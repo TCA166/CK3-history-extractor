@@ -30,7 +30,7 @@ But you can change that easily since .py files are essentially text files.
 <li>Open CK3_history_extractor.py using any text editor (preferably an actual IDE or Np++)</li>
 <li>Go to line nr 582 (that's near the end)</li>
 There you will find a line that says <code>lineage = gLineage(lineageData, allChars, data, Environment(loader=FileSystemLoader('')), 1)</code>
-<li>Change the 1 to whatever number you want. BE WARNED: this will increase parsing time considerably. Like quadruple(if you change it to 4)</li>
+<li>Change the 1 to whatever number you want. BE WARNED: this will double parsing time(if you change it to 2)</li>
 This will make the program export more detail and characters
 </ol>
 <h5>If you want to preview the end result download "TCA166 History.zip", unzip it and go to home.html</h5>
