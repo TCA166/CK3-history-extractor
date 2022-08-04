@@ -1,0 +1,31 @@
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <title>{%if dynasty.parent is defined%}House{%endif%} {{dynasty.name}}</title>
+</head>
+<body>
+    <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
+        <p class="h1 my-0 me-md-auto fw-normal">{%if dynasty.parent is defined%}House{%endif%} {{dynasty.name}}</p>
+    </header>
+    <main style="margin:15px">
+        Creation Date: {{dynasty.date}}
+        <br />
+        {%if dynasty.parent is defined%}
+        Parent Dynasty: <a href="{{dynasty.parent.dynid}}.html">{{dynasty.parent.name}}</a>
+        <br />
+        {%endif%}
+        Total Members: {{dynasty.members}}
+        <br />
+        House head history:
+        <ol>
+            {%for leader in dynasty.leaders%}
+            {%if leader.dna is defined%}
+            <li><a href="file:///{{path}}\characters\{{leader.charid}}.html">{{leader.name}}</a></li>
+            {%else%}
+            <li>{{leader.name}}</li>
+            {%endif%}
+            {%endfor%}
+        </ol>
+    </main>
+</body>
+</html>

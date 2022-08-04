@@ -1,0 +1,36 @@
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <title>{{culture.name}}</title>
+</head>
+<body>
+    <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
+        <p class="h1 my-0 me-md-auto fw-normal">{{culture.name}}</p>
+    </header>
+    <main style="margin:15px">
+        Nature: {{culture.ethos}}
+        <br />
+        Heritage: {{culture.heritage}}
+        <br />
+        Language: {{culture.language}}
+        <br />
+        Martial Customs: {{culture.martial}}
+        <br />
+        {%if culture.date is defined%}
+        Culture Creation Date: {{culture.date}}
+        <br />
+        {%endif%}
+        {%if culture.parents|length > 0%}
+        Created from:
+        {%for parent in culture.parents%}
+        <a href="{{parent.culid}}.html">{{parent.name}}</a>
+        {%endfor%}
+        <br />
+        {%endif%}
+        Traditions:
+        {%for tradition in culture.traditions%}
+        {{tradition}} |
+        {%endfor%}
+    </main>
+</body>
+</html>
