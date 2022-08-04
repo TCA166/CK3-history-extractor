@@ -345,7 +345,7 @@ class gChar: #game character
                         global knownChars
                         self.kills.append(knownChars[dead])
                     except KeyError:
-                        self.kills.append(gChar(dead, allData, allChars, env, path, 0))
+                        self.kills.append(gChar(dead, allData, allChars, env, path, limit - 1))
             findGovernment = re.findall(r'government="(.*?)"', rawData, re.S)
             if len(findGovernment) > 0:
                 self.government = findGovernment[0]
@@ -368,7 +368,7 @@ class gChar: #game character
                                 self.vassals.append(knownChars[vassalId])
                             except KeyError:
                                 #print(vassalId)
-                                self.vassals.append(gChar(vassalId, allData, allChars, env, path, 0))
+                                self.vassals.append(gChar(vassalId, allData, allChars, env, path, limit - 1))
                         except:
                             #print(vassal)
                             #print(traceback.format_exc())
@@ -404,7 +404,7 @@ class gChar: #game character
         
 
 class lChar: #lineage character
-    def __init__(self, rawData, allChars, allData, env, path):
+    def __init__(self, rawData, allChars, allData, env, path, limit):
         #always there
         findCharid = re.findall(r'character=(.*?)\n', rawData, re.S)
         self.charid = findCharid[0]
@@ -413,7 +413,7 @@ class lChar: #lineage character
         self.date = findDate[0]
         #print(charData)
         #we create a page for this character and save it to extract select elements
-        charVar = gChar(self.charid, allData, allChars, env, path, 1)
+        charVar = gChar(self.charid, allData, allChars, env, path, limit)
         self.name = charVar.name
         self.nick = charVar.nick
         self.house = charVar.house
@@ -439,7 +439,7 @@ class lChar: #lineage character
 
 
 class gLineage: #game lineage
-    def __init__(self, rawData, allChars, allData, env):
+    def __init__(self, rawData, allChars, allData, env, limit):
         findPlayer = re.findall(r'name="(.*?)"', rawData, re.S)
         self.player = findPlayer[0]
         path = self.player + ' history'
@@ -479,7 +479,7 @@ class gLineage: #game lineage
         print('Starting character parsing')
         for charData in charsData:
             #print(charData)
-            char = lChar(charData, allChars, allData, env, path)
+            char = lChar(charData, allChars, allData, env, path, limit)
             sT = round(time.time() - timeSince, 2)
             sTs.append(sT)
             print(str(round(i/lngth * 100)) + '% done|s/it: ' + str(sT), flush=True, end='\r')
@@ -579,7 +579,7 @@ if __name__ == "__main__":
         charachterhistory = re.findall(r'played_character={.+?\n}', data, re.S)
         for lineageData in charachterhistory:
             try:
-                lineage = gLineage(lineageData, allChars, data, Environment(loader=FileSystemLoader('')))
+                lineage = gLineage(lineageData, allChars, data, Environment(loader=FileSystemLoader('')), 1)
             except Exception:
                 print(traceback.format_exc())
         print('Done...')

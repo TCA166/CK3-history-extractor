@@ -20,7 +20,7 @@
         <ol>
             {%for leader in dynasty.leaders%}
             {%if leader.dna is defined%}
-            <li><a href="file:///{{path}}\characters\{{leader.charid}}.html">{{leader.name}}</a></li>
+            <li><a href="../characters/{{leader.charid}}.html">{{leader.name}}</a></li>
             {%else%}
             <li>{{leader.name}}</li>
             {%endif%}
