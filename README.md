@@ -24,3 +24,5 @@ We need to regenerate trait_indexes.lookup file because it is no longer in sync 
 <li>Congrats! your save file in the savefile folder is now no longer encrypted</li>
 </ol>
 <h5>If you want to preview the end result download "TCA166 History.zip", unzip it and go to home.html</h5>
+<br>
+<a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
