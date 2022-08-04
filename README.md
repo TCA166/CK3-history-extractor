@@ -7,6 +7,7 @@
 <li>Download the entire repository</li>
 <li>Prepare your unencrypted ck3 save file in the same directory as CK3_history_extractor.py (ironman save files are encrypted)</li>
 <li>Make sure the template html files are in the same directory as CK3_history_extractor.py</li>
+<li>Make sure the lookup file is in the same directory as CK3_history_extractor.py</li>
 <li>Run CK3_history_extractor.py</li>
 <li>Follow the prompts</li>
 </ol>
