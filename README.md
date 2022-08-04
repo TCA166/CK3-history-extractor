@@ -1,5 +1,5 @@
 # CK3-history-extractor
-<h1>A program designed for creating an encyclopedia of sorts containing your ck3 history</h1>
+<h2>A program designed for creating an encyclopedia of sorts containing your ck3 history</h2>
 <br>
 How to Install:
 <ol>
