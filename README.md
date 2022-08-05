@@ -6,7 +6,7 @@
 <li>Ensure you have python 3 installed</li>
 <li>Download the entire repository</li>
 <li>Ensure your ck3 savefile is unencrypted (ironman save files are encrypted)</li>
-If your savegame is compressed (by default it is):
+<li>If your savegame is compressed (by default it is):</li>
 <ol>
 <li>Unzip your ck3 file as if it was an archive and get the gamestate file inside</li>
 <li>Add ".ck3" to your gamestate file - this is your actual savefile</li>
