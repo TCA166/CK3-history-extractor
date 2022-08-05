@@ -5,7 +5,13 @@
 <ol>
 <li>Ensure you have python 3 installed</li>
 <li>Download the entire repository</li>
-<li>Prepare your unencrypted ck3 save file in the same directory as CK3_history_extractor.py (ironman save files are encrypted)</li>
+<li>Ensure your ck3 savefile is unencrypted (ironman save files are encrypted)</li>
+If your savegame is compressed (by default it is):
+<ol>
+<li>Unzip your ck3 file as if it was an archive and get the gamestate file inside</li>
+<li>Add ".ck3" to your gamestate file - this is your actual savefile</li>
+</ol>
+<li>Prepare your save file in the same directory as CK3_history_extractor.py </li>
 <li>Make sure the template html files are in the same directory as CK3_history_extractor.py</li>
 <li>Make sure the lookup file is in the same directory as CK3_history_extractor.py</li>
 <li>Run CK3_history_extractor.py</li>
