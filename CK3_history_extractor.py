@@ -111,7 +111,7 @@ class gCulture:
         culData = re.findall(r'\n\tcultures={(.*?)\n}', allData, re.S)[0]
         rawData = re.findall(r'\n\t\t%s={(.*?)\n\t\t}' % culid, culData, re.S)[0]
         findName = re.findall(r'name="(.*?)"', rawData, re.S)
-        self.name = findName[0].capitalize()
+        self.name = findName[0].replace('_','').capitalize()
         findDate = re.findall(r'created=(.*?)\n', rawData, re.S)
         if len(findDate) > 0:
             self.date = findDate[0]
@@ -273,11 +273,14 @@ class gChar: #game character
             self.house = 'Lowborn'
         findSkills = re.findall(r'skill={(.*?)}', rawData, re.S)
         self.skills = findSkills[0].split(' ')
-        findTraits = re.findall(r'traits={(.*?)}', rawData, re.S)[0].split(' ')[1:-1]
+        findTraits = re.findall(r'traits={(.*?)}', rawData, re.S)
         traits = []
-        for trait in findTraits:
-            #print(trait)
-            traits.append(getTrait(int(trait)))
+        if len(findTraits):
+            findTraits = findTraits[0].split(' ')[1:-1]
+            
+            for trait in findTraits:
+                #print(trait)
+                traits.append(getTrait(int(trait)))
         self.traits = traits
         findRecessive = re.findall(r'recessive_traits={(.*?)}', rawData, re.S)
         self.recessive = []
@@ -398,13 +401,14 @@ class gChar: #game character
             locPath = os.path.dirname(absFilePath) + '\\' + path 
             template = env.get_template('charTemplate.html')
             output = template.render(character = self, path = locPath)
-            f = open(path + '\characters\\' + charid + '.html', 'w')
+            f = open(path + '\characters\\' + charid + '.html', 'w', encoding='utf-8')
             f.write(output)
             f.close()
         
 
 class lChar: #lineage character
     def __init__(self, rawData, allChars, allData, env, path, limit):
+        #print(rawData)
         #always there
         findCharid = re.findall(r'character=(.*?)\n', rawData, re.S)
         self.charid = findCharid[0]
@@ -442,6 +446,7 @@ class gLineage: #game lineage
     def __init__(self, rawData, allChars, allData, env, limit):
         findPlayer = re.findall(r'name="(.*?)"', rawData, re.S)
         self.player = findPlayer[0]
+        print('Starting work on ' + self.player + ' history')
         path = self.player + ' history'
         #create directory
         try:
@@ -467,7 +472,7 @@ class gLineage: #game lineage
         #findLeadChar = re.findall(r'character=(.*?)\n', rawData, re.S)
         #self.lead = findLeadChar[0]
         #print(self.lead)
-        legacyData = re.findall(r'legacy={(.*?)rally_points', rawData, re.S)[0]
+        legacyData = re.findall(r'legacy={(.*?)\n }', rawData, re.S)[0]
         #print(legacyData)
         charsData = re.findall(r'{(.*?)\t}', legacyData, re.S)
         #print(charsData)
@@ -570,7 +575,7 @@ if __name__ == "__main__":
     startTime = time.time()
     filename = input('Name of the readable ck3 save file:')
     sys.tracebacklimit = 10
-    with open (filename + ".ck3", "r", encoding='UTF-8') as myfile:
+    with open (filename + ".ck3", "r", encoding='utf-8') as myfile:
         data=myfile.read()
         print('File length: ' + str(len(data)) + ' characters, or: ' + str(len(data.split('\n'))) + ' lines')
         #we need to get a string containing only char data
@@ -579,6 +584,7 @@ if __name__ == "__main__":
         charachterhistory = re.findall(r'played_character={.+?\n}', data, re.S)
         for lineageData in charachterhistory:
             try:
+                #print(lineageData)
                 lineage = gLineage(lineageData, allChars, data, Environment(loader=FileSystemLoader('')), 1)
             except Exception:
                 print(traceback.format_exc())
