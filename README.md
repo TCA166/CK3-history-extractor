@@ -104,5 +104,5 @@ Also rewriting the entire thing in C is a possibility now. Though not sure if th
 
 ## License
 
-[(https://i.creativecommons.org/l/by/4.0/88x31.png "Creative Commons License")](http://creativecommons.org/licenses/by/4.0/")
+[![CCimg](https://i.creativecommons.org/l/by/4.0/88x31.png)](http://creativecommons.org/licenses/by/4.0/")  
 This work (.py and .html files) is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).  
