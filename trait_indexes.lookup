@@ -219,6 +219,8 @@ peasant_leader
 witch
 disinherited
 denounced
+loyal
+disloyal
 logistician
 military_engineer
 aggressive_attacker
@@ -259,4 +261,4 @@ education_republican_knowledge_1
 education_republican_knowledge_2
 education_republican_knowledge_3
 education_republican_knowledge_4
-This file was generated to emulate og ck3 trait id lookup table on 2022-08-02
+This file was generated to emulate og ck3 trait id lookup table on 2023-02-04 . This is important because it might be outdated

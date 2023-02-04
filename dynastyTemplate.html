@@ -8,24 +8,50 @@
         <p class="h1 my-0 me-md-auto fw-normal">{%if dynasty.parent is defined%}House{%endif%} {{dynasty.name}}</p>
     </header>
     <main style="margin:15px">
+        {%if dynasty.date != 'Time immemorial...'%}
         Creation Date: {{dynasty.date}}
         <br />
+        {%endif%}
         {%if dynasty.parent is defined%}
-        Parent Dynasty: <a href="{{dynasty.parent.dynid}}.html">{{dynasty.parent.name}}</a>
+        Parent Dynasty: <a href="{{dynasty.parent.dynid}}Dyn.html">{{dynasty.parent.name}}</a>
         <br />
         {%endif%}
+        {%if dynasty.members is defined%}
         Total Members: {{dynasty.members}}
+        {%else%}
+        Number of houses: {{dynasty.houses}}<br>
+        Total accumulated renown: {{dynasty.prestigeTot}}<br>
+        Current renown: {{dynasty.prestige}}<br>
+        {%if dynasty.perks is defined%}
+        Dynasty Legacies:
+        <table style="width:auto" class="table table-bordered">
+        {%for key, value in dynasty.perks.items()%}
+        <tr>
+            <td>{{key}}</td>
+            {%for i in range(value)%}
+            <td class= "bg-success" style="width:20px"></td>
+            {%endfor%}
+            {%for i in range(5 - value)%}
+            <td style="width:20px"></td>
+            {%endfor%}
+        </tr>
+        {%endfor%}
+        </table>
+        {%endif%}
+        {%endif%}
         <br />
+        {%if dynasty.leaders|length > 0%}
         House head history:
         <ol>
             {%for leader in dynasty.leaders%}
             {%if leader.dna is defined%}
             <li><a href="../characters/{{leader.charid}}.html">{{leader.name}}</a></li>
             {%else%}
-            <li>{{leader.name}}</li>
+            <li>{{leader}}</li>
             {%endif%}
             {%endfor%}
         </ol>
+        {%endif%}
     </main>
 </body>
 </html>

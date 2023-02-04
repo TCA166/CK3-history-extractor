@@ -11,4 +11,4 @@ I have bundled a tool for generating a new trait id lookup table. Here's how to 
 1.Prepare 00_traits.txt in the same directory as CK3_lookup_gen.py (it can be found in steamapps\common\Crusader Kings III\game\common\traits)
 2.Run CK3_lookup_gen.py
 
-That's about it. In case of issues try to get in contact with me 
+That's about it. In case of issues try to get in contact with me. Preferably on reddit if you came from there

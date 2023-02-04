@@ -18,14 +18,14 @@
                     Reason of death: {{character.reason}}<br />
                     {%endif%}
                     {%if character.culture != "Lost to time..."%}
-                    Culture: <a href="file:///{{path}}\cultures\{{character.culture.culid}}.html">{{character.culture.name}}</a>
+                    Culture: <a href="../cultures/{{character.culture.culid}}.html">{{character.culture.name}}</a>
                     <br />
                     {%endif%}
                     {%if character.faith != "Lost to time..."%}
-                    Faith: <a href="file:///{{path}}\faiths\{{character.faith.faid}}.html">{{character.faith.name}}</a>
+                    Faith: <a href="../faiths/{{character.faith.faid}}.html">{{character.faith.name}}</a>
                     <br />
                     {%endif%}
-                    Dynastic House: {%if character.house.dynid is defined%}<a href="file:///{{path}}\dynasties\{{character.house.dynid}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
+                    Dynastic House: {%if character.house.dynid is defined%}<a href="../dynasties/{{character.house.dynid}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">
@@ -93,13 +93,39 @@
                     <div class="card" style="width: 50rem;">
                         <div class="card-header">
                             Character DNA
+                            <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
+                                Show
+                            </a>
+                        </div>
+                        <div class="collapse" id="collapseDna">
+                            {{character.dna}}
+                        </div>
+                    </div>
+                    {%endif%}
+                    {%if character.memories is defined%}
+                    <div class="card" style="width: 50rem;">
+                        <div class="card-header">
+                            Character Memories
                             <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
                                 Show
                             </a>
                         </div>
-                        <div class="collapse" id="collapseExample">
-                            {{character.dna}}
-                        </div>
+                        <ul class="collapse list-group" id="collapseExample">
+                            {%for memory in character.memories%}
+                            <li class="list-group-item">
+                                {{memory.date}}:{{memory.type}}<br>
+                                {%if memory.participants is defined%}
+                                {%for key, value in memory.participants.items()%}
+                                    {%if value.name is defined%}
+                                    {{key}}:<a href="{{value.charid}}.html">{{value.name}}</a>
+                                    {%else%}
+                                    {{key}}:{{value}}
+                                    {%endif%}
+                                {%endfor%}
+                                {%endif%}
+                            </li>
+                            {%endfor%}
+                        </ul>
                     </div>
                     {%endif%}
                 </div>
@@ -109,9 +135,15 @@
                         <div class="card-header">
                             Titles
                         </div>
-                        {%for title in character.titles%}
-                        {{title.name}} |
-                        {%endfor%}
+                        <div class="card-body">
+                            {%for title in character.titles%} 
+                            {%if 'b_' not in title.key%}
+                            <a href="../titles/{{title.titleid}}.html">{{title.name}}</a> |
+                            {%else%}
+                            {{title.name}} |
+                            {%endif%}
+                            {%endfor%}
+                        </div>
                     </div>
                     {%else%}
                     <div class="card" style="width: 50rem;">
@@ -119,10 +151,19 @@
                             Domain
                         </div>
                         <ul class="list-group list-group-flush" style="text-align:left">
-                            <li class="list-group-item">Titles: {%for title in character.titles%} {{title.name}} |{%endfor%}</li>
+                            <li class="list-group-item">Titles: 
+                                {%for title in character.titles%} 
+                                {%if 'b_' not in title.key%}
+                                <a href="../titles/{{title.titleid}}.html">{{title.name}}</a> |
+                                {%else%}
+                                {{title.name}} |
+                                {%endif%}
+                                {%endfor%}
+                            </li>
                             <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
                             <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
                             <li class="list-group-item">Kills: {%for killed in character.kills%} <a href="{{killed.charid}}.html">{{killed.name}}</a>{%endfor%}</li>
+                            <li class="list-group-item">Known Languages: {%for lang in character.languages%}{{lang}} {%endfor%}</li>
                             <li class="list-group-item">Vassals: {%for vassal in character.vassals%} <a href="{{vassal.charid}}.html">{{vassal.name}}</a>{%endfor%}</li>
                         </ul>
                     </div>

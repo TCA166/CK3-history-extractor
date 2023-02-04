@@ -26,6 +26,8 @@
                     <li class="list-group-item">{% if char.perks != []%}Was a: {% for perk in char.perks %} {{perk}} {%endfor%}{%else%}Didn't master a specific field{%endif%}</li>
                     {% else %}
                     <li class="list-group-item">{{char.score}}</li>
+                    <li class="list-group-item">⠀</li>
+                    <li class="list-group-item">⠀</li>
                     {% endif %}
                 </ul>
                 <div class="card-body">

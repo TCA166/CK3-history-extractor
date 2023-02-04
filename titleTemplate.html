@@ -1,0 +1,69 @@
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <title>{{title.name}}</title>
+</head>
+<body>
+    <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
+        <p class="h1 my-0 me-md-auto fw-normal">{{title.name}}</p>
+    </header>
+    <main style="margin:15px">
+        <div class="row">
+            <div class="col">
+                {%if title.deJure is defined%}
+                De jure title liege: 
+                {%if title.deJure.titleid is defined%}
+                <a href="{{title.deJure.titleid}}.html">{{title.deJure.name}}</a>
+                {%else%}
+                {{title.deJure}}
+                {%endif%}
+                <br>
+                {%endif%}
+                {%if title.deFacto is defined%}
+                De facto title liege:
+                {%if title.deFacto.titleid is defined%} 
+                <a href="{{title.deFacto.titleid}}.html">{{title.deFacto.name}}</a>
+                {%else%}
+                {{title.deFacto}}
+                {%endif%}
+                <br>
+                {%endif%}
+                {%if title.vassals is defined%}
+                De jure vassals:
+                <ul>
+                    {%for vassal in title.vassals%}
+                        {%if vassal.key is defined%}
+                            {%if 'b_' not in vassal.key%}
+                            <li><a href="{{vassal.titleid}}.html">{{vassal.name}}</a></li>
+                            {%else%}
+                            <li>{{vassal.name}}</li>
+                            {%endif%}
+                        {%else%}
+                        <li>{{vassal}}</li>
+                        {%endif%}
+                    {%endfor%}
+                </ul>
+                {%endif%}
+            </div>
+            <div class="col">
+                <div class="card" style="width:50rem">
+                    <div class="card-header">
+                        Title History
+                    </div>
+                    <div class="card-body">
+                        {%if title.history is defined%}
+                        <ul class="list-group list-group-flush">
+                            {%for key, value in title.history.items()%}
+                            <li class="list-group-item">{{key}}:{%if value[0].charid is defined%}<a href="../characters/{{value[0].charid}}.html">{{value[0].name}}</a>{%else%}{{value[0]}}{%endif%} {{value[1]}}</li>
+                            {%endfor%}
+                        </ul>
+                        {%else%}
+                        There is no history to display
+                        {%endif%}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -16,7 +16,7 @@
         <br />
         Martial Customs: {{culture.martial}}
         <br />
-        {%if culture.date is defined%}
+        {%if culture.date is defined and culture.date != '1.1.1'%}
         Culture Creation Date: {{culture.date}}
         <br />
         {%endif%}
