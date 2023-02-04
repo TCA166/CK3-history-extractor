@@ -55,7 +55,7 @@ By default the program goes and searches characters one level deep. As in only c
 But you can change that easily since .py files are essentially text files.
 
 1. Open CK3_history_extractor.py using any text editor (preferably an actual IDE or Np++)
-2. Go to [line nr 665](https://github.com/TCA166/CK3-history-extractor/blob/955b3205b38fc9f8df6a3f975d95c67eaef5bd96/CK3_history_extractor.py#L665) (that's near the end) There you will find a line that says:
+2. Go to [line nr 665](./CK3_history_extractor.py#L665) (that's near the end) There you will find a line that says:
 
     ```Python
     lineage = gLineage(lineageData, data, Environment(loader=FileSystemLoader('')), limit=1)
@@ -72,7 +72,7 @@ By default the program searches only down when handling titles. This can be also
 #### Enable detailed liege extraction
 
 1. Open CK3_history_extractor.py using any text editor
-2. Go to [line nr 74](https://github.com/TCA166/CK3-history-extractor/blob/955b3205b38fc9f8df6a3f975d95c67eaef5bd96/CK3_history_extractor.py#L74) There you will find a line that says:
+2. Go to [line nr 74](./CK3_history_extractor.py#L74) There you will find a line that says:
 
     ```Python
     lookDownToggle = False
@@ -83,7 +83,7 @@ By default the program searches only down when handling titles. This can be also
 #### Enable detailed vassal extraction
 
 1. Open CK3_history_extractor.py using any text editor
-2. Go to [line nr 104](https://github.com/TCA166/CK3-history-extractor/blob/955b3205b38fc9f8df6a3f975d95c67eaef5bd96/CK3_history_extractor.py#L104) There you will find a line that says:
+2. Go to [line nr 104](./CK3_history_extractor.py#L104) There you will find a line that says:
 
     ```Python
     vassal = gTitle(vassal, allData, env, path, lookUp=False)
