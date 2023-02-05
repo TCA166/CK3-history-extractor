@@ -142,10 +142,13 @@ class gFaith:
         self.religion = findReligion[0]
         findHead =  re.findall(r'religious_head=(.*?)\n', rawData, re.S)
         if len(findHead) > 0:
-            if findHead[0] in knownTitles.keys():
-                self.head = knownTitles[findHead[0]]
-            else:
-                self.head = gTitle(findHead[0], allData, env, path)
+            try:
+                if findHead[0] in knownTitles.keys():
+                    self.head = knownTitles[findHead[0]]
+                else:
+                    self.head = gTitle(findHead[0], allData, env, path)
+            except IndexError:
+                pass
         knownFaiths[faid] = self
         if env != False:
             template = env.get_template('faithTemplate.html')
