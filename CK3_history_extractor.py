@@ -230,19 +230,22 @@ class gDynn:
             self.prestigeTot = findPrestigeTot
             findPrestige = re.findall(r'currency=(.*?)\n', rawData, re.S)[0]
             self.prestige = findPrestige
-            findPerks = re.findall(r'perk={ (.*?) }', rawData, re.S)[0]
-            perks = findPerks.split(' ')
-            perkDict = {}
-            for perk in perks:
-                perk = perk.replace('"', '')
-                key = gameStringToRead(perk[:-2])
-                val = int(perk[len(perk) - 1:])
-                if key in perkDict.keys():
-                    if val > perkDict[key]:
+            try:
+                findPerks = re.findall(r'perk={ (.*?) }', rawData, re.S)[0]
+                perks = findPerks.split(' ')
+                perkDict = {}
+                for perk in perks:
+                    perk = perk.replace('"', '')
+                    key = gameStringToRead(perk[:-2])
+                    val = int(perk[len(perk) - 1:])
+                    if key in perkDict.keys():
+                        if val > perkDict[key]:
+                            perkDict[key] = val
+                    else:
                         perkDict[key] = val
-                else:
-                    perkDict[key] = val
-            self.perks = perkDict
+                self.perks = perkDict
+            except IndexError:
+                self.perks = {}
         try:
             findHistorical = re.findall(r'historical={(.*?)}', rawData, re.S)
             historicalLeaders = findHistorical[0].split(' ')[1:-1]
