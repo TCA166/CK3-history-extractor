@@ -93,7 +93,7 @@ By default the program searches only down when handling titles. This can be also
 
 ## Other similar tools
 
-- 
+- [CK2-history-extractor](https://github.com/TCA166/CK2-history-extractor) is a tool like this for CK2
 
 ## Development status
 
