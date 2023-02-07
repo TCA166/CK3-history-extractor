@@ -91,6 +91,10 @@ By default the program searches only down when handling titles. This can be also
 
 3. Change the False to True
 
+## Other similar tools
+
+- 
+
 ## Development status
 
 Currently there are still things to get done/things that could be improved. Most notably:
@@ -104,5 +108,5 @@ Also rewriting the entire thing in C is a possibility now. Though not sure if th
 
 ## License
 
-[![CCimg](https://i.creativecommons.org/l/by/4.0/88x31.png)](http://creativecommons.org/licenses/by/4.0/")  
+[![CCimg](https://i.creativecommons.org/l/by/4.0/88x31.png)](http://creativecommons.org/licenses/by/4.0/)  
 This work (.py and .html files) is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).  
