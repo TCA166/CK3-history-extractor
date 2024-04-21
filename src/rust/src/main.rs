@@ -16,8 +16,13 @@ fn main() {
     stdin().read_line(&mut filename).unwrap();
     let filename = filename.trim();
     //initialize the save file
-    let mut save = SaveFile::new(filename);
-    let obj = save.next();
-    print!("{:#?}\n", obj);
-    save.next();
+    let save = SaveFile::new(filename);
+    for i in save{
+        print!("{}\r", i.get_name());
+        //print!("{:#?}\n", i);
+    }
+    //Get the ending time
+    let end_time = SystemTime::now();
+    //Print the time taken
+    println!("\nTime taken: {}s\n", end_time.duration_since(start_time).unwrap().as_secs());
 }
