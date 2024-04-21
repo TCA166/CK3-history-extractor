@@ -18,6 +18,8 @@ knownHouses = {}
 #(.*?) - narrow search
 #.+? - wide search
 
+TEMPLATE_PATH = 'src/templates'
+
 class gMem:
     def __init__(self, memid:str, allData:str) -> None:
         self.memId = memid
@@ -107,9 +109,9 @@ class gTitle:
                     self.vassals.append(vassal)
         knownTitles[titleid] = self
         if env != False and 'b_' not in self.key:
-            template = env.get_template('titleTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'titleTemplate.html'))
             output = template.render(title = self)
-            f = open(path + '\\titles\\' + titleid + '.html', 'w', encoding='utf-8')
+            f = open(os.path.join(path, 'titles', titleid + '.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
 
@@ -151,9 +153,9 @@ class gFaith:
                 pass
         knownFaiths[faid] = self
         if env != False:
-            template = env.get_template('faithTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'faithTemplate.html'))
             output = template.render(faith = self)
-            f = open(path + '\\faiths\\' + faid + '.html', 'w', encoding='utf-8')
+            f = open(os.path.join(path, 'faiths', faid + '.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
 
@@ -192,9 +194,9 @@ class gCulture:
         self.martial = gameStringToRead(findMartial[0])
         knownCuls[culid] = self
         if env != False:
-            template = env.get_template('cultureTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'cultureTemplate.html'))
             output = template.render(culture = self)
-            f = open(path + '\cultures\\' + culid + '.html', 'w', encoding='utf-8')
+            f = open(os.path.join(path, 'cultures', culid + '.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
 
@@ -258,14 +260,14 @@ class gDynn:
         if house:
             knownDyns[dynid] = self
         if env != False:
-            template = env.get_template('dynastyTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'dynastyTemplate.html'))
             absFilePath = os.path.realpath(__file__) 
             locPath = os.path.dirname(absFilePath) + '\\' + path 
             output = template.render(dynasty = self, path = locPath)
             if house:
-                f = open(path + '\dynasties\\' + dynid + '.html', 'w', encoding='utf-8')
+                f = open(os.path.join(path, 'dynasties', dynid + '.html'), 'w', encoding='utf-8')
             else:
-                f = open(path + '\dynasties\\' + dynid + 'Dyn.html', 'w', encoding='utf-8')
+                f = open(os.path.join(path, 'dynasties', dynid + 'Dyn.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
 
@@ -451,9 +453,9 @@ class gChar: #game character
             #__file__
             absFilePath = os.path.realpath(__file__) 
             locPath = os.path.dirname(absFilePath) + '\\' + path 
-            template = env.get_template('charTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'charTemplate.html'))
             output = template.render(character = self, path = locPath)
-            f = open(path + '\characters\\' + charid + '.html', 'w', encoding='utf-8')
+            f = open(os.path.join(path, 'characters', charid + '.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
         
@@ -501,23 +503,23 @@ class gLineage: #game lineage
         except:
             print('Directory is already here...')
         try:
-            os.makedirs(path + '\characters')
+            os.makedirs(os.path.join(path, 'characters'))
         except:
             print('Directory is already here...')
         try:
-            os.makedirs(path + '\dynasties')
+            os.makedirs(os.path.join(path, 'dynasties'))
         except:
             print('Directory is already here...')
         try:
-            os.makedirs(path + '\cultures')
+            os.makedirs(os.path.join(path, 'cultures'))
         except:
             print('Directory is already here...')
         try:
-            os.makedirs(path + '\\faiths')
+            os.makedirs(os.path.join(path, 'faiths'))
         except:
             print('Directory is already here...')
         try:
-            os.makedirs(path + '\\titles')
+            os.makedirs(os.path.join(path, 'titles'))
         except:
             print('Directory is already here...')
         #findLeadChar = re.findall(r'character=(.*?)\n', rawData, re.S)
@@ -546,9 +548,9 @@ class gLineage: #game lineage
         #create home file
         #you can use False as env to override file creation
         if env != False:
-            template = env.get_template('homeTemplate.html')
+            template = env.get_template(os.path.join(TEMPLATE_PATH, 'homeTemplate.html'))
             output = template.render(lineage = self)
-            f = open(path + '\\home.html', 'w', encoding='utf-8')
+            f = open(os.path.join(path, 'home.html'), 'w', encoding='utf-8')
             f.write(output)
             f.close()
             print('home.html created')
