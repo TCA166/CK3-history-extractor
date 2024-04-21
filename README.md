@@ -16,7 +16,7 @@ It goes through the lineage of every player in the savefile (meaning multiplayer
 5. Prepare your save file in the same directory as CK3_history_extractor.py
 6. Make sure the template html files are in the same directory as CK3_history_extractor.py
 7. Make sure the lookup file is in the same directory as CK3_history_extractor.py
-8. Run CK3_history_extractor.py
+8. Run CK3_history_extractor.py in the src directory
 9. Follow the prompts
 
 ### How to preview the end result
@@ -97,14 +97,9 @@ By default the program searches only down when handling titles. This can be also
 
 ## Development status
 
-Currently there are still things to get done/things that could be improved. Most notably:
-
-- Artifact extraction
-- Rendering rework
-- Code reformatting
-- Graphical rework
-
-Also rewriting the entire thing in C is a possibility now. Though not sure if that's a good idea. Performance would surely benefit, but by the nature of C the process would be a slog
+Currently I'm rewriting the tool in Rust.
+This means updated game support, faster speeds and no need for a Python installed.
+Stay tuned for updates!
 
 ## License
 

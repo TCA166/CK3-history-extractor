@@ -1,2 +1,5 @@
 *.ck3
 *history/*
+target*
+*.lock
+*.log
