@@ -1,8 +1,13 @@
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
+
+mod game_object;
+
 mod save_file;
 use save_file::SaveFile;
+
+mod structures;
 
 fn main() {
     //Get the staring time
