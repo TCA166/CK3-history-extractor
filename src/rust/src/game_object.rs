@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::structures::{GameObjectDerived, GameObjectDerivedType};
+use crate::{game_state::GameState, structures::{GameObjectDerived}};
 
 #[derive(Debug)]
 pub enum SaveFileValue{
@@ -79,11 +79,11 @@ impl GameObject{
         &self.name
     }
 
-    pub fn get_as<T> (&self, key: &str, game_state: &HashMap<String, HashMap<String, GameObjectDerivedType>>) -> T where T: GameObjectDerived{
+    pub fn get_as<T> (&self, key: &str, game_state: &GameState) -> T where T: GameObjectDerived{
         T::from_game_object(self.get(key).unwrap().as_object().unwrap(), game_state)
     }
 
-    pub fn to<T> (&self, game_state: &HashMap<String, HashMap<String, GameObjectDerivedType>>) -> T where T: GameObjectDerived{
+    pub fn to<T> (&self, game_state: &GameState) -> T where T: GameObjectDerived{
         T::from_game_object(self, game_state)
     }
 

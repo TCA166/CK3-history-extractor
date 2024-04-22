@@ -12,11 +12,11 @@ use super::renderer::Renderable;
 use super::{Character, GameObjectDerived};
 
 pub struct Title {
-    name: Rc<String>,
-    deJure: Rc<Title>,
-    deFacto: Rc<Title>,
-    vassals: Vec<Rc<Title>>,
-    history: HashMap<Rc<String>, (Rc<Character>, Rc<String>)>
+    pub name: Rc<String>,
+    pub deJure: Rc<Title>,
+    pub deFacto: Rc<Title>,
+    pub vassals: Vec<Rc<Title>>,
+    pub history: HashMap<Rc<String>, (Rc<Character>, Rc<String>)>
 }
 
 impl Serialize for Title {

@@ -5,13 +5,13 @@ use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 
 pub struct Culture {
-    name: Rc<String>,
-    ethos: Rc<String>,
-    heritage: Rc<String>,
-    martial: Rc<String>,
-    date: Rc<String>,
-    parents: Vec<Rc<Culture>>,
-    traditions: Vec<Rc<String>>,
+    pub name: Rc<String>,
+    pub ethos: Rc<String>,
+    pub heritage: Rc<String>,
+    pub martial: Rc<String>,
+    pub date: Rc<String>,
+    pub parents: Vec<Rc<Culture>>,
+    pub traditions: Vec<Rc<String>>,
 }
 
 impl Serialize for Culture {

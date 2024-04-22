@@ -8,14 +8,14 @@ use super::renderer::Renderable;
 use super::Character;
 
 pub struct Dynasty{
-    parent: Rc<RefCell<Dynasty>>,
-    name: Rc<String>,
-    members: u32,
-    houses: u32,
-    prestigeTot: u32,
-    prestige: u32,
-    perks: HashMap<Rc<String>, u32>,
-    leaders: Vec<Rc<Character>>,
+    pub parent: Rc<RefCell<Dynasty>>,
+    pub name: Rc<String>,
+    pub members: u32,
+    pub houses: u32,
+    pub prestigeTot: u32,
+    pub prestige: u32,
+    pub perks: HashMap<Rc<String>, u32>,
+    pub leaders: Vec<Rc<Character>>,
 }
 
 impl Serialize for Dynasty {

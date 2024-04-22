@@ -10,8 +10,10 @@ mod game_object;
 mod save_file;
 use save_file::SaveFile;
 
-use crate::game_object::{GameObject, SaveFileValue};
-use crate::structures::{GameObjectDerived, GameObjectDerivedType, Player, Title};
+mod game_state;
+use game_state::GameState;
+
+use crate::structures::{Player, Title};
 
 mod structures;
 
@@ -28,7 +30,7 @@ fn main() {
     //initialize the save file
     let save = SaveFile::new(filename); // now we have an iterator we can work with that returns these large objects
     // this is sort of like the first round of filtering where we store the objects we care about
-    let mut game_state: HashMap<String, HashMap<String, GameObjectDerivedType>> = HashMap::new();
+    let mut game_state:GameState = GameState::new();
     for i in save{
         print!("{:?}", i.get_name());
         match i.get_name(){

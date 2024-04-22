@@ -5,9 +5,9 @@ use serde::ser::SerializeStruct;
 use super::Character;
 
 pub struct Memory {
-    date: Rc<String>,
-    r#type: Rc<String>,
-    participants: HashMap<Rc<String>, Rc<Character>>,
+    pub date: Rc<String>,
+    pub r#type: Rc<String>,
+    pub participants: HashMap<Rc<String>, Rc<Character>>,
 }
 
 impl Memory {

@@ -12,40 +12,32 @@ use super::{Faith, Culture, Dynasty, Memory, Title, GameObjectDerived};
 use std::rc::Rc;
 
 pub struct Character {
-    name: Rc<String>,
-    nick: Rc<String>,
-    birth: Rc<String>,
-    dead: Rc<String>,
-    date: Option<Rc<String>>,
-    reason: Option<Rc<String>>,
-    faith: Rc<Faith>,
-    culture: Rc<Culture>,
-    house: Rc<Dynasty>,
-    skills: Vec<u8>,
-    traits: Vec<Rc<String>>,
-    recessive: Vec<Rc<String>>,
-    spouses: Vec<Rc<Character>>,
-    former: Vec<Rc<Character>>,
-    children: Vec<Rc<Character>>,
-    dna: Rc<String>,
-    memories: Vec<Rc<Memory>>,
-    titles: Vec<Rc<Title>>,
-    gold: u32,
-    piety: u32,
-    prestige: u32,
-    dread: u32,
-    strength: u32,
-    kills: Vec<Rc<Character>>,
-    languages: Vec<Rc<String>>,
-    vassals: Vec<Rc<Character>>
-}
-
-impl GameObjectDerived for Character {
-    fn from_game_object(base:&'_ GameObject, game_state:&std::collections::HashMap<String, std::collections::HashMap<String, super::GameObjectDerivedType>>) -> Self {
-        Character {
-            
-        }
-    }
+    pub name: Rc<String>,
+    pub nick: Rc<String>,
+    pub birth: Rc<String>,
+    pub dead: Rc<String>,
+    pub date: Option<Rc<String>>,
+    pub reason: Option<Rc<String>>,
+    pub faith: Rc<Faith>,
+    pub culture: Rc<Culture>,
+    pub house: Rc<Dynasty>,
+    pub skills: Vec<u8>,
+    pub traits: Vec<Rc<String>>,
+    pub recessive: Vec<Rc<String>>,
+    pub spouses: Vec<Rc<Character>>,
+    pub former: Vec<Rc<Character>>,
+    pub children: Vec<Rc<Character>>,
+    pub dna: Rc<String>,
+    pub memories: Vec<Rc<Memory>>,
+    pub titles: Vec<Rc<Title>>,
+    pub gold: u32,
+    pub piety: u32,
+    pub prestige: u32,
+    pub dread: u32,
+    pub strength: u32,
+    pub kills: Vec<Rc<Character>>,
+    pub languages: Vec<Rc<String>>,
+    pub vassals: Vec<Rc<Character>>
 }
 
 impl Serialize for Character {

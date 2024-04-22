@@ -1,24 +1,29 @@
 
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 use crate::game_object::GameObject;
 
-use super::{Character, GameObjectDerived, GameObjectDerivedType};
+use crate::game_state::GameState;
+
+use super::{Character, GameObjectDerived};
 
 pub struct Player {
-    name: Rc<String>,
-    id: u32,
-    character: Rc<Character> 
+    pub name: Rc<String>,
+    pub id: u32,
+    pub character: Rc<Character> 
 }
 
 impl GameObjectDerived for Player {
-    fn from_game_object(base: &GameObject, game_state: &HashMap<String, HashMap<String, GameObjectDerivedType>>) -> Player {
-        let characters = game_state.get("characters").unwrap();
+    fn from_game_object(base: &GameObject, game_state: &GameState) -> Self {
         let key = base.get("character").unwrap().as_string().unwrap();
         Player {
             name: Rc::new(base.get("name").unwrap().as_string().unwrap().to_string()),
             id: base.get("player").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            character: characters.get(key).unwrap().get_as::<Character>().unwrap()
+            character: Rc::from(*game_state.get_character(key).unwrap())
         }
+    }
+
+    fn type_name() -> &'static str {
+        "player"
     }
 }

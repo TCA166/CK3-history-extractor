@@ -6,11 +6,11 @@ use super::character::Character;
 use super::renderer::Renderable;
 
 pub struct Faith {
-    name: Rc<String>,
-    tenets: Vec<Rc<String>>,
-    head: Rc<Character>,
-    fervor: f32,
-    doctrines: Vec<Rc<String>>,
+    pub name: Rc<String>,
+    pub tenets: Vec<Rc<String>>,
+    pub head: Rc<Character>,
+    pub fervor: f32,
+    pub doctrines: Vec<Rc<String>>,
 }
 
 impl Serialize for Faith {
