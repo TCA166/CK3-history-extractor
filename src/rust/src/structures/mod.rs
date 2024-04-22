@@ -1,5 +1,4 @@
 mod renderer;
-use renderer::Renderable;
 
 mod character;
 pub use character::Character;
@@ -13,10 +12,16 @@ pub use culture::Culture;
 mod dynasty;
 pub use dynasty::Dynasty;
 
-struct Memory {
+mod memory;
+pub use memory::Memory;
 
-}
+mod title;
+pub use title::Title;
 
-struct Title {
-
+pub enum FrontendStructure<'a>{
+    Character(Character<'a>),
+    Faith(Faith<'a>),
+    Culture(Culture<'a>),
+    Dynasty(Dynasty<'a>),
+    Title(Title<'a>),
 }
