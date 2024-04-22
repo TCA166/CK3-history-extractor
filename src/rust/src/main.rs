@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::rc::Rc;
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
@@ -6,6 +9,9 @@ mod game_object;
 
 mod save_file;
 use save_file::SaveFile;
+
+use crate::game_object::{GameObject, SaveFileValue};
+use crate::structures::{GameObjectDerived, GameObjectDerivedType, Player, Title};
 
 mod structures;
 
@@ -20,11 +26,20 @@ fn main() {
     stdin().read_line(&mut filename).unwrap();
     let filename = filename.trim();
     //initialize the save file
-    let save = SaveFile::new(filename);
+    let save = SaveFile::new(filename); // now we have an iterator we can work with that returns these large objects
+    // this is sort of like the first round of filtering where we store the objects we care about
+    let mut game_state: HashMap<String, HashMap<String, GameObjectDerivedType>> = HashMap::new();
     for i in save{
-        print!("{}\r", i.get_name());
-        //print!("{:#?}\n", i);
+        print!("{:?}", i.get_name());
+        match i.get_name(){
+            "played_character" => {
+                let player = i.to::<Player>(&game_state);
+                
+            }
+            _ => {}
+        }
     }
+
     //Get the ending time
     let end_time = SystemTime::now();
     //Print the time taken

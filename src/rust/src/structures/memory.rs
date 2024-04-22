@@ -1,25 +1,33 @@
 use std::collections::HashMap;
-
+use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-
 use super::Character;
 
-
-pub struct Memory<'a> {
-    date: &'a String,
-    r#type: &'a String,
-    participants: HashMap<&'a String, &'a Character<'a>>
+pub struct Memory {
+    date: Rc<String>,
+    r#type: Rc<String>,
+    participants: HashMap<Rc<String>, Rc<Character>>,
 }
 
-impl Serialize for Memory<'_> {
+impl Memory {
+    pub fn new(date: Rc<String>, r#type: Rc<String>, participants: HashMap<Rc<String>, Rc<Character>>) -> Self {
+        Memory {
+            date,
+            r#type,
+            participants,
+        }
+    }
+}
+
+impl Serialize for Memory {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Memory", 3)?;
-        state.serialize_field("date", self.date)?;
-        state.serialize_field("type", self.r#type)?;
+        state.serialize_field("date", &self.date)?;
+        state.serialize_field("type", &self.r#type)?;
         state.serialize_field("participants", &self.participants)?;
         state.end()
     }

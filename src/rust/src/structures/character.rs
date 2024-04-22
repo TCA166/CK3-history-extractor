@@ -3,65 +3,73 @@ use minijinja::{Environment, context};
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
+use crate::game_object::GameObject;
+
 use super::renderer::Renderable;
 
-use super::Faith;
-use super::Culture;
-use super::Dynasty;
-use super::Memory;
-use super::Title;
+use super::{Faith, Culture, Dynasty, Memory, Title, GameObjectDerived};
 
-pub struct Character<'a> {
-    name: &'a String,
-    nick: &'a String,
-    birth: &'a String,
-    dead: &'a String,
-    date: Option<&'a String>,
-    reason: Option<&'a String>,
-    faith: &'a Faith<'a>,
-    culture: &'a Culture<'a>,
-    house: &'a Dynasty<'a>,
+use std::rc::Rc;
+
+pub struct Character {
+    name: Rc<String>,
+    nick: Rc<String>,
+    birth: Rc<String>,
+    dead: Rc<String>,
+    date: Option<Rc<String>>,
+    reason: Option<Rc<String>>,
+    faith: Rc<Faith>,
+    culture: Rc<Culture>,
+    house: Rc<Dynasty>,
     skills: Vec<u8>,
-    traits: Vec<&'a String>,
-    recessive: Vec<&'a String>,
-    spouses: Vec<&'a Character<'a>>,
-    former: Vec<&'a Character<'a>>,
-    children: Vec<&'a Character<'a>>,
-    dna: &'a String,
-    memories: Vec<&'a Memory<'a>>,
-    titles: Vec<&'a Title<'a>>,
+    traits: Vec<Rc<String>>,
+    recessive: Vec<Rc<String>>,
+    spouses: Vec<Rc<Character>>,
+    former: Vec<Rc<Character>>,
+    children: Vec<Rc<Character>>,
+    dna: Rc<String>,
+    memories: Vec<Rc<Memory>>,
+    titles: Vec<Rc<Title>>,
     gold: u32,
     piety: u32,
     prestige: u32,
     dread: u32,
     strength: u32,
-    kills: Vec<&'a Character<'a>>,
-    languages: Vec<&'a String>,
-    vassals: Vec<&'a Character<'a>>
+    kills: Vec<Rc<Character>>,
+    languages: Vec<Rc<String>>,
+    vassals: Vec<Rc<Character>>
 }
 
-impl Serialize for Character<'_> {
+impl GameObjectDerived for Character {
+    fn from_game_object(base:&'_ GameObject, game_state:&std::collections::HashMap<String, std::collections::HashMap<String, super::GameObjectDerivedType>>) -> Self {
+        Character {
+            
+        }
+    }
+}
+
+impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Character", 27)?;
-        state.serialize_field("name", self.name)?;
-        state.serialize_field("nick", self.nick)?;
-        state.serialize_field("birth", self.birth)?;
-        state.serialize_field("dead", self.dead)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("nick", &self.nick)?;
+        state.serialize_field("birth", &self.birth)?;
+        state.serialize_field("dead", &self.dead)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
-        state.serialize_field("faith", self.faith)?;
-        state.serialize_field("culture", self.culture)?;
-        state.serialize_field("house", self.house)?;
+        state.serialize_field("faith", &self.faith)?;
+        state.serialize_field("culture", &self.culture)?;
+        state.serialize_field("house", &self.house)?;
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
         state.serialize_field("recessive", &self.recessive)?;
         state.serialize_field("spouses", &self.spouses)?;
         state.serialize_field("former", &self.former)?;
         state.serialize_field("children", &self.children)?;
-        state.serialize_field("dna", self.dna)?;
+        state.serialize_field("dna", &self.dna)?;
         state.serialize_field("memories", &self.memories)?;
         state.serialize_field("titles", &self.titles)?;
         state.serialize_field("gold", &self.gold)?;
@@ -74,12 +82,11 @@ impl Serialize for Character<'_> {
         state.serialize_field("vassals", &self.vassals)?;
         state.end()
     }
-
 }
 
-impl Renderable for Character<'_>{
+impl Renderable for Character {
     fn render(&self, env: &Environment, template_name: &'static String) -> String {
         let ctx = context! {character=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()    
+        env.get_template(template_name).unwrap().render(&ctx).unwrap()
     }
 }
