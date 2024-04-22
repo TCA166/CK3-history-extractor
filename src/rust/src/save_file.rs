@@ -2,8 +2,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::SeekFrom;
 
-mod game_objects;
-use game_objects::{GameObject, SaveFileValue};
+use game_object::{GameObject, SaveFileValue};
 
 /// A struct that represents a ck3 save file
 pub struct SaveFile{
@@ -142,7 +141,7 @@ mod tests {
 
     use tempfile::NamedTempFile;
 
-    use crate::save_file::game_objects::GameObject;
+    use crate::save_file::game_object::GameObject;
 
     #[test]
     fn test_save_file(){

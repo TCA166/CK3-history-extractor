@@ -1,4 +1,3 @@
-use minijinja::{Environment, context};
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
