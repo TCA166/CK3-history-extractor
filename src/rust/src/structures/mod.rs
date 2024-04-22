@@ -10,9 +10,8 @@ pub use faith::Faith;
 mod culture;
 pub use culture::Culture;
 
-struct Dynasty {
-
-}
+mod dynasty;
+pub use dynasty::Dynasty;
 
 struct Memory {
 
