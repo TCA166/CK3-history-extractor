@@ -19,6 +19,7 @@ impl SaveFile{
         }
     }
 
+    /// Reset the file to the beginning
     pub fn reset(&mut self){
         self.file.seek(SeekFrom::Start(0)).unwrap();
     }
@@ -63,9 +64,19 @@ impl Iterator for SaveFile{
                     past_eq = false;
                 }
                 '}' => { // we have reached the end of an object
-                    if !key.is_empty() && !past_eq { //the only case where this is possible is if we have an array
-                        stack.last_mut().unwrap().push(game_objects::SaveFileValue::String(key.clone()));
-                        key.clear();
+                    if past_eq {
+                        if !val.is_empty() {
+                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(val.clone()));
+                            key.clear();
+                            val.clear();
+                            past_eq = false;
+                        }
+                    }
+                    else {
+                        if !key.is_empty() {
+                            stack.last_mut().unwrap().push(SaveFileValue::String(key.clone()));
+                            key.clear();
+                        }
                     }
                     depth -= 1;
                     if depth == 0{ // we have reached the end of the object we are parsing, we return the object
@@ -122,5 +133,87 @@ impl Iterator for SaveFile{
             return None;
         }
         return Some(object);
+    }
+}
+
+mod tests {
+
+    use std::io::Write;
+
+    use tempfile::NamedTempFile;
+
+    use crate::save_file::game_objects::GameObject;
+
+    #[test]
+    fn test_save_file(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+            test={
+                test2={
+                    test3=1
+                }
+            }
+        ").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap();
+        assert_eq!(object.get_name(), "test".to_string());
+        let test2 = object.get("test2").unwrap().as_object();
+        assert!(test2.is_some());
+        let test3 = test2.unwrap().get("test3");
+        assert!(test3.is_some());
+        assert_eq!(*(test3.unwrap().as_string().unwrap()) , "1".to_string());
+    }
+
+    #[test]
+    fn test_save_file_array(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+            test={
+                test2={
+                    1
+                    2
+                    3
+                }
+                test3={ 1 2 3}
+            }
+        ").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap();
+        assert_eq!(object.get_name(), "test".to_string());
+        let test2 = object.get("test2").unwrap().as_object();
+        assert!(test2.is_some());
+        let test2_val = test2.unwrap();
+        assert_eq!(*(test2_val.get_index(0).unwrap().as_string().unwrap()) , "1".to_string());
+        assert_eq!(*(test2_val.get_index(1).unwrap().as_string().unwrap()) , "2".to_string());
+        assert_eq!(*(test2_val.get_index(2).unwrap().as_string().unwrap()) , "3".to_string());
+        let test3 = object.get("test3").unwrap().as_object();
+        assert!(test3.is_some());
+        let test3_val = test3.unwrap();
+        assert_eq!(*(test3_val.get_index(0).unwrap().as_string().unwrap()) , "1".to_string());
+        assert_eq!(*(test3_val.get_index(1).unwrap().as_string().unwrap()) , "2".to_string());
+        assert_eq!(*(test3_val.get_index(2).unwrap().as_string().unwrap()) , "3".to_string());
+    }
+
+    #[test]
+    fn test_weird_syntax(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+            test={
+                test2={1=2
+                    3=4}
+                test3={1 2 
+                    3}
+                test4={1 2 3}
+                test5=42
+            }
+        ").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap();
+        assert_eq!(object.get_name(), "test".to_string());
+        let test2 = object.get("test2").unwrap().as_object();
+        assert!(test2.is_some());
+        let test2_val = test2.unwrap();
+        assert_eq!(*(test2_val.get("1").unwrap().as_string().unwrap()) , "2".to_string());
+        assert_eq!(*(test2_val.get("3").unwrap().as_string().unwrap()) , "4".to_string());
     }
 }

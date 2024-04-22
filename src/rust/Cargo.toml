@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 minijinja = "1.0.20"
+tempfile = "3.2.0"
