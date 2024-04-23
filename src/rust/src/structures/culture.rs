@@ -1,36 +1,37 @@
 use minijinja::{Environment, context};
-use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::GameObjectDerived;
+use super::{GameObjectDerived, Shared};
+use crate::game_object::GameObject;
+use std::cell::Ref;
 
 pub struct Culture {
-    pub name: Rc<String>,
-    pub ethos: Rc<String>,
-    pub heritage: Rc<String>,
-    pub martial: Rc<String>,
-    pub date: Rc<String>,
-    pub parents: Vec<Rc<Culture>>,
-    pub traditions: Vec<Rc<String>>,
+    pub name: Shared<String>,
+    pub ethos: Shared<String>,
+    pub heritage: Shared<String>,
+    pub martial: Shared<String>,
+    pub date: Shared<String>,
+    pub parents: Vec<Shared<Culture>>,
+    pub traditions: Vec<Shared<String>>,
 }
 
 impl GameObjectDerived for Culture {
-    fn from_game_object(base:&'_ crate::game_object::GameObject, game_state:&crate::game_state::GameState) -> Self {
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&crate::game_state::GameState) -> Self {
         let mut parents = Vec::new();
-        for p in base.get("parents").unwrap().as_array().unwrap(){
-            parents.push(Rc::from(game_state.get_culture(p.as_string().unwrap().as_str()).unwrap().clone()));
+        for p in base.get_object_ref("parents").get_array(){
+            parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).unwrap().clone());
         }
         let mut traditions = Vec::new();
-        for t in base.get("traditions").unwrap().as_array().unwrap(){
-            traditions.push(t.as_string().unwrap());
+        for t in base.get_object_ref("traditions").get_array(){
+            traditions.push(t.as_string());
         }
         Culture{
-            name: base.get("name").unwrap().as_string().unwrap(),
-            ethos: base.get("ethos").unwrap().as_string().unwrap(),
-            heritage: base.get("heritage").unwrap().as_string().unwrap(),
-            martial: base.get("martial").unwrap().as_string().unwrap(),
-            date: base.get("date").unwrap().as_string().unwrap(),
+            name: base.get("name").unwrap().as_string(),
+            ethos: base.get("ethos").unwrap().as_string(),
+            heritage: base.get("heritage").unwrap().as_string(),
+            martial: base.get("martial").unwrap().as_string(),
+            date: base.get("date").unwrap().as_string(),
             parents: parents,
             traditions: traditions
         }

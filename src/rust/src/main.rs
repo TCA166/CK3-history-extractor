@@ -1,3 +1,4 @@
+use std::cell::{Ref, RefCell};
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
@@ -41,31 +42,32 @@ fn main() {
         print!("{:?}", i.get_name());
         match i.get_name(){ //the order is kept consistent with the order in the save file
             "landed_titles" => {
-                let landed = i.get("landed_titles").unwrap().as_object().unwrap();
+                let landed = i.get_object_ref("landed_titles");
                 for l in landed.get_keys(){
-                    game_state.add::<Title>(landed.get(&l).unwrap().as_object().unwrap().as_ref());
+                    game_state.add::<Title>(landed.get_object_ref(&l));
                 }
             }
             "dynasties" => {
                 let dynasties = i.get_keys();
                 for d in dynasties{
-                    game_state.add::<Title>(i.get(&d).unwrap().as_object().unwrap().as_ref());
+                    game_state.add::<Title>(i.get_object_ref(&d));
                 }
             }
             "living" => {
                 let living = i.get_keys();
                 for l in living{
-                    game_state.add::<Player>(i.get(&l).unwrap().as_object().unwrap().as_ref());
+                    game_state.add::<Player>(i.get_object_ref(&l));
                 }
             }
             "dead_unprunable" => {
                 let dead = i.get_keys();
                 for d in dead{
-                    game_state.add::<Player>(i.get(&d).unwrap().as_object().unwrap().as_ref());
+                    game_state.add::<Player>(i.get_object_ref(&d));
                 }
             }
             "played_character" => {
-                game_state.add::<Player>(&i);
+                let p = RefCell::from(i);
+                game_state.add::<Player>(p.borrow());
             }
             _ => {}
         }

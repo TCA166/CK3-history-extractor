@@ -1,44 +1,47 @@
-use std::rc::Rc;
 use minijinja::{Environment, context};
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{Character, GameObjectDerived};
+use super::{Character, GameObjectDerived, Shared};
+use crate::game_object::GameObject;
+use std::cell::Ref;
 
 pub struct Dynasty{
-    pub parent: Option<Rc<Dynasty>>,
-    pub name: Rc<String>,
+    pub parent: Option<Shared<Dynasty>>,
+    pub name: Shared<String>,
     pub members: u32,
     pub houses: u32,
     pub prestigeTot: u32,
     pub prestige: u32,
-    pub perks: Vec<Rc<String>>,
-    pub leaders: Vec<Rc<Character>>,
+    pub perks: Vec<Shared<String>>,
+    pub leaders: Vec<Shared<Character>>,
 }
 
 impl GameObjectDerived for Dynasty {
-    fn from_game_object(base:&'_ crate::game_object::GameObject, game_state:&crate::game_state::GameState) -> Self {
-        let parent_id = base.get("dynasty").unwrap().as_string().unwrap();
-        let currency = base.get("prestige").unwrap().as_object().unwrap();
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&crate::game_state::GameState) -> Self {
+        let parent_id = base.get_string_ref("dynasty");
+        let currency = base.get_object_ref("prestige");
         let mut perks = Vec::new();
-        for p in base.get("perks").unwrap().as_array().unwrap(){
-            perks.push(p.as_string().unwrap());
+        for p in base.get_object_ref("perks").get_array(){
+            perks.push(p.as_string());
         }
         let mut leaders = Vec::new();
-        for l in base.get("leaders").unwrap().as_array().unwrap(){
-            leaders.push(Rc::from(game_state.get_character(l.as_string().unwrap().as_str()).unwrap().clone()));
+        for l in base.get_object_ref("leaders").get_array(){
+            leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).unwrap().clone());
         }
+        let prestige_tot = currency.get_string_ref("accumulated").parse::<u32>().unwrap();
+        let prestige = currency.get_string_ref("currency").parse::<u32>().unwrap();
         Dynasty{
-            name: base.get("name").unwrap().as_string().unwrap(),
+            name: base.get("name").unwrap().as_string(),
             parent: match parent_id.as_str() {
                 "0" => None,
-                _ => Some(Rc::from(game_state.get_dynasty(parent_id.as_str()).unwrap().clone()))
+                _ => Some(game_state.get_dynasty(parent_id.as_str()).unwrap().clone())
             },
             members: 0,
             houses: 0,
-            prestigeTot: currency.get("accumulated").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            prestige: currency.get("currency").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
+            prestigeTot: prestige_tot,
+            prestige: prestige,
             perks: perks,
             leaders: leaders
         }

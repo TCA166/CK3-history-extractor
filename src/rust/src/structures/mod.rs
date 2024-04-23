@@ -1,5 +1,7 @@
 mod renderer;
 
+use std::cell::Ref;
+
 use super::game_object::GameObject;
 
 use super::game_state::GameState;
@@ -25,8 +27,10 @@ pub use memory::Memory;
 mod title;
 pub use title::Title;
 
+pub type Shared<T> = std::rc::Rc<std::cell::RefCell<T>>;
+
 pub trait GameObjectDerived{
-    fn from_game_object(base:&'_ GameObject, game_state:&GameState) -> Self;
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&GameState) -> Self;
 
     fn type_name() -> &'static str;
 }

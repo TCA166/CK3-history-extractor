@@ -1,24 +1,24 @@
 
-use std::rc::Rc;
+use std::{cell::Ref, rc::Rc};
 
 use crate::game_object::GameObject;
 
 use crate::game_state::GameState;
 
-use super::{Character, GameObjectDerived};
+use super::{Character, GameObjectDerived, Shared};
 
 pub struct Player {
-    pub name: Rc<String>,
+    pub name: Shared<String>,
     pub id: u32,
-    pub character: Rc<Character> 
+    pub character: Shared<Character> 
 }
 
 impl GameObjectDerived for Player {
-    fn from_game_object(base: &GameObject, game_state: &GameState) -> Self {
-        let key = base.get("character").unwrap().as_string().unwrap();
+    fn from_game_object(base: Ref<'_, GameObject>, game_state: &GameState) -> Self {
+        let key = base.get("character").unwrap().as_string_ref().unwrap();
         Player {
-            name: base.get("name").unwrap().as_string().unwrap(),
-            id: base.get("player").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
+            name: base.get("name").unwrap().as_string(),
+            id: base.get("player").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
             character: Rc::from(game_state.get_character(&key).unwrap().clone())
         }
     }

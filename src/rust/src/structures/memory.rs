@@ -1,26 +1,27 @@
-use std::collections::HashMap;
+use std::cell::{RefCell, Ref};
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, GameObjectDerived};
+use super::{Character, GameObjectDerived, Shared};
+use crate::game_object::GameObject;
 
 pub struct Memory {
-    pub date: Rc<String>,
-    pub r#type: Rc<String>,
-    pub participants: HashMap<Rc<String>, Rc<Character>>,
+    pub date: Shared<String>,
+    pub r#type: Shared<String>,
+    pub participants: Vec<(Shared<String>, Shared<Character>)>,
 }
 
 impl GameObjectDerived for Memory {
-    fn from_game_object(base: &crate::game_object::GameObject, game_state: &crate::game_state::GameState) -> Self {
-        let part = base.get("participants").unwrap().as_object().unwrap();
-        let mut participants = HashMap::new();
+    fn from_game_object(base: Ref<'_, GameObject>, game_state: &crate::game_state::GameState) -> Self {
+        let part = base.get("participants").unwrap().as_object_ref().unwrap();
+        let mut participants = Vec::new();
         for k in part.get_keys(){
             let v = part.get(&k).unwrap();
-            participants.insert(Rc::from(k), Rc::from(game_state.get_character(v.as_string().unwrap().as_str()).unwrap().clone()));
+            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).unwrap().clone()));
         }
         Memory{
-            date: base.get("date").unwrap().as_string().unwrap(),
-            r#type: base.get("type").unwrap().as_string().unwrap(),
+            date: base.get("date").unwrap().as_string(),
+            r#type: base.get("type").unwrap().as_string(),
             participants: participants
         }
     }

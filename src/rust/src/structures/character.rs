@@ -1,3 +1,5 @@
+use std::cell::Ref;
+
 use minijinja::{Environment, context};
 
 use serde::Serialize;
@@ -7,81 +9,79 @@ use crate::game_object::GameObject;
 
 use super::renderer::Renderable;
 
-use super::{Faith, Culture, Dynasty, Memory, Title, GameObjectDerived};
-
-use std::rc::Rc;
+use super::{Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
-    pub name: Rc<String>,
-    pub nick: Rc<String>,
-    pub birth: Rc<String>,
+    pub name: Shared<String>,
+    pub nick: Shared<String>,
+    pub birth: Shared<String>,
     pub dead: bool,
-    pub date: Option<Rc<String>>,
-    pub reason: Option<Rc<String>>,
-    pub faith: Rc<Faith>,
-    pub culture: Rc<Culture>,
-    pub house: Rc<Dynasty>,
+    pub date: Option<Shared<String>>,
+    pub reason: Option<Shared<String>>,
+    pub faith: Shared<Faith>,
+    pub culture: Shared<Culture>,
+    pub house: Shared<Dynasty>,
     pub skills: Vec<u8>,
-    pub traits: Vec<Rc<String>>,
-    pub recessive: Vec<Rc<String>>,
-    pub spouses: Vec<Rc<Character>>,
-    pub former: Vec<Rc<Character>>,
-    pub children: Vec<Rc<Character>>,
-    pub dna: Rc<String>,
-    pub memories: Vec<Rc<Memory>>,
-    pub titles: Vec<Rc<Title>>,
+    pub traits: Vec<Shared<String>>,
+    pub recessive: Vec<Shared<String>>,
+    pub spouses: Vec<Shared<Character>>,
+    pub former: Vec<Shared<Character>>,
+    pub children: Vec<Shared<Character>>,
+    pub dna: Shared<String>,
+    pub memories: Vec<Shared<Memory>>,
+    pub titles: Vec<Shared<Title>>,
     pub gold: u32,
     pub piety: u32,
     pub prestige: u32,
     pub dread: u32,
     pub strength: u32,
-    pub kills: Vec<Rc<Character>>,
-    pub languages: Vec<Rc<String>>,
-    pub vassals: Vec<Rc<Character>>
+    pub kills: Vec<Shared<Character>>,
+    pub languages: Vec<Shared<String>>,
+    pub vassals: Vec<Shared<Character>>
 }
 
 impl GameObjectDerived for Character {
 
-    fn from_game_object(base:&'_ GameObject, game_state:&crate::game_state::GameState) -> Self {
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&crate::game_state::GameState) -> Self {
         let keys = base.get_keys();
         let dead = keys.contains(&"date".to_string());
         let mut skills = Vec::new();
-        for s in base.get("skills").unwrap().as_array().unwrap(){
-            skills.push(s.as_string().unwrap().parse::<u8>().unwrap());
+        for s in base.get_object_ref("skills").get_array(){
+            skills.push(s.as_string_ref().unwrap().parse::<u8>().unwrap());
         }
         Character{
-            name: base.get("first_name").unwrap().as_string().unwrap(),
-            nick: base.get("nickname").unwrap().as_string().unwrap(),
-            birth: base.get("birth").unwrap().as_string().unwrap(),
+            name: base.get("first_name").unwrap().as_string(),
+            nick: base.get("nickname").unwrap().as_string(),
+            birth: base.get("birth").unwrap().as_string(),
             dead: dead,
             date: match dead {
-                true => Some(base.get("date").unwrap().as_string().unwrap()),
+                true => Some(base.get("date").unwrap().as_string()),
                 false => None
             },
             reason: match dead {
-                true => Some(base.get("reason").unwrap().as_string().unwrap()),
+                true => Some(base.get("reason").unwrap().as_string()),
                 false => None
             },
-            faith: Rc::from(game_state.get_faith(base.get("religion").unwrap().as_string().unwrap().as_str()).unwrap().clone()),
-            culture: Rc::from(game_state.get_culture(base.get("faith").unwrap().as_string().unwrap().as_str()).unwrap().clone()),
-            house: Rc::from(game_state.get_dynasty(base.get("dynasty_house").unwrap().as_string().unwrap().as_str()).unwrap().clone()),
+            faith: game_state.get_faith(base.get("religion").unwrap().as_string_ref().unwrap().as_str()).unwrap().clone(),
+            culture: game_state.get_culture(base.get("faith").unwrap().as_string_ref().unwrap().as_str()).unwrap().clone(),
+            house: game_state.get_dynasty(base.get("dynasty_house").unwrap().as_string_ref().unwrap().as_str()).unwrap().clone(),
             skills: skills,
-            traits: base.get("traits").unwrap().as_array().unwrap().iter().map(|t| Rc::from(t.as_string().unwrap())).collect(),
-            recessive: base.get("recessive_traits").unwrap().as_array().unwrap().iter().map(|t| Rc::from(t.as_string().unwrap())).collect(),
-            spouses: base.get("spouses").unwrap().as_array().unwrap().iter().map(|s| Rc::from(game_state.get_character(s.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            former: base.get("former_spouses").unwrap().as_array().unwrap().iter().map(|s| Rc::from(game_state.get_character(s.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            children: base.get("children").unwrap().as_array().unwrap().iter().map(|s| Rc::from(game_state.get_character(s.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            dna: Rc::from(base.get("dna").unwrap().as_string().unwrap()),
-            memories: base.get("memories").unwrap().as_array().unwrap().iter().map(|m| Rc::from(game_state.get_memory(m.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            titles: base.get("titles").unwrap().as_array().unwrap().iter().map(|t| Rc::from(game_state.get_title(t.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            gold: base.get("gold").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            piety: base.get("piety").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            prestige: base.get("prestige").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            dread: base.get("dread").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            strength: base.get("strength").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            kills: base.get("kills").unwrap().as_array().unwrap().iter().map(|k| Rc::from(game_state.get_character(k.as_string().unwrap().as_str()).unwrap().clone())).collect(),
-            languages: base.get("languages").unwrap().as_array().unwrap().iter().map(|l| Rc::from(l.as_string().unwrap())).collect(),
-            vassals: base.get("vassals").unwrap().as_array().unwrap().iter().map(|v| Rc::from(game_state.get_character(v.as_string().unwrap().as_str()).unwrap().clone())).collect()
+            traits: base.get_object_ref("traits").get_array().iter().map(|t| t.as_string()).collect(),
+            recessive: base.get_object_ref("recessive_traits").get_array().iter().map(|t| t.as_string()).collect(),
+            spouses: base.get_object_ref("spouses").get_array().iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            former: base.get_object_ref("former_spouses").get_array().iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            children: base.get_object_ref("children").get_array().iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            dna: base.get("dna").unwrap().as_string(),
+            memories: base.get_object_ref("memories").get_array().iter().map(|m| game_state.get_memory(m.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            titles: base.get_object_ref("titles").get_array().iter().map(|t| game_state.get_title(t.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            gold: base.get("gold").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
+            piety: base.get("piety").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
+            prestige: base.get("prestige").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
+            dread: base.get("dread").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
+            strength: base.get("strength").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
+            kills: base.get_object_ref("kills").get_array().iter().map(|k|game_state.get_character(k.as_string_ref().unwrap().as_str()).unwrap().clone()).collect(),
+            languages: base.get_object_ref("languages").get_array().iter().map(|l| l.as_string()).collect(),
+            vassals: base.get_object_ref("vassals").get_array().iter().map(|v| game_state.get_character(v.as_string_ref().unwrap().as_str()).unwrap().clone()).collect()
         }    
     }
 

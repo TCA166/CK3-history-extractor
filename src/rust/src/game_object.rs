@@ -1,35 +1,38 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{cell::Ref, collections::HashMap};
+
+use crate::structures::Shared;
 
 #[derive(Debug)]
 pub enum SaveFileValue{
-    String(Rc<String>),
-    Object(Rc<GameObject>)
+    String(Shared<String>),
+    Object(Shared<GameObject>)
 }
 
 impl SaveFileValue {
 
     /// Create a new Option<&String> from a SaveFileValue
-    pub fn as_string(&self) -> Option<Rc<String>>{
+    pub fn as_string_ref(&self) -> Option<Ref<'_, String>>{
         match self{
-            SaveFileValue::String(s) => Some(s.clone()),
+            SaveFileValue::String(s) => Some(s.as_ref().borrow()),
             _ => None
+        }
+    }
+
+    pub fn as_string(&self) -> Shared<String>{
+        match self{
+            SaveFileValue::String(s) => s.clone(),
+            _ => panic!("Invalid value")
         }
     }
 
     /// Create a new Option<&GameObject> from a SaveFileValue
-    pub fn as_object(&self) -> Option<Rc<GameObject>>{
+    pub fn as_object_ref(&self) -> Option<Ref<'_, GameObject>>{
         match self{
-            SaveFileValue::Object(o) => Some(o.clone()),
+            SaveFileValue::Object(o) => Some(o.as_ref().borrow()),
             _ => None
         }
     }
 
-    pub fn as_array(&self) -> Option<&Vec<SaveFileValue>>{
-        match self{
-            SaveFileValue::Object(o) => Some(o.get_array()),
-            _ => None
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -74,6 +77,14 @@ impl GameObject{
         self.inner.get(key)
     }
 
+    pub fn get_string_ref(&self, key: &str) -> Ref<'_, String>{
+        self.inner.get(key).unwrap().as_string_ref().unwrap()
+    }
+
+    pub fn get_object_ref(&self, key: &str) -> Ref<'_, GameObject>{
+        self.inner.get(key).unwrap().as_object_ref().unwrap()
+    }
+
     /// Get the value of an index in the GameObject array
     pub fn get_index(&self, index: usize) -> Option<&SaveFileValue>{
         self.array.get(index)
@@ -99,8 +110,6 @@ impl GameObject{
     }
 
     pub fn get_keys(&self) -> Vec<String>{
-        let mut keys: Vec<String> = self.inner.keys().map(|x| x.clone()).collect();
-        keys.sort();
-        keys
+        self.inner.keys().map(|x| x.clone()).collect()
     }
 }
