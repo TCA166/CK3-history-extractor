@@ -34,8 +34,11 @@ impl GameObjectDerived for Title{
             None => None
         };
         let mut vassals = Vec::new();
-        for v in base.get("vassals").unwrap().as_array().unwrap(){
-            vassals.push(game_state.get_title(v.as_string().unwrap().as_str()).unwrap().clone());
+        let vas = base.get("vassals");
+        if !vas.is_none(){
+            for v in base.get("vassals").unwrap().as_array().unwrap(){
+                vassals.push(game_state.get_title(v.as_string().unwrap().as_str()).unwrap().clone());
+            }
         }
         let mut history = HashMap::new();
         let hist = base.get("history").unwrap().as_object().unwrap();

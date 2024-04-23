@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
+use std::env;
 
 mod game_object;
 
@@ -15,11 +16,12 @@ use crate::structures::{Player, Title};
 mod structures;
 
 fn main() {
+    env::set_var("RUST_BACKTRACE", "1");
     //Get the staring time
     let start_time = SystemTime::now();
     //User IO
     let mut filename:String = String::new();
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
         stdout().flush().unwrap();

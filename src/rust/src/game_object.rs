@@ -1,7 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
 
-use crate::{game_state::GameState, structures::GameObjectDerived};
-
 #[derive(Debug)]
 pub enum SaveFileValue{
     String(Rc<String>),
@@ -86,10 +84,6 @@ impl GameObject{
         &self.name
     }
 
-    pub fn get_as<T> (&self, key: &str, game_state: &GameState) -> T where T: GameObjectDerived{
-        T::from_game_object(self.get(key).unwrap().as_object().unwrap().as_ref(), game_state)
-    }
-
     /// Push a new value into the GameObject array
     pub fn push(&mut self, value: SaveFileValue){
         self.array.push(value);
@@ -105,6 +99,8 @@ impl GameObject{
     }
 
     pub fn get_keys(&self) -> Vec<String>{
-        self.inner.keys().map(|x| x.clone()).collect()
+        let mut keys: Vec<String> = self.inner.keys().map(|x| x.clone()).collect();
+        keys.sort();
+        keys
     }
 }

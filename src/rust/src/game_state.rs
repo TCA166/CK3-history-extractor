@@ -59,25 +59,25 @@ impl GameState{
         let key = value.get_name().to_string();
         match T::type_name(){
             "player" => {
-                self.players.insert(key.clone(), Rc::from(value.get_as::<Player>(&key, self)));
+                self.players.insert(key.clone(), Rc::from(Player::from_game_object(value, self)));
             },
             "character" => {
-                self.characters.insert(key.clone(), Rc::from(value.get_as::<Character>(&key, self)));
+                self.characters.insert(key.clone(), Rc::from(Character::from_game_object(value, self)));
             },
             "title" => {
-                self.titles.insert(key.clone(), Rc::from(value.get_as::<Title>(&key, self)));
+                self.titles.insert(key.clone(), Rc::from(Title::from_game_object(value, self)));
             },
             "faith" => {
-                self.faiths.insert(key.clone(), Rc::from(value.get_as::<Faith>(&key, self)));
+                self.faiths.insert(key.clone(), Rc::from(Faith::from_game_object(value, self)));
             },
             "culture" => {
-                self.cultures.insert(key.clone(), Rc::from(value.get_as::<Culture>(&key, self)));
+                self.cultures.insert(key.clone(), Rc::from(Culture::from_game_object(value, self)));
             },
             "dynasty" => {
-                self.dynasties.insert(key.clone(), Rc::from(value.get_as::<Dynasty>(&key, self)));
+                self.dynasties.insert(key.clone(), Rc::from(Dynasty::from_game_object(value, self)));
             },
             "memory" => {
-                self.memories.insert(key.clone(), Rc::from(value.get_as::<Memory>(&key, self)));
+                self.memories.insert(key.clone(), Rc::from(Memory::from_game_object(value, self)));
             },
             _ => {panic!("Unknown type: {}", T::type_name())}
         };
