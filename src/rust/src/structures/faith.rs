@@ -2,7 +2,7 @@ use minijinja::{Environment, context};
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::character::Character;
+use super::{Character, GameObjectDerived};
 use super::renderer::Renderable;
 
 pub struct Faith {
@@ -11,6 +11,31 @@ pub struct Faith {
     pub head: Rc<Character>,
     pub fervor: f32,
     pub doctrines: Vec<Rc<String>>,
+}
+
+impl GameObjectDerived for Faith {
+    fn from_game_object(base:&'_ crate::game_object::GameObject, game_state:&crate::game_state::GameState) -> Self {
+        let mut tenets = Vec::new();
+        for t in base.get("tenets").unwrap().as_array().unwrap(){
+            tenets.push(t.as_string().unwrap());
+        }
+        let head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string().unwrap().as_str()).unwrap().clone());
+        let mut doctrines = Vec::new();
+        for d in base.get("doctrines").unwrap().as_array().unwrap(){
+            doctrines.push(d.as_string().unwrap());
+        }
+        Faith{
+            name: base.get("name").unwrap().as_string().unwrap(),
+            tenets: tenets,
+            head: head,
+            fervor: base.get("fervor").unwrap().as_string().unwrap().parse::<f32>().unwrap(),
+            doctrines: doctrines
+        }
+    }
+
+    fn type_name() -> &'static str {
+        "faith"
+    }
 }
 
 impl Serialize for Faith {

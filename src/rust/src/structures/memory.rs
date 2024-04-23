@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::Character;
+use super::{Character, GameObjectDerived};
 
 pub struct Memory {
     pub date: Rc<String>,
@@ -10,13 +10,23 @@ pub struct Memory {
     pub participants: HashMap<Rc<String>, Rc<Character>>,
 }
 
-impl Memory {
-    pub fn new(date: Rc<String>, r#type: Rc<String>, participants: HashMap<Rc<String>, Rc<Character>>) -> Self {
-        Memory {
-            date,
-            r#type,
-            participants,
+impl GameObjectDerived for Memory {
+    fn from_game_object(base: &crate::game_object::GameObject, game_state: &crate::game_state::GameState) -> Self {
+        let part = base.get("participants").unwrap().as_object().unwrap();
+        let mut participants = HashMap::new();
+        for k in part.get_keys(){
+            let v = part.get(&k).unwrap();
+            participants.insert(Rc::from(k), Rc::from(game_state.get_character(v.as_string().unwrap().as_str()).unwrap().clone()));
         }
+        Memory{
+            date: base.get("date").unwrap().as_string().unwrap(),
+            r#type: base.get("type").unwrap().as_string().unwrap(),
+            participants: participants
+        }
+    }
+
+    fn type_name() -> &'static str {
+        "memory"
     }
 }
 

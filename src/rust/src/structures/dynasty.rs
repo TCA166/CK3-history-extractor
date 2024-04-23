@@ -1,21 +1,52 @@
-use std::collections::HashMap;
 use std::rc::Rc;
-use std::cell::RefCell;
 use minijinja::{Environment, context};
+
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::Character;
+use super::{Character, GameObjectDerived};
 
 pub struct Dynasty{
-    pub parent: Rc<RefCell<Dynasty>>,
+    pub parent: Option<Rc<Dynasty>>,
     pub name: Rc<String>,
     pub members: u32,
     pub houses: u32,
     pub prestigeTot: u32,
     pub prestige: u32,
-    pub perks: HashMap<Rc<String>, u32>,
+    pub perks: Vec<Rc<String>>,
     pub leaders: Vec<Rc<Character>>,
+}
+
+impl GameObjectDerived for Dynasty {
+    fn from_game_object(base:&'_ crate::game_object::GameObject, game_state:&crate::game_state::GameState) -> Self {
+        let parent_id = base.get("dynasty").unwrap().as_string().unwrap();
+        let currency = base.get("prestige").unwrap().as_object().unwrap();
+        let mut perks = Vec::new();
+        for p in base.get("perks").unwrap().as_array().unwrap(){
+            perks.push(p.as_string().unwrap());
+        }
+        let mut leaders = Vec::new();
+        for l in base.get("leaders").unwrap().as_array().unwrap(){
+            leaders.push(Rc::from(game_state.get_character(l.as_string().unwrap().as_str()).unwrap().clone()));
+        }
+        Dynasty{
+            name: base.get("name").unwrap().as_string().unwrap(),
+            parent: match parent_id.as_str() {
+                "0" => None,
+                _ => Some(Rc::from(game_state.get_dynasty(parent_id.as_str()).unwrap().clone()))
+            },
+            members: 0,
+            houses: 0,
+            prestigeTot: currency.get("accumulated").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
+            prestige: currency.get("currency").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
+            perks: perks,
+            leaders: leaders
+        }
+    }
+
+    fn type_name() -> &'static str {
+        "dynasty"
+    }
 }
 
 impl Serialize for Dynasty {

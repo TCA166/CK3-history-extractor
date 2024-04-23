@@ -3,6 +3,7 @@ use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
+use super::GameObjectDerived;
 
 pub struct Culture {
     pub name: Rc<String>,
@@ -12,6 +13,32 @@ pub struct Culture {
     pub date: Rc<String>,
     pub parents: Vec<Rc<Culture>>,
     pub traditions: Vec<Rc<String>>,
+}
+
+impl GameObjectDerived for Culture {
+    fn from_game_object(base:&'_ crate::game_object::GameObject, game_state:&crate::game_state::GameState) -> Self {
+        let mut parents = Vec::new();
+        for p in base.get("parents").unwrap().as_array().unwrap(){
+            parents.push(Rc::from(game_state.get_culture(p.as_string().unwrap().as_str()).unwrap().clone()));
+        }
+        let mut traditions = Vec::new();
+        for t in base.get("traditions").unwrap().as_array().unwrap(){
+            traditions.push(t.as_string().unwrap());
+        }
+        Culture{
+            name: base.get("name").unwrap().as_string().unwrap(),
+            ethos: base.get("ethos").unwrap().as_string().unwrap(),
+            heritage: base.get("heritage").unwrap().as_string().unwrap(),
+            martial: base.get("martial").unwrap().as_string().unwrap(),
+            date: base.get("date").unwrap().as_string().unwrap(),
+            parents: parents,
+            traditions: traditions
+        }
+    }
+
+    fn type_name() -> &'static str {
+        "culture"
+    }
 }
 
 impl Serialize for Culture {

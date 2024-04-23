@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::SeekFrom;
+use std::rc::Rc;
 
 use crate::game_object::{GameObject, SaveFileValue};
 
@@ -16,11 +16,6 @@ impl SaveFile{
         SaveFile{
             file: File::open(filename).unwrap(),
         }
-    }
-
-    /// Reset the file to the beginning
-    pub fn reset(&mut self){
-        self.file.seek(SeekFrom::Start(0)).unwrap();
     }
 
 }
@@ -65,7 +60,7 @@ impl Iterator for SaveFile{
                 '}' => { // we have reached the end of an object
                     if past_eq {
                         if !val.is_empty() {
-                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(val.clone()));
+                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                             key.clear();
                             val.clear();
                             past_eq = false;
@@ -73,7 +68,7 @@ impl Iterator for SaveFile{
                     }
                     else {
                         if !key.is_empty() {
-                            stack.last_mut().unwrap().push(SaveFileValue::String(key.clone()));
+                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                             key.clear();
                         }
                     }
@@ -86,30 +81,30 @@ impl Iterator for SaveFile{
                     }
                     else{ // we pop the inner object and insert it into the outer object
                         let inner = stack.pop().unwrap();
-                        stack.last_mut().unwrap().insert(inner.get_name().to_string(), SaveFileValue::Object(inner));
+                        stack.last_mut().unwrap().insert(inner.get_name().to_string(), SaveFileValue::Object(Rc::new(inner)));
                     }
                 }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
                     if past_eq { // we have a key value pair
-                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(val.clone()));
+                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                         key.clear();
                         val.clear();
                         past_eq = false; // we reset the past_eq flag
                     }
                     else if !key.is_empty(){ // we have just a key { \n key \n }
-                        stack.last_mut().unwrap().push(SaveFileValue::String(key.clone()));
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                         key.clear();
                     }
                 }
                 ' ' | '\t' => { //syntax sugar we ignore, most of the time
                     if past_eq && !val.is_empty() { // in case {something=else something=else}
-                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(val.clone()));
+                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                         key.clear();
                         val.clear();
                         past_eq = false;
                     }
                     else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                        stack.last_mut().unwrap().push(SaveFileValue::String(key.clone()));
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                         key.clear();
                     }
                 } 
@@ -158,7 +153,8 @@ mod tests {
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get("test2").unwrap().as_object();
         assert!(test2.is_some());
-        let test3 = test2.unwrap().get("test3");
+        let binding = test2.unwrap();
+        let test3 = binding.get("test3");
         assert!(test3.is_some());
         assert_eq!(*(test3.unwrap().as_string().unwrap()) , "1".to_string());
     }

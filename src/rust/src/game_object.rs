@@ -1,27 +1,34 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
-use crate::{game_state::GameState, structures::{GameObjectDerived}};
+use crate::{game_state::GameState, structures::GameObjectDerived};
 
 #[derive(Debug)]
 pub enum SaveFileValue{
-    String(String),
-    Object(GameObject)
+    String(Rc<String>),
+    Object(Rc<GameObject>)
 }
 
 impl SaveFileValue {
 
     /// Create a new Option<&String> from a SaveFileValue
-    pub fn as_string(&self) -> Option<&String>{
+    pub fn as_string(&self) -> Option<Rc<String>>{
         match self{
-            SaveFileValue::String(s) => Some(s),
+            SaveFileValue::String(s) => Some(s.clone()),
             _ => None
         }
     }
 
     /// Create a new Option<&GameObject> from a SaveFileValue
-    pub fn as_object(&self) -> Option<&GameObject>{
+    pub fn as_object(&self) -> Option<Rc<GameObject>>{
         match self{
-            SaveFileValue::Object(o) => Some(o),
+            SaveFileValue::Object(o) => Some(o.clone()),
+            _ => None
+        }
+    }
+
+    pub fn as_array(&self) -> Option<&Vec<SaveFileValue>>{
+        match self{
+            SaveFileValue::Object(o) => Some(o.get_array()),
             _ => None
         }
     }
@@ -80,11 +87,7 @@ impl GameObject{
     }
 
     pub fn get_as<T> (&self, key: &str, game_state: &GameState) -> T where T: GameObjectDerived{
-        T::from_game_object(self.get(key).unwrap().as_object().unwrap(), game_state)
-    }
-
-    pub fn to<T> (&self, game_state: &GameState) -> T where T: GameObjectDerived{
-        T::from_game_object(self, game_state)
+        T::from_game_object(self.get(key).unwrap().as_object().unwrap().as_ref(), game_state)
     }
 
     /// Push a new value into the GameObject array
@@ -95,5 +98,13 @@ impl GameObject{
     /// Get the length of the GameObject array
     pub fn is_empty(&self) -> bool{
         self.inner.is_empty() && self.array.is_empty()
+    }
+
+    pub fn get_array(&self) -> &Vec<SaveFileValue>{
+        &self.array
+    }
+
+    pub fn get_keys(&self) -> Vec<String>{
+        self.inner.keys().map(|x| x.clone()).collect()
     }
 }

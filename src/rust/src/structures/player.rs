@@ -17,9 +17,9 @@ impl GameObjectDerived for Player {
     fn from_game_object(base: &GameObject, game_state: &GameState) -> Self {
         let key = base.get("character").unwrap().as_string().unwrap();
         Player {
-            name: Rc::new(base.get("name").unwrap().as_string().unwrap().to_string()),
+            name: base.get("name").unwrap().as_string().unwrap(),
             id: base.get("player").unwrap().as_string().unwrap().parse::<u32>().unwrap(),
-            character: Rc::from(*game_state.get_character(key).unwrap())
+            character: Rc::from(game_state.get_character(&key).unwrap().clone())
         }
     }
 
