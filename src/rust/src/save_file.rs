@@ -4,54 +4,65 @@ use std::rc::Rc;
 
 use crate::game_object::{GameObject, SaveFileValue};
 
-/// A struct that represents a ck3 save file
-pub struct SaveFile{
-    file: File
+
+/// A function that reads a single character from a file
+/// 
+/// ## Returns
+/// 
+/// The character read or None if the end of the file is reached
+fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies out there
+    let mut buffer = [0; 1];
+    let ret = file.read(&mut buffer);
+    if ret.is_err(){
+        return None;
+    }
+    return Some(buffer[0] as char);
 }
 
-impl SaveFile{
+pub struct Section{
+    name: String,
+    file:Option<File>
+}
 
-    /// Create a new SaveFile instance
-    pub fn new(filename: &str) -> SaveFile{
-        SaveFile{
-            file: File::open(filename).unwrap(),
+impl Section{
+    fn new(name: &str, file: File) -> Section{
+        Section{
+            name: name.to_string(),
+            file: Some(file)
         }
     }
 
-}
+    pub fn get_name(&self) -> &str{
+        &self.name
+    }
 
-impl Iterator for SaveFile{
+    fn invalidate(&mut self){
+        self.file = None;
+    }
 
-    type Item = GameObject;
-
-    /// Get the next object in the save file
-    fn next(&mut self) -> Option<GameObject>{
+    pub fn to_object(&mut self) -> Option<GameObject>{
+        if self.file.is_none(){
+            panic!("Invalid section");
+        }
+        let file = &mut self.file.as_mut().unwrap();
         // storage
         let mut key = String::new();
         let mut val = String::new();
         let mut past_eq = false; // we use this flag to determine if we are parsing a key or a value
         let mut depth = 0; // how deep we are in the object tree
-        let mut root_name:String = String::new();
         let mut object:GameObject = GameObject::new();
         //initialize the object stack
         let mut stack: Vec<GameObject> = Vec::new();
         stack.push(object);
         //initialize the key stack
         loop{
-            let c: char;
-            { // we read a single byte from the file
-                let mut buffer = [0; 1];
-                let ret = self.file.read(&mut buffer);
-                if ret.is_err(){
-                    break;
-                }
-                c = buffer[0] as char;
+            let ret = fgetc(file);
+            if ret.is_none(){
+                break;
             }
+            let c = ret.unwrap();
             match c{ // we parse the byte
                 '{' => { // we have a new object, we push a new hashmap to the stack
-                    if depth == 0 {
-                        root_name.clone_from(&key.clone());
-                    }
                     depth += 1;
                     stack.push(GameObject::from_name(&key));
                     key.clear();
@@ -122,11 +133,90 @@ impl Iterator for SaveFile{
             }
         }
         object = stack.pop().unwrap();
-        object.rename(root_name.clone());
+        object.rename(self.name.clone());
+        self.invalidate();
         if object.is_empty(){
             return None;
         }
         return Some(object);
+    }
+
+    pub fn skip(&mut self){
+        if self.file.is_none(){
+            panic!("Invalid section");
+        }
+        let mut depth = 0;
+        let file = &mut self.file.as_mut().unwrap();
+        loop{
+            let ret = fgetc(file);
+            if ret.is_none(){
+                break;
+            }
+            let c = ret.unwrap();
+            match c{
+                '{' => {
+                    depth += 1;
+                }
+                '}' => {
+                    depth -= 1;
+                    if depth == 0{
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        self.invalidate();
+    }
+}
+
+/// A struct that represents a ck3 save file
+pub struct SaveFile{
+    file: File
+}
+
+impl SaveFile{
+
+    /// Create a new SaveFile instance
+    pub fn new(filename: &str) -> SaveFile{
+        SaveFile{
+            file: File::open(filename).unwrap(),
+        }
+    }
+
+}
+
+impl Iterator for SaveFile{
+
+    type Item = Section;
+
+    /// Get the next object in the save file
+    fn next(&mut self) -> Option<Section>{
+        let mut key = String::new();
+        let file = &mut self.file;
+        loop{
+            let ret = fgetc(file);
+            if ret.is_none(){
+                return None;
+            }
+            let c = ret.unwrap();
+            match c{
+                '=' => {
+                    break;
+                }
+                '\n' => {
+                    key.clear();
+                }
+                ' ' | '\t' => {
+                    continue;
+                }
+                _ => {
+                    key.push(c);
+                }
+            }
+            
+        }
+        return Some(Section::new(&key, self.file.try_clone().unwrap()));
     }
 }
 
@@ -152,7 +242,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap();
+        let object = save_file.next().unwrap().to_object().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         let test3 = test2.get_string_ref("test3");
@@ -173,7 +263,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap();
+        let object = save_file.next().unwrap().to_object().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         let test2_val = test2;
@@ -201,7 +291,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap();
+        let object = save_file.next().unwrap().to_object().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         assert_eq!(*(test2.get_string_ref("1")) , "2".to_string());

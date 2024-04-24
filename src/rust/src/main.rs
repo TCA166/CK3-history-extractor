@@ -35,12 +35,13 @@ fn main() {
     let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
-    for i in save{
+    for mut i in save{
         print!("{:?}\n", i.get_name());
         stdout().flush().unwrap();
         match i.get_name(){ //the order is kept consistent with the order in the save file
             "landed_titles" => {
-                let landed = i.get_object_ref("landed_titles");
+                let o = i.to_object().unwrap();
+                let landed = o.get_object_ref("landed_titles");
                 for v in landed.get_obj_iter(){
                     let o = v.1.as_object_ref();
                     if o.is_none(){
@@ -51,7 +52,7 @@ fn main() {
                 }
             }
             "dynasties" => {
-                for d in i.get_obj_iter(){
+                for d in i.to_object().unwrap().get_obj_iter(){
                     let o = d.1.as_object_ref().unwrap();
                     if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
                         for h in o.get_obj_iter(){
@@ -66,22 +67,26 @@ fn main() {
                 }
             }
             "living" => {
-                let living = i.get_keys();
+                let o = i.to_object().unwrap();
+                let living = o.get_keys();
                 for l in living{
-                    game_state.add_character(i.get_object_ref(&l));
+                    game_state.add_character(o.get_object_ref(&l));
                 }
             }
             "dead_unprunable" => {
-                let dead = i.get_keys();
+                let o = i.to_object().unwrap();
+                let dead = o.get_keys();
                 for d in dead{
-                    game_state.add_character(i.get_object_ref(&d));
+                    game_state.add_character(o.get_object_ref(&d));
                 }
             }
             "played_character" => {
-                let p = RefCell::from(i);
+                let p = RefCell::from(i.to_object().unwrap());
                 game_state.add_player(p.borrow());
             }
-            _ => {}
+            _ => {
+                i.skip();
+            }
         }
     }
 
