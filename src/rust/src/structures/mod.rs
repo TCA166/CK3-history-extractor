@@ -27,14 +27,20 @@ pub use memory::Memory;
 mod title;
 pub use title::Title;
 
+/// A type alias for shared objects
 pub type Shared<T> = std::rc::Rc<std::cell::RefCell<T>>;
 
+/// A trait for objects that can be created from a GameObject
 pub trait GameObjectDerived{
+    /// Create a new object from a GameObject and auxiliary data from the game state
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self;
 
+    /// Get the type name of the object
     fn type_name() -> &'static str;
 
+    /// Create a dummy object that can be used as a placeholder
     fn dummy() -> Self;
 
+    /// Initialize the object (ideally dummy) with auxiliary data from the game state
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState);
 }

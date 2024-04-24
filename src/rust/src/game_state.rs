@@ -5,6 +5,10 @@ use std::rc::Rc;
 use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Memory, Player, Shared, Title};
 use crate::game_object::GameObject;
 
+/// A struct representing all known game objects
+/// 
+/// It is guaranteed to always return a reference to the same object for the same key.
+/// Naturally the value of that reference may change as values are added to the game state.
 pub struct GameState{
     players: HashMap<String, Shared<Player>>,
     characters: HashMap<String, Shared<Character>>,
@@ -16,6 +20,7 @@ pub struct GameState{
 }
 
 impl GameState{
+    /// Create a new GameState
     pub fn new() -> GameState{
         GameState{
             players: HashMap::new(),
@@ -28,6 +33,7 @@ impl GameState{
         }
     }
 
+    /// Get a player by key
     pub fn get_player(&mut self, key: &str) -> Shared<Player>{
         if !self.players.contains_key(key){
             let v = Rc::new(RefCell::new(Player::dummy()));
@@ -39,6 +45,7 @@ impl GameState{
         }
     }
 
+    /// Get a character by key
     pub fn get_character(&mut self, key: &str) -> Shared<Character>{
         if !self.characters.contains_key(key){
             let v = Rc::new(RefCell::new(Character::dummy()));
@@ -50,6 +57,7 @@ impl GameState{
         }
     }
 
+    /// Get a title by key
     pub fn get_title(&mut self, key: &str) -> Shared<Title>{
         if !self.titles.contains_key(key){
             let v = Rc::new(RefCell::new(Title::dummy()));
@@ -61,6 +69,7 @@ impl GameState{
         }
     }
 
+    /// Get a faith by key
     pub fn get_faith(&mut self, key: &str) -> Shared<Faith>{
         if self.faiths.contains_key(key){
             self.faiths.get(key).unwrap().clone()
@@ -72,6 +81,7 @@ impl GameState{
         }
     }
 
+    /// Get a culture by key
     pub fn get_culture(&mut self, key: &str) -> Shared<Culture>{
         if self.cultures.contains_key(key){
             self.cultures.get(key).unwrap().clone()
@@ -83,6 +93,7 @@ impl GameState{
         }
     }
 
+    /// Get a dynasty by key
     pub fn get_dynasty(&mut self, key: &str) -> Shared<Dynasty>{
         if self.dynasties.contains_key(key){
             self.dynasties.get(key).unwrap().clone()
@@ -94,6 +105,7 @@ impl GameState{
         }
     }
 
+    /// Get a memory by key
     pub fn get_memory(&mut self, key: &str) -> Shared<Memory>{
         if self.memories.contains_key(key){
             self.memories.get(key).unwrap().clone()
@@ -105,6 +117,7 @@ impl GameState{
         }
     }
 
+    /// Add a player to the game state
     pub fn add_player(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.players.contains_key(&key){
@@ -117,7 +130,7 @@ impl GameState{
         }
     }
 
-    
+    /// Add a character to the game state    
     pub fn add_character(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.characters.contains_key(&key){
@@ -130,6 +143,7 @@ impl GameState{
         }
     }
 
+    /// Add a title to the game state
     pub fn add_title(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.titles.contains_key(&key){
@@ -142,6 +156,7 @@ impl GameState{
         }
     }
 
+    /// Add a faith to the game state
     pub fn add_faith(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.faiths.contains_key(&key){
@@ -154,6 +169,7 @@ impl GameState{
         }
     }
 
+    /// Add a culture to the game state
     pub fn add_culture(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.cultures.contains_key(&key){
@@ -166,6 +182,7 @@ impl GameState{
         }
     }
 
+    /// Add a dynasty to the game state
     pub fn add_dynasty(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.dynasties.contains_key(&key){
@@ -178,6 +195,7 @@ impl GameState{
         }
     }
 
+    /// Add a memory to the game state
     pub fn add_memory(&mut self, value: Ref<'_, GameObject>){
         let key = value.get_name().to_string();
         if self.memories.contains_key(&key){

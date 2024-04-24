@@ -2,6 +2,9 @@ use std::{cell::Ref, collections::{hash_map, HashMap}, slice};
 
 use crate::structures::Shared;
 
+/// A value that can be stored in a SaveFile and is held by a GameObject
+/// 
+/// This is a wrapper around a String or a GameObject
 #[derive(Debug)]
 pub enum SaveFileValue{
     String(Shared<String>),
@@ -10,7 +13,11 @@ pub enum SaveFileValue{
 
 impl SaveFileValue {
 
-    /// Create a new Option<&String> from a SaveFileValue
+    /// Get the value as a string reference
+    /// 
+    /// ## Returns
+    /// 
+    /// A reference to the string
     pub fn as_string_ref(&self) -> Option<Ref<'_, String>>{
         match self{
             SaveFileValue::String(s) => Some(s.as_ref().borrow()),
@@ -18,6 +25,15 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as a string
+    /// 
+    /// ## Panics
+    /// 
+    /// Panics if the value is not a string
+    /// 
+    /// ## Returns
+    /// 
+    /// A reference to the string
     pub fn as_string(&self) -> Shared<String>{
         match self{
             SaveFileValue::String(s) => s.clone(),
@@ -25,7 +41,11 @@ impl SaveFileValue {
         }
     }
 
-    /// Create a new Option<&GameObject> from a SaveFileValue
+    /// Get the value as a GameObject reference
+    /// 
+    /// ## Returns
+    /// 
+    /// A reference to the GameObject
     pub fn as_object_ref(&self) -> Option<Ref<'_, GameObject>>{
         match self{
             SaveFileValue::Object(o) => Some(o.as_ref().borrow()),
@@ -35,6 +55,9 @@ impl SaveFileValue {
 
 }
 
+/// Representation of a save file object
+/// 
+/// Acts like a named dictionary and array, may be either or both
 #[derive(Debug)]
 pub struct GameObject{
     inner: HashMap<String, SaveFileValue>,
@@ -77,10 +100,12 @@ impl GameObject{
         self.inner.get(key)
     }
 
+    /// Get the value of a key as a string
     pub fn get_string_ref(&self, key: &str) -> Ref<'_, String>{
         self.inner.get(key).unwrap().as_string_ref().unwrap()
     }
 
+    /// Get the value of a key as a GameObject
     pub fn get_object_ref(&self, key: &str) -> Ref<'_, GameObject>{
         self.inner.get(key).unwrap().as_object_ref().unwrap()
     }
@@ -105,14 +130,17 @@ impl GameObject{
         self.inner.is_empty() && self.array.is_empty()
     }
 
+    /// Get the length of the GameObject array
     pub fn get_array_iter(&self) -> slice::Iter<SaveFileValue>{
         self.array.iter()
     }
 
+    /// Get the length of the GameObject array
     pub fn get_obj_iter(&self) -> hash_map::Iter<String, SaveFileValue>{
         self.inner.iter()
     }
 
+    /// Get the keys of the GameObject
     pub fn get_keys(&self) -> Vec<String>{
         self.inner.keys().map(|x| x.clone()).collect()
     }
