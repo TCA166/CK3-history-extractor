@@ -132,10 +132,13 @@ impl Iterator for SaveFile{
 
 mod tests {
 
+    #[allow(unused_imports)]
     use std::io::Write;
 
+    #[allow(unused_imports)]
     use tempfile::NamedTempFile;
 
+    #[allow(unused_imports)]
     use crate::game_object::GameObject;
 
     #[test]

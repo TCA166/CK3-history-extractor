@@ -20,8 +20,7 @@ pub struct Dynasty{
 
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
-        let parent_id = base.get_string_ref("dynasty");
-        let currency = base.get_object_ref("prestige");
+        
         let mut perks = Vec::new();
         for p in base.get_object_ref("perks").get_array_iter(){
             perks.push(p.as_string());
@@ -30,13 +29,19 @@ impl GameObjectDerived for Dynasty {
         for l in base.get_object_ref("leaders").get_array_iter(){
             leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
         }
-        let prestige_tot = currency.get_string_ref("accumulated").parse::<u32>().unwrap();
-        let prestige = currency.get_string_ref("currency").parse::<u32>().unwrap();
+        let currency = base.get("prestige");
+        let mut prestige_tot = 0;
+        let mut prestige = 0;
+        if currency.is_some(){
+            prestige_tot = currency.unwrap().as_object_ref().unwrap().get_string_ref("accumulated").parse::<u32>().unwrap();
+            prestige = currency.unwrap().as_object_ref().unwrap().get_string_ref("currency").parse::<u32>().unwrap();
+        }
+        let parent_id = base.get("dynasty");
         Dynasty{
             name: base.get("name").unwrap().as_string(),
-            parent: match parent_id.as_str() {
-                "0" => None,
-                _ => Some(game_state.get_dynasty(parent_id.as_str()).clone())
+            parent: match parent_id {
+                None => None,
+                k => Some(game_state.get_dynasty(k.unwrap().as_string_ref().unwrap().as_str()).clone())
             },
             members: 0,
             houses: 0,

@@ -125,7 +125,7 @@ impl GameObjectDerived for Title{
             }
         }
         self.vassals = vassals;
-        let mut history = get_history(base, game_state);
+        let history = get_history(base, game_state);
         self.history = history;
     
     }

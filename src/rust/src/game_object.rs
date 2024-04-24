@@ -111,6 +111,7 @@ impl GameObject{
     }
 
     /// Get the value of an index in the GameObject array
+    #[allow(dead_code)]
     pub fn get_index(&self, index: usize) -> Option<&SaveFileValue>{
         self.array.get(index)
     }
