@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
@@ -12,8 +12,6 @@ use save_file::SaveFile;
 mod game_state;
 use game_state::GameState;
 
-use crate::structures::{Player, Title};
-
 mod structures;
 
 fn main() {
@@ -21,15 +19,14 @@ fn main() {
     //Get the staring time
     let start_time = SystemTime::now();
     //User IO
-    let mut filename:String = String::new();
+    let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
         stdout().flush().unwrap();
         //raw file contents
-        let mut filename = String::new();
         stdin().read_line(&mut filename).unwrap();
-        let filename = filename.trim();
+        filename = filename.trim().to_string();
     }
     else{
         filename = args[1].clone();
@@ -39,12 +36,18 @@ fn main() {
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
     for i in save{
-        print!("{:?}", i.get_name());
+        print!("{:?}\n", i.get_name());
+        stdout().flush().unwrap();
         match i.get_name(){ //the order is kept consistent with the order in the save file
             "landed_titles" => {
                 let landed = i.get_object_ref("landed_titles");
-                for l in landed.get_keys(){
-                    game_state.add_title(landed.get_object_ref(&l));
+                for v in landed.get_obj_iter(){
+                    let o = v.1.as_object_ref();
+                    if o.is_none(){
+                        println!("Landed title {} is none?", v.0);
+                        continue;
+                    }
+                    game_state.add_title(o.unwrap());
                 }
             }
             "dynasties" => {

@@ -23,11 +23,11 @@ impl GameObjectDerived for Dynasty {
         let parent_id = base.get_string_ref("dynasty");
         let currency = base.get_object_ref("prestige");
         let mut perks = Vec::new();
-        for p in base.get_object_ref("perks").get_array(){
+        for p in base.get_object_ref("perks").get_array_iter(){
             perks.push(p.as_string());
         }
         let mut leaders = Vec::new();
-        for l in base.get_object_ref("leaders").get_array(){
+        for l in base.get_object_ref("leaders").get_array_iter(){
             leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
         }
         let prestige_tot = currency.get_string_ref("accumulated").parse::<u32>().unwrap();
@@ -68,11 +68,11 @@ impl GameObjectDerived for Dynasty {
         let parent_id = base.get_string_ref("dynasty");
         let currency = base.get_object_ref("prestige");
         let mut perks = Vec::new();
-        for p in base.get_object_ref("perks").get_array(){
+        for p in base.get_object_ref("perks").get_array_iter(){
             perks.push(p.as_string());
         }
         let mut leaders = Vec::new();
-        for l in base.get_object_ref("leaders").get_array(){
+        for l in base.get_object_ref("leaders").get_array_iter(){
             leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
         }
         let prestige_tot = currency.get_string_ref("accumulated").parse::<u32>().unwrap();

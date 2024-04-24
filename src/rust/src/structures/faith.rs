@@ -10,7 +10,7 @@ use crate::game_object::GameObject;
 pub struct Faith {
     pub name: Shared<String>,
     pub tenets: Vec<Shared<String>>,
-    pub head: Shared<Character>,
+    pub head: Option<Shared<Character>>,
     pub fervor: f32,
     pub doctrines: Vec<Shared<String>>,
 }
@@ -18,12 +18,16 @@ pub struct Faith {
 impl GameObjectDerived for Faith {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut tenets = Vec::new();
-        for t in base.get_object_ref("tenets").get_array(){
+        for t in base.get_object_ref("tenets").get_array_iter(){
             tenets.push(t.as_string());
         }
-        let head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string_ref().unwrap().as_str()).clone());
+        let head_id = base.get("head");
+        let head = match head_id{
+            Some(h) => Some(Rc::from(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone())),
+            None => None
+        };
         let mut doctrines = Vec::new();
-        for d in base.get_object_ref("doctrines").get_array(){
+        for d in base.get_object_ref("doctrines").get_array_iter(){
             doctrines.push(d.as_string());
         }
         Faith{
@@ -43,7 +47,7 @@ impl GameObjectDerived for Faith {
         Faith{
             name: Rc::new("".to_owned().into()),
             tenets: Vec::new(),
-            head: Rc::new(Character::dummy().into()),
+            head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
             doctrines: Vec::new()
         }
@@ -51,13 +55,17 @@ impl GameObjectDerived for Faith {
 
     fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
         let mut tenets = Vec::new();
-        for t in base.get_object_ref("tenets").get_array(){
+        for t in base.get_object_ref("tenets").get_array_iter(){
             tenets.push(t.as_string());
         }
         self.tenets = tenets;
-        self.head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string_ref().unwrap().as_str()).clone());
+        let head_id = base.get("head");
+        self.head = match head_id{
+            Some(h) => Some(Rc::from(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone())),
+            None => None
+        };
         let mut doctrines = Vec::new();
-        for d in base.get_object_ref("doctrines").get_array(){
+        for d in base.get_object_ref("doctrines").get_array_iter(){
             doctrines.push(d.as_string());
         }
         self.doctrines = doctrines;

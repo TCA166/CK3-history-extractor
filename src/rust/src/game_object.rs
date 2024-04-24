@@ -1,4 +1,4 @@
-use std::{cell::Ref, collections::HashMap};
+use std::{cell::Ref, collections::{hash_map, HashMap}, slice};
 
 use crate::structures::Shared;
 
@@ -105,8 +105,12 @@ impl GameObject{
         self.inner.is_empty() && self.array.is_empty()
     }
 
-    pub fn get_array(&self) -> &Vec<SaveFileValue>{
-        &self.array
+    pub fn get_array_iter(&self) -> slice::Iter<SaveFileValue>{
+        self.array.iter()
+    }
+
+    pub fn get_obj_iter(&self) -> hash_map::Iter<String, SaveFileValue>{
+        self.inner.iter()
     }
 
     pub fn get_keys(&self) -> Vec<String>{

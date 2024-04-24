@@ -18,13 +18,51 @@ pub struct Title {
     pub de_jure: Option<Shared<Title>>,
     pub de_facto: Option<Shared<Title>>,
     pub vassals: Vec<Shared<Title>>,
-    pub history: HashMap<String, (Shared<Character>, Shared<String>)>
+    pub history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>
+}
+
+fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> HashMap<String, (Option<Shared<Character>>, Shared<String>)>{
+    let mut history = HashMap::new();
+    let hist = base.get("history");
+    if hist.is_some() {
+        let hist_obj = hist.unwrap().as_object_ref().unwrap();
+        for h in hist_obj.get_keys(){
+            let val = hist_obj.get(&h);
+            let character;
+            let action:Shared<String>;
+            match val{
+                Some(&SaveFileValue::Object(ref o)) => {
+                    let r = o.as_ref().borrow();
+                    action = r.get("type").unwrap().as_string();
+                    let holder = r.get("holder");
+                    match holder{
+                        Some(h) => {
+                            character = Some(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone());
+                        },
+                        None => {
+                            character = None;
+                        }
+                    }
+                },
+                Some(&SaveFileValue::String(ref o)) => {
+                    action = Rc::new(RefCell::new("Inherited".to_owned()));
+                    character = Some(game_state.get_character(o.as_ref().borrow().as_str()).clone());
+                }
+                _ => {
+                    panic!("Invalid history entry")
+                }
+            }
+            let ent = (character, action);
+            history.insert(h, ent);
+        }
+    }
+    history
 }
 
 impl GameObjectDerived for Title{
 
     fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut GameState) -> Self {
-        println!("Title: {:?}\n", base);
+        //first we get the optional de_jure_liege and de_facto_liege
         let de_jure_id = base.get("de_jure_liege");
         let de_jure = match de_jure_id{
             Some(de_jure) => Some(game_state.get_title(de_jure.as_string_ref().unwrap().as_str()).clone()),
@@ -36,37 +74,17 @@ impl GameObjectDerived for Title{
             None => None
         };
         let mut vassals = Vec::new();
+        //if the title has vassals, we get them
         let vas = base.get("vassals");
         if !vas.is_none(){
-            for v in base.get_object_ref("vassals").get_array(){
+            for v in base.get_object_ref("vassals").get_array_iter(){
                 vassals.push(game_state.get_title(v.as_string_ref().unwrap().as_str()).clone());
             }
         }
-        let mut history = HashMap::new();
-        let hist = base.get("history").unwrap().as_object_ref().unwrap();
-        for h in hist.get_keys(){
-            let val = hist.get(&h);
-            let character;
-            let action:Shared<String>;
-            match val{
-                Some(&SaveFileValue::Object(ref o)) => {
-                    let r = o.as_ref().borrow();
-                    action = r.get("type").unwrap().as_string();
-                    character = game_state.get_character(r.get_string_ref("holder").as_str()).clone();
-                },
-                Some(&SaveFileValue::String(ref o)) => {
-                    action = Rc::new(RefCell::new("Inherited".to_owned()));
-                    character = game_state.get_character(o.as_ref().borrow().as_str()).clone();
-                }
-                _ => {
-                    panic!("Invalid history entry")
-                }
-            }
-            let ent = (character, action);
-            history.insert(h, ent);
-        }
+        let name = base.get("name").unwrap().as_string();
+        let history = get_history(base, game_state);
         Title{
-            name: base.get("name").unwrap().as_string(),
+            name: name,
             de_jure: de_jure,
             de_facto: de_facto,
             vassals: vassals,
@@ -102,34 +120,12 @@ impl GameObjectDerived for Title{
         let mut vassals = Vec::new();
         let vas = base.get("vassals");
         if !vas.is_none(){
-            for v in base.get_object_ref("vassals").get_array(){
+            for v in base.get_object_ref("vassals").get_array_iter(){
                 vassals.push(game_state.get_title(v.as_string_ref().unwrap().as_str()).clone());
             }
         }
         self.vassals = vassals;
-        let mut history = HashMap::new();
-        let hist = base.get("history").unwrap().as_object_ref().unwrap();
-        for h in hist.get_keys(){
-            let val = hist.get(&h);
-            let character;
-            let action:Shared<String>;
-            match val{
-                Some(&SaveFileValue::Object(ref o)) => {
-                    let r = o.as_ref().borrow();
-                    action = r.get("type").unwrap().as_string();
-                    character = game_state.get_character(r.get_string_ref("holder").as_str()).clone();
-                },
-                Some(&SaveFileValue::String(ref o)) => {
-                    action = Rc::new(RefCell::new("Inherited".to_owned()));
-                    character = game_state.get_character(o.as_ref().borrow().as_str()).clone();
-                }
-                _ => {
-                    panic!("Invalid history entry")
-                }
-            }
-            let ent = (character, action);
-            history.insert(h, ent);
-        }
+        let mut history = get_history(base, game_state);
         self.history = history;
     
     }

@@ -19,11 +19,11 @@ pub struct Culture {
 impl GameObjectDerived for Culture {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut parents = Vec::new();
-        for p in base.get_object_ref("parents").get_array(){
+        for p in base.get_object_ref("parents").get_array_iter(){
             parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
         }
         let mut traditions = Vec::new();
-        for t in base.get_object_ref("traditions").get_array(){
+        for t in base.get_object_ref("traditions").get_array_iter(){
             traditions.push(t.as_string());
         }
         Culture{
@@ -55,12 +55,12 @@ impl GameObjectDerived for Culture {
 
     fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
         let mut parents = Vec::new();
-        for p in base.get_object_ref("parents").get_array(){
+        for p in base.get_object_ref("parents").get_array_iter(){
             parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
         }
         self.parents = parents;
         let mut traditions = Vec::new();
-        for t in base.get_object_ref("traditions").get_array(){
+        for t in base.get_object_ref("traditions").get_array_iter(){
             traditions.push(t.as_string());
         }
         self.traditions = traditions;
