@@ -51,9 +51,18 @@ fn main() {
                 }
             }
             "dynasties" => {
-                let dynasties = i.get_keys();
-                for d in dynasties{
-                    game_state.add_dynasty(i.get_object_ref(&d));
+                for d in i.get_obj_iter(){
+                    let o = d.1.as_object_ref().unwrap();
+                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
+                        for h in o.get_obj_iter(){
+                            let house = h.1.as_object_ref();
+                            if house.is_none(){
+                                println!("House {} is none?", h.0);
+                                continue;
+                            }
+                            game_state.add_dynasty(house.unwrap());
+                        }
+                    }
                 }
             }
             "living" => {

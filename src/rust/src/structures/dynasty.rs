@@ -4,16 +4,16 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{Character, GameObjectDerived, Shared};
-use crate::game_object::GameObject;
+use crate::game_object::{GameObject, SaveFileValue};
 use std::cell::Ref;
 
 pub struct Dynasty{
     pub parent: Option<Shared<Dynasty>>,
-    pub name: Shared<String>,
+    pub name: Option<Shared<String>>,
     pub members: u32,
     pub houses: u32,
-    pub prestige_tot: u32,
-    pub prestige: u32,
+    pub prestige_tot: f32,
+    pub prestige: f32,
     pub perks: Vec<Shared<String>>,
     pub leaders: Vec<Shared<Character>>,
 }
@@ -22,23 +22,51 @@ impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         
         let mut perks = Vec::new();
-        for p in base.get_object_ref("perks").get_array_iter(){
-            perks.push(p.as_string());
+        let perks_obj = base.get("perks");
+        if perks_obj.is_some(){
+            for p in perks_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+                perks.push(p.as_string());
+            }
         }
         let mut leaders = Vec::new();
-        for l in base.get_object_ref("leaders").get_array_iter(){
-            leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+        let leaders_obj = base.get("leaders");
+        if perks_obj.is_some(){
+            for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+                leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+            }
         }
         let currency = base.get("prestige");
-        let mut prestige_tot = 0;
-        let mut prestige = 0;
+        let mut prestige_tot = 0.0;
+        let mut prestige = 0.0;
         if currency.is_some(){
-            prestige_tot = currency.unwrap().as_object_ref().unwrap().get_string_ref("accumulated").parse::<u32>().unwrap();
-            prestige = currency.unwrap().as_object_ref().unwrap().get_string_ref("currency").parse::<u32>().unwrap();
+            let o = currency.unwrap().as_object_ref().unwrap();
+            match o.get("accumulated").unwrap() {
+                SaveFileValue::Object(ref o) => {
+                    prestige_tot = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                },
+                SaveFileValue::String(ref o) => {
+                    prestige_tot = o.as_ref().borrow().parse::<f32>().unwrap();
+                },
+            }
+            match o.get("currency") {
+                Some(v) => match v {
+                    SaveFileValue::Object(ref o) => {
+                        prestige = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                    },
+                    SaveFileValue::String(ref o) => {
+                        prestige = o.as_ref().borrow().parse::<f32>().unwrap();
+                    },
+                },
+                None => {}
+            }
         }
         let parent_id = base.get("dynasty");
+        let name:Option<Shared<String>> = match base.get("name") {
+            Some(n) => Some(n.as_string()),
+            None => None
+        };
         Dynasty{
-            name: base.get("name").unwrap().as_string(),
+            name: name,
             parent: match parent_id {
                 None => None,
                 k => Some(game_state.get_dynasty(k.unwrap().as_string_ref().unwrap().as_str()).clone())
@@ -58,34 +86,66 @@ impl GameObjectDerived for Dynasty {
 
     fn dummy() -> Self {
         Dynasty{
-            name: Shared::new("".to_owned().into()),
+            name: Some(Shared::new("".to_owned().into())),
             parent: None,
             members: 0,
             houses: 0,
-            prestige_tot: 0,
-            prestige: 0,
+            prestige_tot: 0.0,
+            prestige: 0.0,
             perks: Vec::new(),
             leaders: Vec::new()
         }
     }
 
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
-        let parent_id = base.get_string_ref("dynasty");
-        let currency = base.get_object_ref("prestige");
         let mut perks = Vec::new();
-        for p in base.get_object_ref("perks").get_array_iter(){
-            perks.push(p.as_string());
+        let perks_obj = base.get("perks");
+        if perks_obj.is_some(){
+            for p in perks_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+                perks.push(p.as_string());
+            }
         }
         let mut leaders = Vec::new();
-        for l in base.get_object_ref("leaders").get_array_iter(){
-            leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+        let leaders_obj = base.get("leaders");
+        if perks_obj.is_some(){
+            for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+                leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+            }
         }
-        let prestige_tot = currency.get_string_ref("accumulated").parse::<u32>().unwrap();
-        let prestige = currency.get_string_ref("currency").parse::<u32>().unwrap();
-        self.name = base.get("name").unwrap().as_string();
-        self.parent = match parent_id.as_str() {
-            "0" => None,
-            _ => Some(game_state.get_dynasty(parent_id.as_str()).clone())
+        let currency = base.get("prestige");
+        let mut prestige_tot = 0.0;
+        let mut prestige = 0.0;
+        if currency.is_some(){
+            let o = currency.unwrap().as_object_ref().unwrap();
+            match o.get("accumulated").unwrap() {
+                SaveFileValue::Object(ref o) => {
+                    prestige_tot = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                },
+                SaveFileValue::String(ref o) => {
+                    prestige_tot = o.as_ref().borrow().parse::<f32>().unwrap();
+                },
+            }
+            match o.get("currency") {
+                Some(v) => match v {
+                    SaveFileValue::Object(ref o) => {
+                        prestige = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                    },
+                    SaveFileValue::String(ref o) => {
+                        prestige = o.as_ref().borrow().parse::<f32>().unwrap();
+                    },
+                },
+                None => {}
+            }
+        }
+        let parent_id = base.get("dynasty");
+        let name:Option<Shared<String>> = match base.get("name") {
+            Some(n) => Some(n.as_string()),
+            None => None
+        };
+        self.name = name;
+        self.parent = match parent_id {
+            None => None,
+            k => Some(game_state.get_dynasty(k.unwrap().as_string_ref().unwrap().as_str()).clone())
         };
         self.members = 0;
         self.houses = 0;
@@ -93,7 +153,6 @@ impl GameObjectDerived for Dynasty {
         self.prestige = prestige;
         self.perks = perks;
         self.leaders = leaders;
-    
     }
 }
 
