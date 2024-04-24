@@ -45,6 +45,7 @@ fn main() {
                 for v in landed.get_obj_iter(){
                     let o = v.1.as_object_ref();
                     if o.is_none(){
+                        // FIXME investigate why
                         println!("Landed title {} is none?", v.0);
                         continue;
                     }
@@ -58,6 +59,7 @@ fn main() {
                         for h in o.get_obj_iter(){
                             let house = h.1.as_object_ref();
                             if house.is_none(){
+                                // FIXME investigate why
                                 println!("House {} is none?", h.0);
                                 continue;
                             }

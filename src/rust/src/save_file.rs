@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 use crate::game_object::{GameObject, SaveFileValue};
 
-
 /// A function that reads a single character from a file
 /// 
 /// ## Returns
@@ -32,6 +31,7 @@ impl Section{
         }
     }
 
+    /// Get the name of the section
     pub fn get_name(&self) -> &str{
         &self.name
     }
@@ -40,6 +40,7 @@ impl Section{
         self.file = None;
     }
 
+    /// Convert the section to a GameObject and invalidate it
     pub fn to_object(&mut self) -> Option<GameObject>{
         if self.file.is_none(){
             panic!("Invalid section");
@@ -141,6 +142,7 @@ impl Section{
         return Some(object);
     }
 
+    /// Skip the current section and invalidate it
     pub fn skip(&mut self){
         if self.file.is_none(){
             panic!("Invalid section");
@@ -201,6 +203,9 @@ impl Iterator for SaveFile{
             }
             let c = ret.unwrap();
             match c{
+                '{' | '}' | '"' => {
+                    panic!("Unexpected character");
+                }
                 '=' => {
                     break;
                 }

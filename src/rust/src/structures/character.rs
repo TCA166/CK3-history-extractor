@@ -13,7 +13,7 @@ use super::{Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
     pub name: Shared<String>,
-    pub nick: Shared<String>,
+    pub nick: Option<Shared<String>>,
     pub birth: Shared<String>,
     pub dead: bool,
     pub date: Option<Shared<String>>,
@@ -46,12 +46,36 @@ impl GameObjectDerived for Character {
         let keys = base.get_keys();
         let dead = keys.contains(&"date".to_string());
         let mut skills = Vec::new();
-        for s in base.get_object_ref("skills").get_array_iter(){
+        println!("{:?}", base);
+        for s in base.get_object_ref("skill").get_array_iter(){
             skills.push(s.as_string_ref().unwrap().parse::<u8>().unwrap());
+        }
+        let mut recessive = Vec::new();
+        let rec_t = base.get("recessive_traits");
+        if rec_t.is_some(){
+            for r in rec_t.unwrap().as_object_ref().unwrap().get_array_iter(){
+                recessive.push(r.as_string());
+            }
+        }
+        let mut spouses = Vec::new();
+        let mut former_spouses = Vec::new();
+        let mut children = Vec::new();
+        let family_data = base.get("family_data");
+        if family_data.is_some(){
+            let f = family_data.unwrap().as_object_ref().unwrap();
+            for s in f.get("spouses").unwrap().as_object_ref().unwrap().get_array_iter(){
+                spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+            for s in f.get("former_spouses").unwrap().as_object_ref().unwrap().get_array_iter(){
+                former_spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+            for s in f.get("children").unwrap().as_object_ref().unwrap().get_array_iter(){
+                children.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
         }
         Character{
             name: base.get("first_name").unwrap().as_string(),
-            nick: base.get("nickname").unwrap().as_string(),
+            nick: base.get("nickname").map(|v| v.as_string()),
             birth: base.get("birth").unwrap().as_string(),
             dead: dead,
             date: match dead {
@@ -62,15 +86,15 @@ impl GameObjectDerived for Character {
                 true => Some(base.get("reason").unwrap().as_string()),
                 false => None
             },
-            faith: game_state.get_faith(base.get("religion").unwrap().as_string_ref().unwrap().as_str()).clone(),
-            culture: game_state.get_culture(base.get("faith").unwrap().as_string_ref().unwrap().as_str()).clone(),
+            faith: game_state.get_faith(base.get("faith").unwrap().as_string_ref().unwrap().as_str()).clone(),
+            culture: game_state.get_culture(base.get("culture").unwrap().as_string_ref().unwrap().as_str()).clone(),
             house: game_state.get_dynasty(base.get("dynasty_house").unwrap().as_string_ref().unwrap().as_str()).clone(),
             skills: skills,
             traits: base.get_object_ref("traits").get_array_iter().map(|t| t.as_string()).collect(),
-            recessive: base.get_object_ref("recessive_traits").get_array_iter().map(|t| t.as_string()).collect(),
-            spouses: base.get_object_ref("spouses").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect(),
-            former: base.get_object_ref("former_spouses").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect(),
-            children: base.get_object_ref("children").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect(),
+            recessive:recessive,
+            spouses: spouses,
+            former: former_spouses,
+            children: children,
             dna: base.get("dna").unwrap().as_string(),
             memories: base.get_object_ref("memories").get_array_iter().map(|m| game_state.get_memory(m.as_string_ref().unwrap().as_str()).clone()).collect(),
             titles: base.get_object_ref("titles").get_array_iter().map(|t| game_state.get_title(t.as_string_ref().unwrap().as_str()).clone()).collect(),
@@ -92,7 +116,7 @@ impl GameObjectDerived for Character {
     fn dummy() -> Self {
         Character{
             name: Shared::new("".to_owned().into()),
-            nick: Shared::new("".to_owned().into()),
+            nick: None,
             birth: Shared::new("".to_owned().into()),
             dead: false,
             date: None,
@@ -122,32 +146,54 @@ impl GameObjectDerived for Character {
 
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
         let keys = base.get_keys();
-        let dead = keys.contains(&"date".to_string());
+        self.dead = keys.contains(&"date".to_string());
         let mut skills = Vec::new();
-        for s in base.get_object_ref("skills").get_array_iter(){
+        for s in base.get_object_ref("skill").get_array_iter(){
             skills.push(s.as_string_ref().unwrap().parse::<u8>().unwrap());
         }
+        let mut recessive = Vec::new();
+        let rec_t = base.get("recessive_traits");
+        if rec_t.is_some(){
+            for r in rec_t.unwrap().as_object_ref().unwrap().get_array_iter(){
+                recessive.push(r.as_string());
+            }
+        }
+        let mut spouses = Vec::new();
+        let mut former_spouses = Vec::new();
+        let mut children = Vec::new();
+        let family_data = base.get("family_data");
+        if family_data.is_some(){
+            let f = family_data.unwrap().as_object_ref().unwrap();
+            for s in f.get("spouses").unwrap().as_object_ref().unwrap().get_array_iter(){
+                spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+            for s in f.get("former_spouses").unwrap().as_object_ref().unwrap().get_array_iter(){
+                former_spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+            for s in f.get("children").unwrap().as_object_ref().unwrap().get_array_iter(){
+                children.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+        }
         self.name = base.get("first_name").unwrap().as_string();
-        self.nick = base.get("nickname").unwrap().as_string();
+        self.nick = base.get("nickname").map(|v| v.as_string());
         self.birth = base.get("birth").unwrap().as_string();
-        self.dead = dead;
-        self.date = match dead {
+        self.date = match self.dead {
             true => Some(base.get("date").unwrap().as_string()),
             false => None
         };
-        self.reason = match dead {
+        self.reason = match self.dead {
             true => Some(base.get("reason").unwrap().as_string()),
             false => None
         };
-        self.faith = game_state.get_faith(base.get("religion").unwrap().as_string_ref().unwrap().as_str()).clone();
-        self.culture = game_state.get_culture(base.get("faith").unwrap().as_string_ref().unwrap().as_str()).clone();
+        self.faith = game_state.get_faith(base.get("faith").unwrap().as_string_ref().unwrap().as_str()).clone();
+        self.culture = game_state.get_culture(base.get("culture").unwrap().as_string_ref().unwrap().as_str()).clone();
         self.house = game_state.get_dynasty(base.get("dynasty_house").unwrap().as_string_ref().unwrap().as_str()).clone();
         self.skills = skills;
         self.traits = base.get_object_ref("traits").get_array_iter().map(|t| t.as_string()).collect();
-        self.recessive = base.get_object_ref("recessive_traits").get_array_iter().map(|t| t.as_string()).collect();
-        self.spouses = base.get_object_ref("spouses").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect();
-        self.former = base.get_object_ref("former_spouses").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect();
-        self.children = base.get_object_ref("children").get_array_iter().map(|s| game_state.get_character(s.as_string_ref().unwrap().as_str()).clone()).collect();
+        self.recessive = recessive;
+        self.spouses = spouses;
+        self.former = former_spouses;
+        self.children = children;
         self.dna = base.get("dna").unwrap().as_string();
         self.memories = base.get_object_ref("memories").get_array_iter().map(|m| game_state.get_memory(m.as_string_ref().unwrap().as_str()).clone()).collect();
         self.titles = base.get_object_ref("titles").get_array_iter().map(|t| game_state.get_title(t.as_string_ref().unwrap().as_str()).clone()).collect();
