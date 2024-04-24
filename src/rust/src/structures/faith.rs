@@ -16,12 +16,12 @@ pub struct Faith {
 }
 
 impl GameObjectDerived for Faith {
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&crate::game_state::GameState) -> Self {
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut tenets = Vec::new();
         for t in base.get_object_ref("tenets").get_array(){
             tenets.push(t.as_string());
         }
-        let head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string_ref().unwrap().as_str()).unwrap().clone());
+        let head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string_ref().unwrap().as_str()).clone());
         let mut doctrines = Vec::new();
         for d in base.get_object_ref("doctrines").get_array(){
             doctrines.push(d.as_string());
@@ -37,6 +37,32 @@ impl GameObjectDerived for Faith {
 
     fn type_name() -> &'static str {
         "faith"
+    }
+
+    fn dummy() -> Self {
+        Faith{
+            name: Rc::new("".to_owned().into()),
+            tenets: Vec::new(),
+            head: Rc::new(Character::dummy().into()),
+            fervor: 0.0,
+            doctrines: Vec::new()
+        }
+    }
+
+    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
+        let mut tenets = Vec::new();
+        for t in base.get_object_ref("tenets").get_array(){
+            tenets.push(t.as_string());
+        }
+        self.tenets = tenets;
+        self.head = Rc::from(game_state.get_character(base.get("head").unwrap().as_string_ref().unwrap().as_str()).clone());
+        let mut doctrines = Vec::new();
+        for d in base.get_object_ref("doctrines").get_array(){
+            doctrines.push(d.as_string());
+        }
+        self.doctrines = doctrines;
+        self.name = base.get("name").unwrap().as_string();
+        self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
     }
 }
 

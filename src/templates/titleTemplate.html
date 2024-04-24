@@ -10,21 +10,21 @@
     <main style="margin:15px">
         <div class="row">
             <div class="col">
-                {%if title.deJure is defined%}
+                {%if title.de_jure is defined%}
                 De jure title liege: 
-                {%if title.deJure.titleid is defined%}
-                <a href="{{title.deJure.titleid}}.html">{{title.deJure.name}}</a>
+                {%if title.de_jure.titleid is defined%}
+                <a href="{{title.de_jure.titleid}}.html">{{title.de_jure.name}}</a>
                 {%else%}
-                {{title.deJure}}
+                {{title.de_jure}}
                 {%endif%}
                 <br>
                 {%endif%}
-                {%if title.deFacto is defined%}
+                {%if title.de_facto is defined%}
                 De facto title liege:
-                {%if title.deFacto.titleid is defined%} 
-                <a href="{{title.deFacto.titleid}}.html">{{title.deFacto.name}}</a>
+                {%if title.de_facto.titleid is defined%} 
+                <a href="{{title.de_facto.titleid}}.html">{{title.de_facto.name}}</a>
                 {%else%}
-                {{title.deFacto}}
+                {{title.de_facto}}
                 {%endif%}
                 <br>
                 {%endif%}

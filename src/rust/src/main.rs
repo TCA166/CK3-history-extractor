@@ -44,30 +44,30 @@ fn main() {
             "landed_titles" => {
                 let landed = i.get_object_ref("landed_titles");
                 for l in landed.get_keys(){
-                    game_state.add::<Title>(landed.get_object_ref(&l));
+                    game_state.add_title(landed.get_object_ref(&l));
                 }
             }
             "dynasties" => {
                 let dynasties = i.get_keys();
                 for d in dynasties{
-                    game_state.add::<Title>(i.get_object_ref(&d));
+                    game_state.add_dynasty(i.get_object_ref(&d));
                 }
             }
             "living" => {
                 let living = i.get_keys();
                 for l in living{
-                    game_state.add::<Player>(i.get_object_ref(&l));
+                    game_state.add_character(i.get_object_ref(&l));
                 }
             }
             "dead_unprunable" => {
                 let dead = i.get_keys();
                 for d in dead{
-                    game_state.add::<Player>(i.get_object_ref(&d));
+                    game_state.add_character(i.get_object_ref(&d));
                 }
             }
             "played_character" => {
                 let p = RefCell::from(i);
-                game_state.add::<Player>(p.borrow());
+                game_state.add_player(p.borrow());
             }
             _ => {}
         }

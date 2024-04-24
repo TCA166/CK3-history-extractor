@@ -12,12 +12,12 @@ pub struct Memory {
 }
 
 impl GameObjectDerived for Memory {
-    fn from_game_object(base: Ref<'_, GameObject>, game_state: &crate::game_state::GameState) -> Self {
+    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) -> Self {
         let part = base.get("participants").unwrap().as_object_ref().unwrap();
         let mut participants = Vec::new();
         for k in part.get_keys(){
             let v = part.get(&k).unwrap();
-            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).unwrap().clone()));
+            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).clone()));
         }
         Memory{
             date: base.get("date").unwrap().as_string(),
@@ -28,6 +28,26 @@ impl GameObjectDerived for Memory {
 
     fn type_name() -> &'static str {
         "memory"
+    }
+
+    fn dummy() -> Self {
+        Memory{
+            date: Rc::new(RefCell::new("".to_owned())),
+            r#type: Rc::new(RefCell::new("".to_owned())),
+            participants: Vec::new()
+        }
+    }
+
+    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
+        let part = base.get("participants").unwrap().as_object_ref().unwrap();
+        let mut participants = Vec::new();
+        for k in part.get_keys(){
+            let v = part.get(&k).unwrap();
+            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).clone()));
+        }
+        self.date = base.get("date").unwrap().as_string();
+        self.r#type = base.get("type").unwrap().as_string();
+        self.participants = participants;
     }
 }
 

@@ -14,16 +14,30 @@ pub struct Player {
 }
 
 impl GameObjectDerived for Player {
-    fn from_game_object(base: Ref<'_, GameObject>, game_state: &GameState) -> Self {
+    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut GameState) -> Self {
         let key = base.get("character").unwrap().as_string_ref().unwrap();
         Player {
             name: base.get("name").unwrap().as_string(),
             id: base.get("player").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
-            character: Rc::from(game_state.get_character(&key).unwrap().clone())
+            character: Rc::from(game_state.get_character(&key).clone())
         }
     }
 
     fn type_name() -> &'static str {
         "player"
+    }
+
+    fn dummy() -> Self {
+        Player {
+            name: Rc::new("".to_owned().into()),
+            id: 0,
+            character: Rc::new(Character::dummy().into())
+        }
+    }
+
+    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut GameState) {
+        let key = base.get("character").unwrap().as_string_ref().unwrap();
+        self.character = Rc::from(game_state.get_character(&key).clone());
+        self.id = base.get("player").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap();
     }
 }

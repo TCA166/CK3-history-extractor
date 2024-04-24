@@ -83,7 +83,7 @@ class gTitle:
                         findJure = gTitle(findJure, allData, env, path, lookUp=True, lookDown=lookDownToggle)
                     else:
                         findJure = getTitleName(findJure, allData)
-                self.deJure = findJure
+                self.de_jure = findJure
             if 'de_facto_liege' in rawData:
                 findFacto = re.findall(r'de_facto_liege=(.*?)\n', rawData, re.S)[0]
                 if findFacto in knownTitles.keys():
@@ -93,7 +93,7 @@ class gTitle:
                         findFacto = gTitle(findFacto, allData, env, path, lookUp=True, lookDown=lookDownToggle)
                     else:
                         findFacto = getTitleName(findFacto, allData)
-                self.deFacto = findFacto
+                self.de_facto = findFacto
             if 'de_jure_vassals=' in rawData:
                 findVassals = re.findall(r'de_jure_vassals={ (.*?) }', rawData, re.S)[0]
                 vassals = findVassals.split(' ')
@@ -228,8 +228,8 @@ class gDynn:
             self.members = allData.count('dynasty_house=%s' % dynid)
         else:
             self.houses = allData.count('dynasty=%s' % dynid)
-            findPrestigeTot = re.findall(r'accumulated=(.*?)\n', rawData, re.S)[0]
-            self.prestigeTot = findPrestigeTot
+            findprestige_tot = re.findall(r'accumulated=(.*?)\n', rawData, re.S)[0]
+            self.prestige_tot = findprestige_tot
             findPrestige = re.findall(r'currency=(.*?)\n', rawData, re.S)[0]
             self.prestige = findPrestige
             try:

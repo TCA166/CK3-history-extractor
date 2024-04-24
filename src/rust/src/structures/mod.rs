@@ -30,7 +30,11 @@ pub use title::Title;
 pub type Shared<T> = std::rc::Rc<std::cell::RefCell<T>>;
 
 pub trait GameObjectDerived{
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&GameState) -> Self;
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self;
 
     fn type_name() -> &'static str;
+
+    fn dummy() -> Self;
+
+    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState);
 }
