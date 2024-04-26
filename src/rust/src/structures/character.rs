@@ -23,7 +23,7 @@ pub struct Character {
     pub faith: Shared<Faith>,
     pub culture: Shared<Culture>,
     pub house: Option<Shared<Dynasty>>,
-    pub skills: Vec<u8>,
+    pub skills: Vec<i8>,
     pub traits: Vec<Shared<String>>,
     pub recessive: Vec<Shared<String>>,
     pub spouses: Vec<Shared<Character>>,
@@ -50,7 +50,7 @@ impl GameObjectDerived for Character {
         //find skills
         let mut skills = Vec::new();
         for s in base.get_object_ref("skill").get_array_iter(){
-            skills.push(s.as_string_ref().unwrap().parse::<u8>().unwrap());
+            skills.push(s.as_string_ref().unwrap().parse::<i8>().unwrap());
         }
         //find recessive traits
         let mut recessive = Vec::new();
@@ -116,22 +116,25 @@ impl GameObjectDerived for Character {
         let mut kills: Vec<Shared<Character>> = Vec::new();
         let mut languages: Vec<Shared<String>> = Vec::new();
         if !dead {
-            let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
-            piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
-            prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
-            let kills_node = alive_data.get("kills");
-            if kills_node.is_some(){
-                for k in kills_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                    kills.push(game_state.get_character(k.as_string_ref().unwrap().as_str()).clone());
+            let alive_node = base.get("alive_data");
+            if alive_node.is_some(){ //i guess sometimes alive data can be missing from alive characters?         
+                let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
+                piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
+                prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
+                let kills_node = alive_data.get("kills");
+                if kills_node.is_some(){
+                    for k in kills_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                        kills.push(game_state.get_character(k.as_string_ref().unwrap().as_str()).clone());
+                    }
                 }
-            }
-            for l in alive_data.get_object_ref("languages").get_array_iter(){
-                languages.push(l.as_string());
-            }
-            let perk_node = alive_data.get("perks");
-            if perk_node.is_some(){
-                for p in perk_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                    traits.push(p.as_string());
+                for l in alive_data.get_object_ref("languages").get_array_iter(){
+                    languages.push(l.as_string());
+                }
+                let perk_node = alive_data.get("perks");
+                if perk_node.is_some(){
+                    for p in perk_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                        traits.push(p.as_string());
+                    }
                 }
             }
         }
@@ -141,17 +144,29 @@ impl GameObjectDerived for Character {
         let landed_data_node = base.get("landed_data");
         if landed_data_node.is_some(){
             let landed_data = landed_data_node.unwrap().as_object_ref().unwrap();
-            dread = landed_data.get("dread").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
-            strength = landed_data.get("strength").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            let dread_node = landed_data.get("dread");
+            if dread_node.is_some(){
+                dread = dread_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            }
+            let strength_node = landed_data.get("strength");
+            if strength_node.is_some(){
+                strength = landed_data.get("strength").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            }
             let gold_node = landed_data.get("gold");
             if gold_node.is_some(){
                 gold = gold_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
             }
-            for t in landed_data.get("titles").unwrap().as_object_ref().unwrap().get_array_iter(){
-                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()).clone());
+            let titles_node = landed_data.get("titles");
+            if titles_node.is_some(){
+                for t in landed_data.get("titles").unwrap().as_object_ref().unwrap().get_array_iter(){
+                    titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()).clone());
+                }
             }
-            for v in landed_data.get("vassals").unwrap().as_object_ref().unwrap().get_array_iter(){
-                vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()).clone());
+            let vassals_node = landed_data.get("vassals");
+            if vassals_node.is_some(){
+                for v in landed_data.get("vassals").unwrap().as_object_ref().unwrap().get_array_iter(){
+                    vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()).clone());
+                }
             }
         }
         //find house
@@ -160,6 +175,7 @@ impl GameObjectDerived for Character {
             Some(d) => Some(game_state.get_dynasty(d.as_string_ref().unwrap().as_str()).clone()),
             None => None
         };
+        //TODO faith and culture are gathered from a) gameobject b) house leader, c) dynasty, d) culture leader e)faith leader(?)
         //find faith and culture
         let faith:Shared<Faith>;
         let faith_node = base.get("faith");
@@ -169,11 +185,17 @@ impl GameObjectDerived for Character {
         else{
             let h = house.as_ref().unwrap().borrow();
             if h.leaders.len() == 0 {
-                let p = h.parent.as_ref().unwrap().borrow();
-                if p.leaders.len() == 0 {
-                    println!("{:?}", p.id);
+                if h.parent.is_some(){
+                    let p = h.parent.as_ref().unwrap().borrow();
+                    if p.leaders.len() == 0 {
+                        panic!("No faith found");
+                    }
+                    faith = p.leaders[0].borrow().faith.clone();
                 }
-                faith = p.leaders[0].borrow().faith.clone();
+                else{
+                    println!("{:?} {:?}", h.id, h.leaders.len());
+                    panic!("No faith found");
+                }
             }
             else{
                 faith = h.leaders[0].borrow().faith.clone();
@@ -273,7 +295,7 @@ impl GameObjectDerived for Character {
         let dead = keys.contains(&"date".to_string());
         let mut skills = Vec::new();
         for s in base.get_object_ref("skill").get_array_iter(){
-            skills.push(s.as_string_ref().unwrap().parse::<u8>().unwrap());
+            skills.push(s.as_string_ref().unwrap().parse::<i8>().unwrap());
         }
         let mut recessive = Vec::new();
         let rec_t = base.get("recessive_traits");
@@ -319,8 +341,11 @@ impl GameObjectDerived for Character {
             }
         }
         let mut traits = Vec::new();
-        for t in base.get_object_ref("traits").get_array_iter(){
-            traits.push(t.as_string());
+        let traits_node = base.get("traits");
+        if traits_node.is_some(){
+            for t in traits_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                traits.push(t.as_string());
+            }
         }
         let dynasty_id = base.get("dynasty_house");
         let mut piety = 0.0;
@@ -332,7 +357,6 @@ impl GameObjectDerived for Character {
         let mut languages: Vec<Shared<String>> = Vec::new();
         if !dead {
             let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
-            println!("{:?}", alive_data);
             piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
             prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
             let kills_node = alive_data.get("kills");
@@ -356,12 +380,14 @@ impl GameObjectDerived for Character {
         let landed_data_node = base.get("landed_data");
         if landed_data_node.is_some(){
             let landed_data = landed_data_node.unwrap().as_object_ref().unwrap();
-            println!("{:?}", landed_data);
             let dread_node = landed_data.get("dread");
             if dread_node.is_some(){
                 dread = dread_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
             }
-            strength = landed_data.get("strength").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            let strength_node = landed_data.get("strength");
+            if strength_node.is_some(){
+                strength = landed_data.get("strength").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            }
             let gold_node = landed_data.get("gold");
             if gold_node.is_some(){
                 gold = gold_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
@@ -372,8 +398,11 @@ impl GameObjectDerived for Character {
                     titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()).clone());
                 }
             }
-            for v in landed_data.get("vassals").unwrap().as_object_ref().unwrap().get_array_iter(){
-                vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()).clone());
+            let vassals_node = landed_data.get("vassals");
+            if vassals_node.is_some(){
+                for v in vassals_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                    vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()).clone());
+                }
             }
         }
         self.name = base.get("first_name").unwrap().as_string();
@@ -399,8 +428,17 @@ impl GameObjectDerived for Character {
         else{
             let h = self.house.as_ref().unwrap().borrow();
             if h.leaders.len() == 0 {
-                let p = h.parent.as_ref().unwrap().borrow();
-                self.faith = p.leaders[0].borrow().faith.clone();
+                if h.parent.is_some(){
+                    let p = h.parent.as_ref().unwrap().borrow();
+                    if p.leaders.len() == 0 {
+                        panic!("No faith found");
+                    }
+                    self.faith = p.leaders[0].borrow().faith.clone();
+                }
+                else{
+                    println!("{:?} {:?}", h.id, h.leaders.len());
+                    panic!("No faith found");
+                }
             }
             else{
                 self.faith = h.leaders[0].borrow().faith.clone();

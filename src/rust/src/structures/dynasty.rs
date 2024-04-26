@@ -21,7 +21,7 @@ pub struct Dynasty{
 
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
-        
+        //get the dynasty legacies
         let mut perks = Vec::new();
         let perks_obj = base.get("perks");
         if perks_obj.is_some(){
@@ -29,11 +29,27 @@ impl GameObjectDerived for Dynasty {
                 perks.push(p.as_string());
             }
         }
+        //get the array of leaders
         let mut leaders = Vec::new();
         let leaders_obj = base.get("historical");
         if perks_obj.is_some(){
             for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
                 leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+            }
+        }
+        //append to this array the leader if its not already there, you would assume that the leader is the first element in the array, but not always
+        let mut current = base.get("dynasty_head");
+        if current.is_some(){
+            if leaders.len() == 0{
+                leaders.push(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()).clone());
+            }
+        }
+        else{
+            current = base.get("head_of_house");
+            if current.is_some(){
+                if leaders.len() == 0{
+                    leaders.push(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()).clone());
+                }
             }
         }
         let currency = base.get("prestige");

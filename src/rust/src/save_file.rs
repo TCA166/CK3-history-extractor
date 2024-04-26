@@ -45,6 +45,7 @@ impl Section{
         if self.file.is_none(){
             panic!("Invalid section");
         }
+        let mut quotes = false;
         let file = &mut self.file.as_mut().unwrap();
         // storage
         let mut key = String::new();
@@ -96,6 +97,9 @@ impl Section{
                         stack.last_mut().unwrap().insert(inner.get_name().to_string(), SaveFileValue::Object(Rc::new(RefCell::new(inner))));
                     }
                 }
+                '"' => { // we have a quote, we toggle the quotes flag
+                    quotes = !quotes;
+                }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
                     if past_eq { // we have a key value pair
                         stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
@@ -108,16 +112,20 @@ impl Section{
                         key.clear();
                     }
                 }
-                ' ' | '\t' => { //syntax sugar we ignore, most of the time
-                    if past_eq && !val.is_empty() { // in case {something=else something=else}
-                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
-                        key.clear();
-                        val.clear();
-                        past_eq = false;
-                    }
-                    else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(RefCell::new(key.clone()))));
-                        key.clear();
+                ' ' | '\t' => { //syntax sugar we ignore, most of the time, unless...
+                    if !quotes{ // we are not in quotes, we check if we have a key value pair
+                        // we are key=value <-here
+                        if past_eq && !val.is_empty() { // in case {something=else something=else}
+                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
+                            key.clear();
+                            val.clear();
+                            past_eq = false;
+                        }
+                        //
+                        else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
+                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(RefCell::new(key.clone()))));
+                            key.clear();
+                        }
                     }
                 } 
                 '=' => {
@@ -318,5 +326,55 @@ mod tests {
         assert_eq!(*(test2.get_index(0).unwrap().as_string_ref().unwrap()) , "1".to_string());
         assert_eq!(*(test2.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
         assert_eq!(*(test2.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
+        assert_eq!(test2.get_array_iter().len(), 3);
+    }
+
+    #[test]
+    fn test_example_1(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+        3623={
+            name=\"dynn_Sao\"
+            variables={
+                data={ {
+                        flag=\"ai_random_harm_cooldown\"
+                        tick=7818
+                        data={
+                            type=boolean
+                            identity=1
+                        }
+        
+                    }
+         }
+            }
+            found_date=750.1.1
+            head_of_house=83939093
+            dynasty=3623
+            historical={ 4440 5398 6726 10021 33554966 50385988 77977 33583389 50381158 50425637 16880568 83939093 }
+            motto={
+                key=\"motto_with_x_I_seek_y\"
+                variables={ {
+                        key=\"1\"
+                        value=\"motto_the_sword_word\"
+                    }
+         {
+                        key=\"2\"
+                        value=\"motto_bravery\"
+                    }
+         }
+            }
+            artifact_claims={ 83888519 }
+        }").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().to_object().unwrap();
+        assert_eq!(object.get_name(), "3623".to_string());
+        assert_eq!(*(object.get_string_ref("name")) , "dynn_Sao".to_string());
+        let historical = object.get_object_ref("historical");
+        assert_eq!(*(historical.get_index(0).unwrap().as_string_ref().unwrap()) , "4440".to_string());
+        assert_eq!(*(historical.get_index(1).unwrap().as_string_ref().unwrap()) , "5398".to_string());
+        assert_eq!(*(historical.get_index(2).unwrap().as_string_ref().unwrap()) , "6726".to_string());
+        assert_eq!(*(historical.get_index(3).unwrap().as_string_ref().unwrap()) , "10021".to_string());
+        assert_eq!(*(historical.get_index(4).unwrap().as_string_ref().unwrap()) , "33554966".to_string());
+        assert_eq!(historical.get_array_iter().len(), 12);
     }
 }
