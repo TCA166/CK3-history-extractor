@@ -302,4 +302,21 @@ mod tests {
         assert_eq!(*(test2.get_string_ref("1")) , "2".to_string());
         assert_eq!(*(test2.get_string_ref("3")) , "4".to_string());
     }
+
+    #[test]
+    fn test_array_syntax(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+            test={
+                test2={ 1 2 3 }
+            }
+        ").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().to_object().unwrap();
+        assert_eq!(object.get_name(), "test".to_string());
+        let test2 = object.get_object_ref("test2");
+        assert_eq!(*(test2.get_index(0).unwrap().as_string_ref().unwrap()) , "1".to_string());
+        assert_eq!(*(test2.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
+        assert_eq!(*(test2.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
+    }
 }

@@ -8,11 +8,12 @@ use super::renderer::Renderable;
 use crate::game_object::GameObject;
 
 pub struct Faith {
+    pub id: u32,
     pub name: Shared<String>,
     pub tenets: Vec<Shared<String>>,
     pub head: Option<Shared<Character>>,
     pub fervor: f32,
-    pub doctrines: Vec<Shared<String>>,
+    pub doctrines: Vec<Shared<String>>
 }
 
 impl GameObjectDerived for Faith {
@@ -35,7 +36,8 @@ impl GameObjectDerived for Faith {
             tenets: tenets,
             head: head,
             fervor: base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap(),
-            doctrines: doctrines
+            doctrines: doctrines,
+            id: base.get_name().parse::<u32>().unwrap()
         }
     }
 
@@ -49,7 +51,8 @@ impl GameObjectDerived for Faith {
             tenets: Vec::new(),
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
-            doctrines: Vec::new()
+            doctrines: Vec::new(),
+            id: 0
         }
     }
 
@@ -71,6 +74,7 @@ impl GameObjectDerived for Faith {
         self.doctrines = doctrines;
         self.name = base.get("name").unwrap().as_string();
         self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+        self.id = base.get_name().parse::<u32>().unwrap();
     }
 }
 

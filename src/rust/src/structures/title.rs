@@ -14,6 +14,7 @@ use super::renderer::Renderable;
 use super::{Character, GameObjectDerived, Shared};
 
 pub struct Title {
+    pub id: u32,
     pub name: Shared<String>,
     pub de_jure: Option<Shared<Title>>,
     pub de_facto: Option<Shared<Title>>,
@@ -81,14 +82,16 @@ impl GameObjectDerived for Title{
                 vassals.push(game_state.get_title(v.as_string_ref().unwrap().as_str()).clone());
             }
         }
-        let name = base.get("name").unwrap().as_string();
+        let name = base.get("name").unwrap().as_string().clone();
+        let id = base.get_name().parse::<u32>().unwrap();
         let history = get_history(base, game_state);
         Title{
             name: name,
             de_jure: de_jure,
             de_facto: de_facto,
             vassals: vassals,
-            history: history
+            history: history,
+            id: id
         }
     }
 
@@ -102,7 +105,8 @@ impl GameObjectDerived for Title{
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
-            history: HashMap::new()
+            history: HashMap::new(),
+            id: 0
         }
     }
 
@@ -125,6 +129,7 @@ impl GameObjectDerived for Title{
             }
         }
         self.vassals = vassals;
+        self.id = base.get_name().parse::<u32>().unwrap();
         let history = get_history(base, game_state);
         self.history = history;
     

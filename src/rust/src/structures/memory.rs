@@ -6,6 +6,7 @@ use super::{Character, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 
 pub struct Memory {
+    pub id: u32,
     pub date: Shared<String>,
     pub r#type: Shared<String>,
     pub participants: Vec<(Shared<String>, Shared<Character>)>,
@@ -22,7 +23,8 @@ impl GameObjectDerived for Memory {
         Memory{
             date: base.get("date").unwrap().as_string(),
             r#type: base.get("type").unwrap().as_string(),
-            participants: participants
+            participants: participants,
+            id: base.get_name().parse::<u32>().unwrap()
         }
     }
 
@@ -34,7 +36,8 @@ impl GameObjectDerived for Memory {
         Memory{
             date: Rc::new(RefCell::new("".to_owned())),
             r#type: Rc::new(RefCell::new("".to_owned())),
-            participants: Vec::new()
+            participants: Vec::new(),
+            id: 0
         }
     }
 
@@ -48,6 +51,7 @@ impl GameObjectDerived for Memory {
         self.date = base.get("date").unwrap().as_string();
         self.r#type = base.get("type").unwrap().as_string();
         self.participants = participants;
+        self.id = base.get_name().parse::<u32>().unwrap();
     }
 }
 

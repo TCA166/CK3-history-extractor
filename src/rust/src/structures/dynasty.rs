@@ -8,6 +8,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 use std::cell::Ref;
 
 pub struct Dynasty{
+    pub id: u32,
     pub parent: Option<Shared<Dynasty>>,
     pub name: Option<Shared<String>>,
     pub members: u32,
@@ -29,7 +30,7 @@ impl GameObjectDerived for Dynasty {
             }
         }
         let mut leaders = Vec::new();
-        let leaders_obj = base.get("leaders");
+        let leaders_obj = base.get("historical");
         if perks_obj.is_some(){
             for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
                 leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
@@ -76,7 +77,8 @@ impl GameObjectDerived for Dynasty {
             prestige_tot: prestige_tot,
             prestige: prestige,
             perks: perks,
-            leaders: leaders
+            leaders: leaders,
+            id: base.get_name().parse::<u32>().unwrap()
         }
     }
 
@@ -93,21 +95,22 @@ impl GameObjectDerived for Dynasty {
             prestige_tot: 0.0,
             prestige: 0.0,
             perks: Vec::new(),
-            leaders: Vec::new()
+            leaders: Vec::new(),
+            id: 0
         }
     }
 
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
         let mut perks = Vec::new();
-        let perks_obj = base.get("perks");
+        let perks_obj = base.get("perk");
         if perks_obj.is_some(){
             for p in perks_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
                 perks.push(p.as_string());
             }
         }
         let mut leaders = Vec::new();
-        let leaders_obj = base.get("leaders");
-        if perks_obj.is_some(){
+        let leaders_obj = base.get("historical");
+        if leaders_obj.is_some(){
             for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
                 leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
             }
@@ -153,6 +156,7 @@ impl GameObjectDerived for Dynasty {
         self.prestige = prestige;
         self.perks = perks;
         self.leaders = leaders;
+        self.id = base.get_name().parse::<u32>().unwrap();
     }
 }
 

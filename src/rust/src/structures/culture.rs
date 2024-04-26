@@ -7,13 +7,14 @@ use crate::game_object::GameObject;
 use std::cell::Ref;
 
 pub struct Culture {
+    pub id: u32,
     pub name: Shared<String>,
     pub ethos: Shared<String>,
     pub heritage: Shared<String>,
     pub martial: Shared<String>,
     pub date: Shared<String>,
     pub parents: Vec<Shared<Culture>>,
-    pub traditions: Vec<Shared<String>>,
+    pub traditions: Vec<Shared<String>>
 }
 
 impl GameObjectDerived for Culture {
@@ -33,7 +34,8 @@ impl GameObjectDerived for Culture {
             martial: base.get("martial").unwrap().as_string(),
             date: base.get("date").unwrap().as_string(),
             parents: parents,
-            traditions: traditions
+            traditions: traditions,
+            id: base.get_name().parse::<u32>().unwrap()
         }
     }
 
@@ -49,7 +51,8 @@ impl GameObjectDerived for Culture {
             martial: Shared::new("".to_owned().into()),
             date: Shared::new("".to_owned().into()),
             parents: Vec::new(),
-            traditions: Vec::new()
+            traditions: Vec::new(),
+            id: 0
         }
     }
 
@@ -64,6 +67,7 @@ impl GameObjectDerived for Culture {
             traditions.push(t.as_string());
         }
         self.traditions = traditions;
+        self.id = base.get_name().parse::<u32>().unwrap();
     }
 }
 
