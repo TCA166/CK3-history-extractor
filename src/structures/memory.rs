@@ -28,16 +28,12 @@ impl GameObjectDerived for Memory {
         }
     }
 
-    fn type_name() -> &'static str {
-        "memory"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Memory{
             date: Rc::new(RefCell::new("".to_owned())),
             r#type: Rc::new(RefCell::new("".to_owned())),
             participants: Vec::new(),
-            id: 0
+            id: id
         }
     }
 
@@ -52,6 +48,10 @@ impl GameObjectDerived for Memory {
         self.r#type = base.get("type").unwrap().as_string();
         self.participants = participants;
         self.id = base.get_name().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }
 

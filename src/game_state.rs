@@ -36,7 +36,7 @@ impl GameState{
     /// Get a player by key
     pub fn get_player(&mut self, key: &str) -> Shared<Player>{
         if !self.players.contains_key(key){
-            let v = Rc::new(RefCell::new(Player::dummy()));
+            let v = Rc::new(RefCell::new(Player::dummy(key.parse::<u32>().unwrap())));
             self.players.insert(key.to_string(), v.clone());
             v
         }
@@ -48,7 +48,7 @@ impl GameState{
     /// Get a character by key
     pub fn get_character(&mut self, key: &str) -> Shared<Character>{
         if !self.characters.contains_key(key){
-            let v = Rc::new(RefCell::new(Character::dummy()));
+            let v = Rc::new(RefCell::new(Character::dummy(key.parse::<u32>().unwrap())));
             self.characters.insert(key.to_string(), v.clone());
             v
         }
@@ -60,7 +60,7 @@ impl GameState{
     /// Get a title by key
     pub fn get_title(&mut self, key: &str) -> Shared<Title>{
         if !self.titles.contains_key(key){
-            let v = Rc::new(RefCell::new(Title::dummy()));
+            let v = Rc::new(RefCell::new(Title::dummy(key.parse::<u32>().unwrap())));
             self.titles.insert(key.to_string(), v.clone());
             v
         }
@@ -75,7 +75,7 @@ impl GameState{
             self.faiths.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Faith::dummy()));
+            let v = Rc::new(RefCell::new(Faith::dummy(key.parse::<u32>().unwrap())));
             self.faiths.insert(key.to_string(), v.clone());
             v
         }
@@ -87,7 +87,7 @@ impl GameState{
             self.cultures.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Culture::dummy()));
+            let v = Rc::new(RefCell::new(Culture::dummy(key.parse::<u32>().unwrap())));
             self.cultures.insert(key.to_string(), v.clone());
             v
         }
@@ -99,7 +99,7 @@ impl GameState{
             self.dynasties.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Dynasty::dummy()));
+            let v = Rc::new(RefCell::new(Dynasty::dummy(key.parse::<u32>().unwrap())));
             self.dynasties.insert(key.to_string(), v.clone());
             v
         }
@@ -111,7 +111,7 @@ impl GameState{
             self.memories.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Memory::dummy()));
+            let v = Rc::new(RefCell::new(Memory::dummy(key.parse::<u32>().unwrap())));
             self.memories.insert(key.to_string(), v.clone());
             v
         }

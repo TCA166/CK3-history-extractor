@@ -41,18 +41,14 @@ impl GameObjectDerived for Faith {
         }
     }
 
-    fn type_name() -> &'static str {
-        "faith"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Faith{
             name: Rc::new("".to_owned().into()),
             tenets: Vec::new(),
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
             doctrines: Vec::new(),
-            id: 0
+            id: id
         }
     }
 
@@ -75,6 +71,10 @@ impl GameObjectDerived for Faith {
         self.name = base.get("name").unwrap().as_string();
         self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
         self.id = base.get_name().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }
 

@@ -95,18 +95,18 @@ impl GameObjectDerived for Title{
         }
     }
 
-    fn type_name() -> &'static str {
-        "title"
+    fn get_id(&self) -> u32 {
+        self.id
     }
 
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Title{
             name: Rc::new(RefCell::new("Dummy".to_owned())),
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
             history: HashMap::new(),
-            id: 0
+            id: id
         }
     }
 

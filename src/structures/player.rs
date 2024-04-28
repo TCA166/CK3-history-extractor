@@ -10,7 +10,7 @@ use super::{Character, GameObjectDerived, Shared};
 pub struct Player {
     pub name: Shared<String>,
     pub id: u32,
-    pub character: Shared<Character> 
+    pub character: Option<Shared<Character>> 
 }
 
 impl GameObjectDerived for Player {
@@ -19,25 +19,25 @@ impl GameObjectDerived for Player {
         Player {
             name: base.get("name").unwrap().as_string(),
             id: base.get("player").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap(),
-            character: Rc::from(game_state.get_character(&key).clone())
+            character: Some(Rc::from(game_state.get_character(&key).clone()))
         }
     }
 
-    fn type_name() -> &'static str {
-        "player"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Player {
             name: Rc::new("".to_owned().into()),
-            id: 0,
-            character: Rc::new(Character::dummy().into())
+            id: id,
+            character: None
         }
     }
 
     fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut GameState) {
         let key = base.get("character").unwrap().as_string_ref().unwrap();
-        self.character = Rc::from(game_state.get_character(&key).clone());
+        self.character = Some(Rc::from(game_state.get_character(&key).clone()));
         self.id = base.get("player").unwrap().as_string_ref().unwrap().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }

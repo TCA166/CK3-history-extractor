@@ -5,6 +5,7 @@ use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{Character, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, SaveFileValue};
+use std::fmt;
 use std::cell::Ref;
 
 pub struct Dynasty{
@@ -100,11 +101,7 @@ impl GameObjectDerived for Dynasty {
         }
     }
 
-    fn type_name() -> &'static str {
-        "dynasty"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Dynasty{
             name: Some(Shared::new("".to_owned().into())),
             parent: None,
@@ -114,7 +111,7 @@ impl GameObjectDerived for Dynasty {
             prestige: 0.0,
             perks: Vec::new(),
             leaders: Vec::new(),
-            id: 0
+            id: id
         }
     }
 
@@ -171,6 +168,10 @@ impl GameObjectDerived for Dynasty {
         self.prestige_tot = prestige_tot;
         self.prestige = prestige;
         self.id = base.get_name().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }
 

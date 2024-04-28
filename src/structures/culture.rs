@@ -6,6 +6,7 @@ use super::{GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use std::cell::Ref;
 
+#[derive(Debug)]
 pub struct Culture {
     pub id: u32,
     pub name: Shared<String>,
@@ -39,11 +40,7 @@ impl GameObjectDerived for Culture {
         }
     }
 
-    fn type_name() -> &'static str {
-        "culture"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Culture{
             name: Shared::new("".to_owned().into()),
             ethos: Shared::new("".to_owned().into()),
@@ -52,7 +49,7 @@ impl GameObjectDerived for Culture {
             date: Shared::new("".to_owned().into()),
             parents: Vec::new(),
             traditions: Vec::new(),
-            id: 0
+            id: id
         }
     }
 
@@ -68,6 +65,10 @@ impl GameObjectDerived for Culture {
         }
         self.traditions = traditions;
         self.id = base.get_name().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }
 

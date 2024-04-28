@@ -44,7 +44,7 @@ pub struct Character {
 
 //TODO seperate each getting segment into a separate function
 
-fn get_faith(house:Option<Shared<Dynasty>>, base:Ref<'_, GameObject>, game_state:&mut GameState) -> Shared<Faith>{
+fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
         return game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone();
@@ -65,11 +65,13 @@ fn get_faith(house:Option<Shared<Dynasty>>, base:Ref<'_, GameObject>, game_state
             panic!("No faith found");
         }
         else{
+            //FIXME borrow checker is being a pain here
             return h.leaders[0].borrow().faith.clone();
         }
     }
 }
 
+//TODO get_culture function
 
 impl GameObjectDerived for Character {
 
@@ -204,32 +206,8 @@ impl GameObjectDerived for Character {
             Some(d) => Some(game_state.get_dynasty(d.as_string_ref().unwrap().as_str()).clone()),
             None => None
         };
-        //TODO faith and culture are gathered from a) gameobject b) house leader, c) dynasty, d) culture leader e)faith leader(?)
         //find faith and culture
-        let faith:Shared<Faith>;
-        let faith_node = base.get("faith");
-        if faith_node.is_some(){
-            faith = game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone();
-        }
-        else{
-            let h = house.as_ref().unwrap().borrow();
-            if h.leaders.len() == 0 {
-                if h.parent.is_some(){
-                    let p = h.parent.as_ref().unwrap().borrow();
-                    if p.leaders.len() == 0 {
-                        panic!("No faith found");
-                    }
-                    faith = p.leaders[0].borrow().faith.clone();
-                }
-                else{
-                    println!("{:?} {:?}", h.id, h.leaders.len());
-                    panic!("No faith found");
-                }
-            }
-            else{
-                faith = h.leaders[0].borrow().faith.clone();
-            }
-        }
+        let faith:Shared<Faith> = get_faith(&house, &base, game_state);
         let culture:Shared<Culture>;
         let culture_node = base.get("culture");
         if culture_node.is_some(){
@@ -283,11 +261,7 @@ impl GameObjectDerived for Character {
         }    
     }
 
-    fn type_name() -> &'static str {
-        "character"
-    }
-
-    fn dummy() -> Self {
+    fn dummy(id:u32) -> Self {
         Character{
             name: Shared::new("".to_owned().into()),
             nick: None,
@@ -295,8 +269,8 @@ impl GameObjectDerived for Character {
             dead: false,
             date: None,
             reason: None,
-            faith: Shared::new(Faith::dummy().into()),
-            culture: Shared::new(Culture::dummy().into()),
+            faith: Shared::new(Faith::dummy(0).into()),
+            culture: Shared::new(Culture::dummy(0).into()),
             house: None,
             skills: Vec::new(),
             traits: Vec::new(),
@@ -315,7 +289,7 @@ impl GameObjectDerived for Character {
             kills: Vec::new(),
             languages: Vec::new(),
             vassals: Vec::new(),
-            id: 0
+            id: id
         }
     }
 
@@ -453,30 +427,8 @@ impl GameObjectDerived for Character {
             Some(d) => Some(game_state.get_dynasty(d.as_string_ref().unwrap().as_str()).clone()),
             None => None
         };
-        let faith_node = base.get("faith");
-        if faith_node.is_some(){
-            self.faith = game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone();
-        }
-        else{
-            let h = self.house.as_ref().unwrap().borrow();
-            if h.leaders.len() == 0 {
-                if h.parent.is_some(){
-                    let p = h.parent.as_ref().unwrap().borrow();
-                    if p.leaders.len() == 0 {
-                        panic!("No faith found");
-                    }
-                    self.faith = p.leaders[0].borrow().faith.clone();
-                }
-                else{
-                    println!("{:?} {:?}", h.id, h.leaders.len());
-                    panic!("No faith found");
-                }
-            }
-            else{
-                //FIXME borrow expection here? how's that possible? circular reference from game_state?
-                self.faith = h.leaders[0].borrow().faith.clone();
-            }
-        }
+        let faith = get_faith(&self.house, &base, game_state);
+        self.faith.clone_from(&faith);
         let culture_node = base.get("culture");
         if culture_node.is_some(){
             self.culture = game_state.get_culture(culture_node.unwrap().as_string_ref().unwrap().as_str()).clone();
@@ -510,6 +462,10 @@ impl GameObjectDerived for Character {
         self.languages = languages;
         self.vassals = vassals;
         self.id = base.get_name().parse::<u32>().unwrap();
+    }
+
+    fn get_id(&self) -> u32 {
+        self.id
     }
 }
 
