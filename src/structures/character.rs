@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 
 use crate::game_object::GameObject;
-use crate::structures::title;
+use crate::game_state::GameState;
 
 use super::renderer::Renderable;
 
@@ -42,9 +42,38 @@ pub struct Character {
     pub vassals: Vec<Shared<Character>>
 }
 
+//TODO seperate each getting segment into a separate function
+
+fn get_faith(house:Option<Shared<Dynasty>>, base:Ref<'_, GameObject>, game_state:&mut GameState) -> Shared<Faith>{
+    let faith_node = base.get("faith");
+    if faith_node.is_some(){
+        return game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+    }
+    else{
+        let h = house.as_ref().unwrap().borrow();
+        if h.leaders.len() == 0 {
+            if h.parent.is_some(){
+                let p = h.parent.as_ref().unwrap().borrow();
+                if p.leaders.len() != 0 {
+                    return p.leaders[0].borrow().faith.clone();
+                }
+                else{
+                    panic!("No faith found");
+                }
+            }
+            //if we made it here it means we need to search for faith in culture
+            panic!("No faith found");
+        }
+        else{
+            return h.leaders[0].borrow().faith.clone();
+        }
+    }
+}
+
+
 impl GameObjectDerived for Character {
 
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
+    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
         let keys = base.get_keys();
         let dead = keys.contains(&"date".to_string());
         //find skills
@@ -290,7 +319,7 @@ impl GameObjectDerived for Character {
         }
     }
 
-    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
+    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState) {
         let keys = base.get_keys();
         let dead = keys.contains(&"date".to_string());
         let mut skills = Vec::new();
@@ -356,22 +385,25 @@ impl GameObjectDerived for Character {
         let mut kills: Vec<Shared<Character>> = Vec::new();
         let mut languages: Vec<Shared<String>> = Vec::new();
         if !dead {
-            let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
-            piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
-            prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
-            let kills_node = alive_data.get("kills");
-            if kills_node.is_some(){
-                for k in kills_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                    kills.push(game_state.get_character(k.as_string_ref().unwrap().as_str()).clone());
+            let alive_node = base.get("alive_data");
+            if alive_node.is_some(){
+                let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
+                piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
+                prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
+                let kills_node = alive_data.get("kills");
+                if kills_node.is_some(){
+                    for k in kills_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                        kills.push(game_state.get_character(k.as_string_ref().unwrap().as_str()).clone());
+                    }
                 }
-            }
-            for l in alive_data.get_object_ref("languages").get_array_iter(){
-                languages.push(l.as_string());
-            }
-            let perk_node = alive_data.get("perks");
-            if perk_node.is_some(){
-                for p in perk_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                    traits.push(p.as_string());
+                for l in alive_data.get_object_ref("languages").get_array_iter(){
+                    languages.push(l.as_string());
+                }
+                let perk_node = alive_data.get("perks");
+                if perk_node.is_some(){
+                    for p in perk_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                        traits.push(p.as_string());
+                    }
                 }
             }
         }
@@ -441,6 +473,7 @@ impl GameObjectDerived for Character {
                 }
             }
             else{
+                //FIXME borrow expection here? how's that possible? circular reference from game_state?
                 self.faith = h.leaders[0].borrow().faith.clone();
             }
         }

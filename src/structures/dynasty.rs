@@ -19,6 +19,8 @@ pub struct Dynasty{
     pub leaders: Vec<Shared<Character>>,
 }
 
+// TODO seperate each getting segment into a function
+
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         //get the dynasty legacies
@@ -32,7 +34,7 @@ impl GameObjectDerived for Dynasty {
         //get the array of leaders
         let mut leaders = Vec::new();
         let leaders_obj = base.get("historical");
-        if perks_obj.is_some(){
+        if leaders_obj.is_some(){
             for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
                 leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
             }
@@ -117,18 +119,16 @@ impl GameObjectDerived for Dynasty {
     }
 
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
-        let mut perks = Vec::new();
         let perks_obj = base.get("perk");
         if perks_obj.is_some(){
             for p in perks_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
-                perks.push(p.as_string());
+                self.perks.push(p.as_string());
             }
         }
-        let mut leaders = Vec::new();
         let leaders_obj = base.get("historical");
         if leaders_obj.is_some(){
             for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
-                leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+                self.leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
             }
         }
         let currency = base.get("prestige");
@@ -170,8 +170,6 @@ impl GameObjectDerived for Dynasty {
         self.houses = 0;
         self.prestige_tot = prestige_tot;
         self.prestige = prestige;
-        self.perks = perks;
-        self.leaders = leaders;
         self.id = base.get_name().parse::<u32>().unwrap();
     }
 }

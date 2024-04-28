@@ -39,7 +39,7 @@ You will need to decompress the save file and convert the save file to the text 
 #### Decompressing your save file
 
 The save file is compressed using zlib, meaning any ordinary decompression program is capable of decompressing the save file.
-Just decompress it then as if it was an archive, then enter the new directory and copy the ````gamestate``` file inside.
+Just decompress it then as if it was an archive, then enter the new directory and copy the ```gamestate``` file inside.
 That file is your actual file the program is expecting.
 
 ### Running the program
@@ -48,6 +48,11 @@ Depending on the version this might vary a bit, but the program expects to find 
 Make sure then you download it from this repository and place it so that the program will find it.
 Then just run it and follow the prompts.
 The program will create a new directory in your current working directory for each player within your save file.
+
+## Output example
+
+You can find output examples in the [examples](examples/) directory.
+Just unzip the files contained within and witness the glory of my dynasty!
 
 ## Other similar tools
 
