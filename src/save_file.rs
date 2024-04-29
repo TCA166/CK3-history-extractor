@@ -12,7 +12,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies out there
     let mut buffer = [0; 1];
     let ret = file.read(&mut buffer);
-    if ret.is_err(){
+    if ret.is_err() || ret.unwrap() == 0{
         return None;
     }
     return Some(buffer[0] as char);

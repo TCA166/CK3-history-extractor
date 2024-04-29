@@ -35,10 +35,17 @@ fn main() {
     let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
+    let mut last_name = String::new();
     for mut i in save{
-        print!("{:?}\n", i.get_name());
-        stdout().flush().unwrap();
+        if i.get_name() != last_name{
+            print!("{:?}\n", i.get_name());
+            stdout().flush().unwrap();
+            last_name = i.get_name().to_string().clone();
+        }
         match i.get_name(){ //the order is kept consistent with the order in the save file
+            "traits_lookup" => {
+                game_state.add_lookup(i.to_object().unwrap().get_array_iter().map(|x| x.as_string()).collect());
+            }
             "landed_titles" => {
                 let o = i.to_object().unwrap();
                 let landed = o.get_object_ref("landed_titles");
@@ -69,18 +76,37 @@ fn main() {
             }
             "living" => {
                 let o = i.to_object().unwrap();
-                let living = o.get_keys();
-                for l in living{
-                    game_state.add_character(o.get_object_ref(&l));
+                for l in o.get_obj_iter(){
+                    game_state.add_character(l.1.as_object_ref().unwrap());
                 }
             }
             "dead_unprunable" => {
                 let o = i.to_object().unwrap();
-                let dead = o.get_keys();
-                for d in dead{
-                    game_state.add_character(o.get_object_ref(&d));
+                for d in o.get_obj_iter(){
+                    game_state.add_character(d.1.as_object_ref().unwrap());
                 }
             }
+            "religion" => {
+                let o = i.to_object().unwrap();
+                let faiths = o.get_object_ref("faiths");
+                for f in faiths.get_obj_iter(){
+                    game_state.add_faith(f.1.as_object_ref().unwrap());
+                }
+            }
+            "culture_manager" => {
+                let o = i.to_object().unwrap();
+                let cultures = o.get_object_ref("cultures");
+                for c in cultures.get_obj_iter(){
+                    game_state.add_culture(c.1.as_object_ref().unwrap());
+                }
+            }
+            "character_memory_manager" => {
+                let o = i.to_object().unwrap();
+                let database = o.get_object_ref("database");
+                for d in database.get_obj_iter(){
+                    game_state.add_memory(d.1.as_object_ref().unwrap());
+                }
+            } 
             "played_character" => {
                 let p = RefCell::from(i.to_object().unwrap());
                 game_state.add_player(p.borrow());

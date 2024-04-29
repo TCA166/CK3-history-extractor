@@ -14,14 +14,15 @@ pub struct Memory {
 
 impl GameObjectDerived for Memory {
     fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) -> Self {
-        let part = base.get("participants").unwrap().as_object_ref().unwrap();
+        let part = base.get("participants").unwrap().as_object_ref().unwrap(); //FIXME sometimes missing?
         let mut participants = Vec::new();
         for k in part.get_keys(){
             let v = part.get(&k).unwrap();
             participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).clone()));
         }
+        println!("Memory: {:?}", base);
         Memory{
-            date: base.get("date").unwrap().as_string(),
+            date: base.get("creation_date").unwrap().as_string(),
             r#type: base.get("type").unwrap().as_string(),
             participants: participants,
             id: base.get_name().parse::<u32>().unwrap()

@@ -148,11 +148,12 @@ fn get_memories(memories:&mut Vec<Shared<Memory>>, base:&GameObject, game_state:
     }
 }
 
-fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject){
+fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject, game_state:&mut GameState){
     let traits_node = base.get("traits");
     if traits_node.is_some(){
         for t in traits_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-            traits.push(t.as_string());
+            let index = t.as_string().borrow().parse::<u32>().unwrap();
+            traits.push(game_state.get_trait(index));
         }
     }
 }
@@ -200,13 +201,13 @@ fn get_landed_data(gold:&mut f32, dread:&mut f32, strength:&mut f32, titles:&mut
         let titles_node = landed_data.get("titles");
         if titles_node.is_some(){
             for t in titles_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()).clone());
+                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()));
             }
         }
         let vassals_node = landed_data.get("vassals");
         if vassals_node.is_some(){
             for v in landed_data.get("vassals").unwrap().as_object_ref().unwrap().get_array_iter(){
-                vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()).clone());
+                vassals.push(game_state.get_character(v.as_string_ref().unwrap().as_str()));
             }
         }
     }
@@ -215,7 +216,7 @@ fn get_landed_data(gold:&mut f32, dread:&mut f32, strength:&mut f32, titles:&mut
 fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){
-        return Some(game_state.get_dynasty(dynasty_id.unwrap().as_string_ref().unwrap().as_str()).clone());
+        return Some(game_state.get_dynasty(dynasty_id.unwrap().as_string_ref().unwrap().as_str()));
     }
     None
 }
@@ -245,7 +246,7 @@ impl GameObjectDerived for Character {
         get_memories(&mut memories, &base, game_state);
         //find traits
         let mut traits = Vec::new();
-        get_traits(&mut traits, &base);
+        get_traits(&mut traits, &base, game_state);
         //find alive data
         let mut piety = 0.0;
         let mut prestige = 0.0;
@@ -347,7 +348,7 @@ impl GameObjectDerived for Character {
         //find memories
         get_memories(&mut self.memories, &base, game_state);
         //find traits
-        get_traits(&mut self.traits, &base);
+        get_traits(&mut self.traits, &base, game_state);
         //find alive data
         if !dead {
             parse_alive_data(&base, &mut self.piety, &mut self.prestige, &mut self.kills, &mut self.languages, &mut self.traits, game_state);

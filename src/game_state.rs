@@ -16,7 +16,8 @@ pub struct GameState{
     faiths: HashMap<String, Shared<Faith>>,
     cultures: HashMap<String, Shared<Culture>>,
     dynasties: HashMap<String, Shared<Dynasty>>,
-    memories: HashMap<String, Shared<Memory>>
+    memories: HashMap<String, Shared<Memory>>,
+    traits_lookup: Vec<Shared<String>>
 }
 
 impl GameState{
@@ -29,8 +30,17 @@ impl GameState{
             faiths: HashMap::new(),
             cultures: HashMap::new(),
             dynasties: HashMap::new(),
-            memories: HashMap::new()
+            memories: HashMap::new(),
+            traits_lookup: Vec::new()
         }
+    }
+
+    pub fn add_lookup(&mut self, array:Vec<Shared<String>>){
+        self.traits_lookup = array;
+    }
+
+    pub fn get_trait(&self, id:u32) -> Shared<String>{
+        self.traits_lookup[id as usize].clone()
     }
 
     /// Get a player by key

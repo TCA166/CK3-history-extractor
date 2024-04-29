@@ -13,27 +13,49 @@ pub struct Culture {
     pub ethos: Shared<String>,
     pub heritage: Shared<String>,
     pub martial: Shared<String>,
-    pub date: Shared<String>,
+    pub date: Option<Shared<String>>,
     pub parents: Vec<Shared<Culture>>,
     pub traditions: Vec<Shared<String>>
+}
+
+fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState){
+    let parents_obj = base.get("parents");
+    if parents_obj.is_some(){
+        for p in parents_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+            parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
+        }
+    }
+}
+
+fn get_traditions(traditions:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+    let traditions_obj = base.get("traditions");
+    if traditions_obj.is_some(){
+        for t in traditions_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+            traditions.push(t.as_string());
+        }
+    }
+}
+
+fn get_date(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
+    let node = base.get("date");
+    if node.is_some(){
+        return Some(node.unwrap().as_string());
+    }
+    None
 }
 
 impl GameObjectDerived for Culture {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut parents = Vec::new();
-        for p in base.get_object_ref("parents").get_array_iter(){
-            parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
-        }
+        get_parents(&mut parents, &base, game_state);
         let mut traditions = Vec::new();
-        for t in base.get_object_ref("traditions").get_array_iter(){
-            traditions.push(t.as_string());
-        }
+        get_traditions(&mut traditions, &base);
         Culture{
             name: base.get("name").unwrap().as_string(),
             ethos: base.get("ethos").unwrap().as_string(),
             heritage: base.get("heritage").unwrap().as_string(),
-            martial: base.get("martial").unwrap().as_string(),
-            date: base.get("date").unwrap().as_string(),
+            martial: base.get("martial_custom").unwrap().as_string(),
+            date: get_date(&base),
             parents: parents,
             traditions: traditions,
             id: base.get_name().parse::<u32>().unwrap()
@@ -46,7 +68,7 @@ impl GameObjectDerived for Culture {
             ethos: Shared::new("".to_owned().into()),
             heritage: Shared::new("".to_owned().into()),
             martial: Shared::new("".to_owned().into()),
-            date: Shared::new("".to_owned().into()),
+            date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
             id: id
@@ -54,17 +76,13 @@ impl GameObjectDerived for Culture {
     }
 
     fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
-        let mut parents = Vec::new();
-        for p in base.get_object_ref("parents").get_array_iter(){
-            parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
-        }
-        self.parents = parents;
-        let mut traditions = Vec::new();
-        for t in base.get_object_ref("traditions").get_array_iter(){
-            traditions.push(t.as_string());
-        }
-        self.traditions = traditions;
-        self.id = base.get_name().parse::<u32>().unwrap();
+        get_parents(&mut self.parents, &base, game_state);
+        get_traditions(&mut self.traditions, &base);
+        self.name = base.get("name").unwrap().as_string();
+        self.ethos = base.get("ethos").unwrap().as_string();
+        self.heritage = base.get("heritage").unwrap().as_string();
+        self.martial = base.get("martial_custom").unwrap().as_string();
+        self.date = get_date(&base);
     }
 
     fn get_id(&self) -> u32 {

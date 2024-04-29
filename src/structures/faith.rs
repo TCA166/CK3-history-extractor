@@ -42,6 +42,16 @@ fn get_doctrines(doctrines:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
     }
 }
 
+fn get_name(base:&Ref<'_, GameObject>) -> Shared<String>{
+    let node = base.get("name");
+    if node.is_some(){
+        return node.unwrap().as_string();
+    }
+    else{
+        base.get("template").unwrap().as_string()
+    }
+}
+
 impl GameObjectDerived for Faith {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut tenets = Vec::new();
@@ -49,7 +59,7 @@ impl GameObjectDerived for Faith {
         let mut doctrines = Vec::new();
         get_doctrines(&mut doctrines, &base);
         Faith{
-            name: base.get("name").unwrap().as_string(),
+            name: get_name(&base),
             tenets: tenets,
             head: get_head(&base, game_state),
             fervor: base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap(),
@@ -73,7 +83,7 @@ impl GameObjectDerived for Faith {
         get_tenets(&mut self.tenets, &base);
         self.head.clone_from(&get_head(&base, game_state));
         get_doctrines(&mut self.doctrines, &base);
-        self.name.clone_from(&base.get("name").unwrap().as_string());
+        self.name = get_name(&base);
         self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
     }
 
