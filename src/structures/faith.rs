@@ -16,25 +16,42 @@ pub struct Faith {
     pub doctrines: Vec<Shared<String>>
 }
 
+fn get_head(base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
+    let current = base.get("head");
+    if current.is_some(){
+        return Some(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()));
+    }
+    None
+}
+
+fn get_tenets(tenets:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+    let tenets_obj = base.get("tenets");
+    if tenets_obj.is_some(){
+        for t in tenets_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+            tenets.push(t.as_string());
+        }
+    }
+}
+
+fn get_doctrines(doctrines:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+    let doctrines_obj = base.get("doctrines");
+    if doctrines_obj.is_some(){
+        for d in doctrines_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+            doctrines.push(d.as_string());
+        }
+    }
+}
+
 impl GameObjectDerived for Faith {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
         let mut tenets = Vec::new();
-        for t in base.get_object_ref("tenets").get_array_iter(){
-            tenets.push(t.as_string());
-        }
-        let head_id = base.get("head");
-        let head = match head_id{
-            Some(h) => Some(Rc::from(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone())),
-            None => None
-        };
+        get_tenets(&mut tenets, &base);
         let mut doctrines = Vec::new();
-        for d in base.get_object_ref("doctrines").get_array_iter(){
-            doctrines.push(d.as_string());
-        }
+        get_doctrines(&mut doctrines, &base);
         Faith{
             name: base.get("name").unwrap().as_string(),
             tenets: tenets,
-            head: head,
+            head: get_head(&base, game_state),
             fervor: base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap(),
             doctrines: doctrines,
             id: base.get_name().parse::<u32>().unwrap()
@@ -53,24 +70,11 @@ impl GameObjectDerived for Faith {
     }
 
     fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
-        let mut tenets = Vec::new();
-        for t in base.get_object_ref("tenets").get_array_iter(){
-            tenets.push(t.as_string());
-        }
-        self.tenets = tenets;
-        let head_id = base.get("head");
-        self.head = match head_id{
-            Some(h) => Some(Rc::from(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone())),
-            None => None
-        };
-        let mut doctrines = Vec::new();
-        for d in base.get_object_ref("doctrines").get_array_iter(){
-            doctrines.push(d.as_string());
-        }
-        self.doctrines = doctrines;
-        self.name = base.get("name").unwrap().as_string();
+        get_tenets(&mut self.tenets, &base);
+        self.head.clone_from(&get_head(&base, game_state));
+        get_doctrines(&mut self.doctrines, &base);
+        self.name.clone_from(&base.get("name").unwrap().as_string());
         self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
-        self.id = base.get_name().parse::<u32>().unwrap();
     }
 
     fn get_id(&self) -> u32 {

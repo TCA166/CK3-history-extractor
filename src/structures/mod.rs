@@ -41,5 +41,6 @@ pub trait GameObjectDerived{
     /// Initialize the object (ideally dummy) with auxiliary data from the game state
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState);
 
+    /// Get the id of the object
     fn get_id(&self) -> u32;
 }
