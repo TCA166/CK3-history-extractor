@@ -120,7 +120,14 @@ impl Section{
                     }
                     else{ // we pop the inner object and insert it into the outer object
                         let inner = stack.pop().unwrap();
-                        stack.last_mut().unwrap().insert(inner.get_name().to_string(), SaveFileValue::Object(Rc::new(RefCell::new(inner))));
+                        let name = inner.get_name().to_string();
+                        let val = SaveFileValue::Object(Rc::new(RefCell::new(inner)));
+                        if name.is_empty(){ //check if unnamed node, implies we are dealing with an array of unnamed objects
+                            stack.last_mut().unwrap().push(val);
+                        }
+                        else{
+                            stack.last_mut().unwrap().insert(name, val);
+                        }
                     }
                 }
                 '"' => { // we have a quote, we toggle the quotes flag
@@ -370,6 +377,39 @@ mod tests {
         assert_eq!(*(test2.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
         assert_eq!(*(test2.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
         assert_eq!(test2.get_array_iter().len(), 3);
+    }
+
+    #[test]
+    fn test_unnamed_obj(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+        3623={
+            name=\"dynn_Sao\"
+            variables={
+                data={ 
+                        {
+                            flag=\"ai_random_harm_cooldown\"
+                            tick=7818
+                            data={
+                                type=boolean
+                                identity=1
+                            }
+                        }
+                        {
+                            something_else=\"test\"
+                        }
+                    }
+                }
+            }
+        }
+        ").unwrap();
+        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().to_object().unwrap();
+        let variables = object.get_object_ref("variables");
+        let data = variables.get_object_ref("data");
+        assert!(!data.is_empty());
+        assert_ne!(data.get_array_iter().len(), 0)
+
     }
 
     #[test]

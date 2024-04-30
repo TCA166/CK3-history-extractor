@@ -27,6 +27,9 @@ pub use memory::Memory;
 mod title;
 pub use title::Title;
 
+mod lineage;
+pub use lineage::LineageNode;
+
 /// A type alias for shared objects.
 /// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
 /// 
