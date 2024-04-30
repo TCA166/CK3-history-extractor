@@ -9,7 +9,6 @@ use crate::game_object::GameObject;
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
 pub struct GameState{
-    players: HashMap<String, Shared<Player>>,
     characters: HashMap<String, Shared<Character>>,
     titles: HashMap<String, Shared<Title>>,
     faiths: HashMap<String, Shared<Faith>>,
@@ -23,7 +22,6 @@ impl GameState{
     /// Create a new GameState
     pub fn new() -> GameState{
         GameState{
-            players: HashMap::new(),
             characters: HashMap::new(),
             titles: HashMap::new(),
             faiths: HashMap::new(),
@@ -42,18 +40,6 @@ impl GameState{
     /// Get a trait by id
     pub fn get_trait(&self, id:u32) -> Shared<String>{
         self.traits_lookup[id as usize].clone()
-    }
-
-    /// Get a player by key
-    pub fn get_player(&mut self, key: &str) -> Shared<Player>{
-        if !self.players.contains_key(key){
-            let v = Rc::new(RefCell::new(Player::dummy(key.parse::<u32>().unwrap())));
-            self.players.insert(key.to_string(), v.clone());
-            v
-        }
-        else{
-            self.players.get(key).unwrap().clone()
-        }
     }
 
     /// Get a character by key
@@ -125,19 +111,6 @@ impl GameState{
             let v = Rc::new(RefCell::new(Memory::dummy(key.parse::<u32>().unwrap())));
             self.memories.insert(key.to_string(), v.clone());
             v
-        }
-    }
-
-    /// Add a player to the game state
-    pub fn add_player(&mut self, value: Ref<'_, GameObject>){
-        let key = value.get_name().to_string();
-        if self.players.contains_key(&key){
-            let p = self.players.get(&key).unwrap().clone();
-            p.borrow_mut().init(value, self);
-        }
-        else{
-            let p = Player::from_game_object(value, self);
-            self.players.insert(key.clone(), Rc::from(RefCell::from(p)));
         }
     }
 

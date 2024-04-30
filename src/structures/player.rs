@@ -1,6 +1,7 @@
 
 use std::{cell::Ref, rc::Rc};
 
+use minijinja::{context, Environment};
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
@@ -8,7 +9,7 @@ use crate::game_object::GameObject;
 
 use crate::game_state::GameState;
 
-use super::{Character, GameObjectDerived, Shared, LineageNode};
+use super::{renderer::Renderable, Character, GameObjectDerived, LineageNode, Shared};
 
 pub struct Player {
     pub name: Shared<String>,
@@ -70,5 +71,12 @@ impl Serialize for Player{
         state.serialize_field("character", &self.character)?;
         state.serialize_field("lineage", &self.lineage)?;
         state.end()
+    }
+}
+
+impl Renderable for Player{
+    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+        let ctx = context!{player=>self};
+        env.get_template(template_name).unwrap().render(&ctx).unwrap()   
     }
 }

@@ -7,13 +7,17 @@ use std::env;
 mod game_object;
 
 mod save_file;
+use minijinja::Environment;
 use save_file::SaveFile;
 
 mod game_state;
 use game_state::GameState;
 
 mod structures;
+use structures::Player;
 
+use crate::structures::{GameObjectDerived, Renderable};
+use std::fs;
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     //Get the staring time
@@ -36,6 +40,7 @@ fn main() {
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
     let mut last_name = String::new();
+    let mut players:Vec<Player> = Vec::new();
     for mut i in save{
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());
@@ -112,15 +117,35 @@ fn main() {
                 }
             } 
             "played_character" => {
-                let p = RefCell::from(i.to_object().unwrap());
-                game_state.add_player(p.borrow());
+                let p = Player::from_game_object(RefCell::new(i.to_object().unwrap()).borrow(), &mut game_state);
+                players.push(p);
             }
             _ => {
                 i.skip();
             }
         }
     }
+    println!("Savefile parsing complete");
+    let mut env = Environment::new();
+    let template_files = fs::read_dir("templates/")
+        .unwrap()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .collect::<Vec<_>>();
 
+    for template_file in template_files {
+        let contents = fs::read_to_string(template_file).unwrap();
+        let template = env.add_template(template_file.file_name().unwrap().to_str().unwrap(), &contents);
+    }
+    for player in players{
+        println!("Processing {:?}", player.name);
+        if let Err(err) = fs::create_dir_all(&player.name.borrow().clone()) {
+            if err.kind() != std::io::ErrorKind::AlreadyExists {
+                println!("Failed to create folder: {}", err);
+            }
+        }
+        //player.render(&env, "homeTemplate.html");
+    }
     //Get the ending time
     let end_time = SystemTime::now();
     //Print the time taken
