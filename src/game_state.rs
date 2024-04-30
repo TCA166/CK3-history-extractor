@@ -6,7 +6,6 @@ use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, M
 use crate::game_object::GameObject;
 
 /// A struct representing all known game objects
-/// 
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
 pub struct GameState{
@@ -35,10 +34,12 @@ impl GameState{
         }
     }
 
+    /// Add a lookup table for traits
     pub fn add_lookup(&mut self, array:Vec<Shared<String>>){
         self.traits_lookup = array;
     }
 
+    /// Get a trait by id
     pub fn get_trait(&self, id:u32) -> Shared<String>{
         self.traits_lookup[id as usize].clone()
     }

@@ -104,7 +104,11 @@ fn main() {
                 let o = i.to_object().unwrap();
                 let database = o.get_object_ref("database");
                 for d in database.get_obj_iter(){
-                    game_state.add_memory(d.1.as_object_ref().unwrap());
+                    let mem = d.1.as_object_ref();
+                    if mem.is_none() {
+                        continue;
+                    }
+                    game_state.add_memory(mem.unwrap());
                 }
             } 
             "played_character" => {

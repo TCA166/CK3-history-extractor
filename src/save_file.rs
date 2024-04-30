@@ -6,7 +6,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 
 /// A function that reads a single character from a file
 /// 
-/// ## Returns
+/// # Returns
 /// 
 /// The character read or None if the end of the file is reached
 fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies out there
@@ -18,12 +18,30 @@ fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies o
     return Some(buffer[0] as char);
 }
 
+
+/// A struct that represents a section in a ck3 save file
+/// Each section has a name, and holds a file handle to the section
+/// 
+/// # Validity
+/// 
+/// The section is guaranteed to be valid when you get it.
+/// However once you call [Section::to_object] or [Section::skip] the section becomes invalid.
+/// Trying to do anything with an invalid section will panic.
+/// 
+/// # Example
+/// 
+/// ```
+/// let save = SaveFile::new("save.ck3");
+/// let section = save.next();
+/// let object = section.to_object().unwrap();
+/// ```
 pub struct Section{
     name: String,
     file:Option<File>
 }
 
 impl Section{
+    /// Create a new section
     fn new(name: &str, file: File) -> Section{
         Section{
             name: name.to_string(),
@@ -36,11 +54,19 @@ impl Section{
         &self.name
     }
 
+    /// Invalidate the section
     fn invalidate(&mut self){
         self.file = None;
     }
 
-    /// Convert the section to a GameObject and invalidate it
+    /// Convert the section to a GameObject and invalidate it.
+    /// This is a rather costly process as it has to read the entire section contents and parse them.
+    /// You can then make a choice if you want to parse the object or [Section::skip] it.
+    /// The section must be valid.
+    /// 
+    /// # Panics
+    /// 
+    /// If the section is invalid
     pub fn to_object(&mut self) -> Option<GameObject>{
         if self.file.is_none(){
             panic!("Invalid section");
@@ -150,7 +176,13 @@ impl Section{
         return Some(object);
     }
 
-    /// Skip the current section and invalidate it
+    /// Skip the current section and invalidate it.
+    /// This is a rather cheap operation as it only reads the file until the end of the section.
+    /// The section must be valid.
+    /// 
+    /// # Panics
+    /// 
+    /// If the section is invalid
     pub fn skip(&mut self){
         if self.file.is_none(){
             panic!("Invalid section");
@@ -180,14 +212,24 @@ impl Section{
     }
 }
 
-/// A struct that represents a ck3 save file
+/// A struct that represents a ck3 save file.
+/// This struct is an iterator that returns sections from the save file.
+/// 
+/// # Example
+/// 
+/// ```
+/// let save = SaveFile::new("save.ck3");
+/// for section in save{
+///    println!("Section: {}", section.get_name());
+/// }
 pub struct SaveFile{
     file: File
 }
 
 impl SaveFile{
 
-    /// Create a new SaveFile instance
+    /// Create a new SaveFile instance.
+    /// The filename must be valid of course.
     pub fn new(filename: &str) -> SaveFile{
         SaveFile{
             file: File::open(filename).unwrap(),
@@ -201,6 +243,7 @@ impl Iterator for SaveFile{
     type Item = Section;
 
     /// Get the next object in the save file
+    /// If the file pointer has reached the end of the file then it will return None.
     fn next(&mut self) -> Option<Section>{
         let mut key = String::new();
         let file = &mut self.file;

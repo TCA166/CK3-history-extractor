@@ -4,23 +4,28 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{Character, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
+use crate::game_state::GameState;
 
 pub struct Memory {
     pub id: u32,
     pub date: Shared<String>,
     pub r#type: Shared<String>,
-    pub participants: Vec<(Shared<String>, Shared<Character>)>,
+    pub participants: Vec<(String, Shared<Character>)>,
+}
+
+fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ref<'_, GameObject>, game_state:&mut GameState){
+    let participants_node = base.get("participants");
+    if participants_node.is_some(){
+        for part in participants_node.unwrap().as_object_ref().unwrap().get_obj_iter(){
+            participants.push((part.0.clone(), game_state.get_character(part.1.as_string().borrow().as_str()).clone()));
+        }
+    }
 }
 
 impl GameObjectDerived for Memory {
-    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) -> Self {
-        let part = base.get("participants").unwrap().as_object_ref().unwrap(); //FIXME sometimes missing?
+    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut GameState) -> Self {
         let mut participants = Vec::new();
-        for k in part.get_keys(){
-            let v = part.get(&k).unwrap();
-            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).clone()));
-        }
-        println!("Memory: {:?}", base);
+        get_participants(&mut participants, &base, game_state);
         Memory{
             date: base.get("creation_date").unwrap().as_string(),
             r#type: base.get("type").unwrap().as_string(),
@@ -38,17 +43,10 @@ impl GameObjectDerived for Memory {
         }
     }
 
-    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
-        let part = base.get("participants").unwrap().as_object_ref().unwrap();
-        let mut participants = Vec::new();
-        for k in part.get_keys(){
-            let v = part.get(&k).unwrap();
-            participants.push((Rc::from(RefCell::from(k)), game_state.get_character(v.as_string_ref().unwrap().as_str()).clone()));
-        }
+    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut GameState) {
         self.date = base.get("date").unwrap().as_string();
         self.r#type = base.get("type").unwrap().as_string();
-        self.participants = participants;
-        self.id = base.get_name().parse::<u32>().unwrap();
+        get_participants(&mut self.participants, &base, game_state);
     }
 
     fn get_id(&self) -> u32 {
