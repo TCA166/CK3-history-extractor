@@ -9,7 +9,7 @@ use crate::game_object::GameObject;
 
 use crate::game_state::GameState;
 
-use super::{renderer::Renderable, Character, GameObjectDerived, LineageNode, Shared};
+use super::{renderer::{Renderable, Cullable}, Character, GameObjectDerived, LineageNode, Shared};
 
 pub struct Player {
     pub name: Shared<String>,
@@ -76,6 +76,9 @@ impl Serialize for Player{
 
 impl Renderable for Player{
     fn render(&self, env: &Environment) -> String {
+        for char in self.lineage.iter(){
+            char.character.as_ref().unwrap().borrow_mut().set_depth(1);
+        }
         let ctx = context!{player=>self};
         env.get_template("homeTemplate.html").unwrap().render(&ctx).unwrap()   
     }

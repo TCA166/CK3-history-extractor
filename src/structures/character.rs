@@ -10,7 +10,7 @@ use crate::game_state::GameState;
 
 use super::renderer::Renderable;
 
-use super::{Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use super::{Cullable, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
     pub id: u32,
@@ -39,7 +39,8 @@ pub struct Character {
     pub strength: f32,
     pub kills: Vec<Shared<Character>>,
     pub languages: Vec<Shared<String>>,
-    pub vassals: Vec<Shared<Character>>
+    pub vassals: Vec<Shared<Character>>,
+    depth: usize
 }
 
 //TODO seperate each getting segment into a separate function
@@ -297,7 +298,8 @@ impl GameObjectDerived for Character {
             kills: kills,
             languages: languages,
             vassals: vassals,
-            id: base.get_name().parse::<u32>().unwrap()
+            id: base.get_name().parse::<u32>().unwrap(),
+            depth: 0
         }    
     }
 
@@ -329,7 +331,8 @@ impl GameObjectDerived for Character {
             kills: Vec::new(),
             languages: Vec::new(),
             vassals: Vec::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -385,7 +388,15 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
+        println!("Serializing character {:?}", self.id);
+        if self.depth == 0 {
+            let mut state = serializer.serialize_struct("Character", 2)?;
+            state.serialize_field("id", &self.id)?;
+            state.serialize_field("name", &self.name)?;
+            return state.end();
+        }
         let mut state = serializer.serialize_struct("Character", 27)?;
+        //FIXME possible infinite recursion here somewhere somehow
         state.serialize_field("name", &self.name)?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
@@ -412,6 +423,7 @@ impl Serialize for Character {
         state.serialize_field("kills", &self.kills)?;
         state.serialize_field("languages", &self.languages)?;
         state.serialize_field("vassals", &self.vassals)?;
+        state.serialize_field("id", &self.id)?;
         state.end()
     }
 }
@@ -420,5 +432,44 @@ impl Renderable for Character {
     fn render(&self, env: &Environment) -> String {
         let ctx = context! {character=>self};
         env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap()
+    }
+}
+
+impl Cullable for Character {
+    fn set_depth(&mut self, depth:usize) {
+        if depth <= self.depth || depth == 0 {
+            return;
+        }
+        self.depth = depth;
+        for s in self.spouses.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        for s in self.former.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        for s in self.children.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        for s in self.kills.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        for s in self.vassals.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        self.culture.borrow_mut().set_depth(depth - 1);
+        self.faith.borrow_mut().set_depth(depth - 1);
+        for s in self.titles.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        for s in self.memories.iter_mut(){
+            s.borrow_mut().set_depth(depth - 1);
+        }
+        if self.house.is_some(){
+            self.house.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
+        }
+    }
+
+    fn get_depth(&self) -> usize {
+        self.depth
     }
 }

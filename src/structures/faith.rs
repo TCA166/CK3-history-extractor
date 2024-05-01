@@ -3,7 +3,7 @@ use std::cell::Ref;
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, GameObjectDerived, Shared};
+use super::{Character, Cullable, GameObjectDerived, Shared};
 use super::renderer::Renderable;
 use crate::game_object::GameObject;
 
@@ -13,7 +13,8 @@ pub struct Faith {
     pub tenets: Vec<Shared<String>>,
     pub head: Option<Shared<Character>>,
     pub fervor: f32,
-    pub doctrines: Vec<Shared<String>>
+    pub doctrines: Vec<Shared<String>>,
+    depth: usize
 }
 
 fn get_head(base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
@@ -64,7 +65,8 @@ impl GameObjectDerived for Faith {
             head: get_head(&base, game_state),
             fervor: base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap(),
             doctrines: doctrines,
-            id: base.get_name().parse::<u32>().unwrap()
+            id: base.get_name().parse::<u32>().unwrap(),
+            depth: 0
         }
     }
 
@@ -75,7 +77,8 @@ impl GameObjectDerived for Faith {
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
             doctrines: Vec::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -111,5 +114,21 @@ impl Renderable for Faith {
     fn render(&self, env: &Environment) -> String {
         let ctx = context! {faith=>self};
         env.get_template("faithTemplate.html").unwrap().render(&ctx).unwrap()   
+    }
+}
+
+impl Cullable for Faith {
+    fn get_depth(&self) -> usize {
+        self.depth
+    }
+
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth || depth == 0{
+            return;
+        }
+        self.depth = depth;
+        if self.head.is_some(){
+            self.head.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+        }
     }
 }

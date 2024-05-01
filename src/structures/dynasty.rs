@@ -3,7 +3,7 @@ use minijinja::{Environment, context};
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{Character, GameObjectDerived, Shared};
+use super::{Character, Cullable, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
 use std::cell::Ref;
@@ -18,6 +18,7 @@ pub struct Dynasty{
     pub prestige: f32,
     pub perks: Vec<Shared<String>>,
     pub leaders: Vec<Shared<Character>>,
+    depth: usize
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
@@ -122,7 +123,8 @@ impl GameObjectDerived for Dynasty {
             prestige: res.1,
             perks: perks,
             leaders: leaders,
-            id: base.get_name().parse::<u32>().unwrap()
+            id: base.get_name().parse::<u32>().unwrap(),
+            depth: 0
         }
     }
 
@@ -136,7 +138,8 @@ impl GameObjectDerived for Dynasty {
             prestige: 0.0,
             perks: Vec::new(),
             leaders: Vec::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -189,5 +192,24 @@ impl Renderable for Dynasty {
     fn render(&self, env: &Environment) -> String {
         let ctx = context! {dynasty=>self};
         env.get_template("dynastyTemplate.html").unwrap().render(&ctx).unwrap()   
+    }
+}
+
+impl Cullable for Dynasty {
+    fn set_depth(&mut self, depth:usize) {
+        if depth <= self.depth || depth == 0 {
+            return;
+        }
+        self.depth = depth;
+        for leader in self.leaders.iter(){
+            leader.borrow_mut().set_depth(depth-1);
+        }
+        if self.parent.as_ref().is_some(){
+            self.parent.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+        }
+    }
+
+    fn get_depth(&self) -> usize {
+        self.depth
     }
 }

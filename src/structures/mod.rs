@@ -1,5 +1,5 @@
 mod renderer;
-pub use renderer::Renderable;
+pub use renderer::{Renderable, Cullable};
 
 use std::cell::Ref;
 

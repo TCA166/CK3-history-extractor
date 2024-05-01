@@ -11,7 +11,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
 use super::renderer::Renderable;
-use super::{Character, GameObjectDerived, Shared};
+use super::{Character, Cullable, GameObjectDerived, Shared};
 
 pub struct Title {
     pub id: u32,
@@ -19,7 +19,8 @@ pub struct Title {
     pub de_jure: Option<Shared<Title>>,
     pub de_facto: Option<Shared<Title>>,
     pub vassals: Vec<Shared<Title>>,
-    pub history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>
+    pub history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>,
+    depth: usize
 }
 
 fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> HashMap<String, (Option<Shared<Character>>, Shared<String>)>{
@@ -91,7 +92,8 @@ impl GameObjectDerived for Title{
             de_facto: de_facto,
             vassals: vassals,
             history: history,
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -106,7 +108,8 @@ impl GameObjectDerived for Title{
             de_facto: None,
             vassals: Vec::new(),
             history: HashMap::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -155,5 +158,27 @@ impl Renderable for Title {
     fn render(&self, env: &Environment) -> String {
         let ctx = context! {title=>self};
         env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap()   
+    }
+}
+
+impl Cullable for Title {
+    fn set_depth(&mut self, depth:usize) {
+        if depth <= self.depth || depth == 0{
+            return;
+        }
+        self.depth = depth;
+        if self.de_jure.is_some(){
+            self.de_jure.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+        }
+        if self.de_facto.is_some(){
+            self.de_facto.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+        }
+        for v in &self.vassals{
+            v.borrow_mut().set_depth(depth-1);
+        }
+    }
+
+    fn get_depth(&self) -> usize {
+        self.depth
     }
 }

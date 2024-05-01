@@ -2,11 +2,10 @@ use minijinja::{Environment, context};
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{GameObjectDerived, Shared};
+use super::{Cullable, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use std::cell::Ref;
 
-#[derive(Debug)]
 pub struct Culture {
     pub id: u32,
     pub name: Shared<String>,
@@ -15,7 +14,8 @@ pub struct Culture {
     pub martial: Shared<String>,
     pub date: Option<Shared<String>>,
     pub parents: Vec<Shared<Culture>>,
-    pub traditions: Vec<Shared<String>>
+    pub traditions: Vec<Shared<String>>,
+    depth: usize
 }
 
 fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState){
@@ -58,7 +58,8 @@ impl GameObjectDerived for Culture {
             date: get_date(&base),
             parents: parents,
             traditions: traditions,
-            id: base.get_name().parse::<u32>().unwrap()
+            id: base.get_name().parse::<u32>().unwrap(),
+            depth: 0
         }
     }
 
@@ -71,7 +72,8 @@ impl GameObjectDerived for Culture {
             date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -111,5 +113,21 @@ impl Renderable for Culture {
     fn render(&self, env: &Environment) -> String {
         let ctx = context! {culture=>self};
         env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap()   
+    }
+}
+
+impl Cullable for Culture {
+    fn get_depth(&self) -> usize {
+        self.depth
+    }
+
+    fn set_depth(&mut self, depth:usize) {
+        if depth <= self.depth || depth == 0{
+            return;
+        }
+        self.depth = depth;
+        for p in &self.parents{
+            p.borrow_mut().set_depth(depth-1);
+        }
     }
 }

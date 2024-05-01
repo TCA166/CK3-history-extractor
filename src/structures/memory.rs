@@ -2,7 +2,7 @@ use std::cell::{RefCell, Ref};
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, GameObjectDerived, Shared};
+use super::{Character, Cullable, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
@@ -11,6 +11,7 @@ pub struct Memory {
     pub date: Shared<String>,
     pub r#type: Shared<String>,
     pub participants: Vec<(String, Shared<Character>)>,
+    depth: usize
 }
 
 fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ref<'_, GameObject>, game_state:&mut GameState){
@@ -30,7 +31,8 @@ impl GameObjectDerived for Memory {
             date: base.get("creation_date").unwrap().as_string(),
             r#type: base.get("type").unwrap().as_string(),
             participants: participants,
-            id: base.get_name().parse::<u32>().unwrap()
+            id: base.get_name().parse::<u32>().unwrap(),
+            depth: 0
         }
     }
 
@@ -39,7 +41,8 @@ impl GameObjectDerived for Memory {
             date: Rc::new(RefCell::new("".to_owned())),
             r#type: Rc::new(RefCell::new("".to_owned())),
             participants: Vec::new(),
-            id: id
+            id: id,
+            depth: 0
         }
     }
 
@@ -64,5 +67,21 @@ impl Serialize for Memory {
         state.serialize_field("type", &self.r#type)?;
         state.serialize_field("participants", &self.participants)?;
         state.end()
+    }
+}
+
+impl Cullable for Memory {
+    fn set_depth(&mut self, depth:usize){
+        if depth <= self.depth || depth == 0{
+            return;
+        }
+        self.depth = depth;
+        for part in self.participants.iter_mut(){
+            part.1.borrow_mut().set_depth(depth - 1);
+        }
+    }
+
+    fn get_depth(&self) -> usize{
+        self.depth
     }
 }
