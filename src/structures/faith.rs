@@ -108,8 +108,8 @@ impl Serialize for Faith {
 }
 
 impl Renderable for Faith {
-    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+    fn render(&self, env: &Environment) -> String {
         let ctx = context! {faith=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()   
+        env.get_template("faithTemplate.html").unwrap().render(&ctx).unwrap()   
     }
 }

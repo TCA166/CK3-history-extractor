@@ -127,16 +127,8 @@ fn main() {
     }
     println!("Savefile parsing complete");
     let mut env = Environment::new();
-    let template_files = fs::read_dir("templates/")
-        .unwrap()
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path())
-        .collect::<Vec<_>>();
-
-    for template_file in template_files {
-        let contents = fs::read_to_string(template_file).unwrap();
-        let template = env.add_template(template_file.file_name().unwrap().to_str().unwrap(), &contents);
-    }
+    let h_template = fs::read_to_string("templates/homeTemplate.html").unwrap();
+    env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
     for player in players{
         println!("Processing {:?}", player.name);
         if let Err(err) = fs::create_dir_all(&player.name.borrow().clone()) {
@@ -144,7 +136,7 @@ fn main() {
                 println!("Failed to create folder: {}", err);
             }
         }
-        //player.render(&env, "homeTemplate.html");
+        player.render(&env);
     }
     //Get the ending time
     let end_time = SystemTime::now();

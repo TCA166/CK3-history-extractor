@@ -6,7 +6,7 @@ use serde::ser::SerializeStruct;
 use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
-use super::{Character, Dynasty, GameObjectDerived, Shared};
+use super::{Character, GameObjectDerived, Shared};
 
 pub struct LineageNode{
     pub character: Option<Shared<Character>>,
@@ -88,7 +88,6 @@ impl GameObjectDerived for LineageNode{
         let char = game_state.get_character(id.as_str());
         let mut perks: Vec<Shared<String>> = Vec::new();
         get_perks(&mut perks, &base);
-        println!("{:?}", base);
         LineageNode { 
             character: Some(char),
             date: base.get("date").unwrap().as_string(),

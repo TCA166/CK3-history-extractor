@@ -2,7 +2,7 @@ use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Memory, Player, Shared, Title};
+use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 use crate::game_object::GameObject;
 
 /// A struct representing all known game objects

@@ -108,8 +108,8 @@ impl Serialize for Culture {
 }
 
 impl Renderable for Culture {
-    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+    fn render(&self, env: &Environment) -> String {
         let ctx = context! {culture=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()   
+        env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap()   
     }
 }

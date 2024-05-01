@@ -75,8 +75,8 @@ impl Serialize for Player{
 }
 
 impl Renderable for Player{
-    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+    fn render(&self, env: &Environment) -> String {
         let ctx = context!{player=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()   
+        env.get_template("homeTemplate.html").unwrap().render(&ctx).unwrap()   
     }
 }

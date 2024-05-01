@@ -152,8 +152,8 @@ impl Serialize for Title {
 }
 
 impl Renderable for Title {
-    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+    fn render(&self, env: &Environment) -> String {
         let ctx = context! {title=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()   
+        env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap()   
     }
 }

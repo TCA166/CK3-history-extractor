@@ -417,8 +417,8 @@ impl Serialize for Character {
 }
 
 impl Renderable for Character {
-    fn render(&self, env: &Environment, template_name: &'static String) -> String {
+    fn render(&self, env: &Environment) -> String {
         let ctx = context! {character=>self};
-        env.get_template(template_name).unwrap().render(&ctx).unwrap()
+        env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap()
     }
 }
