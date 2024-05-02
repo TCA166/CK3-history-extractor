@@ -10,6 +10,8 @@ pub enum SaveFileValue{
     Object(Shared<GameObject>)
 }
 
+// TODO rework where shared is implemented? possible speedup if the shared creation is moved from here to when things are added to the game state
+
 impl SaveFileValue {
 
     /// Get the value as a string reference.

@@ -383,6 +383,8 @@ impl GameObjectDerived for Character {
     }
 }
 
+// TODO possible astronomical cost of serializing? is it possible we serialize some things multiple times?
+
 impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

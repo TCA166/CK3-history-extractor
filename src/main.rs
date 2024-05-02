@@ -13,6 +13,7 @@ use save_file::SaveFile;
 mod game_state;
 use game_state::GameState;
 
+/// A submodule that provides functionality for rendering objects
 mod structures;
 use structures::Player;
 
@@ -58,7 +59,6 @@ fn main() {
                     let o = v.1.as_object_ref();
                     if o.is_none(){
                         // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
-                        //println!("Landed title {} is none?", v.0);
                         continue;
                     }
                     game_state.add_title(o.unwrap());
@@ -71,7 +71,6 @@ fn main() {
                         for h in o.get_obj_iter(){
                             let house = h.1.as_object_ref();
                             if house.is_none(){
-                                //println!("House {} is none?", h.0);
                                 continue;
                             }
                             game_state.add_dynasty(house.unwrap());
