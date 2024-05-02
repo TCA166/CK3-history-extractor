@@ -97,6 +97,7 @@ fn get_parent(base:&Ref<'_, GameObject>, game_state:&mut GameState) -> Option<Sh
 
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
+        println!("{:?}", base.get_keys());
         //get the dynasty legacies
         let mut perks = Vec::new();
         get_perks(&mut perks, &base);

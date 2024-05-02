@@ -43,8 +43,6 @@ pub struct Character {
     depth: usize
 }
 
-//TODO seperate each getting segment into a separate function
-
 fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
@@ -52,32 +50,18 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
     }
     else{
         let h = house.as_ref().unwrap().borrow();
-        if h.leaders.len() == 0 {
-            if h.parent.is_some(){
-                let p = h.parent.as_ref().unwrap().borrow();
-                if p.leaders.len() != 0 {
-                    return p.leaders[0].borrow().faith.as_ref().unwrap().clone();
-                }
-                else{
-                    panic!("No faith found");
+        if h.parent.is_some(){
+            let p = h.parent.as_ref().unwrap().borrow();
+            // FIXME faiths can be none, but this may be because they have not been loaded yet or because they are non for real
+            for l in p.leaders.iter(){
+                if l.borrow().faith.is_some(){
+                    return l.borrow().faith.as_ref().unwrap().clone();
                 }
             }
-            //if we made it here it means we need to search for faith in culture
             panic!("No faith found");
         }
         else{
-            let mut i = 0;
-            loop { //FIXME sometimes house leaders don't have faith
-                let l = h.leaders[i].try_borrow();
-                if l.is_ok(){
-                    let o = l.unwrap(); //dumb compiler forced me to create a new variable here
-                    let f = o.faith.as_ref();
-                    if f.is_some(){
-                        return f.unwrap().clone();
-                    }
-                }
-                i += 1;
-            }
+            panic!("No faith found");
         }
     }
 }
