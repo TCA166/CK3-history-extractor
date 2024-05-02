@@ -137,6 +137,11 @@ impl GameObjectDerived for Title{
         self.history = history;
     
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.name.clone()
+    
+    }
 }
 
 impl Serialize for Title {

@@ -55,6 +55,10 @@ impl GameObjectDerived for Memory {
     fn get_id(&self) -> u32 {
         self.id
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.r#type.clone()
+    }
 }
 
 impl Serialize for Memory {

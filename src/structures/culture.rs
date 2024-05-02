@@ -90,6 +90,10 @@ impl GameObjectDerived for Culture {
     fn get_id(&self) -> u32 {
         self.id
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.name.clone()
+    }
 }
 
 impl Serialize for Culture {
@@ -128,6 +132,47 @@ impl Cullable for Culture {
         self.depth = depth;
         for p in &self.parents{
             p.borrow_mut().set_depth(depth-1);
+        }
+    }
+}
+
+/// A struct representing a shallow reference to a culture
+/// This is used to avoid infinite recursion when serializing cultures
+pub struct CultureRef{
+    pub id: u32,
+    pub name: Shared<String>,
+    culture: Shared<Culture>
+}
+
+impl Serialize for CultureRef{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("CultureRef", 2)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("name", &self.name)?;
+        state.end()
+    }
+}
+
+impl Cullable for CultureRef{
+    fn get_depth(&self) -> usize {
+        self.culture.borrow().get_depth()
+    }
+
+    fn set_depth(&mut self, depth:usize) {
+        self.culture.borrow_mut().set_depth(depth);
+    }
+}
+
+impl CultureRef{
+    pub fn from_derived(culture:Shared<Culture>) -> Self{
+        let c = culture.borrow();
+        CultureRef{
+            id: c.id,
+            name: c.name.clone(),
+            culture: culture.clone()
         }
     }
 }

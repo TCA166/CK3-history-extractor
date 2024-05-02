@@ -130,6 +130,10 @@ impl GameObjectDerived for LineageNode{
     fn get_id(&self) -> u32 {
         self.id
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.character.as_ref().unwrap().borrow().get_name()
+    }
 }
 
 impl Serialize for LineageNode{

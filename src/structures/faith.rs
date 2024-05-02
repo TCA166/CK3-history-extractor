@@ -93,6 +93,10 @@ impl GameObjectDerived for Faith {
     fn get_id(&self) -> u32 {
         self.id
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.name.clone()
+    }
 }
 
 impl Serialize for Faith {

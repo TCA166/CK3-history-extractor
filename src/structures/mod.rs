@@ -18,6 +18,7 @@ pub use faith::Faith;
 
 mod culture;
 pub use culture::Culture;
+pub use culture::CultureRef;
 
 mod dynasty;
 pub use dynasty::Dynasty;
@@ -30,6 +31,8 @@ pub use title::Title;
 
 mod lineage;
 pub use lineage::LineageNode;
+
+mod derived_ref;
 
 /// A type alias for shared objects.
 /// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
@@ -63,4 +66,7 @@ pub trait GameObjectDerived{
     /// Within a given section that number is unique.
     /// For example, all characters have a unique id, but a title and a character can have the same id.
     fn get_id(&self) -> u32;
+
+    /// Get the name of the object.
+    fn get_name(&self) -> Shared<String>;
 }

@@ -168,6 +168,10 @@ impl GameObjectDerived for Dynasty {
     fn get_id(&self) -> u32 {
         self.id
     }
+
+    fn get_name(&self) -> Shared<String> {
+        self.name.as_ref().unwrap().clone()
+    }
 }
 
 impl Serialize for Dynasty {

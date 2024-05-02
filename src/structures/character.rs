@@ -1,4 +1,5 @@
-use std::cell::Ref;
+use std::cell::{Ref, RefCell};
+use std::rc::Rc;
 
 use minijinja::{Environment, context};
 
@@ -10,7 +11,7 @@ use crate::game_state::GameState;
 
 use super::renderer::Renderable;
 
-use super::{Cullable, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use super::{Cullable, CultureRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
     pub id: u32,
@@ -20,8 +21,8 @@ pub struct Character {
     pub dead: bool,
     pub date: Option<Shared<String>>,
     pub reason: Option<Shared<String>>,
-    pub faith: Shared<Faith>,
-    pub culture: Shared<Culture>,
+    pub faith: Option<Shared<Faith>>,
+    pub culture: Option<Shared<CultureRef>>,
     pub house: Option<Shared<Dynasty>>,
     pub skills: Vec<i8>,
     pub traits: Vec<Shared<String>>,
@@ -56,7 +57,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
             if h.parent.is_some(){
                 let p = h.parent.as_ref().unwrap().borrow();
                 if p.leaders.len() != 0 {
-                    return p.leaders[0].borrow().faith.clone();
+                    return p.leaders[0].borrow().faith.as_ref().unwrap().clone();
                 }
                 else{
                     panic!("No faith found");
@@ -70,7 +71,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
             loop {
                 let l = h.leaders[i].try_borrow();
                 if l.is_ok(){
-                    return l.unwrap().faith.clone();
+                    return l.unwrap().faith.as_ref().unwrap().clone();
                 }
                 i += 1;
             }
@@ -78,19 +79,20 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
     }
 }
 
-fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Culture>{
+fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<CultureRef>{
     let culture_node = base.get("culture");
     if culture_node.is_some(){
-        return game_state.get_culture(culture_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+        let r = CultureRef::from_derived(game_state.get_culture(culture_node.unwrap().as_string_ref().unwrap().as_str()).clone());
+        return Rc::new(RefCell::new(r));
     }
     else{
         let h = house.as_ref().unwrap().borrow();
         if h.leaders.len() == 0 {
             let p = h.parent.as_ref().unwrap().borrow();
-            return p.leaders[0].borrow().culture.clone();
+            return p.leaders[0].borrow().culture.as_ref().unwrap().clone();
         }
         else{
-            return h.leaders[0].borrow().culture.clone();
+            return h.leaders[0].borrow().culture.as_ref().unwrap().clone();
         }
     }
 }
@@ -279,8 +281,8 @@ impl GameObjectDerived for Character {
                 false => None
             },
             house: house.clone(),
-            faith: get_faith(&house, &base, game_state),
-            culture: get_culture(&house, &base, game_state),
+            faith: Some(get_faith(&house, &base, game_state)),
+            culture: Some(get_culture(&house, &base, game_state)),
             skills: skills,
             traits: traits,
             recessive:recessive,
@@ -311,8 +313,8 @@ impl GameObjectDerived for Character {
             dead: false,
             date: None,
             reason: None,
-            faith: Shared::new(Faith::dummy(0).into()),
-            culture: Shared::new(Culture::dummy(0).into()),
+            faith: None,
+            culture: None,
             house: None,
             skills: Vec::new(),
             traits: Vec::new(),
@@ -373,13 +375,17 @@ impl GameObjectDerived for Character {
             false => None
         };
         self.house = house.clone();
-        self.faith.clone_from(&get_faith(&house, &base, game_state));
-        self.culture.clone_from(&get_culture(&house, &base, game_state));
+        self.faith = Some(get_faith(&house, &base, game_state));
+        self.culture = Some(get_culture(&house, &base, game_state));
         self.dna = dna;
     }
 
     fn get_id(&self) -> u32 {
         self.id
+    }
+
+    fn get_name(&self) -> Shared<String> {
+        self.name.clone()
     }
 }
 
@@ -458,8 +464,8 @@ impl Cullable for Character {
         for s in self.vassals.iter_mut(){
             s.borrow_mut().set_depth(depth - 1);
         }
-        self.culture.borrow_mut().set_depth(depth - 1);
-        self.faith.borrow_mut().set_depth(depth - 1);
+        self.culture.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
+        self.faith.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
         for s in self.titles.iter_mut(){
             s.borrow_mut().set_depth(depth - 1);
         }
