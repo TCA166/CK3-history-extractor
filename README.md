@@ -1,5 +1,7 @@
 # CK3-history-extractor
 
+[![GitHub Pages Documentation](https://img.shields.io/badge/GitHub_Pages-Documentation-blue)](https://tca166.github.io/CK3-history-extractor/)
+
 A program designed for creating an encyclopedia of sorts containing your ck3 history  
 It goes through the lineage of every player in the save file (meaning multiplayer save files also work) and extracts data about every character it encounters and their associates
 
