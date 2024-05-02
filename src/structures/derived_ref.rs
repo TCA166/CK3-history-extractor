@@ -3,26 +3,22 @@ use serde::ser::SerializeStruct;
 
 use super::{Cullable, GameObjectDerived, Shared};
 
-struct DerivedRef<T> where T:GameObjectDerived + Cullable{
+/// A shallow serializable reference to a derived game object.
+/// The idea is to provide the id and name of the object, without serializing the whole object.
+/// This is useful for serializing references to objects that are not in the current scope.
+pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
     pub id: u32,
     pub name: Shared<String>,
-    obj: T
+    obj: Shared<T>
 }
 
 impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
-    pub fn new(id:u32, name:Shared<String>, obj:T) -> Self{
+    pub fn from_derived(obj:Shared<T>) -> Self{
+        let o = obj.borrow();
         DerivedRef{
-            id,
-            name,
-            obj
-        }
-    }
-
-    pub fn from_derived(obj:T) -> Self{
-        DerivedRef{
-            id: obj.get_id(),
-            name: obj.get_name(),
-            obj
+            id: o.get_id(),
+            name: o.get_name(),
+            obj: obj.clone()
         }
     }
 }
@@ -38,10 +34,10 @@ impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{
 
 impl<T> Cullable for DerivedRef<T> where T:GameObjectDerived + Cullable{
     fn get_depth(&self) -> usize {
-        self.obj.get_depth()
+        self.obj.borrow().get_depth()
     }
 
     fn set_depth(&mut self, depth:usize) {
-        self.obj.set_depth(depth);
+        self.obj.borrow_mut().set_depth(depth);
     }
 }

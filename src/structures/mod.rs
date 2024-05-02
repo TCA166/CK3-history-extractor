@@ -18,7 +18,6 @@ pub use faith::Faith;
 
 mod culture;
 pub use culture::Culture;
-pub use culture::CultureRef;
 
 mod dynasty;
 pub use dynasty::Dynasty;
@@ -33,6 +32,7 @@ mod lineage;
 pub use lineage::LineageNode;
 
 mod derived_ref;
+pub use derived_ref::DerivedRef;
 
 /// A type alias for shared objects.
 /// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
