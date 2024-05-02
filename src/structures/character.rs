@@ -1,4 +1,4 @@
-use std::cell::Ref;
+use std::cell::{Ref, RefCell};
 
 use minijinja::{Environment, context};
 
@@ -43,26 +43,35 @@ pub struct Character {
     depth: usize
 }
 
+/// Gets the dynasty meant to be the source of some properties
+fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
+    if house.borrow().parent.is_some(){
+        let p = house.borrow().parent.as_ref().unwrap().clone();
+        return p.clone();
+    }
+    else{
+        house.clone()
+    }
+}
+
 fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
         game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone()
     }
     else{
-        let h = house.as_ref().unwrap().borrow();
-        if h.parent.is_some(){
-            let p = h.parent.as_ref().unwrap().borrow();
-            // FIXME faiths can be none, but this may be because they have not been loaded yet or because they are non for real
-            for l in p.leaders.iter(){
-                if l.borrow().faith.is_some(){
-                    return l.borrow().faith.as_ref().unwrap().clone();
+        let house = get_src_dynasty(house.as_ref().unwrap());
+        let h = house.borrow();
+        for l in h.leaders.iter(){
+            let l = l.try_borrow();
+            if l.is_ok(){
+                let o = l.unwrap();
+                if o.faith.is_some(){
+                    return o.faith.as_ref().unwrap().clone();
                 }
             }
-            panic!("No faith found");
         }
-        else{
-            panic!("No faith found");
-        }
+        Shared::new(RefCell::new(Faith::dummy(0)))
     }
 }
 
@@ -72,14 +81,18 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
         game_state.get_culture(culture_node.unwrap().as_string_ref().unwrap().as_str()).clone()
     }
     else{
-        let h = house.as_ref().unwrap().borrow();
-        if h.leaders.len() == 0 {
-            let p = h.parent.as_ref().unwrap().borrow();
-            return p.leaders[0].borrow().culture.as_ref().unwrap().clone();
+        let h = get_src_dynasty(house.as_ref().unwrap());
+        let h = h.borrow();
+        for l in h.leaders.iter(){
+            let l = l.try_borrow();
+            if l.is_ok(){
+                let o = l.unwrap();
+                if o.culture.is_some(){
+                    return o.culture.as_ref().unwrap().clone();
+                }
+            }
         }
-        else{
-            return h.leaders[0].borrow().culture.as_ref().unwrap().clone();
-        }
+        Shared::new(RefCell::new(Culture::dummy(0)))
     }
 }
 
@@ -401,6 +414,7 @@ impl Serialize for Character {
         state.serialize_field("faith", &rf)?;
         let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
         state.serialize_field("culture", &rc)?;
+        //FIXME panics if the house is not initialized
         let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
         state.serialize_field("house", &rd)?;
         state.serialize_field("skills", &self.skills)?;

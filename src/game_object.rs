@@ -2,9 +2,10 @@ use std::{cell::Ref, collections::{hash_map, HashMap}, slice};
 
 use crate::structures::Shared;
 
+use std::fmt::Debug;
+
 /// A value that can be stored in a SaveFile and is held by a GameObject.
 /// This is a wrapper around a String or a GameObject.
-#[derive(Debug)]
 pub enum SaveFileValue{
     String(Shared<String>),
     Object(Shared<GameObject>)
@@ -65,13 +66,21 @@ impl SaveFileValue {
 
 }
 
+impl Debug for SaveFileValue{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            SaveFileValue::String(s) => write!(f, "{}", s.as_ref().borrow()),
+            SaveFileValue::Object(o) => write!(f, "{:?}", o.as_ref().borrow())
+        }
+    }
+}
+
 /// Representation of a save file object.
 /// These are the main data structure used to store game data.
 /// Each belongs to a section, but that is not stored here.
 /// Acts like a named dictionary and array, may be either or both or neither.
 /// Each has a name, which isn't unique.
 /// Holds [SaveFileValue]s, which are either strings or other GameObjects.
-#[derive(Debug)]
 pub struct GameObject{
     inner: HashMap<String, SaveFileValue>,
     array: Vec<SaveFileValue>,
@@ -169,5 +178,24 @@ impl GameObject{
     /// Get the keys of the GameObject dictionary
     pub fn get_keys(&self) -> Vec<String>{
         self.inner.keys().map(|x| x.clone()).collect()
+    }
+}
+
+impl Debug for GameObject{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let r = write!(f, "name:{} ", self.name);
+        if !self.array.is_empty(){
+            let r = write!(f, " {:?} ", self.array);
+            if r.is_err(){
+                return r;
+            }
+        }
+        if !self.inner.is_empty(){
+            let r = write!(f, " {:?} ", self.inner);
+            if r.is_err(){
+                return r;
+            }
+        }
+        return r;
     }
 }
