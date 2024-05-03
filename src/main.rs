@@ -128,14 +128,18 @@ fn main() {
     let mut env = Environment::new();
     let h_template = fs::read_to_string("templates/homeTemplate.html").unwrap();
     env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
+    //TODO serialization is done multiple times, this is inefficient
     for player in players{
-        println!("Processing {:?}", player.name);
-        if let Err(err) = fs::create_dir_all(&player.name.borrow().clone()) {
+        println!("Processing {:?}", player.name.borrow());
+        if let Err(err) = fs::create_dir_all(player.name.borrow().clone() + "'s history") {
             if err.kind() != std::io::ErrorKind::AlreadyExists {
                 println!("Failed to create folder: {}", err);
             }
         }
-        player.render(&env);
+        let contents = player.render(&env);
+        let mut file = fs::File::create(format!("{}/index.html", player.name.borrow().clone())).unwrap();
+        file.write_all(contents.as_bytes()).unwrap();
+        file.flush().unwrap();
     }
     //Get the ending time
     let end_time = SystemTime::now();

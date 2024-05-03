@@ -95,6 +95,23 @@ fn get_parent(base:&Ref<'_, GameObject>, game_state:&mut GameState) -> Option<Sh
     }
 }
 
+fn get_name(base:&Ref<'_, GameObject>, parent:Option<Shared<Dynasty>>) -> Shared<String>{
+    let mut n = base.get("name");
+    if !n.is_some(){
+        n = base.get("localized_name");
+        if !n.is_some(){
+            if parent.is_none(){
+                //TODO this happens for dynasties that exist at game start. WTF?
+                //println!("{:?}", base);
+                return Shared::new("".to_owned().into());
+            }
+            //this may happen for dynasties with a house with the same name
+            return parent.unwrap().borrow().name.as_ref().unwrap().clone();
+        }
+    }
+    n.unwrap().as_string()
+}
+
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
         //get the dynasty legacies
@@ -110,13 +127,10 @@ impl GameObjectDerived for Dynasty {
             leaders.insert(0, head);
         }
         let res = get_prestige(&base);
-        let name:Option<Shared<String>> = match base.get("name") {
-            Some(n) => Some(n.as_string()),
-            None => None
-        };
+        let p = get_parent(&base, game_state);
         Dynasty{
-            name: name,
-            parent: get_parent(&base, game_state),
+            name: Some(get_name(&base, p.clone())),
+            parent: p,
             members: 0,
             houses: 0,
             prestige_tot: res.0,
@@ -155,11 +169,7 @@ impl GameObjectDerived for Dynasty {
         self.prestige_tot = res.0;
         self.prestige = res.1;
         self.parent = get_parent(&base, game_state);
-        let name:Option<Shared<String>> = match base.get("name") {
-            Some(n) => Some(n.as_string()),
-            None => None
-        };
-        self.name = name;
+        self.name = Some(get_name(&base, self.parent.clone()));
         self.members = 0;
         self.houses = 0;
         self.id = base.get_name().parse::<u32>().unwrap();

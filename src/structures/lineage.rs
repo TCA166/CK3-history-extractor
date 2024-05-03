@@ -15,15 +15,18 @@ pub struct LineageNode{
     pub prestige: i32,
     pub piety: i32,
     pub dread:f32,
-    pub lifestyle: Shared<String>,
-    pub perks:Vec<Shared<String>>,
+    pub lifestyle: Option<Shared<String>>,
+    pub perk:Option<Shared<String>>, //in older version this was a list, guess it no longer is
     pub id: u32
 }
 
-fn get_perks(perks:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
-    let perks_node = base.get("perks");
+fn get_perk(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
+    let perks_node = base.get("perk");
     if perks_node.is_some(){
-        perks.push(perks_node.unwrap().as_string());
+        Some(perks_node.unwrap().as_string())
+    }
+    else{
+        None
     }
 }
 
@@ -73,12 +76,12 @@ fn get_piety(base: &Ref<'_, GameObject>) -> i32 {
     piety
 }
 
-fn get_lifestyle(base: &Ref<'_, GameObject>) -> Shared<String>{
+fn get_lifestyle(base: &Ref<'_, GameObject>) -> Option<Shared<String>>{
     let lifestyle_node = base.get("lifestyle");
     if lifestyle_node.is_some() {
-        lifestyle_node.unwrap().as_string()
+        Some(lifestyle_node.unwrap().as_string())
     } else {
-        Shared::new(String::new().into())
+        None
     }
 }
 
@@ -86,8 +89,6 @@ impl GameObjectDerived for LineageNode{
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
         let id = base.get_string_ref("character");
         let char = game_state.get_character(id.as_str());
-        let mut perks: Vec<Shared<String>> = Vec::new();
-        get_perks(&mut perks, &base);
         LineageNode { 
             character: Some(char),
             date: base.get("date").unwrap().as_string(),
@@ -96,7 +97,7 @@ impl GameObjectDerived for LineageNode{
             piety: get_piety(&base),
             dread: get_dread(&base),
             lifestyle: get_lifestyle(&base),
-            perks: perks,
+            perk: get_perk(&base),
             id: id.parse::<u32>().unwrap()
         }
     }
@@ -109,8 +110,8 @@ impl GameObjectDerived for LineageNode{
             prestige: 0,
             piety: 0,
             dread: 0.0,
-            lifestyle: Shared::new(String::new().into()),
-            perks: Vec::new(),
+            lifestyle: None,
+            perk: None,
             id: id
         }
     }
@@ -123,8 +124,7 @@ impl GameObjectDerived for LineageNode{
         self.piety = get_piety(&base);
         self.dread = get_dread(&base);
         self.lifestyle = get_lifestyle(&base);
-        self.perks.clear();
-        get_perks(&mut self.perks, &base);
+        self.perk = get_perk(&base);
     }
 
     fn get_id(&self) -> u32 {
@@ -149,7 +149,7 @@ impl Serialize for LineageNode{
         state.serialize_field("piety", &self.piety)?;
         state.serialize_field("dread", &self.dread)?;
         state.serialize_field("lifestyle", &self.lifestyle)?;
-        state.serialize_field("perks", &self.perks)?;
+        state.serialize_field("perk", &self.perk)?;
         state.serialize_field("id", &self.id)?;
         state.end()
     }

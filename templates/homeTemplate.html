@@ -1,37 +1,37 @@
 <html>
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
-    <title>{{lineage.player}}'s History</title>
+    <title>{{player.name}}'s History</title>
 </head>
 <body>
     <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
-        <p class="h1 my-0 me-md-auto fw-normal">{{lineage.player}}'s CK3 History</p>
+        <p class="h1 my-0 me-md-auto fw-normal">{{player.name}}'s CK3 History</p>
     </header>
     <main style="margin:8px" >
         <h3>
             This is your character history:
         </h3>
         <div class="card-deck">
-            {% for char in lineage.chars %}
+            {% for node in player.lineage %}
             <div class="card" style="width: 28rem;display: inline-block;margin:2px;">
                 <div class="card-body">
-                    <h5 class="card-title">{{char.name}} {{char.nick}}</h5>
-                    <p class="card-text">Of house {{char.house.name}}</p>
+                    <h5 class="card-title">{{node.character.name}} {{node.character.nick if node.character.nick != none}}</h5>
+                    <p class="card-text">Of house {{node.character.house.name}}</p>
                 </div>
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item">Inherited in {{char.date}}</li>
-                    {% if char.lifestyle != "" %}
-                    <li class="list-group-item">Reached a score of: {{char.score}}</li>
-                    <li class="list-group-item">Had a keen interest in {{char.lifestyle}}</li>
-                    <li class="list-group-item">{% if char.perks != []%}Was a: {% for perk in char.perks %} {{perk}} {%endfor%}{%else%}Didn't master a specific field{%endif%}</li>
+                    <li class="list-group-item">Inherited in {{node.date}}</li>
+                    {% if node.lifestyle != none %}
+                    <li class="list-group-item">Reached a score of: {{node.score}}</li>
+                    <li class="list-group-item">Had a keen interest in {{node.lifestyle}}</li>
+                    <li class="list-group-item">{% if node.perk != none%}Was a: {{node.perk}} {%else%}Didn't master a specific field{%endif%}</li>
                     {% else %}
-                    <li class="list-group-item">{{char.score}}</li>
-                    <li class="list-group-item">⠀</li>
-                    <li class="list-group-item">⠀</li>
+                    <li class="list-group-item">{{node.score}}</li>
+                    <li class="list-group-item"></li>
+                    <li class="list-group-item"></li>
                     {% endif %}
                 </ul>
                 <div class="card-body">
-                    <a href="characters/{{char.charid}}.html">Read more</a>
+                    <a href="characters/{{node.character.id}}.html">Read more</a>
                 </div>
             </div>
             {%endfor%}

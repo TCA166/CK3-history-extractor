@@ -46,7 +46,6 @@ fn get_date(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
 
 impl GameObjectDerived for Culture {
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
-        println!("{:?}", base);
         let mut parents = Vec::new();
         get_parents(&mut parents, &base, game_state);
         let mut traditions = Vec::new();

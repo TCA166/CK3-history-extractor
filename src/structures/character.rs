@@ -2,15 +2,11 @@ use std::cell::{Ref, RefCell};
 
 use minijinja::{Environment, context};
 
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
 
-use crate::game_object::GameObject;
-use crate::game_state::GameState;
+use crate::{game_object::GameObject, game_state::GameState};
 
-use super::renderer::Renderable;
-
-use super::{Cullable, DerivedRef, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use super::{renderer::Renderable, Cullable, DerivedRef, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
     pub id: u32,
@@ -403,7 +399,6 @@ impl Serialize for Character {
             return state.end();
         }
         let mut state = serializer.serialize_struct("Character", 27)?;
-        //FIXME possible infinite recursion here somewhere somehow
         state.serialize_field("name", &self.name)?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;

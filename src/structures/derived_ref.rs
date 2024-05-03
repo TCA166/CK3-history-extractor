@@ -13,6 +13,8 @@ pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
 }
 
 impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
+    /// Create a new DerivedRef from a [Shared] object.
+    /// This will clone the object and store a reference to it.
     pub fn from_derived(obj:Shared<T>) -> Self{
         let o = obj.borrow();
         DerivedRef{

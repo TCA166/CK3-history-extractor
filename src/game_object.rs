@@ -183,19 +183,23 @@ impl GameObject{
 
 impl Debug for GameObject{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let r = write!(f, "name:{} ", self.name);
+        let r = write!(f, "{{name:{},", self.name);
+        if r.is_err(){
+            return r;
+        }
         if !self.array.is_empty(){
-            let r = write!(f, " {:?} ", self.array);
+            let r = write!(f, "{:?}", self.array);
             if r.is_err(){
                 return r;
             }
         }
         if !self.inner.is_empty(){
-            let r = write!(f, " {:?} ", self.inner);
+            let r = write!(f, "{:?}", self.inner);
             if r.is_err(){
                 return r;
             }
         }
+        let r = write!(f, "}}");
         return r;
     }
 }
