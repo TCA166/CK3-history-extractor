@@ -203,9 +203,12 @@ impl Serialize for Dynasty {
 }
 
 impl Renderable for Dynasty {
-    fn render(&self, env: &Environment) -> String {
+    fn render(&self, env: &Environment) -> Option<String> {
+        if self.depth == 0{
+            return None;
+        }
         let ctx = context! {dynasty=>self};
-        env.get_template("dynastyTemplate.html").unwrap().render(&ctx).unwrap()   
+        Some(env.get_template("dynastyTemplate.html").unwrap().render(&ctx).unwrap())  
     }
 }
 

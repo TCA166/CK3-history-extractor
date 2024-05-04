@@ -4,7 +4,7 @@ use minijinja::Environment;
 /// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
 pub trait Renderable{
-    fn render(&self, env: &Environment) -> String;
+    fn render(&self, env: &Environment) -> Option<String>;
 }
 
 /// Trait for objects that can be culled.

@@ -115,9 +115,12 @@ impl Serialize for Faith {
 }
 
 impl Renderable for Faith {
-    fn render(&self, env: &Environment) -> String {
+    fn render(&self, env: &Environment) -> Option<String> {
+        if self.depth == 0{
+            return None;
+        }
         let ctx = context! {faith=>self};
-        env.get_template("faithTemplate.html").unwrap().render(&ctx).unwrap()   
+        Some(env.get_template("faithTemplate.html").unwrap().render(&ctx).unwrap())
     }
 }
 

@@ -114,9 +114,12 @@ impl Serialize for Culture {
 }
 
 impl Renderable for Culture {
-    fn render(&self, env: &Environment) -> String {
+    fn render(&self, env: &Environment) -> Option<String> {
+        if self.depth == 0{
+            return None;
+        }
         let ctx = context! {culture=>self};
-        env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap()   
+        Some(env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap())
     }
 }
 

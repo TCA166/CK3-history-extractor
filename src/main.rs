@@ -3,22 +3,32 @@ use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
 use std::env;
+use std::fs;
 
 mod game_object;
 
 mod save_file;
-use minijinja::Environment;
 use save_file::SaveFile;
+
+use minijinja::Environment;
 
 mod game_state;
 use game_state::GameState;
 
 /// A submodule that provides functionality for rendering objects
 mod structures;
-use structures::Player;
+use structures::{Player, GameObjectDerived, Renderable};
 
-use crate::structures::{GameObjectDerived, Renderable};
-use std::fs;
+/// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
+/// Also prints an error message if the directory creation fails.
+fn create_dir_maybe(name: &str) {
+    if let Err(err) = fs::create_dir_all(name) {
+        if err.kind() != std::io::ErrorKind::AlreadyExists {
+            println!("Failed to create folder: {}", err);
+        }
+    }
+}
+
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     //Get the staring time
@@ -128,18 +138,23 @@ fn main() {
     let mut env = Environment::new();
     let h_template = fs::read_to_string("templates/homeTemplate.html").unwrap();
     env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
+    let c_template = fs::read_to_string("templates/charTemplate.html").unwrap();
+    env.add_template("charTemplate.html", c_template.as_str()).unwrap();
     //TODO serialization is done multiple times, this is inefficient
     for player in players{
         println!("Processing {:?}", player.name.borrow());
-        if let Err(err) = fs::create_dir_all(player.name.borrow().clone() + "'s history") {
-            if err.kind() != std::io::ErrorKind::AlreadyExists {
-                println!("Failed to create folder: {}", err);
-            }
-        }
-        let contents = player.render(&env);
-        let mut file = fs::File::create(format!("{}/index.html", player.name.borrow().clone())).unwrap();
+        let folder_name = player.name.borrow().clone() + "'s history";
+        create_dir_maybe(&folder_name);
+        create_dir_maybe(format!("{}/characters", &folder_name).as_str());
+        let contents = player.render(&env).unwrap();
+        let mut file = fs::File::create(format!("{}/index.html", &folder_name)).unwrap();
         file.write_all(contents.as_bytes()).unwrap();
-        file.flush().unwrap();
+        for lineage in player.lineage.iter() {
+            let char = lineage.character.as_ref().unwrap().borrow();
+            let mut file = fs::File::create(format!("{}/characters/{}.html", &folder_name, char.get_id())).unwrap();
+            let contents = char.render(&env).unwrap();
+            file.write_all(contents.as_bytes()).unwrap();
+        }
     }
     //Get the ending time
     let end_time = SystemTime::now();

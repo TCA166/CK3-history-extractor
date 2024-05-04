@@ -19,8 +19,8 @@ fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies o
 }
 
 
-/// A struct that represents a section in a ck3 save file
-/// Each section has a name, and holds a file handle to the section
+/// A struct that represents a section in a ck3 save file.
+/// Each section has a name, and holds a file handle to the section.
 /// 
 /// # Validity
 /// 

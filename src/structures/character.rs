@@ -384,8 +384,6 @@ impl GameObjectDerived for Character {
     }
 }
 
-// TODO possible astronomical cost of serializing? is it possible we serialize some things multiple times?
-
 impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -409,7 +407,6 @@ impl Serialize for Character {
         state.serialize_field("faith", &rf)?;
         let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
         state.serialize_field("culture", &rc)?;
-        //FIXME panics if the house is not initialized
         let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
         state.serialize_field("house", &rd)?;
         state.serialize_field("skills", &self.skills)?;
@@ -435,9 +432,12 @@ impl Serialize for Character {
 }
 
 impl Renderable for Character {
-    fn render(&self, env: &Environment) -> String {
+    fn render(&self, env: &Environment) -> Option<String> {
+        if self.depth == 0 {
+            return None;
+        }
         let ctx = context! {character=>self};
-        env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap()
+        Some(env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap())
     }
 }
 

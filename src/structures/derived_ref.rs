@@ -30,6 +30,8 @@ impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{
         let mut state = serializer.serialize_struct("DerivedRef", 3)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
+        let shallow = self.obj.borrow().get_depth() == 0;
+        state.serialize_field("shallow", &shallow)?;
         state.end()
     }
 }

@@ -2,11 +2,11 @@
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-    <title>{{character.name}} {{character.nick}}</title>
+    <title>{{character.name}} {{character.nick if character.nick != none}}</title>
 </head>
 <body>
     <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
-        <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick}}</p>
+        <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick if character.nick != none}}</p>
     </header>
     <main style="margin:15px">
         <div class="container-fluid" style="text-align: center">
@@ -17,15 +17,15 @@
                     Date of death: {{character.date}}<br />
                     Reason of death: {{character.reason}}<br />
                     {%endif%}
-                    {%if character.culture != "Lost to time..."%}
-                    Culture: <a href="../cultures/{{character.culture.culid}}.html">{{character.culture.name}}</a>
+                    {%if character.culture != none%}
+                    Culture: <a href="../cultures/{{character.culture.id}}.html">{{character.culture.name}}</a>
                     <br />
                     {%endif%}
-                    {%if character.faith != "Lost to time..."%}
-                    Faith: <a href="../faiths/{{character.faith.faid}}.html">{{character.faith.name}}</a>
+                    {%if character.faith != none%}
+                    Faith: <a href="../faiths/{{character.faith.id}}.html">{{character.faith.name}}</a>
                     <br />
                     {%endif%}
-                    Dynastic House: {%if character.house.dynid is defined%}<a href="../dynasties/{{character.house.dynid}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
+                    Dynastic House: {%if character.house != none%}<a href="../dynasties/{{character.house.id}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">
@@ -34,7 +34,7 @@
                         <div class="card-header">
                             Skills
                         </div>
-                        <table class="table table-bordered">
+                        <table class="table table-bordered mb-0">
                             <thead>
                                 <tr>
                                     <th scope="col">Diplomacy</th>
@@ -84,12 +84,12 @@
                             Family
                         </div>
                         <ul class="list-group list-group-flush" style="text-align:left">
-                            <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {%if spouse.charid is defined%}<a href="{{spouse.charid}}.html">{{spouse.name}}</a>{%else%}{{spouse}}{%endif%} {%endfor%}</li>
-                            <li class="list-group-item">Former spouses: {%for spouse in character.former%} {%if spouse.charid is defined%}<a href="{{spouse.charid}}.html">{{spouse.name}}</a>{%else%}{{spouse}}{%endif%} {%endfor%}</li>
-                            <li class="list-group-item">Children: {%for child in character.children%} {%if child.charid is defined%}<a href="{{child.charid}}.html">{{child.name}}</a>{%else%}{{child}}{%endif%} {%endfor%}</li>
+                            <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
+                            <li class="list-group-item">Former spouses: {%for spouse in character.former%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
+                            <li class="list-group-item">Children: {%for child in character.children%} {%if child.shallow%}{{spouse.name}}{%else%}<a href="{{child.id}}.html">{{child.name}}</a>{%endif%} {%endfor%}</li>
                         </ul>
                     </div>
-                    {%if character.dna is defined%}
+                    {%if character.dna != none%}
                     <div class="card" style="width: 50rem;">
                         <div class="card-header">
                             Character DNA
@@ -98,11 +98,11 @@
                             </a>
                         </div>
                         <div class="collapse" id="collapseDna">
-                            {{character.dna}}
+                            <textarea class="form-control" readonly>{{character.dna}}</textarea>
                         </div>
                     </div>
                     {%endif%}
-                    {%if character.memories is defined%}
+                    {%if character.memories|length != 0%}
                     <div class="card" style="width: 50rem;">
                         <div class="card-header">
                             Character Memories
@@ -117,7 +117,7 @@
                                 {%if memory.participants is defined%}
                                 {%for key, value in memory.participants.items()%}
                                     {%if value.name is defined%}
-                                    {{key}}:<a href="{{value.charid}}.html">{{value.name}}</a>
+                                    {{key}}:<a href="{{value.id}}.html">{{value.name}}</a>
                                     {%else%}
                                     {{key}}:{{value}}
                                     {%endif%}
@@ -130,7 +130,7 @@
                     {%endif%}
                 </div>
                 <div class="col">
-                    {%if character.dead == True%}
+                    {%if character.dead %}
                     <div class="card" style="width: 50rem;">
                         <div class="card-header">
                             Titles
@@ -138,7 +138,7 @@
                         <div class="card-body">
                             {%for title in character.titles%} 
                             {%if 'b_' not in title.key%}
-                            <a href="../titles/{{title.titleid}}.html">{{title.name}}</a> |
+                            <a href="../titles/{{title.id}}.html">{{title.name}}</a> |
                             {%else%}
                             {{title.name}} |
                             {%endif%}
@@ -154,7 +154,7 @@
                             <li class="list-group-item">Titles: 
                                 {%for title in character.titles%} 
                                 {%if 'b_' not in title.key%}
-                                <a href="../titles/{{title.titleid}}.html">{{title.name}}</a> |
+                                <a href="../titles/{{title.id}}.html">{{title.name}}</a> |
                                 {%else%}
                                 {{title.name}} |
                                 {%endif%}
@@ -162,9 +162,9 @@
                             </li>
                             <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
                             <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
-                            <li class="list-group-item">Kills: {%for killed in character.kills%} <a href="{{killed.charid}}.html">{{killed.name}}</a>{%endfor%}</li>
+                            <li class="list-group-item">Kills: {%for killed in character.kills%} <a href="{{killed.id}}.html">{{killed.name}}</a>{%endfor%}</li>
                             <li class="list-group-item">Known Languages: {%for lang in character.languages%}{{lang}} {%endfor%}</li>
-                            <li class="list-group-item">Vassals: {%for vassal in character.vassals%} <a href="{{vassal.charid}}.html">{{vassal.name}}</a>{%endfor%}</li>
+                            <li class="list-group-item">Vassals: {%for vassal in character.vassals%} <a href="{{vassal.id}}.html">{{vassal.name}}</a>{%endfor%}</li>
                         </ul>
                     </div>
                     {%endif%}

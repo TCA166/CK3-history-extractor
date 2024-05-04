@@ -160,9 +160,12 @@ impl Serialize for Title {
 }
 
 impl Renderable for Title {
-    fn render(&self, env: &Environment) -> String {
+    fn render(&self, env: &Environment) -> Option<String> {
+        if self.depth == 0{
+            return None;
+        }
         let ctx = context! {title=>self};
-        env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap()   
+        Some(env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap())
     }
 }
 

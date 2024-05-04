@@ -15,7 +15,6 @@ There are three potential versions of the program:
 - **Dev** - You can also just compile the program from source on your machine of choice. If you have no clue how the rust compilation system works just try running:
 
     ```sh
-
     make dependencies
     make cargo
     cp target/release/ck3_history_extractor ./ck3_history_extractor
