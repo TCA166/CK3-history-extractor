@@ -100,6 +100,16 @@ fn main() {
                     game_state.add_character(d.1.as_object_ref().unwrap());
                 }
             }
+            "vassal_contracts" => {
+                let o = i.to_object().unwrap();
+                let active = o.get_object_ref("active");
+                for contract in active.get_obj_iter(){
+                    let val = contract.1.as_object_ref();
+                    if val.is_some(){
+                        game_state.add_contract(contract.0, val.unwrap().get_string_ref("vassal"))
+                    }
+                }
+            }
             "religion" => {
                 let o = i.to_object().unwrap();
                 let faiths = o.get_object_ref("faiths");

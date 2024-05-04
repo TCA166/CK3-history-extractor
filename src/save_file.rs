@@ -163,7 +163,16 @@ impl Section{
                 } 
                 '=' => {
                     // if we have an assignment, we toggle adding from key to value
-                    past_eq = true;
+                    if quotes{
+                        if past_eq{
+                            val.push(c);
+                        }else{
+                            key.push(c);
+                        }
+                    }
+                    else{
+                        past_eq = true;
+                    }
                 }
                 _ => { //the main content we append to the key or value
                     if past_eq{

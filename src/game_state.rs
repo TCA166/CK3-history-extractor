@@ -5,17 +5,27 @@ use std::rc::Rc;
 use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 use crate::game_object::GameObject;
 
-/// A struct representing all known game objects
+/// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
+/// This is mainly used during the process of gathering data from the parsed save file.
 pub struct GameState{
+    /// A character id->Character transform
     characters: HashMap<String, Shared<Character>>,
+    /// A title id->Title transform
     titles: HashMap<String, Shared<Title>>,
+    /// A faith id->Title transform
     faiths: HashMap<String, Shared<Faith>>,
+    /// A culture id->Culture transform
     cultures: HashMap<String, Shared<Culture>>,
+    /// A dynasty id->Dynasty transform
     dynasties: HashMap<String, Shared<Dynasty>>,
+    /// A memory id->Memory transform
     memories: HashMap<String, Shared<Memory>>,
-    traits_lookup: Vec<Shared<String>>
+    /// A trait id->Trait identifier transform
+    traits_lookup: Vec<Shared<String>>,
+    /// A vassal contract id->Character transform
+    contract_transform: HashMap<String, Shared<Character>>
 }
 
 impl GameState{
@@ -28,7 +38,8 @@ impl GameState{
             cultures: HashMap::new(),
             dynasties: HashMap::new(),
             memories: HashMap::new(),
-            traits_lookup: Vec::new()
+            traits_lookup: Vec::new(),
+            contract_transform: HashMap::new()
         }
     }
 
@@ -51,6 +62,30 @@ impl GameState{
         }
         else{
             self.characters.get(key).unwrap().clone()
+        }
+    }
+
+    /// Gets the vassal associated with the contract with the given id
+    pub fn get_vassal(&mut self, contract_id: &str) -> Shared<Character>{
+        if !self.contract_transform.contains_key(contract_id){
+            let v = Rc::new(RefCell::new(Character::dummy(0)));
+            self.contract_transform.insert(contract_id.to_string(), v.clone());
+            v
+        }
+        else{
+            self.contract_transform.get(contract_id).unwrap().clone()
+        }
+    }
+
+    /// Adds a new vassal contract
+    pub fn add_contract(&mut self, contract_id: &str, character_id: Ref<'_, String>) {
+        let char = self.get_character(character_id.as_str());
+        if self.contract_transform.contains_key(contract_id){
+            let mut entry = self.contract_transform.get(contract_id).unwrap();
+            entry.clone_from(&&char);
+        }
+        else{
+            self.contract_transform.insert(contract_id.to_string(), char);
         }
     }
 

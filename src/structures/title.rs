@@ -132,10 +132,9 @@ impl GameObjectDerived for Title{
             }
         }
         self.vassals = vassals;
-        self.id = base.get_name().parse::<u32>().unwrap();
+        self.name = base.get("name").unwrap().as_string().clone();
         let history = get_history(base, game_state);
         self.history = history;
-    
     }
 
     fn get_name(&self) -> Shared<String> {
