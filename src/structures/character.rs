@@ -98,9 +98,24 @@ fn get_skills(skills:&mut Vec<i8>, base:&GameObject){
     }
 }
 
-fn is_dead(base:&GameObject) -> bool{
-    let keys = base.get_keys();
-    keys.contains(&"date".to_string())
+fn get_dead(dead:&mut bool, reason:&mut Option<Shared<String>>, data:&mut Option<Shared<String>>, titles:&mut Vec<Shared<Title>>, base:&GameObject, game_state:&mut GameState){
+    let dead_data = base.get("dead_data");
+    if dead_data.is_some(){
+        *dead = true;
+        let o = dead_data.unwrap().as_object_ref().unwrap();
+        println!("{:?}", o);
+        let reason_node = o.get("reason");
+        if reason_node.is_some(){
+            *reason = Some(reason_node.unwrap().as_string());
+        }
+        let domain_node = o.get("domain");
+        if domain_node.is_some(){
+            for t in domain_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()));
+            }
+        }
+        *data = Some(o.get("date").unwrap().as_string());
+    }
 }
 
 fn get_recessive(recessive:&mut Vec<Shared<String>>, base:&GameObject){
@@ -222,7 +237,11 @@ fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyn
 impl GameObjectDerived for Character {
 
     fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
-        let dead = is_dead(&base);
+        let mut dead = false;
+        let mut reason = None;
+        let mut date = None;
+        let mut titles: Vec<Shared<Title>> = Vec::new();
+        get_dead(&mut dead, &mut reason, &mut date, &mut titles, &base, game_state);
         //find skills
         let mut skills = Vec::new();
         get_skills(&mut skills, &base);
@@ -257,7 +276,6 @@ impl GameObjectDerived for Character {
         let mut gold = 0.0;
         let mut dread = 0.0;
         let mut strength = 0.0;
-        let mut titles: Vec<Shared<Title>> = Vec::new();
         let mut vassals:Vec<Shared<Character>> = Vec::new();
         get_landed_data(&mut gold, &mut dread, &mut strength, &mut titles, &mut vassals, &base, game_state);
         //find house
@@ -267,14 +285,8 @@ impl GameObjectDerived for Character {
             nick: base.get("nickname").map(|v| v.as_string()),
             birth: base.get("birth").unwrap().as_string(),
             dead: dead,
-            date: match dead {
-                true => Some(base.get("date").unwrap().as_string()),
-                false => None
-            },
-            reason: match dead {
-                true => Some(base.get("reason").unwrap().as_string()),
-                false => None
-            },
+            date: date,
+            reason: reason,
             house: house.clone(),
             faith: Some(get_faith(&house, &base, game_state)),
             culture: Some(get_culture(&house, &base, game_state)),
@@ -334,7 +346,7 @@ impl GameObjectDerived for Character {
     }
 
     fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState) {
-        let dead = is_dead(&base);
+        get_dead(&mut self.dead, &mut self.reason, &mut self.date, &mut self.titles, &base, game_state);
         //find skills
         get_skills(&mut self.skills, &base);
         //find recessive traits
@@ -350,7 +362,7 @@ impl GameObjectDerived for Character {
         //find traits
         get_traits(&mut self.traits, &base, game_state);
         //find alive data
-        if !dead {
+        if !self.dead {
             parse_alive_data(&base, &mut self.piety, &mut self.prestige, &mut self.kills, &mut self.languages, &mut self.traits, game_state);
         }
         //find landed data
@@ -360,15 +372,6 @@ impl GameObjectDerived for Character {
         self.name.clone_from(&base.get("first_name").unwrap().as_string());
         self.nick = base.get("nickname").map(|v| v.as_string());
         self.birth.clone_from(&base.get("birth").unwrap().as_string());
-        self.dead = dead;
-        self.date = match dead {
-            true => Some(base.get("date").unwrap().as_string()),
-            false => None
-        };
-        self.reason = match dead {
-            true => Some(base.get("reason").unwrap().as_string()),
-            false => None
-        };
         self.house = house.clone();
         self.faith = Some(get_faith(&house, &base, game_state));
         self.culture = Some(get_culture(&house, &base, game_state));

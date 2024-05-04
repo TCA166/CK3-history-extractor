@@ -95,11 +95,13 @@ fn get_parent(base:&Ref<'_, GameObject>, game_state:&mut GameState) -> Option<Sh
     }
 }
 
+//FIXME some dynasties have their primary house with the same id as the dynasty, and if the dynasty is iterated over later and and the dynasty has it's named statically stored then the name will be missing
+
 fn get_name(base:&Ref<'_, GameObject>, parent:Option<Shared<Dynasty>>) -> Shared<String>{
     let mut n = base.get("name");
-    if !n.is_some(){
+    if n.is_none(){
         n = base.get("localized_name");
-        if !n.is_some(){
+        if n.is_none(){
             if parent.is_none(){
                 //TODO this happens for dynasties that exist at game start. WTF?
                 //println!("{:?}", base);

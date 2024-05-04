@@ -69,7 +69,7 @@ impl SaveFileValue {
 impl Debug for SaveFileValue{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self{
-            SaveFileValue::String(s) => write!(f, "{}", s.as_ref().borrow()),
+            SaveFileValue::String(s) => write!(f, "\"{}\"", s.as_ref().borrow()),
             SaveFileValue::Object(o) => write!(f, "{:?}", o.as_ref().borrow())
         }
     }
