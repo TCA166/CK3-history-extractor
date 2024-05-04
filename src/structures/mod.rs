@@ -1,3 +1,5 @@
+
+/// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;
 pub use renderer::{Renderable, Cullable};
 
@@ -7,30 +9,39 @@ use super::game_object::GameObject;
 
 use super::game_state::GameState;
 
+/// A submodule that provides the [Player] object.
 mod player;
 pub use player::Player;
 
+/// A submodule that provides the [Character] object.
 mod character;
 pub use character::Character;
 
+/// A submodule that provides the [Faith] object.
 mod faith;
 pub use faith::Faith;
 
+/// A submodule that provides the [Culture] object.
 mod culture;
 pub use culture::Culture;
 
+/// A submodule that provides the [Dynasty] object.
 mod dynasty;
 pub use dynasty::Dynasty;
 
+/// A submodule that provides the [Memory] object.
 mod memory;
 pub use memory::Memory;
 
+/// A submodule that provides the [Title] object.
 mod title;
 pub use title::Title;
 
+/// A submodule that provides the [LineageNode] object.
 mod lineage;
 pub use lineage::LineageNode;
 
+/// A submodule that provides an object that can be used on the frontend as a shallow reference to another [GameObjectDerived] object.
 mod derived_ref;
 pub use derived_ref::DerivedRef;
 

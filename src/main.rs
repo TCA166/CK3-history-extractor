@@ -5,17 +5,24 @@ use std::io::{stdout, stdin};
 use std::env;
 use std::fs;
 
+/// A submodule that provides the intermediate parsing interface for the save file.
+/// The [super::save_file] module uses [GameObject] to store the parsed data and structures in [super::structures] are initialized from these objects.
 mod game_object;
 
+/// A submodule that provides the macro save file parsing.
+/// It provides objects for handling entire [save files](SaveFile) and [Section]s of save files.
 mod save_file;
 use save_file::SaveFile;
 
 use minijinja::Environment;
 
+/// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
+/// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
 mod game_state;
 use game_state::GameState;
 
-/// A submodule that provides functionality for rendering objects
+/// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
+/// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
 use structures::{Player, GameObjectDerived, Renderable};
 
@@ -29,6 +36,20 @@ fn create_dir_maybe(name: &str) {
     }
 }
 
+/// Main function. This is the entry point of the program.
+/// 
+/// # Arguments
+/// 
+/// 1. `filename` - The name of the save file to parse. If not provided as a command line argument, the program will prompt the user to enter it.
+/// 
+/// # Process
+/// 
+/// 1. Reads the save file name from user
+/// 2. Parses the save file into [save_file::Section]s, which are then converted into [game_object::GameObject]s and stored as [structures::GameObjectDerived] into a [game_state::GameState]
+/// 3. Initializes a [minijinja::Environment] and loads the templates from the `templates` folder
+/// 4. Foreach encountered [structures::Player] in game:
+///     1. Creates a folder with the player's name
+///     2. Renders the objects into HTML using the templates and writes them to the folder
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     //Get the staring time
