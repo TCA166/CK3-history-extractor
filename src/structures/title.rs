@@ -2,7 +2,7 @@ use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use minijinja::{Environment, context};
+use minijinja::context;
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
@@ -11,7 +11,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
 use super::renderer::Renderable;
-use super::{Character, Cullable, GameObjectDerived, Shared};
+use super::{Character, Cullable, GameObjectDerived, Renderer, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
@@ -161,38 +161,33 @@ impl Serialize for Title {
 }
 
 impl Renderable for Title {
-    fn render(&self, env: &Environment) -> Option<String> {
-        if self.depth == 0{
-            return None;
-        }
-        let ctx = context! {title=>self};
-        Some(env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap())
+
+    fn get_context(&self) -> minijinja::Value {
+        return context! {title=>self};
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_template() -> &'static str {
+        "titleTemplate.html"
+    }
+
+    fn get_subdir() -> &'static str {
         "titles"
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, &path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
-        }
-        if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().borrow().render_all(env, path)?;
+    fn render_all(&self, renderer: &mut Renderer) {
+        if !renderer.render(self) {
+            return;
         }
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().borrow().render_all(env, path)?;
+            self.de_jure.as_ref().unwrap().borrow().render_all(renderer);
+        }
+        if self.de_facto.is_some(){
+            self.de_facto.as_ref().unwrap().borrow().render_all(renderer);
         }
         for v in &self.vassals{
-            v.borrow().render_all(env, path)?;
+            v.borrow().render_all(renderer);
         }
-        Ok(())
+    
     }
 }
 

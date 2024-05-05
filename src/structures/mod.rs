@@ -1,7 +1,7 @@
 
 /// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;
-pub use renderer::{Renderable, Cullable};
+pub use renderer::{Cullable, Renderer, Renderable};
 
 use std::cell::Ref;
 

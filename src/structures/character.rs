@@ -1,6 +1,6 @@
-use std::{borrow::Borrow, cell::{Ref, RefCell}};
+use std::cell::{Ref, RefCell};
 
-use minijinja::{Environment, context};
+use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
@@ -415,13 +415,6 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
-        println!("Serializing character {:?}", self.id);
-        if self.depth == 0 {
-            let mut state = serializer.serialize_struct("Character", 2)?;
-            state.serialize_field("id", &self.id)?;
-            state.serialize_field("name", &self.name)?;
-            return state.end();
-        }
         let mut state = serializer.serialize_struct("Character", 27)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("nick", &self.nick)?;
@@ -433,8 +426,10 @@ impl Serialize for Character {
         state.serialize_field("faith", &rf)?;
         let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
         state.serialize_field("culture", &rc)?;
-        let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
-        state.serialize_field("house", &rd)?;
+        if self.house.is_some(){
+            let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
+            state.serialize_field("house", &rd)?;
+        }
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
         state.serialize_field("recessive", &self.recessive)?;
@@ -470,56 +465,50 @@ impl Serialize for Character {
 }
 
 impl Renderable for Character {
-    fn render(&self, env: &Environment) -> Option<String> {
-        if self.depth == 0 {
-            return None;
-        }
-        let ctx = context! {character=>self};
-        Some(env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap())
+    fn get_context(&self) -> minijinja::Value {
+        return context!{character=>self};
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_template() -> &'static str {
+        "charTemplate.html"
+    }
+
+    fn get_subdir() -> &'static str {
         "characters"
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
+    fn render_all(&self, renderer: &mut super::Renderer){
+        println!("Rendering character {:?}", self.id);
+        if !renderer.render(self){
+            return;
         }
         if self.faith.is_some(){
-            self.faith.as_ref().unwrap().as_ref().borrow().render_all(env, path)?;
+            self.faith.as_ref().unwrap().as_ref().borrow().render_all(renderer);
         }
         if self.culture.is_some(){
-            self.culture.as_ref().unwrap().as_ref().borrow().borrow().render_all(env, path)?;
+            self.culture.as_ref().unwrap().as_ref().borrow().render_all(renderer);
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().as_ref().borrow().render_all(env, path)?;
+            self.house.as_ref().unwrap().as_ref().borrow().render_all(renderer);
         }
         for s in self.spouses.iter(){
-            s.as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().render_all(renderer);
         }
         for s in self.former.iter(){
-            s.as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().render_all(renderer);
         }
         for s in self.children.iter(){
-            s.as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().render_all(renderer);
         }
         for s in self.kills.iter(){
-            s.as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().render_all(renderer);
         }
         for s in self.vassals.iter(){
-            s.as_ref().borrow().get_ref().as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().get_ref().as_ref().borrow().render_all(renderer);
         }
         for s in self.titles.iter(){
-            s.as_ref().borrow().render_all(env, path)?;
+            s.as_ref().borrow().render_all(renderer);
         }
-        Ok(())
     }
 }
 

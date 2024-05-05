@@ -1,7 +1,7 @@
 
 use std::{cell::Ref, rc::Rc};
 
-use minijinja::{context, Environment};
+use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
@@ -9,7 +9,7 @@ use crate::game_object::GameObject;
 
 use crate::game_state::GameState;
 
-use super::{renderer::{Renderable, Cullable}, Character, GameObjectDerived, LineageNode, Shared};
+use super::{renderer::{Cullable, Renderable}, Character, GameObjectDerived, LineageNode, Renderer, Shared};
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -80,16 +80,20 @@ impl Serialize for Player{
     }
 }
 
-impl Renderable for Player{
-    fn render(&self, env: &Environment) -> Option<String> {
-        for char in self.lineage.iter(){
-            char.get_character().borrow_mut().set_depth(1);
+impl Player{
+    pub fn set_tree_depth(&mut self, depth: usize){
+        for node in self.lineage.iter_mut(){
+            node.get_character().borrow_mut().set_depth(depth);
         }
-        let ctx = context!{player=>self};
-        Some(env.get_template("homeTemplate.html").unwrap().render(&ctx).unwrap())   
+    }
+}
+
+impl Renderable for Player{
+    fn get_context(&self) -> minijinja::Value {
+        context!{player=>self}
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_subdir() -> &'static str {
         "."
     }
 
@@ -97,22 +101,16 @@ impl Renderable for Player{
         format!("{}/index.html", path)
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
-        }
+    fn get_template() -> &'static str {
+        "homeTemplate.html"
+    }
+
+    fn render_all(&self, renderer: &mut Renderer){
+        println!("Rendering player");
+        renderer.render(self);
         for char in self.lineage.iter(){
-            let r = char.get_character().borrow().render_all(env, path);
-            if r.is_err(){
-                return r;
-            }
+            println!("Rendering character");
+            char.get_character().borrow().render_all(renderer);
         }
-        Ok(())
     }
 }

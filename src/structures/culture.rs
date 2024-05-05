@@ -1,4 +1,4 @@
-use minijinja::{Environment, context};
+use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
@@ -118,33 +118,25 @@ impl Serialize for Culture {
 }
 
 impl Renderable for Culture {
-    fn render(&self, env: &Environment) -> Option<String> {
-        if self.depth == 0{
-            return None;
-        }
-        let ctx = context! {culture=>self};
-        Some(env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap())
+    fn get_context(&self) -> minijinja::Value {
+        context!{culture=>self}
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_template() -> &'static str {
+        "cultureTemplate.html"
+    }
+
+    fn get_subdir() -> &'static str {
         "cultures"
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
+    fn render_all(&self, renderer: &mut super::Renderer) {
+        if !renderer.render(self){
+            return;
         }
         for p in &self.parents{
-            p.borrow().render_all(env, path)?;
+            p.borrow().render_all(renderer);
         }
-        Ok(())
-    
     }
 }
 

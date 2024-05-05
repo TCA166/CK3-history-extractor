@@ -1,4 +1,4 @@
-use minijinja::{Environment, context};
+use minijinja::context;
 use std::cell::Ref;
 use std::rc::Rc;
 use serde::Serialize;
@@ -120,32 +120,25 @@ impl Serialize for Faith {
 }
 
 impl Renderable for Faith {
-    fn render(&self, env: &Environment) -> Option<String> {
-        if self.depth == 0{
-            return None;
-        }
-        let ctx = context! {faith=>self};
-        Some(env.get_template("faithTemplate.html").unwrap().render(&ctx).unwrap())
+    fn get_context(&self) -> minijinja::Value {
+        context!{faith=>self}
+    }
+    
+    fn get_template() -> &'static str {
+        "faithTemplate.html"
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_subdir() -> &'static str {
         "faiths"
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
+    fn render_all(&self, renderer: &mut super::Renderer) {
+        if !renderer.render(self){
+            return;
         }
         if self.head.is_some(){
-            self.head.as_ref().unwrap().borrow().render_all(env, path)?;
+            self.head.as_ref().unwrap().borrow().render_all(renderer);
         }
-        Ok(())
     }
 }
 

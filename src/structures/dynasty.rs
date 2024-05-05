@@ -1,4 +1,4 @@
-use minijinja::{Environment, context};
+use minijinja::context;
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
@@ -217,33 +217,26 @@ impl Serialize for Dynasty {
 }
 
 impl Renderable for Dynasty {
-    fn render(&self, env: &Environment) -> Option<String> {
-        if self.depth == 0{
-            return None;
-        }
-        let ctx = context! {dynasty=>self};
-        Some(env.get_template("dynastyTemplate.html").unwrap().render(&ctx).unwrap())  
+
+    fn get_context(&self) -> minijinja::Value {
+        return context!{dynasty=>self};
     }
 
-    fn get_subdir(&self) -> &'static str {
+    fn get_template() -> &'static str {
+        "dynastyTemplate.html"
+    }
+
+    fn get_subdir() -> &'static str {
         "dynasties"
     }
 
-    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
-        let r = self.render_to_file(env, path);
-        if r.is_err(){
-            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
-                return r;
-            }
-            else{
-                return Ok(());
-            }
+    fn render_all(&self, renderer: &mut super::Renderer) {
+        if !renderer.render(self){
+            return;
         }
         for leader in self.leaders.iter(){
-            leader.borrow().render_all(env, path)?;
+            leader.borrow().render_all(renderer);
         }
-        Ok(())
-    
     }
 }
 

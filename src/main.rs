@@ -6,11 +6,11 @@ use std::env;
 use std::fs;
 
 /// A submodule that provides the intermediate parsing interface for the save file.
-/// The [super::save_file] module uses [GameObject] to store the parsed data and structures in [super::structures] are initialized from these objects.
+/// The [crate::save_file] module uses [GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.
 mod game_object;
 
 /// A submodule that provides the macro save file parsing.
-/// It provides objects for handling entire [save files](SaveFile) and [Section]s of save files.
+/// It provides objects for handling entire [save files](SaveFile) and [sections](Section) of save files.
 mod save_file;
 use save_file::SaveFile;
 
@@ -24,7 +24,7 @@ use game_state::GameState;
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{Player, GameObjectDerived, Renderable};
+use structures::{Player, GameObjectDerived, Renderable, Renderer};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -179,8 +179,16 @@ fn main() {
     env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
     let c_template = fs::read_to_string("templates/charTemplate.html").unwrap();
     env.add_template("charTemplate.html", c_template.as_str()).unwrap();
+    let cul_template = fs::read_to_string("templates/cultureTemplate.html").unwrap();
+    env.add_template("cultureTemplate.html", cul_template.as_str()).unwrap();
+    let dyn_template = fs::read_to_string("templates/dynastyTemplate.html").unwrap();
+    env.add_template("dynastyTemplate.html", dyn_template.as_str()).unwrap();
+    let faith_template = fs::read_to_string("templates/faithTemplate.html").unwrap();
+    env.add_template("faithTemplate.html", faith_template.as_str()).unwrap();
+    let title_template = fs::read_to_string("templates/titleTemplate.html").unwrap();
+    env.add_template("titleTemplate.html", title_template.as_str()).unwrap();
     //TODO serialization is done multiple times, this is inefficient
-    for player in players{
+    for player in players.iter_mut(){
         println!("Processing {:?}", player.name.borrow());
         let folder_name = player.name.borrow().clone() + "'s history";
         create_dir_maybe(&folder_name);
@@ -189,7 +197,9 @@ fn main() {
         create_dir_maybe(format!("{}/titles", &folder_name).as_str());
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
-        player.render_all(&env, &folder_name).unwrap();
+        player.set_tree_depth(1);
+        let mut renderer = Renderer::new(env.clone(), folder_name.clone());
+        player.render_all(&mut renderer);
     }
     //Get the ending time
     let end_time = SystemTime::now();
