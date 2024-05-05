@@ -9,44 +9,40 @@ use crate::{game_object::GameObject, game_state::GameState};
 use super::{renderer::Renderable, Cullable, DerivedRef, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 pub struct Character {
-    pub id: u32,
-    pub name: Shared<String>,
-    pub nick: Option<Shared<String>>,
-    pub birth: Shared<String>,
-    pub dead: bool,
-    pub date: Option<Shared<String>>,
-    pub reason: Option<Shared<String>>,
-    pub faith: Option<Shared<Faith>>,
-    pub culture: Option<Shared<Culture>>,
-    pub house: Option<Shared<Dynasty>>,
-    pub skills: Vec<i8>,
-    pub traits: Vec<Shared<String>>,
-    pub recessive: Vec<Shared<String>>,
-    pub spouses: Vec<Shared<Character>>,
-    pub former: Vec<Shared<Character>>,
-    pub children: Vec<Shared<Character>>,
-    pub dna: Option<Shared<String>>,
-    pub memories: Vec<Shared<Memory>>,
-    pub titles: Vec<Shared<Title>>,
-    pub gold: f32,
-    pub piety: f32,
-    pub prestige: f32,
-    pub dread: f32,
-    pub strength: f32,
-    pub kills: Vec<Shared<Character>>,
-    pub languages: Vec<Shared<String>>,
-    pub vassals: Vec<Shared<Character>>,
+    id: u32,
+    name: Shared<String>,
+    nick: Option<Shared<String>>,
+    birth: Shared<String>,
+    dead: bool,
+    date: Option<Shared<String>>,
+    reason: Option<Shared<String>>,
+    faith: Option<Shared<Faith>>,
+    culture: Option<Shared<Culture>>,
+    house: Option<Shared<Dynasty>>,
+    skills: Vec<i8>,
+    traits: Vec<Shared<String>>,
+    recessive: Vec<Shared<String>>,
+    spouses: Vec<Shared<Character>>,
+    former: Vec<Shared<Character>>,
+    children: Vec<Shared<Character>>,
+    dna: Option<Shared<String>>,
+    memories: Vec<Shared<Memory>>,
+    titles: Vec<Shared<Title>>,
+    gold: f32,
+    piety: f32,
+    prestige: f32,
+    dread: f32,
+    strength: f32,
+    kills: Vec<Shared<Character>>,
+    languages: Vec<Shared<String>>,
+    vassals: Vec<Shared<DerivedRef<Character>>>,
     depth: usize
 }
 
-//FIXME prowess is missing from skills
-//FIXME spouses and children are missing
-//FIXME vassal contracts remain invalid
-
 /// Gets the dynasty meant to be the source of some properties
 fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
-    if house.borrow().parent.is_some(){
-        let p = house.borrow().parent.as_ref().unwrap().clone();
+    if house.borrow().get_parent().is_some(){
+        let p = house.borrow().get_parent().as_ref().unwrap().clone();
         return p.clone();
     }
     else{
@@ -62,7 +58,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
     else{
         let house = get_src_dynasty(house.as_ref().unwrap());
         let h = house.borrow();
-        for l in h.leaders.iter(){
+        for l in h.get_leaders().iter(){
             let l = l.try_borrow();
             if l.is_ok(){
                 let o = l.unwrap();
@@ -83,7 +79,7 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
     else{
         let h = get_src_dynasty(house.as_ref().unwrap());
         let h = h.borrow();
-        for l in h.leaders.iter(){
+        for l in h.get_leaders().iter(){
             let l = l.try_borrow();
             if l.is_ok(){
                 let o = l.unwrap();
@@ -97,6 +93,7 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
 }
 
 fn get_skills(skills:&mut Vec<i8>, base:&GameObject){
+    println!("{:?}", base);
     for s in base.get_object_ref("skill").get_array_iter(){
         skills.push(s.as_string_ref().unwrap().parse::<i8>().unwrap());
     }
@@ -134,11 +131,13 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
     let family_data = base.get("family_data");
     if family_data.is_some(){
         let f = family_data.unwrap().as_object_ref().unwrap();
-        let spouses_node = f.get("spouses");
-        if spouses_node.is_some() {
-            for s in spouses_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
-            }
+        let spouse_node = f.get("spouse");
+        if spouse_node.is_some() {
+            spouses.push(game_state.get_character(spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone());
+        }
+        let primary_spouse_node = f.get("primary_spouse");
+        if primary_spouse_node.is_some() {
+            spouses.push(game_state.get_character(primary_spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone());
         }
         let former_spouses_node = f.get("former_spouses");
         if former_spouses_node.is_some() {
@@ -146,7 +145,7 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
                 former_spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
             }
         }
-        let children_node = f.get("children");
+        let children_node = f.get("child");
         if children_node.is_some() {
             for s in children_node.unwrap().as_object_ref().unwrap().get_array_iter(){
                 children.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
@@ -202,7 +201,7 @@ fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&m
     }
 }
 
-fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
+fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Shared<DerivedRef<Character>>>, base:&GameObject, game_state:&mut GameState){
     let landed_data_node = base.get("landed_data");
     if landed_data_node.is_some(){
         let landed_data = landed_data_node.unwrap().as_object_ref().unwrap();
@@ -279,7 +278,7 @@ impl GameObjectDerived for Character {
         //find landed data
         let mut dread = 0.0;
         let mut strength = 0.0;
-        let mut vassals:Vec<Shared<Character>> = Vec::new();
+        let mut vassals:Vec<Shared<DerivedRef<Character>>> = Vec::new();
         get_landed_data(&mut dread, &mut strength, &mut titles, &mut vassals, &base, game_state);
         //find house
         let house = get_dynasty(&base, game_state);
@@ -451,9 +450,8 @@ impl Serialize for Character {
         let kills = serialize_array::<Character>(&self.kills);
         state.serialize_field("kills", &kills)?;
         state.serialize_field("languages", &self.languages)?;
-        //serialize vassals as DerivedRef
-        let vassals = serialize_array::<Character>(&self.vassals);
-        state.serialize_field("vassals", &vassals)?;
+        //vassals is already serialized as DerivedRef
+        state.serialize_field("vassals", &self.vassals)?;
         state.serialize_field("id", &self.id)?;
         state.end()
     }

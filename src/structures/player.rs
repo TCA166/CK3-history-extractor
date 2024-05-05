@@ -81,7 +81,7 @@ impl Serialize for Player{
 impl Renderable for Player{
     fn render(&self, env: &Environment) -> Option<String> {
         for char in self.lineage.iter(){
-            char.character.as_ref().unwrap().borrow_mut().set_depth(1);
+            char.get_character().borrow_mut().set_depth(1);
         }
         let ctx = context!{player=>self};
         Some(env.get_template("homeTemplate.html").unwrap().render(&ctx).unwrap())   

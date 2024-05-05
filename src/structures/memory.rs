@@ -7,10 +7,10 @@ use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
 pub struct Memory {
-    pub id: u32,
-    pub date: Shared<String>,
-    pub r#type: Shared<String>,
-    pub participants: Vec<(String, Shared<Character>)>,
+    id: u32,
+    date: Shared<String>,
+    r#type: Shared<String>,
+    participants: Vec<(String, Shared<Character>)>,
     depth: usize
 }
 

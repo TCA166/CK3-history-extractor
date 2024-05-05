@@ -181,7 +181,8 @@ fn main() {
         let mut file = fs::File::create(format!("{}/index.html", &folder_name)).unwrap();
         file.write_all(contents.as_bytes()).unwrap();
         for lineage in player.lineage.iter() {
-            let char = lineage.character.as_ref().unwrap().borrow();
+            let char = lineage.get_character();
+            let char = char.borrow();
             let mut file = fs::File::create(format!("{}/characters/{}.html", &folder_name, char.get_id())).unwrap();
             let contents = char.render(&env).unwrap();
             file.write_all(contents.as_bytes()).unwrap();

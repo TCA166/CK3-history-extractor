@@ -32,14 +32,14 @@
                 <div class="col">
                     <div class="card" style="width: 50rem;">
                         <div class="card-header">
-                            Skills
+                            Base Skills
                         </div>
                         <table class="table table-bordered mb-0">
                             <thead>
                                 <tr>
                                     <th scope="col">Diplomacy</th>
-                                    <th scope="col">Martial</th>
                                     <th scope="col">Stewardship</th>
+                                    <th scope="col">Martial</th>
                                     <th scope="col">Intrigue</th>
                                     <th scope="col">Learning</th>
                                     <th scope="col">Prowess</th>
@@ -47,6 +47,7 @@
                             </thead>
                             <tbody>
                                 <tr>
+                                    <td>{{character.skills[0]}}</td>
                                     <td>{{character.skills[1]}}</td>
                                     <td>{{character.skills[2]}}</td>
                                     <td>{{character.skills[3]}}</td>
@@ -86,7 +87,7 @@
                         <ul class="list-group list-group-flush" style="text-align:left">
                             <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
                             <li class="list-group-item">Former spouses: {%for spouse in character.former%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
-                            <li class="list-group-item">Children: {%for child in character.children%} {%if child.shallow%}{{spouse.name}}{%else%}<a href="{{child.id}}.html">{{child.name}}</a>{%endif%} {%endfor%}</li>
+                            <li class="list-group-item">Children: {%for child in character.children%} {%if child.shallow%}{{child.name}}{%else%}<a href="{{child.id}}.html">{{child.name}}</a>{%endif%} {%endfor%}</li>
                         </ul>
                     </div>
                     {%if character.dna != none%}

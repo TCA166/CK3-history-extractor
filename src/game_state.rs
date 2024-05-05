@@ -2,7 +2,7 @@ use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 use crate::game_object::GameObject;
 
 /// A struct representing all known game objects.
@@ -25,7 +25,7 @@ pub struct GameState{
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<Shared<String>>,
     /// A vassal contract id->Character transform
-    contract_transform: HashMap<String, Shared<Character>>
+    contract_transform: HashMap<String, Shared<DerivedRef<Character>>>
 }
 
 impl GameState{
@@ -66,9 +66,9 @@ impl GameState{
     }
 
     /// Gets the vassal associated with the contract with the given id
-    pub fn get_vassal(&mut self, contract_id: &str) -> Shared<Character>{
+    pub fn get_vassal(&mut self, contract_id: &str) -> Shared<DerivedRef<Character>>{
         if !self.contract_transform.contains_key(contract_id){
-            let v = Rc::new(RefCell::new(Character::dummy(0)));
+            let v = Rc::new(RefCell::new(DerivedRef::dummy()));
             self.contract_transform.insert(contract_id.to_string(), v.clone());
             v
         }
@@ -81,11 +81,12 @@ impl GameState{
     pub fn add_contract(&mut self, contract_id: &str, character_id: Ref<'_, String>) {
         let char = self.get_character(character_id.as_str());
         if self.contract_transform.contains_key(contract_id){
-            let mut entry = self.contract_transform.get(contract_id).unwrap();
-            entry.clone_from(&&char);
+            let entry = self.contract_transform.get(contract_id).unwrap();
+            entry.borrow_mut().init(char);
         }
         else{
-            self.contract_transform.insert(contract_id.to_string(), char);
+            let r = Rc::new(RefCell::new(DerivedRef::from_derived(char)));
+            self.contract_transform.insert(contract_id.to_string(), r);
         }
     }
 

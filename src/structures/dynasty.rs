@@ -9,16 +9,26 @@ use crate::game_state::GameState;
 use std::cell::Ref;
 
 pub struct Dynasty{
-    pub id: u32,
-    pub parent: Option<Shared<Dynasty>>,
-    pub name: Option<Shared<String>>,
-    pub members: u32,
-    pub houses: u32,
-    pub prestige_tot: f32,
-    pub prestige: f32,
-    pub perks: Vec<Shared<String>>,
-    pub leaders: Vec<Shared<Character>>,
+    id: u32,
+    parent: Option<Shared<Dynasty>>,
+    name: Option<Shared<String>>,
+    members: u32,
+    houses: u32,
+    prestige_tot: f32,
+    prestige: f32,
+    perks: Vec<Shared<String>>,
+    leaders: Vec<Shared<Character>>,
     depth: usize
+}
+
+impl Dynasty {
+    pub fn get_parent(&self) -> Option<Shared<Dynasty>> {
+        self.parent.clone()
+    }
+
+    pub fn get_leaders(&self) -> Vec<Shared<Character>> {
+        self.leaders.clone()
+    }
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector

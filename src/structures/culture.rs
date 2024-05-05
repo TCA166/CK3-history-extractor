@@ -7,14 +7,14 @@ use crate::game_object::GameObject;
 use std::cell::Ref;
 
 pub struct Culture {
-    pub id: u32,
-    pub name: Shared<String>,
-    pub ethos: Shared<String>,
-    pub heritage: Shared<String>,
-    pub martial: Shared<String>,
-    pub date: Option<Shared<String>>,
-    pub parents: Vec<Shared<Culture>>,
-    pub traditions: Vec<Shared<String>>,
+    id: u32,
+    name: Shared<String>,
+    ethos: Shared<String>,
+    heritage: Shared<String>,
+    martial: Shared<String>,
+    date: Option<Shared<String>>,
+    parents: Vec<Shared<Culture>>,
+    traditions: Vec<Shared<String>>,
     depth: usize
 }
 

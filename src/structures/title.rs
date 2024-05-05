@@ -14,12 +14,12 @@ use super::renderer::Renderable;
 use super::{Character, Cullable, GameObjectDerived, Shared};
 
 pub struct Title {
-    pub id: u32,
-    pub name: Shared<String>,
-    pub de_jure: Option<Shared<Title>>,
-    pub de_facto: Option<Shared<Title>>,
-    pub vassals: Vec<Shared<Title>>,
-    pub history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>,
+    id: u32,
+    name: Shared<String>,
+    de_jure: Option<Shared<Title>>,
+    de_facto: Option<Shared<Title>>,
+    vassals: Vec<Shared<Title>>,
+    history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>,
     depth: usize
 }
 

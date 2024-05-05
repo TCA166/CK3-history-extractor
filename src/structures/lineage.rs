@@ -9,15 +9,21 @@ use crate::game_state::GameState;
 use super::{Character, GameObjectDerived, Shared};
 
 pub struct LineageNode{
-    pub character: Option<Shared<Character>>,
-    pub date: Shared<String>,
-    pub score: i32,
-    pub prestige: i32,
-    pub piety: i32,
-    pub dread:f32,
-    pub lifestyle: Option<Shared<String>>,
-    pub perk:Option<Shared<String>>, //in older version this was a list, guess it no longer is
-    pub id: u32
+    character: Option<Shared<Character>>,
+    date: Shared<String>,
+    score: i32,
+    prestige: i32,
+    piety: i32,
+    dread:f32,
+    lifestyle: Option<Shared<String>>,
+    perk:Option<Shared<String>>, //in older version this was a list, guess it no longer is
+    id: u32
+}
+
+impl LineageNode {
+    pub fn get_character(&self) -> Shared<Character> {
+        self.character.as_ref().unwrap().clone()
+    }
 }
 
 fn get_perk(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{

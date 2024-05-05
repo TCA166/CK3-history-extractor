@@ -8,12 +8,12 @@ use super::renderer::Renderable;
 use crate::game_object::GameObject;
 
 pub struct Faith {
-    pub id: u32,
-    pub name: Shared<String>,
-    pub tenets: Vec<Shared<String>>,
-    pub head: Option<Shared<Character>>,
-    pub fervor: f32,
-    pub doctrines: Vec<Shared<String>>,
+    id: u32,
+    name: Shared<String>,
+    tenets: Vec<Shared<String>>,
+    head: Option<Shared<Character>>,
+    fervor: f32,
+    doctrines: Vec<Shared<String>>,
     depth: usize
 }
 

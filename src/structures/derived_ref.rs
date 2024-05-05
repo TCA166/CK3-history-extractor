@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
@@ -7,8 +9,8 @@ use super::{Cullable, GameObjectDerived, Shared};
 /// The idea is to provide the id and name of the object, without serializing the whole object.
 /// This is useful for serializing references to objects that are not in the current scope.
 pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
-    pub id: u32,
-    pub name: Shared<String>,
+    id: u32,
+    name: Shared<String>,
     obj: Shared<T>
 }
 
@@ -22,6 +24,24 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
             name: o.get_name(),
             obj: obj.clone()
         }
+    }
+
+    /// Create a new DerivedRef with a dummy object.
+    /// This is useful for initializing a DerivedRef with an object that is not yet parsed.
+    /// Currently this is used exclusively in [super::GameState::get_vassal].
+    pub fn dummy() -> Self{
+        DerivedRef{
+            id: 0,
+            name: Rc::new(RefCell::new("".to_string())),
+            obj: Rc::new(RefCell::new(T::dummy(0)))
+        }
+    }
+
+    /// Initialize the DerivedRef with a [Shared] object.
+    pub fn init(&mut self, obj:Shared<T>){
+        self.id = obj.borrow().get_id();
+        self.name = obj.borrow().get_name();
+        self.obj = obj;
     }
 }
 
