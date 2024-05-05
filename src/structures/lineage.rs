@@ -8,6 +8,7 @@ use crate::game_state::GameState;
 
 use super::{Character, GameObjectDerived, Shared};
 
+/// A struct representing a lineage node in the game
 pub struct LineageNode{
     character: Option<Shared<Character>>,
     date: Shared<String>,
@@ -21,11 +22,13 @@ pub struct LineageNode{
 }
 
 impl LineageNode {
+    /// Gets the character associated with the lineage node
     pub fn get_character(&self) -> Shared<Character> {
         self.character.as_ref().unwrap().clone()
     }
 }
 
+///Gets the perk of the lineage node
 fn get_perk(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
     let perks_node = base.get("perk");
     if perks_node.is_some(){
@@ -36,6 +39,7 @@ fn get_perk(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
     }
 }
 
+///Gets the dread of the lineage node
 fn get_dread(base:&Ref<'_, GameObject>) -> f32{
     let dread;
     let dread_node = base.get("dread");
@@ -48,6 +52,7 @@ fn get_dread(base:&Ref<'_, GameObject>) -> f32{
     return dread;
 }
 
+///Gets the score of the lineage node
 fn get_score(base: &Ref<'_, GameObject>) -> i32 {
     let score;
     let score_node = base.get("score");
@@ -59,6 +64,7 @@ fn get_score(base: &Ref<'_, GameObject>) -> i32 {
     score
 }
 
+///Gets the prestige of the lineage node
 fn get_prestige(base: &Ref<'_, GameObject>) -> i32 {
     let prestige;
     let prestige_node = base.get("prestige");
@@ -70,6 +76,7 @@ fn get_prestige(base: &Ref<'_, GameObject>) -> i32 {
     prestige
 }
 
+///Gets the piety of the lineage node
 fn get_piety(base: &Ref<'_, GameObject>) -> i32 {
     let piety;
     let piety_node = base.get("piety");
@@ -82,6 +89,7 @@ fn get_piety(base: &Ref<'_, GameObject>) -> i32 {
     piety
 }
 
+///Gets the lifestyle of the lineage node
 fn get_lifestyle(base: &Ref<'_, GameObject>) -> Option<Shared<String>>{
     let lifestyle_node = base.get("lifestyle");
     if lifestyle_node.is_some() {

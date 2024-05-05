@@ -13,6 +13,7 @@ use crate::game_state::GameState;
 use super::renderer::Renderable;
 use super::{Character, Cullable, GameObjectDerived, Shared};
 
+/// A struct representing a title in the game
 pub struct Title {
     id: u32,
     name: Shared<String>,
@@ -23,6 +24,7 @@ pub struct Title {
     depth: usize
 }
 
+///Gets the history of the title and returns a hashmap with the history entries
 fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> HashMap<String, (Option<Shared<Character>>, Shared<String>)>{
     let mut history = HashMap::new();
     let hist = base.get("history");

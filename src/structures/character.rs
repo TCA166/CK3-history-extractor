@@ -8,6 +8,8 @@ use crate::{game_object::GameObject, game_state::GameState};
 
 use super::{renderer::Renderable, Cullable, DerivedRef, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
+/// Represents a character in the game.
+/// Implements [GameObjectDerived], [Renderable] and [Cullable].
 pub struct Character {
     id: u32,
     name: Shared<String>,
@@ -50,6 +52,7 @@ fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
     }
 }
 
+/// Gets the faith of the character
 fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
@@ -71,6 +74,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
     }
 }
 
+/// Gets the culture of the character
 fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Culture>{
     let culture_node = base.get("culture");
     if culture_node.is_some(){
@@ -92,13 +96,14 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
     }
 }
 
+/// Gets the skills of the character
 fn get_skills(skills:&mut Vec<i8>, base:&GameObject){
-    println!("{:?}", base);
     for s in base.get_object_ref("skill").get_array_iter(){
         skills.push(s.as_string_ref().unwrap().parse::<i8>().unwrap());
     }
 }
 
+/// Parses the dead_data field of the character
 fn get_dead(dead:&mut bool, reason:&mut Option<Shared<String>>, data:&mut Option<Shared<String>>, titles:&mut Vec<Shared<Title>>, base:&GameObject, game_state:&mut GameState){
     let dead_data = base.get("dead_data");
     if dead_data.is_some(){
@@ -118,6 +123,7 @@ fn get_dead(dead:&mut bool, reason:&mut Option<Shared<String>>, data:&mut Option
     }
 }
 
+/// Gets the recessive traits of the character
 fn get_recessive(recessive:&mut Vec<Shared<String>>, base:&GameObject){
     let rec_t = base.get("recessive_traits");
     if rec_t.is_some(){
@@ -127,6 +133,7 @@ fn get_recessive(recessive:&mut Vec<Shared<String>>, base:&GameObject){
     }
 }
 
+/// Parses the family_data field of the character
 fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Shared<Character>>, children:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
     let family_data = base.get("family_data");
     if family_data.is_some(){
@@ -154,6 +161,7 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
     }
 }
 
+/// Gets the memories of the character
 fn get_memories(memories:&mut Vec<Shared<Memory>>, base:&GameObject, game_state:&mut GameState){
     let memory_node = base.get("memories");
     if memory_node.is_some(){
@@ -163,6 +171,7 @@ fn get_memories(memories:&mut Vec<Shared<Memory>>, base:&GameObject, game_state:
     }
 }
 
+/// Gets the traits of the character
 fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject, game_state:&mut GameState){
     let traits_node = base.get("traits");
     if traits_node.is_some(){
@@ -173,6 +182,7 @@ fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject, game_state:&mut
     }
 }
 
+/// Parses the alive_data field of the character
 fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&mut f32, kills:&mut Vec<Shared<Character>>, languages:&mut Vec<Shared<String>>, traits:&mut Vec<Shared<String>>, game_state:&mut GameState){
     let alive_node = base.get("alive_data");
     if alive_node.is_some(){
@@ -201,6 +211,7 @@ fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&m
     }
 }
 
+/// Parses the landed_data field of the character
 fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Shared<DerivedRef<Character>>>, base:&GameObject, game_state:&mut GameState){
     let landed_data_node = base.get("landed_data");
     if landed_data_node.is_some(){
@@ -228,6 +239,7 @@ fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Tit
     }
 }
 
+/// Gets the dynasty of the character
 fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){

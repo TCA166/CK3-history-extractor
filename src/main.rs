@@ -45,11 +45,19 @@ fn create_dir_maybe(name: &str) {
 /// # Process
 /// 
 /// 1. Reads the save file name from user
-/// 2. Parses the save file into [save_file::Section]s, which are then converted into [game_object::GameObject]s and stored as [structures::GameObjectDerived] into a [game_state::GameState]
+/// 2. Parses the save file.
+///     1. Initializes a [save_file::SaveFile] object using the provided file name
+///     2. Iterates over the [save_file::Section] objects in the save file
+///         If the section is of interest to us (e.g. `living`, `dead_unprunable`, etc.):
+///         1. We parse the section into [game_object::GameObject]
+///         2. We parse the [game_object::GameObject] into [structures::GameObjectDerived] objects
+///         3. We store the objects in the [game_state::GameState] object
 /// 3. Initializes a [minijinja::Environment] and loads the templates from the `templates` folder
 /// 4. Foreach encountered [structures::Player] in game:
 ///     1. Creates a folder with the player's name
 ///     2. Renders the objects into HTML using the templates and writes them to the folder
+/// 5. Prints the time taken to parse the save file
+///
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     //Get the staring time

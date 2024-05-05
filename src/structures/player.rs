@@ -11,6 +11,7 @@ use crate::game_state::GameState;
 
 use super::{renderer::{Renderable, Cullable}, Character, GameObjectDerived, LineageNode, Shared};
 
+/// A struct representing a player in the game
 pub struct Player {
     pub name: Shared<String>,
     pub id: u32,
@@ -18,6 +19,7 @@ pub struct Player {
     pub lineage: Vec<LineageNode>,
 }
 
+/// Gets the lineage of the player and appends it to the lineage vector
 fn get_lineage(lineage: &mut Vec<LineageNode>, base: &Ref<'_, GameObject>, game_state: &mut GameState){
     let lineage_node = base.get_object_ref("legacy");
     for leg in lineage_node.get_array_iter(){

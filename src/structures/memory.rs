@@ -6,6 +6,7 @@ use super::{Character, Cullable, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
+/// A struct representing a memory in the game
 pub struct Memory {
     id: u32,
     date: Shared<String>,
@@ -14,6 +15,7 @@ pub struct Memory {
     depth: usize
 }
 
+/// Gets the participants of the memory and appends them to the participants vector
 fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ref<'_, GameObject>, game_state:&mut GameState){
     let participants_node = base.get("participants");
     if participants_node.is_some(){

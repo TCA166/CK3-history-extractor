@@ -6,6 +6,7 @@ use super::{Cullable, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use std::cell::Ref;
 
+/// A struct representing a culture in the game
 pub struct Culture {
     id: u32,
     name: Shared<String>,
@@ -18,6 +19,7 @@ pub struct Culture {
     depth: usize
 }
 
+/// Gets the parents of the culture and appends them to the parents vector
 fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState){
     let parents_obj = base.get("parents");
     if parents_obj.is_some(){
@@ -27,6 +29,7 @@ fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&Ref<'_, GameObject>, gam
     }
 }
 
+/// Gets the traditions of the culture and appends them to the traditions vector
 fn get_traditions(traditions:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
     let traditions_obj = base.get("traditions");
     if traditions_obj.is_some(){
@@ -36,6 +39,7 @@ fn get_traditions(traditions:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>
     }
 }
 
+/// Gets the creation date of the culture
 fn get_date(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
     let node = base.get("date");
     if node.is_some(){

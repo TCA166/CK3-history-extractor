@@ -22,10 +22,12 @@ pub struct Dynasty{
 }
 
 impl Dynasty {
+    /// Returns the parent dynasty of the dynasty
     pub fn get_parent(&self) -> Option<Shared<Dynasty>> {
         self.parent.clone()
     }
 
+    /// Returns the historical leaders of the dynasty
     pub fn get_leaders(&self) -> Vec<Shared<Character>> {
         self.leaders.clone()
     }
