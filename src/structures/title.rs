@@ -168,6 +168,32 @@ impl Renderable for Title {
         let ctx = context! {title=>self};
         Some(env.get_template("titleTemplate.html").unwrap().render(&ctx).unwrap())
     }
+
+    fn get_subdir(&self) -> &'static str {
+        "titles"
+    }
+
+    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
+        let r = self.render_to_file(env, &path);
+        if r.is_err(){
+            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
+                return r;
+            }
+            else{
+                return Ok(());
+            }
+        }
+        if self.de_facto.is_some(){
+            self.de_facto.as_ref().unwrap().borrow().render_all(env, path)?;
+        }
+        if self.de_jure.is_some(){
+            self.de_jure.as_ref().unwrap().borrow().render_all(env, path)?;
+        }
+        for v in &self.vassals{
+            v.borrow().render_all(env, path)?;
+        }
+        Ok(())
+    }
 }
 
 impl Cullable for Title {

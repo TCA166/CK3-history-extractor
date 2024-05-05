@@ -125,6 +125,27 @@ impl Renderable for Culture {
         let ctx = context! {culture=>self};
         Some(env.get_template("cultureTemplate.html").unwrap().render(&ctx).unwrap())
     }
+
+    fn get_subdir(&self) -> &'static str {
+        "cultures"
+    }
+
+    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
+        let r = self.render_to_file(env, path);
+        if r.is_err(){
+            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
+                return r;
+            }
+            else{
+                return Ok(());
+            }
+        }
+        for p in &self.parents{
+            p.borrow().render_all(env, path)?;
+        }
+        Ok(())
+    
+    }
 }
 
 impl Cullable for Culture {

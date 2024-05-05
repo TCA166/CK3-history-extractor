@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::{borrow::Borrow, cell::{Ref, RefCell}};
 
 use minijinja::{Environment, context};
 
@@ -43,8 +43,8 @@ pub struct Character {
 
 /// Gets the dynasty meant to be the source of some properties
 fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
-    if house.borrow().get_parent().is_some(){
-        let p = house.borrow().get_parent().as_ref().unwrap().clone();
+    if house.as_ref().borrow().get_parent().is_some(){
+        let p = house.as_ref().borrow().get_parent().as_ref().unwrap().clone();
         return p.clone();
     }
     else{
@@ -60,7 +60,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
     }
     else{
         let house = get_src_dynasty(house.as_ref().unwrap());
-        let h = house.borrow();
+        let h = house.as_ref().borrow();
         for l in h.get_leaders().iter(){
             let l = l.try_borrow();
             if l.is_ok(){
@@ -82,7 +82,7 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
     }
     else{
         let h = get_src_dynasty(house.as_ref().unwrap());
-        let h = h.borrow();
+        let h = h.as_ref().borrow();
         for l in h.get_leaders().iter(){
             let l = l.try_borrow();
             if l.is_ok(){
@@ -176,7 +176,7 @@ fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject, game_state:&mut
     let traits_node = base.get("traits");
     if traits_node.is_some(){
         for t in traits_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-            let index = t.as_string().borrow().parse::<u32>().unwrap();
+            let index = t.as_string().as_ref().borrow().parse::<u32>().unwrap();
             traits.push(game_state.get_trait(index));
         }
     }
@@ -476,6 +476,50 @@ impl Renderable for Character {
         }
         let ctx = context! {character=>self};
         Some(env.get_template("charTemplate.html").unwrap().render(&ctx).unwrap())
+    }
+
+    fn get_subdir(&self) -> &'static str {
+        "characters"
+    }
+
+    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
+        let r = self.render_to_file(env, path);
+        if r.is_err(){
+            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
+                return r;
+            }
+            else{
+                return Ok(());
+            }
+        }
+        if self.faith.is_some(){
+            self.faith.as_ref().unwrap().as_ref().borrow().render_all(env, path)?;
+        }
+        if self.culture.is_some(){
+            self.culture.as_ref().unwrap().as_ref().borrow().borrow().render_all(env, path)?;
+        }
+        if self.house.is_some(){
+            self.house.as_ref().unwrap().as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.spouses.iter(){
+            s.as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.former.iter(){
+            s.as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.children.iter(){
+            s.as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.kills.iter(){
+            s.as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.vassals.iter(){
+            s.as_ref().borrow().get_ref().as_ref().borrow().render_all(env, path)?;
+        }
+        for s in self.titles.iter(){
+            s.as_ref().borrow().render_all(env, path)?;
+        }
+        Ok(())
     }
 }
 

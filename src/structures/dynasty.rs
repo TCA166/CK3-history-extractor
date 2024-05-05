@@ -224,6 +224,27 @@ impl Renderable for Dynasty {
         let ctx = context! {dynasty=>self};
         Some(env.get_template("dynastyTemplate.html").unwrap().render(&ctx).unwrap())  
     }
+
+    fn get_subdir(&self) -> &'static str {
+        "dynasties"
+    }
+
+    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
+        let r = self.render_to_file(env, path);
+        if r.is_err(){
+            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
+                return r;
+            }
+            else{
+                return Ok(());
+            }
+        }
+        for leader in self.leaders.iter(){
+            leader.borrow().render_all(env, path)?;
+        }
+        Ok(())
+    
+    }
 }
 
 impl Cullable for Dynasty {

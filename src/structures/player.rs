@@ -88,4 +88,31 @@ impl Renderable for Player{
         let ctx = context!{player=>self};
         Some(env.get_template("homeTemplate.html").unwrap().render(&ctx).unwrap())   
     }
+
+    fn get_subdir(&self) -> &'static str {
+        "."
+    }
+
+    fn get_path(&self, path: &str) -> String {
+        format!("{}/index.html", path)
+    }
+
+    fn render_all(&self, env: &Environment, path: &str) -> std::io::Result<()> {
+        let r = self.render_to_file(env, path);
+        if r.is_err(){
+            if r.as_ref().err().unwrap().kind() != std::io::ErrorKind::AlreadyExists{
+                return r;
+            }
+            else{
+                return Ok(());
+            }
+        }
+        for char in self.lineage.iter(){
+            let r = char.get_character().borrow().render_all(env, path);
+            if r.is_err(){
+                return r;
+            }
+        }
+        Ok(())
+    }
 }

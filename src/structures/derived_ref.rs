@@ -43,6 +43,10 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
         self.name = obj.borrow().get_name();
         self.obj = obj;
     }
+
+    pub fn get_ref(&self) -> Shared<T>{
+        self.obj.clone()
+    }
 }
 
 impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{

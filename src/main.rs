@@ -185,16 +185,11 @@ fn main() {
         let folder_name = player.name.borrow().clone() + "'s history";
         create_dir_maybe(&folder_name);
         create_dir_maybe(format!("{}/characters", &folder_name).as_str());
-        let contents = player.render(&env).unwrap();
-        let mut file = fs::File::create(format!("{}/index.html", &folder_name)).unwrap();
-        file.write_all(contents.as_bytes()).unwrap();
-        for lineage in player.lineage.iter() {
-            let char = lineage.get_character();
-            let char = char.borrow();
-            let mut file = fs::File::create(format!("{}/characters/{}.html", &folder_name, char.get_id())).unwrap();
-            let contents = char.render(&env).unwrap();
-            file.write_all(contents.as_bytes()).unwrap();
-        }
+        create_dir_maybe(format!("{}/dynasties", &folder_name).as_str());
+        create_dir_maybe(format!("{}/titles", &folder_name).as_str());
+        create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
+        create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
+        player.render_all(&env, &folder_name).unwrap();
     }
     //Get the ending time
     let end_time = SystemTime::now();
