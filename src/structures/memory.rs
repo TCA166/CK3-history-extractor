@@ -2,7 +2,7 @@ use std::cell::{RefCell, Ref};
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, GameObjectDerived, Shared};
+use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared};
 use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
@@ -71,7 +71,12 @@ impl Serialize for Memory {
         let mut state = serializer.serialize_struct("Memory", 3)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("type", &self.r#type)?;
-        state.serialize_field("participants", &self.participants)?;
+        // serialize the participants as an array of tuples
+        let mut participants: Vec<(String, DerivedRef<Character>)> = Vec::new();
+        for part in self.participants.iter(){
+            participants.push((part.0.clone(), DerivedRef::from_derived(part.1.clone())));
+        }
+        state.serialize_field("participants", &participants)?;
         state.end()
     }
 }

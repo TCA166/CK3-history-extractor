@@ -43,7 +43,7 @@ pub use lineage::LineageNode;
 
 /// A submodule that provides an object that can be used on the frontend as a shallow reference to another [GameObjectDerived] object.
 mod derived_ref;
-pub use derived_ref::DerivedRef;
+pub use derived_ref::{DerivedRef, serialize_array};
 
 /// A type alias for shared objects.
 /// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>

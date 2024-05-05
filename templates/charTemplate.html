@@ -18,15 +18,15 @@
                     Date of death: {{character.date}}<br />
                     Reason of death: {{character.reason}}<br />
                     {%endif%}
-                    {%if character.culture != none%}
+                    {%if character.culture is defined%}
                     Culture: <a href="../cultures/{{character.culture.id}}.html">{{character.culture.name}}</a>
                     <br />
                     {%endif%}
-                    {%if character.faith != none%}
+                    {%if character.faith is defined%}
                     Faith: <a href="../faiths/{{character.faith.id}}.html">{{character.faith.name}}</a>
                     <br />
                     {%endif%}
-                    Dynastic House: {%if character.house != none%}<a href="../dynasties/{{character.house.id}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
+                    Dynastic House: {%if character.house is defined%}<a href="../dynasties/{{character.house.id}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">

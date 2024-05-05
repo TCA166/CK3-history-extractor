@@ -1,5 +1,4 @@
 use std::cell::{Ref, RefCell};
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use minijinja::context;
@@ -11,7 +10,7 @@ use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
 use super::renderer::Renderable;
-use super::{Character, Cullable, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived, Renderer, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
@@ -20,13 +19,13 @@ pub struct Title {
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
-    history: HashMap<String, (Option<Shared<Character>>, Shared<String>)>,
+    history: Vec<(String, Option<Shared<Character>>, Shared<String>)>,
     depth: usize
 }
 
 ///Gets the history of the title and returns a hashmap with the history entries
-fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> HashMap<String, (Option<Shared<Character>>, Shared<String>)>{
-    let mut history = HashMap::new();
+fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Vec<(String, Option<Shared<Character>>, Shared<String>)>{
+    let mut history: Vec<(String, Option<Shared<Character>>, Shared<String>)> = Vec::new();
     let hist = base.get("history");
     if hist.is_some() {
         let hist_obj = hist.unwrap().as_object_ref().unwrap();
@@ -57,7 +56,7 @@ fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> HashMap<S
                 }
             }
             let ent = (character, action);
-            history.insert(h, ent);
+            history.push((h.clone(), ent.0, ent.1));
         }
     }
     history
@@ -109,7 +108,7 @@ impl GameObjectDerived for Title{
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
-            history: HashMap::new(),
+            history: Vec::new(),
             id: id,
             depth: 0
         }
@@ -152,9 +151,16 @@ impl Serialize for Title {
     {
         let mut state = serializer.serialize_struct("Title", 5)?;
         state.serialize_field("name", &self.name)?;
-        state.serialize_field("de_jure", &self.de_jure)?;
-        state.serialize_field("de_facto", &self.de_facto)?;
-        state.serialize_field("vassals", &self.vassals)?;
+        if self.de_jure.is_some(){
+            let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
+            state.serialize_field("de_jure", &de_jure)?;
+        }
+        if self.de_facto.is_some(){
+            let de_facto = DerivedRef::from_derived(self.de_facto.as_ref().unwrap().clone());
+            state.serialize_field("de_facto", &de_facto)?;
+        }
+        let vassals = serialize_array(&self.vassals);
+        state.serialize_field("vassals", &vassals)?;
         state.serialize_field("history", &self.history)?;
         state.end()
     }

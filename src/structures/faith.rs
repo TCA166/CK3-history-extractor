@@ -3,7 +3,7 @@ use std::cell::Ref;
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, GameObjectDerived, Shared};
+use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared};
 use super::renderer::Renderable;
 use crate::game_object::GameObject;
 
@@ -112,7 +112,10 @@ impl Serialize for Faith {
         let mut state = serializer.serialize_struct("Faith", 5)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("tenets", &self.tenets)?;
-        state.serialize_field("head", &self.head)?;
+        if self.head.is_some(){
+            let head = DerivedRef::<Character>::from_derived(self.head.as_ref().unwrap().clone());
+            state.serialize_field("head", &head)?;
+        }
         state.serialize_field("fervor", &self.fervor)?;
         state.serialize_field("doctrines", &self.doctrines)?;
         state.end()

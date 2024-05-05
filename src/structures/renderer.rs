@@ -13,6 +13,7 @@ pub struct Renderer<'a>{
 }
 
 impl<'a> Renderer<'a>{
+    /// Create a new Renderer with the given [Environment] and path.
     pub fn new(env: Environment<'a>, path: String) -> Self{
         Renderer{
             env,
@@ -21,6 +22,7 @@ impl<'a> Renderer<'a>{
         }
     }
 
+    /// Returns true if the object has already been rendered.
     fn is_rendered<T: Renderable>(&self, id: u32) -> bool{
         let rendered = self.rendered.get(T::get_subdir());
         if rendered.is_none(){
@@ -84,4 +86,9 @@ pub trait Cullable{
 
     /// Get the depth of the object.
     fn get_depth(&self) -> usize;
+
+    /// Returns true if the object is ok to be rendered / serialized.
+    fn is_ok(&self) -> bool{
+        self.get_depth() > 0
+    }
 }

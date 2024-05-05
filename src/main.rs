@@ -129,6 +129,13 @@ fn main() {
                     game_state.add_character(d.1.as_object_ref().unwrap());
                 }
             }
+            "characters" => {
+                let o = i.to_object().unwrap();
+                let prunable = o.get_object_ref("dead_prunable");
+                for d in prunable.get_obj_iter(){
+                    game_state.add_character(d.1.as_object_ref().unwrap());
+                }
+            }
             "vassal_contracts" => {
                 let o = i.to_object().unwrap();
                 let active = o.get_object_ref("active");

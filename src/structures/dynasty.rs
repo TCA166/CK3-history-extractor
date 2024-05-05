@@ -3,7 +3,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{Character, Cullable, GameObjectDerived, Shared};
+use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
 use std::cell::Ref;
@@ -204,14 +204,18 @@ impl Serialize for Dynasty {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Dynasty", 8)?;
-        state.serialize_field("parent", &self.parent)?;
+        if self.parent.as_ref().is_some(){
+            let parent = DerivedRef::<Dynasty>::from_derived(self.parent.as_ref().unwrap().clone());
+            state.serialize_field("parent", &parent)?;
+        }
         state.serialize_field("name", &self.name)?;
         state.serialize_field("members", &self.members)?;
         state.serialize_field("houses", &self.houses)?;
         state.serialize_field("prestige_tot", &self.prestige_tot)?;
         state.serialize_field("prestige", &self.prestige)?;
         state.serialize_field("perks", &self.perks)?;
-        state.serialize_field("leaders", &self.leaders)?;
+        let leaders = serialize_array(&self.leaders);
+        state.serialize_field("leaders", &leaders)?;
         state.end()
     }
 }

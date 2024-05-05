@@ -6,7 +6,7 @@ use serde::{Serialize, ser::SerializeStruct};
 
 use crate::{game_object::GameObject, game_state::GameState};
 
-use super::{renderer::Renderable, Cullable, DerivedRef, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use super::{renderer::Renderable, Cullable, DerivedRef, serialize_array, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
@@ -401,15 +401,6 @@ impl GameObjectDerived for Character {
     }
 }
 
-/// Converts an array of GameObjectDerived to an array of DerivedRef
-fn serialize_array<T>(array:&Vec<Shared<T>>) -> Vec<DerivedRef<T>> where T:GameObjectDerived + Cullable{
-    let mut res = Vec::new();
-    for s in array.iter(){
-        res.push(DerivedRef::<T>::from_derived(s.clone()));
-    }
-    res
-}
-
 impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -422,10 +413,14 @@ impl Serialize for Character {
         state.serialize_field("dead", &self.dead)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
-        let rf = DerivedRef::<Faith>::from_derived(self.faith.as_ref().unwrap().clone());
-        state.serialize_field("faith", &rf)?;
-        let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
-        state.serialize_field("culture", &rc)?;
+        if self.faith.is_some(){
+            let rf = DerivedRef::<Faith>::from_derived(self.faith.as_ref().unwrap().clone());
+            state.serialize_field("faith", &rf)?;
+        }
+        if self.culture.is_some(){
+            let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
+            state.serialize_field("culture", &rc)?;
+        }
         if self.house.is_some(){
             let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
             state.serialize_field("house", &rd)?;

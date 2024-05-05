@@ -2,7 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{Cullable, GameObjectDerived, Shared};
+use super::{Cullable, GameObjectDerived, Shared, serialize_array};
 use crate::game_object::GameObject;
 use std::cell::Ref;
 
@@ -111,7 +111,8 @@ impl Serialize for Culture {
         state.serialize_field("heritage", &self.heritage)?;
         state.serialize_field("martial", &self.martial)?;
         state.serialize_field("date", &self.date)?;
-        state.serialize_field("parents", &self.parents)?;
+        let parents = serialize_array(&self.parents);
+        state.serialize_field("parents", &parents)?;
         state.serialize_field("traditions", &self.traditions)?;
         state.end()
     }

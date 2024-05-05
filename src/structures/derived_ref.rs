@@ -49,6 +49,15 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     }
 }
 
+/// Converts an array of GameObjectDerived to an array of DerivedRef
+pub fn serialize_array<T>(array:&Vec<Shared<T>>) -> Vec<DerivedRef<T>> where T:GameObjectDerived + Cullable{
+    let mut res = Vec::new();
+    for s in array.iter(){
+        res.push(DerivedRef::<T>::from_derived(s.clone()));
+    }
+    res
+}
+
 impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         let mut state = serializer.serialize_struct("DerivedRef", 3)?;
