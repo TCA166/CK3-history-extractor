@@ -80,14 +80,6 @@ impl Serialize for Player{
     }
 }
 
-impl Player{
-    pub fn set_tree_depth(&mut self, depth: usize){
-        for node in self.lineage.iter_mut(){
-            node.get_character().borrow_mut().set_depth(depth);
-        }
-    }
-}
-
 impl Renderable for Player{
     fn get_context(&self) -> minijinja::Value {
         context!{player=>self}
@@ -112,5 +104,21 @@ impl Renderable for Player{
             println!("Rendering character");
             char.get_character().borrow().render_all(renderer);
         }
+    }
+}
+
+impl Cullable for Player{
+    fn set_depth(&mut self, depth: usize){
+        for node in self.lineage.iter(){
+            node.get_character().borrow_mut().set_depth(depth);
+        }
+    }
+
+    fn get_depth(&self) -> usize {
+        0
+    }
+
+    fn is_ok(&self) -> bool {
+        true
     }
 }

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use minijinja::Environment;
+use serde::Serialize;
 
 use super::GameObjectDerived;
 
@@ -36,16 +37,14 @@ impl<'a> Renderer<'a>{
     }
 
     /// Renders the object and returns true if it was rendered.
-    pub fn render<T: Renderable>(&mut self, obj: &T) -> bool{
+    pub fn render<T: Renderable + Cullable>(&mut self, obj: &T) -> bool{
         //if it is rendered then return
-        if self.is_rendered::<T>(obj.get_id()){
-            println!("Already rendered {}", obj.get_id());
+        if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok(){
             return false
         }
         let ctx = obj.get_context();
         let contents = self.env.get_template(T::get_template()).unwrap().render(&ctx).unwrap();
         let path = obj.get_path(&self.path);
-        println!("Rendering {}", path);
         std::fs::write(path, contents).unwrap();
         let rendered = self.rendered.entry(T::get_subdir()).or_insert(HashMap::new());
         rendered.insert(obj.get_id(), true);
@@ -78,7 +77,7 @@ pub trait Renderable: GameObjectDerived{
 /// Trait for objects that can be culled.
 /// This is used to limit object serialization to a certain depth.
 /// Not all [Renderable] objects need to implement this trait.
-pub trait Cullable{
+pub trait Cullable: Serialize{
     /// Set the depth of the object.
     /// Ideally this should be called on the root object once and the depth should be propagated to all children.
     /// Also ideally should do nothing if the depth is less than or equal to the current depth.

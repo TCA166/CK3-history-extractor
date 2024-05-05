@@ -6,7 +6,7 @@ use std::env;
 use std::fs;
 
 /// A submodule that provides the intermediate parsing interface for the save file.
-/// The [crate::save_file] module uses [GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.
+/// The [crate::save_file] module uses [crate::game_object::GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.
 mod game_object;
 
 /// A submodule that provides the macro save file parsing.
@@ -24,7 +24,7 @@ use game_state::GameState;
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{Player, GameObjectDerived, Renderable, Renderer};
+use structures::{Player, GameObjectDerived, Renderable, Renderer, Cullable};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -204,7 +204,7 @@ fn main() {
         create_dir_maybe(format!("{}/titles", &folder_name).as_str());
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
-        player.set_tree_depth(1);
+        player.set_depth(3);
         let mut renderer = Renderer::new(env.clone(), folder_name.clone());
         player.render_all(&mut renderer);
     }

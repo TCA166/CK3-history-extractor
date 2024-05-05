@@ -251,10 +251,16 @@ impl Cullable for Dynasty {
         }
         self.depth = depth;
         for leader in self.leaders.iter(){
-            leader.borrow_mut().set_depth(depth-1);
+            let o = leader.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
         if self.parent.as_ref().is_some(){
-            self.parent.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+            let o = self.parent.as_ref().unwrap().try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
     }
 

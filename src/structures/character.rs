@@ -138,18 +138,27 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
     let family_data = base.get("family_data");
     if family_data.is_some(){
         let f = family_data.unwrap().as_object_ref().unwrap();
-        let spouse_node = f.get("spouse");
-        if spouse_node.is_some() {
-            spouses.push(game_state.get_character(spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone());
-        }
-        let primary_spouse_node = f.get("primary_spouse");
-        if primary_spouse_node.is_some() {
-            spouses.push(game_state.get_character(primary_spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone());
-        }
         let former_spouses_node = f.get("former_spouses");
         if former_spouses_node.is_some() {
             for s in former_spouses_node.unwrap().as_object_ref().unwrap().get_array_iter(){
                 former_spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            }
+        }
+        let spouse_node = f.get("spouse");
+        if spouse_node.is_some() {
+            let c = game_state.get_character(spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+            let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+            if !contains{
+                spouses.push(c);
+            }
+        }
+        let primary_spouse_node = f.get("primary_spouse");
+        if primary_spouse_node.is_some() {
+            let c = game_state.get_character(primary_spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+            let mut contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+            contains = contains || spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+            if !contains{
+                spouses.push(c);
             }
         }
         let children_node = f.get("child");
@@ -473,7 +482,6 @@ impl Renderable for Character {
     }
 
     fn render_all(&self, renderer: &mut super::Renderer){
-        println!("Rendering character {:?}", self.id);
         if !renderer.render(self){
             return;
         }
@@ -513,31 +521,49 @@ impl Cullable for Character {
             return;
         }
         self.depth = depth;
-        for s in self.spouses.iter_mut(){
-            s.borrow_mut().set_depth(depth - 1);
+        for s in self.spouses.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
-        for s in self.former.iter_mut(){
-            s.borrow_mut().set_depth(depth - 1);
+        for s in self.former.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
-        for s in self.children.iter_mut(){
-            s.borrow_mut().set_depth(depth - 1);
+        for s in self.children.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
-        for s in self.kills.iter_mut(){
-            s.borrow_mut().set_depth(depth - 1);
+        for s in self.kills.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
-        for s in self.vassals.iter_mut(){
-            s.borrow_mut().set_depth(depth - 1);
+        for s in self.vassals.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().get_ref().as_ref().borrow_mut().set_depth(depth - 1);
+            }
         }
         self.culture.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
         self.faith.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
-        for s in self.titles.iter_mut(){
+        for s in self.titles.iter(){
             s.borrow_mut().set_depth(depth - 1);
         }
-        for s in self.memories.iter_mut(){
+        for s in self.memories.iter(){
             s.borrow_mut().set_depth(depth - 1);
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
+            let o = self.house.as_ref().unwrap().try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
     }
 
