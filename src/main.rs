@@ -1,8 +1,4 @@
-use std::time::SystemTime;
-use std::io::prelude::*;
-use std::io::{stdout, stdin};
-use std::env;
-use std::fs;
+use std::{env, fs, time::SystemTime, io::{stdout, stdin, prelude::*}};
 
 /// A submodule that provides the intermediate parsing interface for the save file.
 /// The [crate::save_file] module uses [crate::game_object::GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.

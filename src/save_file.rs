@@ -1,7 +1,4 @@
-use std::fs::File;
-use std::io::prelude::*;
-use std::rc::Rc;
-
+use std::{fs::File, io::prelude::*, mem, rc::Rc};
 use crate::game_object::{GameObject, SaveFileValue};
 
 /// A function that reads a single character from a file
@@ -9,13 +6,12 @@ use crate::game_object::{GameObject, SaveFileValue};
 /// # Returns
 /// 
 /// The character read or None if the end of the file is reached
-fn fgetc(file: &mut File) -> Option<char>{ // Shoutout to my C literate homies out there
+fn fgetc(file: &mut File) -> Option<char> {
     let mut buffer = [0; 1];
-    let ret = file.read(&mut buffer);
-    if ret.is_err() || ret.unwrap() == 0{
+    if file.read_exact(&mut buffer).is_err() {
         return None;
     }
-    return Some(buffer[0] as char);
+    Some(buffer[0] as char)
 }
 
 
@@ -42,9 +38,9 @@ pub struct Section{
 
 impl Section{
     /// Create a new section
-    fn new(name: &str, file: File) -> Section{
+    fn new(name: String, file: File) -> Section{
         Section{
-            name: name.to_string(),
+            name: name,
             file: Some(file)
         }
     }
@@ -83,42 +79,25 @@ impl Section{
         let mut stack: Vec<GameObject> = Vec::new();
         stack.push(object);
         //initialize the key stack
-        loop{
-            let ret = fgetc(file);
-            if ret.is_none(){
-                break;
-            }
-            let c = ret.unwrap();
+        while let Some(c) = fgetc(file) { 
             match c{ // we parse the byte
                 '{' => { // we have a new object, we push a new hashmap to the stack
                     depth += 1;
-                    stack.push(GameObject::from_name(&key));
-                    key.clear();
+                    stack.push(GameObject::from_name(mem::take(&mut key)));
                     past_eq = false;
                 }
                 '}' => { // we have reached the end of an object
-                    if past_eq {
-                        if !val.is_empty() {
-                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
-                            key.clear();
-                            val.clear();
-                            past_eq = false;
-                        }
+                    // if there was an assignment, we insert the key value pair
+                    if past_eq && !val.is_empty() {
+                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
+                        past_eq = false;
                     }
-                    else {
-                        if !key.is_empty() {
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
-                            key.clear();
-                        }
+                    // if there wasn't an assignment but we still gathered some data
+                    else if !key.is_empty() {
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                     }
                     depth -= 1;
-                    if depth == 0{ // we have reached the end of the object we are parsing, we return the object
-                        break;
-                    }
-                    else if depth < 0 { // we have reached the end of the file
-                        panic!("Depth is negative");
-                    }
-                    else{ // we pop the inner object and insert it into the outer object
+                    if depth > 0 { // if we are still in an object, we pop the object and insert it into the parent object
                         let inner = stack.pop().unwrap();
                         let name = inner.get_name().to_string();
                         let val = SaveFileValue::Object(inner);
@@ -129,35 +108,34 @@ impl Section{
                             stack.last_mut().unwrap().insert(name, val);
                         }
                     }
+                    else if depth == 0{ // we have reached the end of the object we are parsing, we return the object
+                        break;
+                    }
+                    else { // sanity check
+                        panic!("Depth is negative");
+                    }
                 }
                 '"' => { // we have a quote, we toggle the quotes flag
                     quotes = !quotes;
                 }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
                     if past_eq { // we have a key value pair
-                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
-                        key.clear();
-                        val.clear();
+                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
                         past_eq = false; // we reset the past_eq flag
                     }
                     else if !key.is_empty(){ // we have just a key { \n key \n }
-                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
-                        key.clear();
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                     }
                 }
                 ' ' | '\t' => { //syntax sugar we ignore, most of the time, unless...
                     if !quotes{ // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() { // in case {something=else something=else}
-                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
-                            key.clear();
-                            val.clear();
+                            stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
                             past_eq = false;
                         }
-                        //
                         else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
-                            key.clear();
+                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                         }
                     }
                 } 
@@ -205,12 +183,7 @@ impl Section{
         }
         let mut depth = 0;
         let file = &mut self.file.as_mut().unwrap();
-        loop{
-            let ret = fgetc(file);
-            if ret.is_none(){
-                break;
-            }
-            let c = ret.unwrap();
+        while let Some(c) = fgetc(file) {
             match c{
                 '{' => {
                     depth += 1;
@@ -263,12 +236,7 @@ impl Iterator for SaveFile{
     fn next(&mut self) -> Option<Section>{
         let mut key = String::new();
         let file = &mut self.file;
-        loop{
-            let ret = fgetc(file);
-            if ret.is_none(){
-                return None;
-            }
-            let c = ret.unwrap();
+        while let Some(c) = fgetc(file) {
             match c{
                 '{' | '}' | '"' => {
                     panic!("Unexpected character");
@@ -288,7 +256,10 @@ impl Iterator for SaveFile{
             }
             
         }
-        return Some(Section::new(&key, self.file.try_clone().unwrap()));
+        if key.is_empty(){
+            return None;
+        }
+        return Some(Section::new(key, self.file.try_clone().unwrap()));
     }
 }
 

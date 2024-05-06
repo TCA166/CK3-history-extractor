@@ -4,3 +4,4 @@ target*
 *.lock
 *.log
 *'s history
+*.svg

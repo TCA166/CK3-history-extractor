@@ -1,6 +1,4 @@
-use std::{collections::{hash_map, HashMap}, rc::Rc, slice};
-
-use std::fmt::Debug;
+use std::{collections::{hash_map, HashMap}, rc::Rc, slice, fmt::Debug};
 
 /// A value that can be stored in a SaveFile and is held by a GameObject.
 /// This is a wrapper around a String or a GameObject.
@@ -69,10 +67,10 @@ pub struct GameObject{
 impl GameObject{
     
     /// Create a new GameObject from a name
-    pub fn from_name(name: &String) -> GameObject{
+    pub fn from_name(name: String) -> GameObject{
         GameObject{
             inner: HashMap::new(),
-            name: name.clone(),
+            name: name,
             array: Vec::new(),
         }
     }
@@ -155,8 +153,8 @@ impl GameObject{
     }
 
     /// Get the keys of the GameObject dictionary
-    pub fn get_keys(&self) -> Vec<String>{
-        self.inner.keys().map(|x| x.clone()).collect()
+    pub fn get_keys(&self) -> hash_map::Keys<String, SaveFileValue>{
+        self.inner.keys()
     }
 }
 
