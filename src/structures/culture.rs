@@ -4,43 +4,43 @@ use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{Cullable, GameObjectDerived, Shared, serialize_array};
 use crate::game_object::GameObject;
-use std::cell::Ref;
+use std::rc::Rc;
 
 /// A struct representing a culture in the game
 pub struct Culture {
     id: u32,
-    name: Shared<String>,
-    ethos: Shared<String>,
-    heritage: Shared<String>,
-    martial: Shared<String>,
-    date: Option<Shared<String>>,
+    name: Rc<String>,
+    ethos: Rc<String>,
+    heritage: Rc<String>,
+    martial: Rc<String>,
+    date: Option<Rc<String>>,
     parents: Vec<Shared<Culture>>,
-    traditions: Vec<Shared<String>>,
+    traditions: Vec<Rc<String>>,
     depth: usize
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
-fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState){
+fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&GameObject, game_state:&mut crate::game_state::GameState){
     let parents_obj = base.get("parents");
     if parents_obj.is_some(){
-        for p in parents_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
-            parents.push(game_state.get_culture(p.as_string_ref().unwrap().as_str()).clone());
+        for p in parents_obj.unwrap().as_object().unwrap().get_array_iter(){
+            parents.push(game_state.get_culture(p.as_string().as_str()).clone());
         }
     }
 }
 
 /// Gets the traditions of the culture and appends them to the traditions vector
-fn get_traditions(traditions:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+fn get_traditions(traditions:&mut Vec<Rc<String>>, base:&&GameObject){
     let traditions_obj = base.get("traditions");
     if traditions_obj.is_some(){
-        for t in traditions_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+        for t in traditions_obj.unwrap().as_object().unwrap().get_array_iter(){
             traditions.push(t.as_string());
         }
     }
 }
 
 /// Gets the creation date of the culture
-fn get_date(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
+fn get_date(base:&GameObject) -> Option<Rc<String>>{
     let node = base.get("date");
     if node.is_some(){
         return Some(node.unwrap().as_string());
@@ -49,9 +49,9 @@ fn get_date(base:&Ref<'_, GameObject>) -> Option<Shared<String>>{
 }
 
 impl GameObjectDerived for Culture {
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Self {
         let mut parents = Vec::new();
-        get_parents(&mut parents, &base, game_state);
+        get_parents(&mut parents, base, game_state);
         let mut traditions = Vec::new();
         get_traditions(&mut traditions, &base);
         Culture{
@@ -69,10 +69,10 @@ impl GameObjectDerived for Culture {
 
     fn dummy(id:u32) -> Self {
         Culture{
-            name: Shared::new("".to_owned().into()),
-            ethos: Shared::new("".to_owned().into()),
-            heritage: Shared::new("".to_owned().into()),
-            martial: Shared::new("".to_owned().into()),
+            name: Rc::new("".to_owned().into()),
+            ethos: Rc::new("".to_owned().into()),
+            heritage: Rc::new("".to_owned().into()),
+            martial: Rc::new("".to_owned().into()),
             date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
@@ -81,7 +81,7 @@ impl GameObjectDerived for Culture {
         }
     }
 
-    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
+    fn init(&mut self, base: &GameObject, game_state: &mut crate::game_state::GameState) {
         get_parents(&mut self.parents, &base, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = base.get("name").unwrap().as_string();
@@ -95,7 +95,7 @@ impl GameObjectDerived for Culture {
         self.id
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.name.clone()
     }
 }

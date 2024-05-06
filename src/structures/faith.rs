@@ -1,5 +1,4 @@
 use minijinja::context;
-use std::cell::Ref;
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
@@ -10,45 +9,45 @@ use crate::game_object::GameObject;
 /// A struct representing a faith in the game
 pub struct Faith {
     id: u32,
-    name: Shared<String>,
-    tenets: Vec<Shared<String>>,
+    name: Rc<String>,
+    tenets: Vec<Rc<String>>,
     head: Option<Shared<Character>>,
     fervor: f32,
-    doctrines: Vec<Shared<String>>,
+    doctrines: Vec<Rc<String>>,
     depth: usize
 }
 
 /// Gets the head of the faith
-fn get_head(base:&Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
+fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
     let current = base.get("head");
     if current.is_some(){
-        return Some(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()));
+        return Some(game_state.get_character(current.unwrap().as_string().as_str()));
     }
     None
 }
 
 /// Gets the tenets of the faith and appends them to the tenets vector
-fn get_tenets(tenets:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+fn get_tenets(tenets:&mut Vec<Rc<String>>, base:&GameObject){
     let tenets_obj = base.get("tenets");
     if tenets_obj.is_some(){
-        for t in tenets_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+        for t in tenets_obj.unwrap().as_object().unwrap().get_array_iter(){
             tenets.push(t.as_string());
         }
     }
 }
 
 /// Gets the doctrines of the faith and appends them to the doctrines vector
-fn get_doctrines(doctrines:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+fn get_doctrines(doctrines:&mut Vec<Rc<String>>, base:&GameObject){
     let doctrines_obj = base.get("doctrines");
     if doctrines_obj.is_some(){
-        for d in doctrines_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+        for d in doctrines_obj.unwrap().as_object().unwrap().get_array_iter(){
             doctrines.push(d.as_string());
         }
     }
 }
 
 /// Gets the name of the faith
-fn get_name(base:&Ref<'_, GameObject>) -> Shared<String>{
+fn get_name(base:&GameObject) -> Rc<String>{
     let node = base.get("name");
     if node.is_some(){
         return node.unwrap().as_string();
@@ -59,7 +58,7 @@ fn get_name(base:&Ref<'_, GameObject>) -> Shared<String>{
 }
 
 impl GameObjectDerived for Faith {
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Self {
         let mut tenets = Vec::new();
         get_tenets(&mut tenets, &base);
         let mut doctrines = Vec::new();
@@ -68,7 +67,7 @@ impl GameObjectDerived for Faith {
             name: get_name(&base),
             tenets: tenets,
             head: get_head(&base, game_state),
-            fervor: base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap(),
+            fervor: base.get("fervor").unwrap().as_string().parse::<f32>().unwrap(),
             doctrines: doctrines,
             id: base.get_name().parse::<u32>().unwrap(),
             depth: 0
@@ -87,19 +86,19 @@ impl GameObjectDerived for Faith {
         }
     }
 
-    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut crate::game_state::GameState) {
+    fn init(&mut self, base: &GameObject, game_state: &mut crate::game_state::GameState) {
         get_tenets(&mut self.tenets, &base);
         self.head.clone_from(&get_head(&base, game_state));
         get_doctrines(&mut self.doctrines, &base);
         self.name = get_name(&base);
-        self.fervor = base.get("fervor").unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+        self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
     }
 
     fn get_id(&self) -> u32 {
         self.id
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.name.clone()
     }
 }

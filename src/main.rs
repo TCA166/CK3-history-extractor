@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::time::SystemTime;
 use std::io::prelude::*;
 use std::io::{stdout, stdin};
@@ -95,7 +94,7 @@ fn main() {
                 let o = i.to_object().unwrap();
                 let landed = o.get_object_ref("landed_titles");
                 for v in landed.get_obj_iter(){
-                    let o = v.1.as_object_ref();
+                    let o = v.1.as_object();
                     if o.is_none(){
                         // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
                         continue;
@@ -105,10 +104,10 @@ fn main() {
             }
             "dynasties" => {
                 for d in i.to_object().unwrap().get_obj_iter(){
-                    let o = d.1.as_object_ref().unwrap();
+                    let o = d.1.as_object().unwrap();
                     if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
                         for h in o.get_obj_iter(){
-                            let house = h.1.as_object_ref();
+                            let house = h.1.as_object();
                             if house.is_none(){
                                 continue;
                             }
@@ -120,29 +119,29 @@ fn main() {
             "living" => {
                 let o = i.to_object().unwrap();
                 for l in o.get_obj_iter(){
-                    game_state.add_character(l.1.as_object_ref().unwrap());
+                    game_state.add_character(l.1.as_object().unwrap());
                 }
             }
             "dead_unprunable" => {
                 let o = i.to_object().unwrap();
                 for d in o.get_obj_iter(){
-                    game_state.add_character(d.1.as_object_ref().unwrap());
+                    game_state.add_character(d.1.as_object().unwrap());
                 }
             }
             "characters" => {
                 let o = i.to_object().unwrap();
                 let prunable = o.get_object_ref("dead_prunable");
                 for d in prunable.get_obj_iter(){
-                    game_state.add_character(d.1.as_object_ref().unwrap());
+                    game_state.add_character(d.1.as_object().unwrap());
                 }
             }
             "vassal_contracts" => {
                 let o = i.to_object().unwrap();
                 let active = o.get_object_ref("active");
                 for contract in active.get_obj_iter(){
-                    let val = contract.1.as_object_ref();
+                    let val = contract.1.as_object();
                     if val.is_some(){
-                        game_state.add_contract(contract.0, val.unwrap().get_string_ref("vassal"))
+                        game_state.add_contract(contract.0, &val.unwrap().get_string_ref("vassal"))
                     }
                 }
             }
@@ -150,21 +149,21 @@ fn main() {
                 let o = i.to_object().unwrap();
                 let faiths = o.get_object_ref("faiths");
                 for f in faiths.get_obj_iter(){
-                    game_state.add_faith(f.1.as_object_ref().unwrap());
+                    game_state.add_faith(f.1.as_object().unwrap());
                 }
             }
             "culture_manager" => {
                 let o = i.to_object().unwrap();
                 let cultures = o.get_object_ref("cultures");
                 for c in cultures.get_obj_iter(){
-                    game_state.add_culture(c.1.as_object_ref().unwrap());
+                    game_state.add_culture(c.1.as_object().unwrap());
                 }
             }
             "character_memory_manager" => {
                 let o = i.to_object().unwrap();
                 let database = o.get_object_ref("database");
                 for d in database.get_obj_iter(){
-                    let mem = d.1.as_object_ref();
+                    let mem = d.1.as_object();
                     if mem.is_none() {
                         continue;
                     }
@@ -172,7 +171,7 @@ fn main() {
                 }
             } 
             "played_character" => {
-                let p = Player::from_game_object(RefCell::new(i.to_object().unwrap()).borrow(), &mut game_state);
+                let p = Player::from_game_object(&i.to_object().unwrap(), &mut game_state);
                 players.push(p);
             }
             _ => {
@@ -196,8 +195,8 @@ fn main() {
     env.add_template("titleTemplate.html", title_template.as_str()).unwrap();
     //TODO serialization is done multiple times, this is inefficient
     for player in players.iter_mut(){
-        println!("Processing {:?}", player.name.borrow());
-        let folder_name = player.name.borrow().clone() + "'s history";
+        println!("Processing {:?}", player.name);
+        let folder_name = player.name.to_string() + "'s history";
         create_dir_maybe(&folder_name);
         create_dir_maybe(format!("{}/characters", &folder_name).as_str());
         create_dir_maybe(format!("{}/dynasties", &folder_name).as_str());

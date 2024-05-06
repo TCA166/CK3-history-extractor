@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::{cell::RefCell, rc::Rc};
 
 use minijinja::context;
 
@@ -12,22 +12,22 @@ use super::{renderer::Renderable, Cullable, DerivedRef, serialize_array, Culture
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
 pub struct Character {
     id: u32,
-    name: Shared<String>,
-    nick: Option<Shared<String>>,
-    birth: Shared<String>,
+    name: Rc<String>,
+    nick: Option<Rc<String>>,
+    birth: Rc<String>,
     dead: bool,
-    date: Option<Shared<String>>,
-    reason: Option<Shared<String>>,
+    date: Option<Rc<String>>,
+    reason: Option<Rc<String>>,
     faith: Option<Shared<Faith>>,
     culture: Option<Shared<Culture>>,
     house: Option<Shared<Dynasty>>,
     skills: Vec<i8>,
-    traits: Vec<Shared<String>>,
-    recessive: Vec<Shared<String>>,
+    traits: Vec<Rc<String>>,
+    recessive: Vec<Rc<String>>,
     spouses: Vec<Shared<Character>>,
     former: Vec<Shared<Character>>,
     children: Vec<Shared<Character>>,
-    dna: Option<Shared<String>>,
+    dna: Option<Rc<String>>,
     memories: Vec<Shared<Memory>>,
     titles: Vec<Shared<Title>>,
     gold: f32,
@@ -36,7 +36,7 @@ pub struct Character {
     dread: f32,
     strength: f32,
     kills: Vec<Shared<Character>>,
-    languages: Vec<Shared<String>>,
+    languages: Vec<Rc<String>>,
     vassals: Vec<Shared<DerivedRef<Character>>>,
     depth: usize
 }
@@ -56,7 +56,7 @@ fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
 fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
-        game_state.get_faith(faith_node.unwrap().as_string_ref().unwrap().as_str()).clone()
+        game_state.get_faith(faith_node.unwrap().as_string().as_str()).clone()
     }
     else{
         let house = get_src_dynasty(house.as_ref().unwrap());
@@ -78,7 +78,7 @@ fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut G
 fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Culture>{
     let culture_node = base.get("culture");
     if culture_node.is_some(){
-        game_state.get_culture(culture_node.unwrap().as_string_ref().unwrap().as_str()).clone()
+        game_state.get_culture(culture_node.unwrap().as_string().as_str()).clone()
     }
     else{
         let h = get_src_dynasty(house.as_ref().unwrap());
@@ -99,24 +99,24 @@ fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut
 /// Gets the skills of the character
 fn get_skills(skills:&mut Vec<i8>, base:&GameObject){
     for s in base.get_object_ref("skill").get_array_iter(){
-        skills.push(s.as_string_ref().unwrap().parse::<i8>().unwrap());
+        skills.push(s.as_string().parse::<i8>().unwrap());
     }
 }
 
 /// Parses the dead_data field of the character
-fn get_dead(dead:&mut bool, reason:&mut Option<Shared<String>>, data:&mut Option<Shared<String>>, titles:&mut Vec<Shared<Title>>, base:&GameObject, game_state:&mut GameState){
+fn get_dead(dead:&mut bool, reason:&mut Option<Rc<String>>, data:&mut Option<Rc<String>>, titles:&mut Vec<Shared<Title>>, base:&GameObject, game_state:&mut GameState){
     let dead_data = base.get("dead_data");
     if dead_data.is_some(){
         *dead = true;
-        let o = dead_data.unwrap().as_object_ref().unwrap();
+        let o = dead_data.unwrap().as_object().unwrap();
         let reason_node = o.get("reason");
         if reason_node.is_some(){
             *reason = Some(reason_node.unwrap().as_string());
         }
         let domain_node = o.get("domain");
         if domain_node.is_some(){
-            for t in domain_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()));
+            for t in domain_node.unwrap().as_object().unwrap().get_array_iter(){
+                titles.push(game_state.get_title(t.as_string().as_str()));
             }
         }
         *data = Some(o.get("date").unwrap().as_string());
@@ -124,10 +124,10 @@ fn get_dead(dead:&mut bool, reason:&mut Option<Shared<String>>, data:&mut Option
 }
 
 /// Gets the recessive traits of the character
-fn get_recessive(recessive:&mut Vec<Shared<String>>, base:&GameObject){
+fn get_recessive(recessive:&mut Vec<Rc<String>>, base:&GameObject){
     let rec_t = base.get("recessive_traits");
     if rec_t.is_some(){
-        for r in rec_t.unwrap().as_object_ref().unwrap().get_array_iter(){
+        for r in rec_t.unwrap().as_object().unwrap().get_array_iter(){
             recessive.push(r.as_string());
         }
     }
@@ -137,16 +137,16 @@ fn get_recessive(recessive:&mut Vec<Shared<String>>, base:&GameObject){
 fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Shared<Character>>, children:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
     let family_data = base.get("family_data");
     if family_data.is_some(){
-        let f = family_data.unwrap().as_object_ref().unwrap();
+        let f = family_data.unwrap().as_object().unwrap();
         let former_spouses_node = f.get("former_spouses");
         if former_spouses_node.is_some() {
-            for s in former_spouses_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                former_spouses.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            for s in former_spouses_node.unwrap().as_object().unwrap().get_array_iter(){
+                former_spouses.push(game_state.get_character(s.as_string().as_str()).clone());
             }
         }
         let spouse_node = f.get("spouse");
         if spouse_node.is_some() {
-            let c = game_state.get_character(spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+            let c = game_state.get_character(spouse_node.unwrap().as_string().as_str()).clone();
             let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
             if !contains{
                 spouses.push(c);
@@ -154,7 +154,7 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
         }
         let primary_spouse_node = f.get("primary_spouse");
         if primary_spouse_node.is_some() {
-            let c = game_state.get_character(primary_spouse_node.unwrap().as_string_ref().unwrap().as_str()).clone();
+            let c = game_state.get_character(primary_spouse_node.unwrap().as_string().as_str()).clone();
             let mut contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
             contains = contains || spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
             if !contains{
@@ -163,8 +163,8 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
         }
         let children_node = f.get("child");
         if children_node.is_some() {
-            for s in children_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                children.push(game_state.get_character(s.as_string_ref().unwrap().as_str()).clone());
+            for s in children_node.unwrap().as_object().unwrap().get_array_iter(){
+                children.push(game_state.get_character(s.as_string().as_str()).clone());
             }
         }
     }
@@ -174,46 +174,46 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
 fn get_memories(memories:&mut Vec<Shared<Memory>>, base:&GameObject, game_state:&mut GameState){
     let memory_node = base.get("memories");
     if memory_node.is_some(){
-        for m in memory_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-            memories.push(game_state.get_memory(m.as_string_ref().unwrap().as_str()).clone());
+        for m in memory_node.unwrap().as_object().unwrap().get_array_iter(){
+            memories.push(game_state.get_memory(m.as_string().as_str()).clone());
         }
     }
 }
 
 /// Gets the traits of the character
-fn get_traits(traits:&mut Vec<Shared<String>>, base:&GameObject, game_state:&mut GameState){
+fn get_traits(traits:&mut Vec<Rc<String>>, base:&GameObject, game_state:&mut GameState){
     let traits_node = base.get("traits");
     if traits_node.is_some(){
-        for t in traits_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-            let index = t.as_string().as_ref().borrow().parse::<u32>().unwrap();
+        for t in traits_node.unwrap().as_object().unwrap().get_array_iter(){
+            let index = t.as_string().parse::<u32>().unwrap();
             traits.push(game_state.get_trait(index));
         }
     }
 }
 
 /// Parses the alive_data field of the character
-fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&mut f32, kills:&mut Vec<Shared<Character>>, languages:&mut Vec<Shared<String>>, traits:&mut Vec<Shared<String>>, game_state:&mut GameState){
+fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&mut f32, kills:&mut Vec<Shared<Character>>, languages:&mut Vec<Rc<String>>, traits:&mut Vec<Rc<String>>, game_state:&mut GameState){
     let alive_node = base.get("alive_data");
     if alive_node.is_some(){
-        let alive_data = base.get("alive_data").unwrap().as_object_ref().unwrap();
+        let alive_data = base.get("alive_data").unwrap().as_object().unwrap();
         *piety = alive_data.get_object_ref("piety").get_string_ref("accumulated").parse::<f32>().unwrap();
         *prestige = alive_data.get_object_ref("prestige").get_string_ref("accumulated").parse::<f32>().unwrap();
         let kills_node = alive_data.get("kills");
         if kills_node.is_some(){
-            for k in kills_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                kills.push(game_state.get_character(k.as_string_ref().unwrap().as_str()).clone());
+            for k in kills_node.unwrap().as_object().unwrap().get_array_iter(){
+                kills.push(game_state.get_character(k.as_string().as_str()).clone());
             }
         }
         let gold_node = alive_data.get("gold");
         if gold_node.is_some(){
-            *gold = gold_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            *gold = gold_node.unwrap().as_string().parse::<f32>().unwrap();
         }
         for l in alive_data.get_object_ref("languages").get_array_iter(){
             languages.push(l.as_string());
         }
         let perk_node = alive_data.get("perks");
         if perk_node.is_some(){
-            for p in perk_node.unwrap().as_object_ref().unwrap().get_array_iter(){
+            for p in perk_node.unwrap().as_object().unwrap().get_array_iter(){
                 traits.push(p.as_string());
             }
         }
@@ -224,25 +224,25 @@ fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&m
 fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Shared<DerivedRef<Character>>>, base:&GameObject, game_state:&mut GameState){
     let landed_data_node = base.get("landed_data");
     if landed_data_node.is_some(){
-        let landed_data = landed_data_node.unwrap().as_object_ref().unwrap();
+        let landed_data = landed_data_node.unwrap().as_object().unwrap();
         let dread_node = landed_data.get("dread");
         if dread_node.is_some(){
-            *dread = dread_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            *dread = dread_node.unwrap().as_string().parse::<f32>().unwrap();
         }
         let strength_node = landed_data.get("strength");
         if strength_node.is_some(){
-            *strength = strength_node.unwrap().as_string_ref().unwrap().parse::<f32>().unwrap();
+            *strength = strength_node.unwrap().as_string().parse::<f32>().unwrap();
         }
         let titles_node = landed_data.get("domain");
         if titles_node.is_some(){
-            for t in titles_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                titles.push(game_state.get_title(t.as_string_ref().unwrap().as_str()));
+            for t in titles_node.unwrap().as_object().unwrap().get_array_iter(){
+                titles.push(game_state.get_title(t.as_string().as_str()));
             }
         }
         let vassals_node = landed_data.get("vassal_contracts");
         if vassals_node.is_some(){
-            for v in vassals_node.unwrap().as_object_ref().unwrap().get_array_iter(){
-                vassals.push(game_state.get_vassal(v.as_string_ref().unwrap().as_str()));
+            for v in vassals_node.unwrap().as_object().unwrap().get_array_iter(){
+                vassals.push(game_state.get_vassal(v.as_string().as_str()));
             }
         }
     }
@@ -252,14 +252,14 @@ fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Tit
 fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){
-        return Some(game_state.get_dynasty(dynasty_id.unwrap().as_string_ref().unwrap().as_str()));
+        return Some(game_state.get_dynasty(dynasty_id.unwrap().as_string().as_str()));
     }
     None
 }
 
 impl GameObjectDerived for Character {
 
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         let mut dead = false;
         let mut reason = None;
         let mut date = None;
@@ -292,7 +292,7 @@ impl GameObjectDerived for Character {
         let mut piety = 0.0;
         let mut prestige = 0.0;
         let mut kills: Vec<Shared<Character>> = Vec::new();
-        let mut languages: Vec<Shared<String>> = Vec::new();
+        let mut languages: Vec<Rc<String>> = Vec::new();
         if !dead {
             parse_alive_data(&base, &mut piety, &mut prestige, &mut gold, &mut kills, &mut languages, &mut traits, game_state);
         }
@@ -337,9 +337,9 @@ impl GameObjectDerived for Character {
 
     fn dummy(id:u32) -> Self {
         Character{
-            name: Shared::new("".to_owned().into()),
+            name: Rc::new("".to_owned().into()),
             nick: None,
-            birth: Shared::new("".to_owned().into()),
+            birth: Rc::new("".to_owned().into()),
             dead: false,
             date: None,
             reason: None,
@@ -368,7 +368,7 @@ impl GameObjectDerived for Character {
         }
     }
 
-    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState) {
+    fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
         get_dead(&mut self.dead, &mut self.reason, &mut self.date, &mut self.titles, &base, game_state);
         //find skills
         get_skills(&mut self.skills, &base);
@@ -405,7 +405,7 @@ impl GameObjectDerived for Character {
         self.id
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.name.clone()
     }
 }

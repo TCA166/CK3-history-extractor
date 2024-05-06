@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs::File};
+use std::fs::File;
 use std::io::prelude::*;
 use std::rc::Rc;
 
@@ -99,7 +99,7 @@ impl Section{
                 '}' => { // we have reached the end of an object
                     if past_eq {
                         if !val.is_empty() {
-                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
+                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                             key.clear();
                             val.clear();
                             past_eq = false;
@@ -107,7 +107,7 @@ impl Section{
                     }
                     else {
                         if !key.is_empty() {
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(RefCell::new(key.clone()))));
+                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                             key.clear();
                         }
                     }
@@ -121,7 +121,7 @@ impl Section{
                     else{ // we pop the inner object and insert it into the outer object
                         let inner = stack.pop().unwrap();
                         let name = inner.get_name().to_string();
-                        let val = SaveFileValue::Object(Rc::new(RefCell::new(inner)));
+                        let val = SaveFileValue::Object(inner);
                         if name.is_empty(){ //check if unnamed node, implies we are dealing with an array of unnamed objects
                             stack.last_mut().unwrap().push(val);
                         }
@@ -135,13 +135,13 @@ impl Section{
                 }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
                     if past_eq { // we have a key value pair
-                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
+                        stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                         key.clear();
                         val.clear();
                         past_eq = false; // we reset the past_eq flag
                     }
                     else if !key.is_empty(){ // we have just a key { \n key \n }
-                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(RefCell::new(key.clone()))));
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                         key.clear();
                     }
                 }
@@ -149,14 +149,14 @@ impl Section{
                     if !quotes{ // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() { // in case {something=else something=else}
-                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(RefCell::new(val.clone()))));
+                            stack.last_mut().unwrap().insert(key.clone(), SaveFileValue::String(Rc::new(val.clone())));
                             key.clear();
                             val.clear();
                             past_eq = false;
                         }
                         //
                         else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(RefCell::new(key.clone()))));
+                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(key.clone())));
                             key.clear();
                         }
                     }
@@ -339,14 +339,14 @@ mod tests {
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         let test2_val = test2;
-        assert_eq!(*(test2_val.get_index(0).unwrap().as_string_ref().unwrap()) , "1".to_string());
-        assert_eq!(*(test2_val.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
-        assert_eq!(*(test2_val.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
+        assert_eq!(*(test2_val.get_index(0).unwrap().as_string()) , "1".to_string());
+        assert_eq!(*(test2_val.get_index(1).unwrap().as_string()) , "2".to_string());
+        assert_eq!(*(test2_val.get_index(2).unwrap().as_string()) , "3".to_string());
         let test3 = object.get_object_ref("test3");
         let test3_val = test3;
-        assert_eq!(*(test3_val.get_index(0).unwrap().as_string_ref().unwrap()) , "1".to_string());
-        assert_eq!(*(test3_val.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
-        assert_eq!(*(test3_val.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
+        assert_eq!(*(test3_val.get_index(0).unwrap().as_string()) , "1".to_string());
+        assert_eq!(*(test3_val.get_index(1).unwrap().as_string()) , "2".to_string());
+        assert_eq!(*(test3_val.get_index(2).unwrap().as_string()) , "3".to_string());
     }
 
     #[test]
@@ -382,9 +382,9 @@ mod tests {
         let object = save_file.next().unwrap().to_object().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
-        assert_eq!(*(test2.get_index(0).unwrap().as_string_ref().unwrap()) , "1".to_string());
-        assert_eq!(*(test2.get_index(1).unwrap().as_string_ref().unwrap()) , "2".to_string());
-        assert_eq!(*(test2.get_index(2).unwrap().as_string_ref().unwrap()) , "3".to_string());
+        assert_eq!(*(test2.get_index(0).unwrap().as_string()) , "1".to_string());
+        assert_eq!(*(test2.get_index(1).unwrap().as_string()) , "2".to_string());
+        assert_eq!(*(test2.get_index(2).unwrap().as_string()) , "3".to_string());
         assert_eq!(test2.get_array_iter().len(), 3);
     }
 
@@ -462,11 +462,11 @@ mod tests {
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(*(object.get_string_ref("name")) , "dynn_Sao".to_string());
         let historical = object.get_object_ref("historical");
-        assert_eq!(*(historical.get_index(0).unwrap().as_string_ref().unwrap()) , "4440".to_string());
-        assert_eq!(*(historical.get_index(1).unwrap().as_string_ref().unwrap()) , "5398".to_string());
-        assert_eq!(*(historical.get_index(2).unwrap().as_string_ref().unwrap()) , "6726".to_string());
-        assert_eq!(*(historical.get_index(3).unwrap().as_string_ref().unwrap()) , "10021".to_string());
-        assert_eq!(*(historical.get_index(4).unwrap().as_string_ref().unwrap()) , "33554966".to_string());
+        assert_eq!(*(historical.get_index(0).unwrap().as_string()) , "4440".to_string());
+        assert_eq!(*(historical.get_index(1).unwrap().as_string()) , "5398".to_string());
+        assert_eq!(*(historical.get_index(2).unwrap().as_string()) , "6726".to_string());
+        assert_eq!(*(historical.get_index(3).unwrap().as_string()) , "10021".to_string());
+        assert_eq!(*(historical.get_index(4).unwrap().as_string()) , "33554966".to_string());
         assert_eq!(historical.get_array_iter().len(), 12);
     }
 }

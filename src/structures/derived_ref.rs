@@ -10,7 +10,7 @@ use super::{Cullable, GameObjectDerived, Shared};
 /// This is useful for serializing references to objects that are not in the current scope.
 pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
     id: u32,
-    name: Shared<String>,
+    name: Rc<String>,
     obj: Shared<T>
 }
 
@@ -32,7 +32,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     pub fn dummy() -> Self{
         DerivedRef{
             id: 0,
-            name: Rc::new(RefCell::new("".to_string())),
+            name: Rc::new("".to_string()),
             obj: Rc::new(RefCell::new(T::dummy(0)))
         }
     }

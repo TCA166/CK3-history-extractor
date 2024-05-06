@@ -1,4 +1,3 @@
-use std::cell::{Ref, RefCell};
 use std::rc::Rc;
 
 use minijinja::context;
@@ -15,32 +14,32 @@ use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived,
 /// A struct representing a title in the game
 pub struct Title {
     id: u32,
-    name: Shared<String>,
+    name: Rc<String>,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
-    history: Vec<(String, Option<Shared<Character>>, Shared<String>)>,
+    history: Vec<(String, Option<Shared<Character>>, Rc<String>)>,
     depth: usize
 }
 
 ///Gets the history of the title and returns a hashmap with the history entries
-fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Vec<(String, Option<Shared<Character>>, Shared<String>)>{
-    let mut history: Vec<(String, Option<Shared<Character>>, Shared<String>)> = Vec::new();
+fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(String, Option<Shared<Character>>, Rc<String>)>{
+    let mut history: Vec<(String, Option<Shared<Character>>, Rc<String>)> = Vec::new();
     let hist = base.get("history");
     if hist.is_some() {
-        let hist_obj = hist.unwrap().as_object_ref().unwrap();
+        let hist_obj = hist.unwrap().as_object().unwrap();
         for h in hist_obj.get_keys(){
             let val = hist_obj.get(&h);
             let character;
-            let action:Shared<String>;
+            let action:Rc<String>;
             match val{
                 Some(&SaveFileValue::Object(ref o)) => {
-                    let r = o.as_ref().borrow();
+                    let r = o;
                     action = r.get("type").unwrap().as_string();
                     let holder = r.get("holder");
                     match holder{
                         Some(h) => {
-                            character = Some(game_state.get_character(h.as_string_ref().unwrap().as_str()).clone());
+                            character = Some(game_state.get_character(h.as_string().as_str()).clone());
                         },
                         None => {
                             character = None;
@@ -48,8 +47,8 @@ fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Vec<(Stri
                     }
                 },
                 Some(&SaveFileValue::String(ref o)) => {
-                    action = Rc::new(RefCell::new("Inherited".to_owned()));
-                    character = Some(game_state.get_character(o.as_ref().borrow().as_str()).clone());
+                    action = Rc::new("Inherited".to_owned());
+                    character = Some(game_state.get_character(o.as_str()).clone());
                 }
                 _ => {
                     panic!("Invalid history entry")
@@ -64,16 +63,16 @@ fn get_history(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Vec<(Stri
 
 impl GameObjectDerived for Title{
 
-    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut GameState) -> Self {
+    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
         //first we get the optional de_jure_liege and de_facto_liege
         let de_jure_id = base.get("de_jure_liege");
         let de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(de_jure.as_string_ref().unwrap().as_str()).clone()),
+            Some(de_jure) => Some(game_state.get_title(de_jure.as_string().as_str()).clone()),
             None => None
         };
         let de_facto_id = base.get("de_facto_liege");
         let de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(de_facto.as_string_ref().unwrap().as_str()).clone()),
+            Some(de_facto) => Some(game_state.get_title(de_facto.as_string().as_str()).clone()),
             None => None
         };
         let mut vassals = Vec::new();
@@ -81,7 +80,7 @@ impl GameObjectDerived for Title{
         let vas = base.get("vassals");
         if !vas.is_none(){
             for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(v.as_string_ref().unwrap().as_str()).clone());
+                vassals.push(game_state.get_title(v.as_string().as_str()).clone());
             }
         }
         let name = base.get("name").unwrap().as_string().clone();
@@ -104,7 +103,7 @@ impl GameObjectDerived for Title{
 
     fn dummy(id:u32) -> Self {
         Title{
-            name: Rc::new(RefCell::new("Dummy".to_owned())),
+            name: Rc::new("Dummy".to_owned()),
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
@@ -114,22 +113,22 @@ impl GameObjectDerived for Title{
         }
     }
 
-    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState) {
+    fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
         let de_jure_id = base.get("de_jure_liege");
         self.de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(de_jure.as_string_ref().unwrap().as_str()).clone()),
+            Some(de_jure) => Some(game_state.get_title(de_jure.as_string().as_str()).clone()),
             None => None
         };
         let de_facto_id = base.get("de_facto_liege");
         self.de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(de_facto.as_string_ref().unwrap().as_str()).clone()),
+            Some(de_facto) => Some(game_state.get_title(de_facto.as_string().as_str()).clone()),
             None => None
         };
         let mut vassals = Vec::new();
         let vas = base.get("vassals");
         if !vas.is_none(){
             for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(v.as_string_ref().unwrap().as_str()).clone());
+                vassals.push(game_state.get_title(v.as_string().as_str()).clone());
             }
         }
         self.vassals = vassals;
@@ -138,7 +137,7 @@ impl GameObjectDerived for Title{
         self.history = history;
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.name.clone()
     
     }

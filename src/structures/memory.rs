@@ -1,4 +1,3 @@
-use std::cell::{RefCell, Ref};
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
@@ -9,24 +8,24 @@ use crate::game_state::GameState;
 /// A struct representing a memory in the game
 pub struct Memory {
     id: u32,
-    date: Shared<String>,
-    r#type: Shared<String>,
+    date: Rc<String>,
+    r#type: Rc<String>,
     participants: Vec<(String, Shared<Character>)>,
     depth: usize
 }
 
 /// Gets the participants of the memory and appends them to the participants vector
-fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ref<'_, GameObject>, game_state:&mut GameState){
+fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&GameObject, game_state:&mut GameState){
     let participants_node = base.get("participants");
     if participants_node.is_some(){
-        for part in participants_node.unwrap().as_object_ref().unwrap().get_obj_iter(){
-            participants.push((part.0.clone(), game_state.get_character(part.1.as_string().borrow().as_str()).clone()));
+        for part in participants_node.unwrap().as_object().unwrap().get_obj_iter(){
+            participants.push((part.0.clone(), game_state.get_character(part.1.as_string().as_str()).clone()));
         }
     }
 }
 
 impl GameObjectDerived for Memory {
-    fn from_game_object(base: Ref<'_, GameObject>, game_state: &mut GameState) -> Self {
+    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
         let mut participants = Vec::new();
         get_participants(&mut participants, &base, game_state);
         Memory{
@@ -40,15 +39,15 @@ impl GameObjectDerived for Memory {
 
     fn dummy(id:u32) -> Self {
         Memory{
-            date: Rc::new(RefCell::new("".to_owned())),
-            r#type: Rc::new(RefCell::new("".to_owned())),
+            date: Rc::new("".to_owned()),
+            r#type: Rc::new("".to_owned()),
             participants: Vec::new(),
             id: id,
             depth: 0
         }
     }
 
-    fn init(&mut self, base: Ref<'_, GameObject>, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
         self.date = base.get("date").unwrap().as_string();
         self.r#type = base.get("type").unwrap().as_string();
         get_participants(&mut self.participants, &base, game_state);
@@ -58,7 +57,7 @@ impl GameObjectDerived for Memory {
         self.id
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.r#type.clone()
     }
 }

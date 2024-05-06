@@ -1,4 +1,4 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -23,7 +23,7 @@ pub struct GameState{
     /// A memory id->Memory transform
     memories: HashMap<String, Shared<Memory>>,
     /// A trait id->Trait identifier transform
-    traits_lookup: Vec<Shared<String>>,
+    traits_lookup: Vec<Rc<String>>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<String, Shared<DerivedRef<Character>>>
 }
@@ -44,12 +44,12 @@ impl GameState{
     }
 
     /// Add a lookup table for traits
-    pub fn add_lookup(&mut self, array:Vec<Shared<String>>){
+    pub fn add_lookup(&mut self, array:Vec<Rc<String>>){
         self.traits_lookup = array;
     }
 
     /// Get a trait by id
-    pub fn get_trait(&self, id:u32) -> Shared<String>{
+    pub fn get_trait(&self, id:u32) -> Rc<String>{
         self.traits_lookup[id as usize].clone()
     }
 
@@ -78,7 +78,7 @@ impl GameState{
     }
 
     /// Adds a new vassal contract
-    pub fn add_contract(&mut self, contract_id: &str, character_id: Ref<'_, String>) {
+    pub fn add_contract(&mut self, contract_id: &str, character_id: &String) {
         let char = self.get_character(character_id.as_str());
         if self.contract_transform.contains_key(contract_id){
             let entry = self.contract_transform.get(contract_id).unwrap();
@@ -151,7 +151,7 @@ impl GameState{
     }
 
     /// Add a character to the game state    
-    pub fn add_character(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_character(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.characters.contains_key(&key){
             let c = self.characters.get(&key).unwrap().clone();
@@ -164,7 +164,7 @@ impl GameState{
     }
 
     /// Add a title to the game state
-    pub fn add_title(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_title(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.titles.contains_key(&key){
             let t = self.titles.get(&key).unwrap().clone();
@@ -177,7 +177,7 @@ impl GameState{
     }
 
     /// Add a faith to the game state
-    pub fn add_faith(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_faith(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.faiths.contains_key(&key){
             let f = self.faiths.get(&key).unwrap().clone();
@@ -190,7 +190,7 @@ impl GameState{
     }
 
     /// Add a culture to the game state
-    pub fn add_culture(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_culture(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.cultures.contains_key(&key){
             let c = self.cultures.get(&key).unwrap().clone();
@@ -203,7 +203,7 @@ impl GameState{
     }
 
     /// Add a dynasty to the game state
-    pub fn add_dynasty(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_dynasty(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.dynasties.contains_key(&key){
             let d = self.dynasties.get(key.as_str()).unwrap().clone();
@@ -216,7 +216,7 @@ impl GameState{
     }
 
     /// Add a memory to the game state
-    pub fn add_memory(&mut self, value: Ref<'_, GameObject>){
+    pub fn add_memory(&mut self, value: &GameObject){
         let key = value.get_name().to_string();
         if self.memories.contains_key(&key){
             let m = self.memories.get(key.as_str()).unwrap().clone();

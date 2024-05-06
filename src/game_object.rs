@@ -1,36 +1,15 @@
-use std::{cell::Ref, collections::{hash_map, HashMap}, slice};
-
-use crate::structures::Shared;
+use std::{collections::{hash_map, HashMap}, rc::Rc, slice};
 
 use std::fmt::Debug;
 
 /// A value that can be stored in a SaveFile and is held by a GameObject.
 /// This is a wrapper around a String or a GameObject.
 pub enum SaveFileValue{
-    String(Shared<String>),
-    Object(Shared<GameObject>)
+    String(Rc<String>),
+    Object(GameObject)
 }
 
-// TODO rework where shared is implemented? possible speedup if the shared creation is moved from here to when things are added to the game state
-
 impl SaveFileValue {
-
-    /// Get the value as a string reference.
-    /// Mainly used for convenience.
-    /// 
-    /// # Panics
-    /// 
-    /// If the value is not a string
-    /// 
-    /// # Returns
-    /// 
-    /// A reference to the string
-    pub fn as_string_ref(&self) -> Option<Ref<'_, String>>{
-        match self{
-            SaveFileValue::String(s) => Some(s.as_ref().borrow()),
-            _ => None
-        }
-    }
 
     /// Get the value as a string
     /// 
@@ -41,7 +20,7 @@ impl SaveFileValue {
     /// # Returns
     /// 
     /// A reference to the string
-    pub fn as_string(&self) -> Shared<String>{
+    pub fn as_string(&self) -> Rc<String>{
         match self{
             SaveFileValue::String(s) => s.clone(),
             _ => panic!("Invalid value")
@@ -57,9 +36,9 @@ impl SaveFileValue {
     /// # Returns
     /// 
     /// A reference to the GameObject
-    pub fn as_object_ref(&self) -> Option<Ref<'_, GameObject>>{
+    pub fn as_object(&self) -> Option<&GameObject>{
         match self{
-            SaveFileValue::Object(o) => Some(o.as_ref().borrow()),
+            SaveFileValue::Object(o) => Some(o),
             _ => None
         }
     }
@@ -69,8 +48,8 @@ impl SaveFileValue {
 impl Debug for SaveFileValue{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self{
-            SaveFileValue::String(s) => write!(f, "\"{}\"", s.as_ref().borrow()),
-            SaveFileValue::Object(o) => write!(f, "{:?}", o.as_ref().borrow())
+            SaveFileValue::String(s) => write!(f, "\"{}\"", s.as_ref()),
+            SaveFileValue::Object(o) => write!(f, "{:?}", o)
         }
     }
 }
@@ -129,8 +108,8 @@ impl GameObject{
     /// 
     /// If the key is missing or the value is not a string
     /// 
-    pub fn get_string_ref(&self, key: &str) -> Ref<'_, String>{
-        self.inner.get(key).unwrap().as_string_ref().unwrap()
+    pub fn get_string_ref(&self, key: &str) -> Rc<String>{
+        self.inner.get(key).unwrap().as_string()
     }
 
     /// Get the value of a key as a GameObject.
@@ -140,8 +119,8 @@ impl GameObject{
     /// 
     /// If the key is missing or the value is not a GameObject
     /// 
-    pub fn get_object_ref(&self, key: &str) -> Ref<'_, GameObject>{
-        self.inner.get(key).unwrap().as_object_ref().unwrap()
+    pub fn get_object_ref(&self, key: &str) -> &GameObject{
+        self.inner.get(key).unwrap().as_object().unwrap()
     }
 
     /// Get the value of an index in the GameObject array

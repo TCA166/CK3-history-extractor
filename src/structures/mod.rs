@@ -3,7 +3,7 @@
 mod renderer;
 pub use renderer::{Cullable, Renderer, Renderable};
 
-use std::cell::Ref;
+use std::rc::Rc;
 
 use super::game_object::GameObject;
 
@@ -62,7 +62,7 @@ pub type Shared<T> = std::rc::Rc<std::cell::RefCell<T>>;
 /// The idea is to have uniform interface for the object initialization.
 pub trait GameObjectDerived{
     /// Create a new object from a GameObject and auxiliary data from the game state.
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self;
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self;
 
     /// Create a dummy object that can be used as a placeholder
     /// Can be used to initialize an object from a section yet to be parsed.
@@ -70,7 +70,7 @@ pub trait GameObjectDerived{
 
     /// Initialize the object (ideally dummy) with auxiliary data from the game state.
     /// This can be called multiple times, but why would you do that?
-    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut GameState);
+    fn init(&mut self, base:&GameObject, game_state:&mut GameState);
 
     /// Get the id of the object.
     /// All CK3 objects have an id that is a number.
@@ -79,5 +79,5 @@ pub trait GameObjectDerived{
     fn get_id(&self) -> u32;
 
     /// Get the name of the object.
-    fn get_name(&self) -> Shared<String>;
+    fn get_name(&self) -> Rc<String>;
 }

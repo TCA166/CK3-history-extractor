@@ -6,17 +6,17 @@ use super::renderer::Renderable;
 use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
-use std::cell::Ref;
+use std::rc::Rc;
 
 pub struct Dynasty{
     id: u32,
     parent: Option<Shared<Dynasty>>,
-    name: Option<Shared<String>>,
+    name: Option<Rc<String>>,
     members: u32,
     houses: u32,
     prestige_tot: f32,
     prestige: f32,
-    perks: Vec<Shared<String>>,
+    perks: Vec<Rc<String>>,
     leaders: Vec<Shared<Character>>,
     depth: usize
 }
@@ -34,62 +34,62 @@ impl Dynasty {
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
-fn get_perks(perks:&mut Vec<Shared<String>>, base:&Ref<'_, GameObject>){
+fn get_perks(perks:&mut Vec<Rc<String>>, base:&GameObject){
     let perks_obj = base.get("perks");
     if perks_obj.is_some(){
-        for p in perks_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
+        for p in perks_obj.unwrap().as_object().unwrap().get_array_iter(){
             perks.push(p.as_string());
         }
     }
 }
 
 ///Gets the leaders of the dynasty and appends them to the leaders vector
-fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&Ref<'_, GameObject>, game_state:&mut GameState){
+fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
     let leaders_obj = base.get("historical");
     if leaders_obj.is_some(){
-        for l in leaders_obj.unwrap().as_object_ref().unwrap().get_array_iter(){
-            leaders.push(game_state.get_character(l.as_string_ref().unwrap().as_str()).clone());
+        for l in leaders_obj.unwrap().as_object().unwrap().get_array_iter(){
+            leaders.push(game_state.get_character(l.as_string().as_str()).clone());
         }
     }
 }
 
 ///Gets the dynasty head of the dynasty
-fn get_dynasty_head(base:&Ref<'_, GameObject>, game_state:&mut GameState) -> Option<Shared<Character>>{
+fn get_dynasty_head(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Character>>{
     let current = base.get("dynasty_head");
     if current.is_some(){
-        return Some(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()).clone());
+        return Some(game_state.get_character(current.unwrap().as_string().as_str()).clone());
     }
     else{
         let current = base.get("head_of_house");
         if current.is_some(){
-            return Some(game_state.get_character(current.unwrap().as_string_ref().unwrap().as_str()).clone());
+            return Some(game_state.get_character(current.unwrap().as_string().as_str()).clone());
         }
     }
     None
 }
 
 ///Gets the prestige of the dynasty and returns a tuple with the total prestige and the current prestige
-fn get_prestige(base:&Ref<'_, GameObject>) -> (f32, f32){
+fn get_prestige(base:&GameObject) -> (f32, f32){
     let currency = base.get("prestige");
     let mut prestige_tot = 0.0;
     let mut prestige = 0.0;
     if currency.is_some(){
-        let o = currency.unwrap().as_object_ref().unwrap();
+        let o = currency.unwrap().as_object().unwrap();
         match o.get("accumulated").unwrap() {
             SaveFileValue::Object(ref o) => {
-                prestige_tot = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                prestige_tot = o.get_string_ref("value").parse::<f32>().unwrap();
             },
             SaveFileValue::String(ref o) => {
-                prestige_tot = o.as_ref().borrow().parse::<f32>().unwrap();
+                prestige_tot = o.parse::<f32>().unwrap();
             },
         }
         match o.get("currency") {
             Some(v) => match v {
                 SaveFileValue::Object(ref o) => {
-                    prestige = o.as_ref().borrow().get_string_ref("value").parse::<f32>().unwrap();
+                    prestige = o.get_string_ref("value").parse::<f32>().unwrap();
                 },
                 SaveFileValue::String(ref o) => {
-                    prestige = o.as_ref().borrow().parse::<f32>().unwrap();
+                    prestige = o.parse::<f32>().unwrap();
                 },
             },
             None => {}
@@ -99,17 +99,17 @@ fn get_prestige(base:&Ref<'_, GameObject>) -> (f32, f32){
 }
 
 ///Gets the parent dynasty of the dynasty
-fn get_parent(base:&Ref<'_, GameObject>, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
+fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
     let parent_id = base.get("dynasty");
     match parent_id {
         None => None,
-        k => Some(game_state.get_dynasty(k.unwrap().as_string_ref().unwrap().as_str()).clone())
+        k => Some(game_state.get_dynasty(k.unwrap().as_string().as_str()).clone())
     }
 }
 
 //FIXME some dynasties have their primary house with the same id as the dynasty, and if the dynasty is iterated over later and and the dynasty has it's named statically stored then the name will be missing
 
-fn get_name(base:&Ref<'_, GameObject>, parent:Option<Shared<Dynasty>>) -> Shared<String>{
+fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
     let mut n = base.get("name");
     if n.is_none(){
         n = base.get("localized_name");
@@ -117,7 +117,7 @@ fn get_name(base:&Ref<'_, GameObject>, parent:Option<Shared<Dynasty>>) -> Shared
             if parent.is_none(){
                 //TODO this happens for dynasties that exist at game start. WTF?
                 //println!("{:?}", base);
-                return Shared::new("".to_owned().into());
+                return Rc::new("".to_owned().into());
             }
             //this may happen for dynasties with a house with the same name
             return parent.unwrap().borrow().name.as_ref().unwrap().clone();
@@ -127,7 +127,7 @@ fn get_name(base:&Ref<'_, GameObject>, parent:Option<Shared<Dynasty>>) -> Shared
 }
 
 impl GameObjectDerived for Dynasty {
-    fn from_game_object(base:Ref<'_, GameObject>, game_state:&mut GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         //get the dynasty legacies
         let mut perks = Vec::new();
         get_perks(&mut perks, &base);
@@ -158,7 +158,7 @@ impl GameObjectDerived for Dynasty {
 
     fn dummy(id:u32) -> Self {
         Dynasty{
-            name: Some(Shared::new("".to_owned().into())),
+            name: Some(Rc::new("".to_owned())),
             parent: None,
             members: 0,
             houses: 0,
@@ -171,7 +171,7 @@ impl GameObjectDerived for Dynasty {
         }
     }
 
-    fn init(&mut self, base:Ref<'_, GameObject>, game_state:&mut crate::game_state::GameState) {
+    fn init(&mut self, base:&GameObject, game_state:&mut crate::game_state::GameState) {
         get_perks(&mut self.perks, &base);
         get_leaders(&mut self.leaders, &base, game_state);
         let head = get_dynasty_head(&base, game_state);
@@ -193,7 +193,7 @@ impl GameObjectDerived for Dynasty {
         self.id
     }
 
-    fn get_name(&self) -> Shared<String> {
+    fn get_name(&self) -> Rc<String> {
         self.name.as_ref().unwrap().clone()
     }
 }
