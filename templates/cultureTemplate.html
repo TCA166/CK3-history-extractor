@@ -17,14 +17,14 @@
         <br />
         Martial Customs: {{culture.martial}}
         <br />
-        {%if culture.date is defined and culture.date != '1.1.1'%}
+        {%if culture.date != none and culture.date != '1.1.1'%}
         Culture Creation Date: {{culture.date}}
         <br />
         {%endif%}
         {%if culture.parents|length > 0%}
         Created from:
         {%for parent in culture.parents%}
-        <a href="{{parent.culid}}.html">{{parent.name}}</a>
+        <a href="{{parent.id}}.html">{{parent.name}}</a>
         {%endfor%}
         <br />
         {%endif%}

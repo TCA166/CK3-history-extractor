@@ -48,7 +48,7 @@ impl GameObjectDerived for Memory {
     }
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        self.date = base.get("date").unwrap().as_string();
+        self.date = base.get("creation_date").unwrap().as_string();
         self.r#type = base.get("type").unwrap().as_string();
         get_participants(&mut self.participants, &base, game_state);
     }
@@ -87,7 +87,11 @@ impl Cullable for Memory {
         }
         self.depth = depth;
         for part in self.participants.iter_mut(){
-            part.1.borrow_mut().set_depth(depth - 1);
+            let o = part.1.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
+            
         }
     }
 

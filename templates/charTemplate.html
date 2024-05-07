@@ -116,7 +116,7 @@
                             <li class="list-group-item">
                                 {{memory.date}}:{{memory.type}}<br>
                                 {%if memory.participants is defined%}
-                                {%for key, value in memory.participants.items()%}
+                                {%for key, value in memory.participants%}
                                     {%if value.name is defined%}
                                     {{key}}:<a href="{{value.id}}.html">{{value.name}}</a>
                                     {%else%}

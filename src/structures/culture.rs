@@ -16,6 +16,7 @@ pub struct Culture {
     date: Option<Rc<String>>,
     parents: Vec<Shared<Culture>>,
     traditions: Vec<Rc<String>>,
+    language: Rc<String>,
     depth: usize
 }
 
@@ -41,7 +42,7 @@ fn get_traditions(traditions:&mut Vec<Rc<String>>, base:&&GameObject){
 
 /// Gets the creation date of the culture
 fn get_date(base:&GameObject) -> Option<Rc<String>>{
-    let node = base.get("date");
+    let node = base.get("created");
     if node.is_some(){
         return Some(node.unwrap().as_string());
     }
@@ -63,6 +64,7 @@ impl GameObjectDerived for Culture {
             parents: parents,
             traditions: traditions,
             id: base.get_name().parse::<u32>().unwrap(),
+            language: base.get("language").unwrap().as_string(),
             depth: 0
         }
     }
@@ -76,6 +78,7 @@ impl GameObjectDerived for Culture {
             date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
+            language: Rc::new("".to_owned().into()),
             id: id,
             depth: 0
         }
@@ -89,6 +92,7 @@ impl GameObjectDerived for Culture {
         self.heritage = base.get("heritage").unwrap().as_string();
         self.martial = base.get("martial_custom").unwrap().as_string();
         self.date = get_date(&base);
+        self.language = base.get("language").unwrap().as_string();
     }
 
     fn get_id(&self) -> u32 {
@@ -114,6 +118,7 @@ impl Serialize for Culture {
         let parents = serialize_array(&self.parents);
         state.serialize_field("parents", &parents)?;
         state.serialize_field("traditions", &self.traditions)?;
+        state.serialize_field("language", &self.language)?;
         state.end()
     }
 }
