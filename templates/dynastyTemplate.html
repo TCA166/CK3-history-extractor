@@ -45,10 +45,10 @@
         House head history:
         <ol>
             {%for leader in dynasty.leaders%}
-            {%if leader.dna is defined%}
-            <li><a href="../characters/{{leader.charid}}.html">{{leader.name}}</a></li>
+            {%if leader.shallow%}
+            <li>{{leader.name}}</li>
             {%else%}
-            <li>{{leader}}</li>
+            <li><a href="../characters/{{leader.charid}}.html">{{leader.name}}</a></li>
             {%endif%}
             {%endfor%}
         </ol>

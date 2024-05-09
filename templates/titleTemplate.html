@@ -11,21 +11,21 @@
     <main style="margin:15px">
         <div class="row">
             <div class="col">
-                {%if title.de_jure is defined%}
+                {%if title.de_jure != none%}
                 De jure title liege: 
-                {%if title.de_jure.titleid is defined%}
-                <a href="{{title.de_jure.titleid}}.html">{{title.de_jure.name}}</a>
+                {%if title.de_jure.shallow%}
+                {{title.de_jure.name}}
                 {%else%}
-                {{title.de_jure}}
+                <a href="{{title.de_jure.id}}.html">{{title.de_jure.name}}</a>
                 {%endif%}
                 <br>
                 {%endif%}
-                {%if title.de_facto is defined%}
+                {%if title.de_facto != none%}
                 De facto title liege:
-                {%if title.de_facto.titleid is defined%} 
-                <a href="{{title.de_facto.titleid}}.html">{{title.de_facto.name}}</a>
+                {%if title.de_facto.shallow %} 
+                {{title.de_facto.name}}
                 {%else%}
-                {{title.de_facto}}
+                <a href="{{title.de_facto.id}}.html">{{title.de_facto.name}}</a>
                 {%endif%}
                 <br>
                 {%endif%}
@@ -33,14 +33,10 @@
                 De jure vassals:
                 <ul>
                     {%for vassal in title.vassals%}
-                        {%if vassal.key is defined%}
-                            {%if 'b_' not in vassal.key%}
-                            <li><a href="{{vassal.titleid}}.html">{{vassal.name}}</a></li>
-                            {%else%}
-                            <li>{{vassal.name}}</li>
-                            {%endif%}
+                        {%if vassal.shallow%}
+                        <li>{{vassal.name}}</li>
                         {%else%}
-                        <li>{{vassal}}</li>
+                        <li><a href="{{vassal.titleid}}.html">{{vassal.name}}</a></li>
                         {%endif%}
                     {%endfor%}
                 </ul>
@@ -52,10 +48,10 @@
                         Title History
                     </div>
                     <div class="card-body">
-                        {%if title.history is defined%}
+                        {%if title.history|length != 0%}
                         <ul class="list-group list-group-flush">
                             {%for item in title.history%}
-                            <li class="list-group-item">{{item[0]}}:{%if item[1] != none%}<a href="../characters/{{item[1].id}}.html">{{item[1].name}}</a>{%else%}{{item[1].name}}{%endif%} {{item[2]}}</li>
+                            <li class="list-group-item">{{item[0]}}:{%if item[1].shallow%}{{item[1].name}}{%else%}<a href="../characters/{{item[1].id}}.html">{{item[1].name}}</a>{%endif%} {{item[2]}}</li>
                             {%endfor%}
                         </ul>
                         {%else%}

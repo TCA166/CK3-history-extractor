@@ -24,7 +24,11 @@
         {%if culture.parents|length > 0%}
         Created from:
         {%for parent in culture.parents%}
+        {%if parent.shallow %}
+        {{parent.name}}
+        {%else%}
         <a href="{{parent.id}}.html">{{parent.name}}</a>
+        {%endif%}
         {%endfor%}
         <br />
         {%endif%}

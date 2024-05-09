@@ -8,14 +8,14 @@ use super::GameObjectDerived;
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
 pub struct Renderer<'a>{
-    env: Environment<'a>,
+    env: &'a Environment<'a>,
     rendered: HashMap<&'static str, HashMap<u32, bool>>,
     path: String
 }
 
 impl<'a> Renderer<'a>{
     /// Create a new Renderer with the given [Environment] and path.
-    pub fn new(env: Environment<'a>, path: String) -> Self{
+    pub fn new(env: &'a Environment<'a>, path: String) -> Self{
         Renderer{
             env,
             rendered: HashMap::new(),

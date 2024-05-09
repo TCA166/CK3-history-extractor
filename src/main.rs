@@ -9,8 +9,6 @@ mod game_object;
 mod save_file;
 use save_file::SaveFile;
 
-use minijinja::Environment;
-
 /// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
 mod game_state;
@@ -20,6 +18,11 @@ use game_state::GameState;
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
 use structures::{Player, GameObjectDerived, Renderable, Renderer, Cullable};
+
+/// A submodule that handles the creation of the minijinja [Environment] and loading of templates.
+mod jinja_env;
+use jinja_env::create_env;
+
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -121,7 +124,7 @@ fn main() {
             "dead_unprunable" => {
                 let o = i.to_object().unwrap();
                 for d in o.get_obj_iter(){
-                    game_state.add_character(d.1.as_object().unwrap());
+                    game_state.add_character(d.1.as_object().unwrap());   
                 }
             }
             "characters" => {
@@ -176,7 +179,7 @@ fn main() {
         }
     }
     println!("Savefile parsing complete");
-    let mut env = Environment::new();
+    let mut env = create_env();
     let h_template = fs::read_to_string("templates/homeTemplate.html").unwrap();
     env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
     let c_template = fs::read_to_string("templates/charTemplate.html").unwrap();
@@ -200,7 +203,7 @@ fn main() {
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(3);
-        let mut renderer = Renderer::new(env.clone(), folder_name.clone());
+        let mut renderer = Renderer::new(&env, folder_name.clone());
         player.render_all(&mut renderer);
     }
     //Get the ending time
