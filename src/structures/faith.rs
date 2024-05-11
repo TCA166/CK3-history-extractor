@@ -5,6 +5,7 @@ use serde::ser::SerializeStruct;
 use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared};
 use super::renderer::Renderable;
 use crate::game_object::GameObject;
+use crate::game_state::GameState;
 
 /// A struct representing a faith in the game
 pub struct Faith {
@@ -17,33 +18,32 @@ pub struct Faith {
     depth: usize
 }
 
-//FIXME The faith rendering is broken
-
 /// Gets the head of the faith
 fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
-    let current = base.get("head");
+    let current = base.get("religious_head");
     if current.is_some(){
-        return Some(game_state.get_character(current.unwrap().as_string().as_str()));
+        let title = game_state.get_title(current.unwrap().as_string().as_str());
+        return title.borrow().get_holder();
     }
     None
 }
 
 /// Gets the tenets of the faith and appends them to the tenets vector
-fn get_tenets(tenets:&mut Vec<Rc<String>>, base:&GameObject){
-    let tenets_obj = base.get("tenets");
-    if tenets_obj.is_some(){
-        for t in tenets_obj.unwrap().as_object().unwrap().get_array_iter(){
-            tenets.push(t.as_string());
+fn get_tenets(tenets:&mut Vec<Rc<String>>, array:&GameObject){
+    for t in array.get_array_iter(){
+        let s = t.as_string();
+        if s.contains("tenet"){
+            tenets.push(s);
         }
     }
 }
 
 /// Gets the doctrines of the faith and appends them to the doctrines vector
-fn get_doctrines(doctrines:&mut Vec<Rc<String>>, base:&GameObject){
-    let doctrines_obj = base.get("doctrines");
-    if doctrines_obj.is_some(){
-        for d in doctrines_obj.unwrap().as_object().unwrap().get_array_iter(){
-            doctrines.push(d.as_string());
+fn get_doctrines(doctrines:&mut Vec<Rc<String>>, array:&GameObject){
+    for d in array.get_array_iter(){
+        let s = d.as_string();
+        if !s.contains("tenet") {
+            doctrines.push(s);
         }
     }
 }
@@ -60,11 +60,12 @@ fn get_name(base:&GameObject) -> Rc<String>{
 }
 
 impl GameObjectDerived for Faith {
-    fn from_game_object(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         let mut tenets = Vec::new();
-        get_tenets(&mut tenets, &base);
+        let doctrines_array = base.get("doctrine").unwrap().as_object().unwrap();
+        get_tenets(&mut tenets, doctrines_array);
         let mut doctrines = Vec::new();
-        get_doctrines(&mut doctrines, &base);
+        get_doctrines(&mut doctrines, doctrines_array);
         Faith{
             name: get_name(&base),
             tenets: tenets,
@@ -88,10 +89,11 @@ impl GameObjectDerived for Faith {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut crate::game_state::GameState) {
-        get_tenets(&mut self.tenets, &base);
+    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+        let doctrines_array = base.get("doctrine").unwrap().as_object().unwrap();
+        get_tenets(&mut self.tenets, doctrines_array);
         self.head.clone_from(&get_head(&base, game_state));
-        get_doctrines(&mut self.doctrines, &base);
+        get_doctrines(&mut self.doctrines, doctrines_array);
         self.name = get_name(&base);
         self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
     }
@@ -157,7 +159,10 @@ impl Cullable for Faith {
         }
         self.depth = depth;
         if self.head.is_some(){
-            self.head.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+            let o = self.head.as_ref().unwrap().try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth-1);
+            }
         }
     }
 }

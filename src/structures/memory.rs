@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared};
+use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared, Renderable};
 use crate::game_object::GameObject;
 use crate::game_state::GameState;
 
@@ -91,11 +91,21 @@ impl Cullable for Memory {
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
-            
         }
     }
 
     fn get_depth(&self) -> usize{
         self.depth
+    }
+}
+
+impl Memory{
+    pub fn render_participants(&self, renderer: &mut super::Renderer) {
+        for part in self.participants.iter() {
+            let o = part.1.as_ref().try_borrow();
+            if o.is_ok() {
+                o.unwrap().render_all(renderer);
+            }
+        }
     }
 }

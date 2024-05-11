@@ -4,7 +4,7 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::GameObject, game_state::GameState};
+use crate::{game_object::{GameObject, SaveFileValue}, game_state::GameState};
 
 use super::{renderer::Renderable, Cullable, DerivedRef, serialize_array, Culture, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
 
@@ -146,10 +146,23 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
         }
         let spouse_node = f.get("spouse");
         if spouse_node.is_some() {
-            let c = game_state.get_character(spouse_node.unwrap().as_string().as_str()).clone();
-            let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
-            if !contains{
-                spouses.push(c);
+            match spouse_node.unwrap() {
+                SaveFileValue::Object(o) => {
+                    for s in o.get_array_iter(){
+                        let c = game_state.get_character(s.as_string().as_str()).clone();
+                        let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+                        if !contains{
+                            spouses.push(c);
+                        }
+                    }
+                }
+                SaveFileValue::String(o) => {
+                    let c = game_state.get_character(o.as_str()).clone();
+                    let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+                    if !contains{
+                        spouses.push(c);
+                    }
+                }
             }
         }
         let primary_spouse_node = f.get("primary_spouse");
@@ -504,6 +517,9 @@ impl Renderable for Character {
         for s in self.titles.iter(){
             s.as_ref().borrow().render_all(renderer);
         }
+        for m in self.memories.iter() {
+            m.as_ref().borrow().render_participants(renderer);
+        }
     }
 }
 
@@ -544,7 +560,10 @@ impl Cullable for Character {
             }
         }
         self.culture.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
-        self.faith.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
+        let o = self.faith.as_ref().unwrap().try_borrow_mut();
+        if o.is_ok(){
+            o.unwrap().set_depth(depth - 1);
+        }
         for s in self.titles.iter(){
             let o = s.try_borrow_mut();
             if o.is_ok(){

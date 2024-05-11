@@ -127,6 +127,7 @@ impl Section{
                         stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                     }
                 }
+                //TODO sometimes a text will precede an array like this color=rgb {} we should handle this
                 ' ' | '\t' => { //syntax sugar we ignore, most of the time, unless...
                     if !quotes{ // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here

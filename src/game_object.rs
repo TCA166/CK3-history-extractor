@@ -27,15 +27,18 @@ impl SaveFileValue {
 
     /// Get the value as a GameObject reference
     /// 
-    /// # Panics
-    /// 
-    /// Panics if the value is not a GameObject
-    /// 
     /// # Returns
     /// 
     /// A reference to the GameObject
     pub fn as_object(&self) -> Option<&GameObject>{
         match self{
+            SaveFileValue::Object(o) => Some(o),
+            _ => None
+        }
+    }
+
+    fn as_object_mut(&mut self) -> Option<&mut GameObject>{
+        match self {
             SaveFileValue::Object(o) => Some(o),
             _ => None
         }
@@ -52,12 +55,43 @@ impl Debug for SaveFileValue{
     }
 }
 
+impl PartialEq for SaveFileValue {
+    fn eq(&self, other: &Self) -> bool {
+        match self{
+            SaveFileValue::String(s) => {
+                if let SaveFileValue::String(other_s) = other {
+                    s == other_s
+                } else {
+                    false
+                }
+            },
+            SaveFileValue::Object(o) => {
+                if let SaveFileValue::Object(other_o) = other {
+                    o == other_o
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
+impl Clone for SaveFileValue{
+    fn clone(&self) -> Self {
+        match self{
+            SaveFileValue::String(s) => SaveFileValue::String(s.clone()),
+            SaveFileValue::Object(o) => SaveFileValue::Object(o.clone())
+        }
+    }
+}
+
 /// Representation of a save file object.
 /// These are the main data structure used to store game data.
 /// Each belongs to a section, but that is not stored here.
 /// Acts like a named dictionary and array, may be either or both or neither.
 /// Each has a name, which isn't unique.
 /// Holds [SaveFileValue]s, which are either strings or other GameObjects.
+#[derive(Clone)]
 pub struct GameObject{
     inner: HashMap<String, SaveFileValue>,
     array: Vec<SaveFileValue>,
@@ -89,9 +123,29 @@ impl GameObject{
         self.name = name;
     }
 
-    /// Insert a new key value pair into the GameObject dictionary
+    /// Insert a new key value pair into the GameObject dictionary.
+    /// Detects if the key has been inserted and in such a case converts the value held under the key into an array.
     pub fn insert(&mut self, key: String, value: SaveFileValue){
-        self.inner.insert(key, value);
+        if self.inner.contains_key(&key) {
+            let val = self.inner.get_mut(&key).unwrap();
+            if val == &value{
+                return;
+            }
+            let val_obj = val.as_object_mut();
+            if val_obj.is_some() && val_obj.as_ref().unwrap().is_array() {
+                let arr = val_obj.unwrap();
+                arr.push(value);
+            }
+            else {
+                let mut arr = GameObject::from_name(key.clone());
+                arr.push(val.clone());
+                arr.push(value);
+                self.inner.insert(key, SaveFileValue::Object(arr));
+            }
+        }
+        else{
+            self.inner.insert(key, value);
+        }
     }
 
     /// Get the value of a key
@@ -156,11 +210,15 @@ impl GameObject{
     pub fn get_keys(&self) -> hash_map::Keys<String, SaveFileValue>{
         self.inner.keys()
     }
+
+    pub fn is_array(&self) -> bool{
+        self.inner.is_empty() && !self.array.is_empty()
+    }
 }
 
 impl Debug for GameObject{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let r = write!(f, "{{name:{},", self.name);
+        let r = write!(f, "{{name:{}", self.name);
         if r.is_err(){
             return r;
         }
@@ -178,5 +236,14 @@ impl Debug for GameObject{
         }
         let r = write!(f, "}}");
         return r;
+    }
+}
+
+impl PartialEq for GameObject {
+    fn eq(&self, other: &Self) -> bool {
+        let mut eq = self.array == other.array;
+        eq = eq && self.inner == other.inner;
+        eq = eq && self.name == other.name;
+        eq
     }
 }

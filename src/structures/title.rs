@@ -34,15 +34,43 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
             let action:Rc<String>;
             match val{
                 Some(&SaveFileValue::Object(ref o)) => {
-                    let r = o;
-                    action = r.get("type").unwrap().as_string();
-                    let holder = r.get("holder");
-                    match holder{
-                        Some(h) => {
-                            character = Some(game_state.get_character(h.as_string().as_str()).clone());
-                        },
-                        None => {
-                            character = None;
+                    if o.is_array(){
+                        for entry in o.get_array_iter(){
+                            let loc_action;
+                            let loc_character;
+                            match entry {
+                                SaveFileValue::Object(ref o) => {
+                                    loc_action = o.get("type").unwrap().as_string();
+                                    let holder = o.get("holder");
+                                    match holder{
+                                        Some(h) => {
+                                            loc_character = Some(game_state.get_character(h.as_string().as_str()).clone());
+                                        },
+                                        None => {
+                                            loc_character = None;
+                                        }
+                                    }
+                                    
+                                }
+                                SaveFileValue::String(ref o) => {
+                                    loc_action = Rc::new("Inherited".to_owned());
+                                    loc_character = Some(game_state.get_character(o.as_str()).clone());
+                                }
+                            }
+                            history.push((Rc::new(h.to_string()), loc_character, loc_action))
+                        }
+                        continue; //if it's an array we handled all the adding already in the loop above
+                    }
+                    else{
+                        action = o.get("type").unwrap().as_string();
+                        let holder = o.get("holder");
+                        match holder{
+                            Some(h) => {
+                                character = Some(game_state.get_character(h.as_string().as_str()).clone());
+                            },
+                            None => {
+                                character = None;
+                            }
                         }
                     }
                 },
@@ -54,8 +82,7 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
                     panic!("Invalid history entry")
                 }
             }
-            let ent = (character, action);
-            history.push((Rc::new(h.to_string()), ent.0, ent.1));
+            history.push((Rc::new(h.to_string()), character, action));
         }
     }
     history
@@ -237,4 +264,15 @@ impl Cullable for Title {
     fn get_depth(&self) -> usize {
         self.depth
     }
+}
+
+impl Title{
+    pub fn get_holder(&self) -> Option<Shared<Character>>{
+        //FIXME get last
+        let entry = self.history.last();
+        if entry.is_none(){
+            return None;
+        }
+        entry.unwrap().1.clone()
+    } 
 }
