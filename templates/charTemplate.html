@@ -19,17 +19,12 @@
                     Reason of death: {{character.reason}}<br />
                     {%endif%}
                     {%if character.culture != none%}
-                    {{render_ref(character.culture, "cultures")}}
+                    Culture: {{character.culture|render_ref("cultures")}} <br>
                     {%endif%}
                     {%if character.faith != none%}
-                    {%if character.faith.shallow%}
-                    {{character.faith.name}}
-                    {%else%}
-                    Faith: <a href="../faiths/{{character.faith.id}}.html">{{character.faith.name}}</a>
-                    <br />
+                    Faith: {{character.faith|render_ref("faiths")}} <br>
                     {%endif%}
-                    {%endif%}
-                    Dynastic House: {%if character.house is defined%}<a href="../dynasties/{{character.house.id}}.html">{{character.house.name}}</a>{%else%}Lowborn{%endif%}<br />
+                    Dynastic House: {%if character.house is defined%}{{character.house|render_ref("dynasties")}}{%else%}Lowborn{%endif%}<br />
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">
@@ -88,9 +83,9 @@
                             Family
                         </div>
                         <ul class="list-group list-group-flush" style="text-align:left">
-                            <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
-                            <li class="list-group-item">Former spouses: {%for spouse in character.former%} {%if spouse.shallow%}{{spouse.name}}{%else%}<a href="{{spouse.id}}.html">{{spouse.name}}</a>{%endif%} {%endfor%}</li>
-                            <li class="list-group-item">Children: {%for child in character.children%} {%if child.shallow%}{{child.name}}{%else%}<a href="{{child.id}}.html">{{child.name}}</a>{%endif%} {%endfor%}</li>
+                            <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {{spouse|render_ref}} {%endfor%}</li>
+                            <li class="list-group-item">Former spouses: {%for spouse in character.former%} {{spouse|render_ref}} {%endfor%}</li>
+                            <li class="list-group-item">Children: {%for child in character.children%} {{child|render_ref}} {%endfor%}</li>
                         </ul>
                     </div>
                     {%if character.dna != none%}
@@ -120,11 +115,7 @@
                                 {{memory.date}}:{{memory.type}}<br>
                                 {%if memory.participants is defined%}
                                 {%for key, value in memory.participants%}
-                                    {%if not value.shallow%}
-                                    {{key}}:<a href="{{value.id}}.html">{{value.name}}</a>
-                                    {%else%}
-                                    {{key}}:{{value}}
-                                    {%endif%}
+                                    {{key}}:{{value|render_ref}}
                                 {%endfor%}
                                 {%endif%}
                             </li>
@@ -141,11 +132,7 @@
                         </div>
                         <div class="card-body">
                             {%for title in character.titles%} 
-                            {%if 'b_' not in title.key%}
-                            <a href="../titles/{{title.id}}.html">{{title.name}}</a> |
-                            {%else%}
-                            {{title.name}} |
-                            {%endif%}
+                            {{title|render_ref("titles")}}
                             {%endfor%}
                         </div>
                     </div>
@@ -157,18 +144,14 @@
                         <ul class="list-group list-group-flush" style="text-align:left">
                             <li class="list-group-item">Titles: 
                                 {%for title in character.titles%} 
-                                {%if title.shallow%}
-                                {{title.name}} |
-                                {%else%}
-                                <a href="../titles/{{title.id}}.html">{{title.name}}</a> |
-                                {%endif%}
+                                {{title|render_ref("titles")}}
                                 {%endfor%}
                             </li>
                             <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
                             <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
-                            <li class="list-group-item">Kills: {%for killed in character.kills%} {%if killed.shallow%}{{killed.name}}{%else%}<a href="{{killed.id}}.html">{{killed.name}}</a>{%endif%}{%endfor%}</li>
-                            <li class="list-group-item">Known Languages: {%for lang in character.languages%}{{lang}} {%endfor%}</li>
-                            <li class="list-group-item">Vassals: {%for vassal in character.vassals%} {%if vassal.shallow %}{{vassal.name}}{%else%}<a href="{{vassal.id}}.html">{{vassal.name}}</a>{%endif%}{%endfor%}</li>
+                            <li class="list-group-item">Kills: {%for killed in character.kills%} {{killed|render_ref}} {%endfor%}</li>
+                            <li class="list-group-item">Known Languages: {%for lang in character.languages%} {{lang}} {%endfor%}</li>
+                            <li class="list-group-item">Vassals: {%for vassal in character.vassals%} {{vassal|render_ref}} {%endfor%}</li>
                         </ul>
                     </div>
                     {%endif%}

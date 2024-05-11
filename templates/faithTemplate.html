@@ -33,11 +33,13 @@
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Religion Head:
                             {%if faith.head is defined%}
-                            <li class="list-group-item">Religion Head: {{faith.head.name}}</li>
+                            {{faith.head|render_ref("characters")}}
                             {%else%}
-                            <li class="list-group-item">Religion Head: None</li>
+                            None
                             {%endif%}
+                            </li>
                             <li class="list-group-item">Fervor: {{faith.fervor}}</li>
                         </ul>
                     </div>

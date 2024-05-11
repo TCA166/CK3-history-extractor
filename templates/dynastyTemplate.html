@@ -13,8 +13,8 @@
         Creation Date: {{dynasty.date}}
         <br />
         {%endif%}
-        {%if dynasty.parent is defined%}
-        Parent Dynasty: <a href="{{dynasty.parent.dynid}}Dyn.html">{{dynasty.parent.name}}</a>
+        {%if dynasty.parent is defined and dynasty.parent != dynasty%}
+        Parent Dynasty: {{dynasty.parent|render_ref}}
         <br />
         {%endif%}
         {%if dynasty.members is defined%}
@@ -45,11 +45,7 @@
         House head history:
         <ol>
             {%for leader in dynasty.leaders%}
-            {%if leader.shallow%}
-            <li>{{leader.name}}</li>
-            {%else%}
-            <li><a href="../characters/{{leader.charid}}.html">{{leader.name}}</a></li>
-            {%endif%}
+            <li>{{leader|render_ref("characters")}}</li>
             {%endfor%}
         </ol>
         {%endif%}

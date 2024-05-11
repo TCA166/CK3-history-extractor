@@ -18,13 +18,13 @@ pub struct Title {
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
-    history: Vec<(String, Option<Shared<Character>>, Rc<String>)>,
+    history: Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)>,
     depth: usize
 }
 
 ///Gets the history of the title and returns a hashmap with the history entries
-fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(String, Option<Shared<Character>>, Rc<String>)>{
-    let mut history: Vec<(String, Option<Shared<Character>>, Rc<String>)> = Vec::new();
+fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)>{
+    let mut history: Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)> = Vec::new();
     let hist = base.get("history");
     if hist.is_some() {
         let hist_obj = hist.unwrap().as_object().unwrap();
@@ -55,7 +55,7 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(String, Opti
                 }
             }
             let ent = (character, action);
-            history.push((h.clone(), ent.0, ent.1));
+            history.push((Rc::new(h.to_string()), ent.0, ent.1));
         }
     }
     history
@@ -160,6 +160,15 @@ impl Serialize for Title {
         }
         let vassals = serialize_array(&self.vassals);
         state.serialize_field("vassals", &vassals)?;
+        let mut history = Vec::new();
+        for h in self.history.iter(){
+            let mut o = (h.0.clone(), None, h.2.clone());
+            if h.1.is_some(){
+                let c = DerivedRef::from_derived(h.1.as_ref().unwrap().clone());
+                o.1 = Some(c);
+            }
+            history.push(o);
+        }
         state.serialize_field("history", &self.history)?;
         state.end()
     }
@@ -190,9 +199,13 @@ impl Renderable for Title {
             self.de_facto.as_ref().unwrap().borrow().render_all(renderer);
         }
         for v in &self.vassals{
-            v.borrow().render_all(renderer);
+            v.as_ref().borrow().render_all(renderer);
         }
-    
+        for o in &self.history{
+            if o.1.is_some(){
+                o.1.as_ref().unwrap().borrow().render_all(renderer);
+            }
+        }
     }
 }
 
@@ -210,6 +223,14 @@ impl Cullable for Title {
         }
         for v in &self.vassals{
             v.borrow_mut().set_depth(depth-1);
+        }
+        for o in &self.history{
+            if o.1.is_some(){
+                let c = o.1.as_ref().unwrap().try_borrow_mut();
+                if c.is_ok(){
+                    c.unwrap().set_depth(depth-1);
+                }
+            }
         }
     }
 

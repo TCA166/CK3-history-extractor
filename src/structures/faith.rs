@@ -17,6 +17,8 @@ pub struct Faith {
     depth: usize
 }
 
+//FIXME The faith rendering is broken
+
 /// Gets the head of the faith
 fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
     let current = base.get("head");

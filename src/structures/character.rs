@@ -546,7 +546,10 @@ impl Cullable for Character {
         self.culture.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
         self.faith.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
         for s in self.titles.iter(){
-            s.borrow_mut().set_depth(depth - 1);
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
         for s in self.memories.iter(){
             s.borrow_mut().set_depth(depth - 1);

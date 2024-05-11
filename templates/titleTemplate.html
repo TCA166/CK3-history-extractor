@@ -11,33 +11,21 @@
     <main style="margin:15px">
         <div class="row">
             <div class="col">
-                {%if title.de_jure != none%}
+                {%if title.de_jure is defined%}
                 De jure title liege: 
-                {%if title.de_jure.shallow%}
-                {{title.de_jure.name}}
-                {%else%}
-                <a href="{{title.de_jure.id}}.html">{{title.de_jure.name}}</a>
-                {%endif%}
+                {{title.de_jure|render_ref}}
                 <br>
                 {%endif%}
-                {%if title.de_facto != none%}
+                {%if title.de_facto is defined and title.de_facto != title.de_jure%}
                 De facto title liege:
-                {%if title.de_facto.shallow %} 
-                {{title.de_facto.name}}
-                {%else%}
-                <a href="{{title.de_facto.id}}.html">{{title.de_facto.name}}</a>
-                {%endif%}
+                {{title.de_facto|render_ref}}
                 <br>
                 {%endif%}
-                {%if title.vassals is defined%}
+                {%if title.vassals|length != 0%}
                 De jure vassals:
                 <ul>
                     {%for vassal in title.vassals%}
-                        {%if vassal.shallow%}
-                        <li>{{vassal.name}}</li>
-                        {%else%}
-                        <li><a href="{{vassal.titleid}}.html">{{vassal.name}}</a></li>
-                        {%endif%}
+                        {{vassal|render_ref}}
                     {%endfor%}
                 </ul>
                 {%endif%}
@@ -51,7 +39,7 @@
                         {%if title.history|length != 0%}
                         <ul class="list-group list-group-flush">
                             {%for item in title.history%}
-                            <li class="list-group-item">{{item[0]}}:{%if item[1].shallow%}{{item[1].name}}{%else%}<a href="../characters/{{item[1].id}}.html">{{item[1].name}}</a>{%endif%} {{item[2]}}</li>
+                            <li class="list-group-item">{{item[0]}}:{{item[1]|render_ref("characters")}} {{item[2]}}</li>
                             {%endfor%}
                         </ul>
                         {%else%}
