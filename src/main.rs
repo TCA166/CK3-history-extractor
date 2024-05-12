@@ -59,6 +59,7 @@ fn main() {
     if cfg!(debug_assertions) {
         env::set_var("RUST_BACKTRACE", "1");
     }
+    // TODO add decompression for compressed save files
     //Get the staring time
     let start_time = SystemTime::now();
     //User IO
@@ -96,6 +97,7 @@ fn main() {
     let mut game_state:GameState = GameState::new();
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
+    //TODO add multiprocessing? mutlithreading?
     for mut i in save{
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());

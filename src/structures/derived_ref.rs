@@ -1,9 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use super::{Cullable, GameObjectDerived, Shared};
+use super::{Cullable, Wrapper, GameObjectDerived, Shared};
 
 /// A shallow serializable reference to a derived game object.
 /// The idea is to provide the id and name of the object, without serializing the whole object.
@@ -33,7 +33,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
         DerivedRef{
             id: 0,
             name: Rc::new("".to_string()),
-            obj: Rc::new(RefCell::new(T::dummy(0)))
+            obj: Shared::wrap(T::dummy(0))
         }
     }
 

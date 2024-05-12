@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
-use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title, Wrapper};
 use crate::game_object::GameObject;
 
 /// A struct representing all known game objects.
@@ -54,7 +54,7 @@ impl GameState{
     /// Get a character by key
     pub fn get_character(&mut self, key: &str) -> Shared<Character>{
         if !self.characters.contains_key(key){
-            let v = Rc::new(RefCell::new(Character::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Character::dummy(key.parse::<u32>().unwrap()));
             self.characters.insert(key.to_string(), v.clone());
             v
         }
@@ -66,7 +66,7 @@ impl GameState{
     /// Gets the vassal associated with the contract with the given id
     pub fn get_vassal(&mut self, contract_id: &str) -> Shared<DerivedRef<Character>>{
         if !self.contract_transform.contains_key(contract_id){
-            let v = Rc::new(RefCell::new(DerivedRef::dummy()));
+            let v = Shared::wrap(DerivedRef::dummy());
             self.contract_transform.insert(contract_id.to_string(), v.clone());
             v
         }
@@ -83,7 +83,7 @@ impl GameState{
             entry.borrow_mut().init(char);
         }
         else{
-            let r = Rc::new(RefCell::new(DerivedRef::from_derived(char)));
+            let r = Shared::wrap(DerivedRef::from_derived(char));
             self.contract_transform.insert(contract_id.to_string(), r);
         }
     }
@@ -91,7 +91,7 @@ impl GameState{
     /// Get a title by key
     pub fn get_title(&mut self, key: &str) -> Shared<Title>{
         if !self.titles.contains_key(key){
-            let v = Rc::new(RefCell::new(Title::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Title::dummy(key.parse::<u32>().unwrap()));
             self.titles.insert(key.to_string(), v.clone());
             v
         }
@@ -106,7 +106,7 @@ impl GameState{
             self.faiths.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Faith::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Faith::dummy(key.parse::<u32>().unwrap()));
             self.faiths.insert(key.to_string(), v.clone());
             v
         }
@@ -118,7 +118,7 @@ impl GameState{
             self.cultures.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Culture::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Culture::dummy(key.parse::<u32>().unwrap()));
             self.cultures.insert(key.to_string(), v.clone());
             v
         }
@@ -130,7 +130,7 @@ impl GameState{
             self.dynasties.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Dynasty::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Dynasty::dummy(key.parse::<u32>().unwrap()));
             self.dynasties.insert(key.to_string(), v.clone());
             v
         }
@@ -142,7 +142,7 @@ impl GameState{
             self.memories.get(key).unwrap().clone()
         }
         else{
-            let v = Rc::new(RefCell::new(Memory::dummy(key.parse::<u32>().unwrap())));
+            let v = Shared::wrap(Memory::dummy(key.parse::<u32>().unwrap()));
             self.memories.insert(key.to_string(), v.clone());
             v
         }
@@ -157,7 +157,7 @@ impl GameState{
         }
         else{
             let c = Character::from_game_object(value, self);
-            self.characters.insert(key.clone(), Rc::from(RefCell::from(c)));
+            self.characters.insert(key.clone(), Shared::wrap(c));
         }
     }
 
@@ -170,7 +170,7 @@ impl GameState{
         }
         else{
             let t = Title::from_game_object(value, self);
-            self.titles.insert(key.clone(), Rc::from(RefCell::from(t)));
+            self.titles.insert(key.clone(), Shared::wrap(t));
         }
     }
 
@@ -183,7 +183,7 @@ impl GameState{
         }
         else{
             let f = Faith::from_game_object(value, self);
-            self.faiths.insert(key.clone(), Rc::from(RefCell::from(f)));
+            self.faiths.insert(key.clone(), Shared::wrap(f));
         }
     }
 
@@ -196,7 +196,7 @@ impl GameState{
         }
         else{
             let c = Culture::from_game_object(value, self);
-            self.cultures.insert(key.clone(), Rc::from(RefCell::from(c)));
+            self.cultures.insert(key.clone(), Shared::wrap(c));
         }
     }
 
@@ -209,7 +209,7 @@ impl GameState{
         }
         else{
             let d = Dynasty::from_game_object(value, self);
-            self.dynasties.insert(key.clone(), Rc::from(RefCell::from(d)));
+            self.dynasties.insert(key.clone(), Shared::wrap(d));
         }
     }
 
@@ -222,7 +222,7 @@ impl GameState{
         }
         else{
             let m = Memory::from_game_object(value, self);
-            self.memories.insert(key.clone(), Rc::from(RefCell::from(m)));
+            self.memories.insert(key.clone(), Shared::wrap(m));
         }
     }
 

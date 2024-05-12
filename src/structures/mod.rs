@@ -4,6 +4,7 @@ mod renderer;
 pub use renderer::{Cullable, Renderer, Renderable};
 
 use std::rc::Rc;
+use std::cell::RefCell;
 
 use super::game_object::GameObject;
 
@@ -51,11 +52,23 @@ pub use derived_ref::{DerivedRef, serialize_array};
 /// # Example
 /// 
 /// ```
-/// let obj:Shared<String> = Rc::new(RefCell::new("Hello"));
+/// let obj:Shared<String> = Shared::wrap("Hello");
 /// 
 /// let value:Ref<String> = obj.borrow();
 /// ```
-pub type Shared<T> = std::rc::Rc<std::cell::RefCell<T>>;
+pub type Shared<T> = Rc<RefCell<T>>;
+
+/// A trait for objects that wrap a certain value
+pub trait Wrapper<T> {
+    /// Wrap a value in the object
+    fn wrap(t:T) -> Self;
+}
+
+impl<T> Wrapper<T> for Shared<T> {
+    fn wrap(t:T) -> Self {
+        Rc::new(RefCell::new(t))
+    }
+}
 
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
