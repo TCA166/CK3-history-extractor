@@ -23,7 +23,6 @@ use structures::{Player, GameObjectDerived, Renderable, Renderer, Cullable};
 mod jinja_env;
 use jinja_env::create_env;
 
-
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
 fn create_dir_maybe(name: &str) {
@@ -33,6 +32,16 @@ fn create_dir_maybe(name: &str) {
         }
     }
 }
+
+// include these variables only in debug mode
+/* 
+static INT_H_TEMPLATE:&str = include_str!("../templates/homeTemplate.html");
+static INT_C_TEMPLATE:&str = include_str!("../templates/charTemplate.html");
+static INT_CUL_TEMPLATE:&str = include_str!("../templates/cultureTemplate.html");
+static INT_DYN_TEMPLATE:&str = include_str!("../templates/dynastyTemplate.html");
+static INT_FAITH_TEMPLATE:&str = include_str!("../templates/faithTemplate.html");
+static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html");
+*/
 
 /// Main function. This is the entry point of the program.
 /// 
@@ -57,12 +66,15 @@ fn create_dir_maybe(name: &str) {
 /// 5. Prints the time taken to parse the save file
 ///
 fn main() {
-    env::set_var("RUST_BACKTRACE", "1");
+    if cfg!(debug_assertions) {
+        env::set_var("RUST_BACKTRACE", "1");
+    }
     //Get the staring time
     let start_time = SystemTime::now();
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
+    let mut use_internal = false;
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
         stdout().flush().unwrap();
@@ -72,6 +84,12 @@ fn main() {
     }
     else{
         filename = args[1].clone();
+        // foreach argument above 1
+        for arg in args.iter().skip(2) {
+            if arg == "--internal" {
+                use_internal = true;
+            }
+        }
     }
     //initialize the save file
     let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
