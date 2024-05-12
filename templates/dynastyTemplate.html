@@ -5,50 +5,62 @@
 </head>
 <body>
     <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
-        <p class="h1 my-0 me-md-auto fw-normal">{%if dynasty.parent is defined%}House{%endif%} {{dynasty.name}}</p>
+        <p class="h1 my-0 me-md-auto fw-normal">{%if dynasty.parent is defined and dynasty.parent != dynasty %}House{%endif%} {{dynasty.name}}</p>
         <a class="btn btn-outline-primary" href="../index.html">Home</a>
     </header>
     <main style="margin:15px">
-        {%if dynasty.date != 'Time immemorial...'%}
-        Creation Date: {{dynasty.date}}
-        <br />
-        {%endif%}
-        {%if dynasty.parent is defined and dynasty.parent != dynasty%}
-        Parent Dynasty: {{dynasty.parent|render_ref}}
-        <br />
-        {%endif%}
-        {%if dynasty.members is defined%}
-        Total Members: {{dynasty.members}}
-        {%else%}
-        Number of houses: {{dynasty.houses}}<br>
-        Total accumulated renown: {{dynasty.prestige_tot}}<br>
-        Current renown: {{dynasty.prestige}}<br>
-        {%if dynasty.perks is defined%}
-        Dynasty Legacies:
-        <table style="width:auto" class="table table-bordered">
-        {%for key, value in dynasty.perks.items()%}
-        <tr>
-            <td>{{key}}</td>
-            {%for i in range(value)%}
-            <td class= "bg-success" style="width:20px"></td>
-            {%endfor%}
-            {%for i in range(5 - value)%}
-            <td style="width:20px"></td>
-            {%endfor%}
-        </tr>
-        {%endfor%}
-        </table>
-        {%endif%}
-        {%endif%}
-        <br />
-        {%if dynasty.leaders|length > 0%}
-        House head history:
-        <ol>
-            {%for leader in dynasty.leaders%}
-            <li>{{leader|render_ref("characters")}}</li>
-            {%endfor%}
-        </ol>
-        {%endif%}
+        <div class="row card-deck" style="text-align: left; margin-bottom:5px">
+            <div class="col">
+                {%if dynasty.found_date != ""%}
+                Creation Date: {{dynasty.found_date}}
+                <br />
+                {%endif%}
+                {%if dynasty.parent is defined and dynasty.parent.id != dynasty.id%}
+                Parent Dynasty: {{dynasty.parent|render_ref}}
+                <br />
+                {%endif%}
+                {%if dynasty.members is defined%}
+                Total Members: {{dynasty.members}}
+                {%else%}
+                Number of houses: {{dynasty.houses}}
+                {%endif%}
+                <br>
+                Total accumulated renown: {{dynasty.prestige_tot}}<br>
+                Current renown: {{dynasty.prestige}}<br>
+                {%if dynasty.perks is defined%}
+                Dynasty Legacies:
+                <table style="width:auto" class="table table-bordered">
+                {%for key, value in dynasty.perks|items%}
+                <tr>
+                    <td>{{key}}</td>
+                    {%for i in range(value)%}
+                    <td class= "bg-success" style="width:20px"></td>
+                    {%endfor%}
+                    {%for i in range(5 - value)%}
+                    <td style="width:20px"></td>
+                    {%endfor%}
+                </tr>
+                {%endfor%}
+                </table>
+                {%endif%}
+            </div>
+            <div class="col">
+                {%if dynasty.leaders|length > 0%}
+                <div class="card">
+                    <div class="card-header">
+                        House head history:
+                    </div>
+                    <div class="card-body">
+                        <ol>
+                            {%for leader in dynasty.leaders%}
+                            <li>{{leader|render_ref("characters")}}</li>
+                            {%endfor%}
+                        </ol>
+                    </div>
+                </div>
+                {%endif%}
+            </div>
+        </div>
     </main>
 </body>
 </html>

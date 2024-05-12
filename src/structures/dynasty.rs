@@ -3,9 +3,10 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived, Shared};
+use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, SaveFileValue};
 use crate::game_state::GameState;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct Dynasty{
@@ -16,29 +17,48 @@ pub struct Dynasty{
     houses: u32,
     prestige_tot: f32,
     prestige: f32,
-    perks: Vec<Rc<String>>,
+    perks: HashMap<String, u8>,
     leaders: Vec<Shared<Character>>,
+    found_date: Option<Rc<String>>,
     depth: usize
 }
 
 impl Dynasty {
-    /// Returns the parent dynasty of the dynasty
-    pub fn get_parent(&self) -> Option<Shared<Dynasty>> {
-        self.parent.clone()
+    /// Gets the faith of the dynasty.
+    /// Really this is just the faith of the current house leader.
+    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+        self.leaders.last().unwrap().borrow().get_faith()
     }
 
-    /// Returns the historical leaders of the dynasty
-    pub fn get_leaders(&self) -> Vec<Shared<Character>> {
-        self.leaders.clone()
+    /// Gets the culture of the dynasty.
+    /// Really this is just the culture of the current house leader.
+    pub fn get_culture(&self) -> Option<Shared<Culture>> {
+        self.leaders.last().unwrap().borrow().get_culture()
     }
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
-fn get_perks(perks:&mut Vec<Rc<String>>, base:&GameObject){
-    let perks_obj = base.get("perks");
+fn get_perks(perks:&mut HashMap<String, u8>, base:&GameObject){
+    let perks_obj = base.get("perk");
     if perks_obj.is_some(){
         for p in perks_obj.unwrap().as_object().unwrap().get_array_iter(){
-            perks.push(p.as_string());
+            let perk = p.as_string();
+            //get the split perk by the second underscore
+            let mut i:u8 = 0;
+            let mut key: Option<&str> = None;
+            let mut val: u8 = 0;
+            for el in perk.rsplitn(2, '_'){
+                if i == 0{
+                    val = el.parse::<u8>().unwrap();
+                } else {
+                    key = Some(el);
+                }
+                i += 1;
+            }
+            if key.is_none(){
+                continue;
+            }
+            perks.insert(key.unwrap().to_owned(), val);
         }
     }
 }
@@ -51,21 +71,6 @@ fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&GameObject, game_state
             leaders.push(game_state.get_character(l.as_string().as_str()).clone());
         }
     }
-}
-
-///Gets the dynasty head of the dynasty
-fn get_dynasty_head(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Character>>{
-    let current = base.get("dynasty_head");
-    if current.is_some(){
-        return Some(game_state.get_character(current.unwrap().as_string().as_str()).clone());
-    }
-    else{
-        let current = base.get("head_of_house");
-        if current.is_some(){
-            return Some(game_state.get_character(current.unwrap().as_string().as_str()).clone());
-        }
-    }
-    None
 }
 
 ///Gets the prestige of the dynasty and returns a tuple with the total prestige and the current prestige
@@ -107,8 +112,6 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
     }
 }
 
-//FIXME some dynasties have their primary house with the same id as the dynasty, and if the dynasty is iterated over later and and the dynasty has it's named statically stored then the name will be missing
-
 fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
     let mut n = base.get("name");
     if n.is_none(){
@@ -116,7 +119,6 @@ fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
         if n.is_none(){
             if parent.is_none(){
                 //TODO this happens for dynasties that exist at game start. WTF?
-                //println!("{:?}", base);
                 return Rc::new("".to_owned().into());
             }
             //this may happen for dynasties with a house with the same name
@@ -126,20 +128,22 @@ fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
     n.unwrap().as_string()
 }
 
+fn get_date(base:&GameObject) -> Option<Rc<String>>{
+    let date = base.get("found_date");
+    if date.is_none(){
+        return None;
+    }
+    Some(date.unwrap().as_string())
+}
+
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         //get the dynasty legacies
-        let mut perks = Vec::new();
+        let mut perks = HashMap::new();
         get_perks(&mut perks, &base);
         //get the array of leaders
         let mut leaders = Vec::new();
         get_leaders(&mut leaders, &base, game_state);
-        //append to this array the leader if its not already there, you would assume that the leader is the first element in the array, but not always
-        let head = get_dynasty_head(&base, game_state);
-        if head.is_some(){
-            let head = head.unwrap();
-            leaders.insert(0, head);
-        }
         let res = get_prestige(&base);
         let p = get_parent(&base, game_state);
         Dynasty{
@@ -151,6 +155,7 @@ impl GameObjectDerived for Dynasty {
             prestige: res.1,
             perks: perks,
             leaders: leaders,
+            found_date: get_date(&base),
             id: base.get_name().parse::<u32>().unwrap(),
             depth: 0
         }
@@ -164,8 +169,9 @@ impl GameObjectDerived for Dynasty {
             houses: 0,
             prestige_tot: 0.0,
             prestige: 0.0,
-            perks: Vec::new(),
+            perks: HashMap::new(),
             leaders: Vec::new(),
+            found_date: None,
             id: id,
             depth: 0
         }
@@ -174,19 +180,19 @@ impl GameObjectDerived for Dynasty {
     fn init(&mut self, base:&GameObject, game_state:&mut crate::game_state::GameState) {
         get_perks(&mut self.perks, &base);
         get_leaders(&mut self.leaders, &base, game_state);
-        let head = get_dynasty_head(&base, game_state);
-        if head.is_some(){
-            let head = head.unwrap();
-            self.leaders.insert(0, head);
-        }
         let res = get_prestige(&base);
-        self.prestige_tot = res.0;
-        self.prestige = res.1;
+        if self.prestige_tot == 0.0{
+            self.prestige_tot = res.0;
+            self.prestige = res.1;
+        }
         self.parent = get_parent(&base, game_state);
-        self.name = Some(get_name(&base, self.parent.clone()));
+        let name = get_name(&base, self.parent.clone());
+        if !name.is_empty() || self.name.is_none(){
+            self.name = Some(name);
+        }
+        self.found_date = get_date(&base);
         self.members = 0;
         self.houses = 0;
-        self.id = base.get_name().parse::<u32>().unwrap();
     }
 
     fn get_id(&self) -> u32 {
@@ -216,6 +222,7 @@ impl Serialize for Dynasty {
         state.serialize_field("perks", &self.perks)?;
         let leaders = serialize_array(&self.leaders);
         state.serialize_field("leaders", &leaders)?;
+        state.serialize_field("found_date", &self.found_date)?;
         state.end()
     }
 }

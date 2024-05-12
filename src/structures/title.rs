@@ -22,6 +22,37 @@ pub struct Title {
     depth: usize
 }
 
+/// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
+fn date_string_cmp(a:&str, b:&str) -> std::cmp::Ordering{
+    let a_split: Vec<&str> = a.split('.').collect();
+    let b_split: Vec<&str> = b.split('.').collect();
+    let a_year = a_split[0].parse::<i32>().unwrap();
+    let b_year = b_split[0].parse::<i32>().unwrap();
+    if a_year < b_year{
+        return std::cmp::Ordering::Less;
+    }
+    else if a_year > b_year{
+        return std::cmp::Ordering::Greater;
+    }
+    let a_month = a_split[1].parse::<i32>().unwrap();
+    let b_month = b_split[1].parse::<i32>().unwrap();
+    if a_month < b_month{
+        return std::cmp::Ordering::Less;
+    }
+    else if a_month > b_month{
+        return std::cmp::Ordering::Greater;
+    }
+    let a_day = a_split[2].parse::<i32>().unwrap();
+    let b_day = b_split[2].parse::<i32>().unwrap();
+    if a_day < b_day{
+        return std::cmp::Ordering::Less;
+    }
+    else if a_day > b_day{
+        return std::cmp::Ordering::Greater;
+    }
+    std::cmp::Ordering::Equal
+}
+
 ///Gets the history of the title and returns a hashmap with the history entries
 fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)>{
     let mut history: Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)> = Vec::new();
@@ -85,6 +116,8 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
             history.push((Rc::new(h.to_string()), character, action));
         }
     }
+    //sort history by the first element of the tuple (the date) in descending order
+    history.sort_by(|a, b| date_string_cmp(a.0.as_str(), b.0.as_str()));
     history
 }
 
@@ -268,7 +301,6 @@ impl Cullable for Title {
 
 impl Title{
     pub fn get_holder(&self) -> Option<Shared<Character>>{
-        //FIXME get last
         let entry = self.history.last();
         if entry.is_none(){
             return None;

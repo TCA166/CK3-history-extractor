@@ -9,9 +9,9 @@
         <a class="btn btn-outline-primary" href="../index.html">Home</a>
     </header>
     <main style="margin:15px">
-        <div class="row  card-deck" style="text-align: left; margin-bottom:5px">
+        <div class="row card-deck" style="text-align: left; margin-bottom:5px">
             <div class="col">
-                <div class="card" style="width:30rem; margin-bottom:5px">
+                <div class="card" style="margin-bottom:5px">
                     <div class="card-header">
                         Tenets:
                     </div>
@@ -27,36 +27,32 @@
                         </table>
                     </div>
                 </div>
-                <div class="card" style="width:30rem">
+                <div class="card">
                     <div class="card-header">
                         Other:
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">Religion Head:
-                            {%if faith.head is defined%}
-                            {{faith.head|render_ref("characters")}}
-                            {%else%}
-                            None
-                            {%endif%}
-                            </li>
-                            <li class="list-group-item">Fervor: {{faith.fervor}}</li>
-                        </ul>
-                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Religion Head:
+                        {%if faith.head is defined%}
+                        {{faith.head|render_ref("characters")}}
+                        {%else%}
+                        None
+                        {%endif%}
+                        </li>
+                        <li class="list-group-item">Fervor: {{faith.fervor}}</li>
+                    </ul>
                 </div>
             </div>
             <div class="col">
-                <div class="card" style="width:30rem">
+                <div class="card">
                     <div class="card-header">
                         Doctrines:
                     </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            {%for doctrine in faith.doctrines%}
-                            <li class="list-group-item">{{doctrine}}</li>
-                            {%endfor%}
-                        </ul>
-                    </div>
+                    <ul class="list-group list-group-flush">
+                        {%for doctrine in faith.doctrines%}
+                        <li class="list-group-item">{{doctrine}}</li>
+                        {%endfor%}
+                    </ul>
                 </div>
             </div>
         </div>

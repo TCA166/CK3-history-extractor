@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use minijinja::context;
 
@@ -41,59 +41,27 @@ pub struct Character {
     depth: usize
 }
 
-/// Gets the dynasty meant to be the source of some properties
-fn get_src_dynasty(house:&Shared<Dynasty>) -> Shared<Dynasty>{
-    if house.as_ref().borrow().get_parent().is_some(){
-        let p = house.as_ref().borrow().get_parent().as_ref().unwrap().clone();
-        return p.clone();
-    }
-    else{
-        house.clone()
-    }
-}
+// So both faith and culture can be stored for a character in the latest leader of their house. 
+// The problem with reading that now is that while Houses are already likely loaded,
+// the characters that the houses hold reference to are likely still dummy, so we can't read the faith and culture from the house leader.
+// So we will be returning None for now in case either is missing, but later during serialization read the one from house.
 
 /// Gets the faith of the character
-fn get_faith(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Faith>{
+fn get_faith(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Faith>>{
     let faith_node = base.get("faith");
     if faith_node.is_some(){
-        game_state.get_faith(faith_node.unwrap().as_string().as_str()).clone()
+        return Some(game_state.get_faith(faith_node.unwrap().as_string().as_str()).clone());
     }
-    else{
-        let house = get_src_dynasty(house.as_ref().unwrap());
-        let h = house.as_ref().borrow();
-        for l in h.get_leaders().iter(){
-            let l = l.try_borrow();
-            if l.is_ok(){
-                let o = l.unwrap();
-                if o.faith.is_some(){
-                    return o.faith.as_ref().unwrap().clone();
-                }
-            }
-        }
-        Shared::new(RefCell::new(Faith::dummy(0)))
-    }
+    None
 }
 
 /// Gets the culture of the character
-fn get_culture(house:&Option<Shared<Dynasty>>, base:&GameObject, game_state:&mut GameState) -> Shared<Culture>{
+fn get_culture(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Culture>>{
     let culture_node = base.get("culture");
     if culture_node.is_some(){
-        game_state.get_culture(culture_node.unwrap().as_string().as_str()).clone()
+        return Some(game_state.get_culture(culture_node.unwrap().as_string().as_str()).clone())
     }
-    else{
-        let h = get_src_dynasty(house.as_ref().unwrap());
-        let h = h.as_ref().borrow();
-        for l in h.get_leaders().iter(){
-            let l = l.try_borrow();
-            if l.is_ok(){
-                let o = l.unwrap();
-                if o.culture.is_some(){
-                    return o.culture.as_ref().unwrap().clone();
-                }
-            }
-        }
-        Shared::new(RefCell::new(Culture::dummy(0)))
-    }
+    None
 }
 
 /// Gets the skills of the character
@@ -266,6 +234,24 @@ fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyn
     None
 }
 
+impl Character {
+    /// Gets the faith of the character
+    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+        if self.faith.is_some(){
+            return Some(self.faith.as_ref().unwrap().clone());
+        }
+        None
+    }
+
+    /// Gets the culture of the character
+    pub fn get_culture(&self) -> Option<Shared<Culture>> {
+        if self.culture.is_some(){
+            return Some(self.culture.as_ref().unwrap().clone());
+        }
+        None
+    }
+}
+
 impl GameObjectDerived for Character {
 
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
@@ -318,8 +304,8 @@ impl GameObjectDerived for Character {
             date: date,
             reason: reason,
             house: house.clone(),
-            faith: Some(get_faith(&house, &base, game_state)),
-            culture: Some(get_culture(&house, &base, game_state)),
+            faith: get_faith(&base, game_state),
+            culture: get_culture(&base, game_state),
             skills: skills,
             traits: traits,
             recessive:recessive,
@@ -401,8 +387,8 @@ impl GameObjectDerived for Character {
         self.nick = base.get("nickname").map(|v| v.as_string());
         self.birth.clone_from(&base.get("birth").unwrap().as_string());
         self.house = house.clone();
-        self.faith = Some(get_faith(&house, &base, game_state));
-        self.culture = Some(get_culture(&house, &base, game_state));
+        self.faith = get_faith(&base, game_state);
+        self.culture = get_culture(&base, game_state);
         self.dna = dna;
     }
 
@@ -427,17 +413,28 @@ impl Serialize for Character {
         state.serialize_field("dead", &self.dead)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
-        if self.faith.is_some(){
-            let rf = DerivedRef::<Faith>::from_derived(self.faith.as_ref().unwrap().clone());
+        let mut faith = self.faith.clone();
+        let mut culture = self.culture.clone();
+        if self.house.is_some(){
+            let h = self.house.as_ref().unwrap();
+            let rd = DerivedRef::<Dynasty>::from_derived(h.clone());
+            state.serialize_field("house", &rd)?;
+            if faith.is_none(){
+                let o = h.as_ref().borrow();
+                faith = o.get_faith();
+            }
+            if culture.is_none(){
+                let o = h.as_ref().borrow();
+                culture = o.get_culture();
+            }
+        }
+        if faith.is_some(){
+            let rf = DerivedRef::<Faith>::from_derived(faith.as_ref().unwrap().clone());
             state.serialize_field("faith", &rf)?;
         }
-        if self.culture.is_some(){
-            let rc = DerivedRef::<Culture>::from_derived(self.culture.as_ref().unwrap().clone());
+        if culture.is_some(){
+            let rc = DerivedRef::<Culture>::from_derived(culture.as_ref().unwrap().clone());
             state.serialize_field("culture", &rc)?;
-        }
-        if self.house.is_some(){
-            let rd = DerivedRef::<Dynasty>::from_derived(self.house.as_ref().unwrap().clone());
-            state.serialize_field("house", &rd)?;
         }
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
@@ -559,10 +556,17 @@ impl Cullable for Character {
                 o.unwrap().get_ref().as_ref().borrow_mut().set_depth(depth - 1);
             }
         }
-        self.culture.as_ref().unwrap().borrow_mut().set_depth(depth - 1);
-        let o = self.faith.as_ref().unwrap().try_borrow_mut();
-        if o.is_ok(){
-            o.unwrap().set_depth(depth - 1);
+        if self.culture.is_some(){
+            let o = self.culture.as_ref().unwrap().try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
+        }
+        if self.faith.is_some(){
+            let o = self.faith.as_ref().unwrap().try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
         }
         for s in self.titles.iter(){
             let o = s.try_borrow_mut();
