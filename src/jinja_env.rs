@@ -1,19 +1,54 @@
+use std::{fs, path::Path};
+
 use minijinja::{AutoEscape, Environment, Value};
 
-/// Create a new [Environment] with the features initialized.
-/// All escapes are disabled.
-/// 
-/// The filters are:
-/// - [render_ref](reference:Value, subdir:String) -> String
-/// 
-/// # Returns
-/// A new [Environment] with the functions initialized.
-/// The environment is static, so it can be used in multiple threads.
-/// Also the environment **doesn't include any templates**
-pub fn create_env() -> Environment<'static>{
+#[cfg(internal)]
+static INT_H_TEMPLATE:&str = include_str!("../templates/homeTemplate.html");
+#[cfg(internal)]
+static INT_C_TEMPLATE:&str = include_str!("../templates/charTemplate.html");
+#[cfg(internal)]
+static INT_CUL_TEMPLATE:&str = include_str!("../templates/cultureTemplate.html");
+#[cfg(internal)]
+static INT_DYN_TEMPLATE:&str = include_str!("../templates/dynastyTemplate.html");
+#[cfg(internal)]
+static INT_FAITH_TEMPLATE:&str = include_str!("../templates/faithTemplate.html");
+#[cfg(internal)]
+static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html");
+
+pub fn create_env(internal:bool) -> Environment<'static>{
     let mut env = Environment::new();
     env.add_filter("render_ref", render_ref);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
+    if internal || !Path::new("./templates").exists(){
+        #[cfg(internal)]
+        {
+            env.add_template("homeTemplate.html", INT_H_TEMPLATE).unwrap();
+            env.add_template("charTemplate.html", INT_C_TEMPLATE).unwrap();
+            env.add_template("cultureTemplate.html", INT_CUL_TEMPLATE).unwrap();
+            env.add_template("dynastyTemplate.html", INT_DYN_TEMPLATE).unwrap();
+            env.add_template("faithTemplate.html", INT_FAITH_TEMPLATE).unwrap();
+            env.add_template("titleTemplate.html", INT_TITLE_TEMPLATE).unwrap();
+        }
+        #[cfg(not(internal))]
+        {
+            panic!("Internal templates requested but not compiled in");
+        }
+    }
+    else {
+        // LEAKS MEMORY
+        let h_template = Box::new(fs::read_to_string("templates/homeTemplate.html").unwrap());
+        env.add_template("homeTemplate.html", h_template.leak()).unwrap();
+        let c_template = Box::new(fs::read_to_string("templates/charTemplate.html").unwrap());
+        env.add_template("charTemplate.html", c_template.leak()).unwrap();
+        let cul_template = Box::new(fs::read_to_string("templates/cultureTemplate.html").unwrap());
+        env.add_template("cultureTemplate.html", cul_template.leak()).unwrap();
+        let dyn_template = Box::new(fs::read_to_string("templates/dynastyTemplate.html").unwrap());
+        env.add_template("dynastyTemplate.html", dyn_template.leak()).unwrap();
+        let faith_template = Box::new(fs::read_to_string("templates/faithTemplate.html").unwrap());
+        env.add_template("faithTemplate.html", faith_template.leak()).unwrap();
+        let title_template = Box::new(fs::read_to_string("templates/titleTemplate.html").unwrap());
+        env.add_template("titleTemplate.html", title_template.leak()).unwrap();
+    }
     env
 }
 

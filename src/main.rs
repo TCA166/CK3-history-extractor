@@ -33,16 +33,6 @@ fn create_dir_maybe(name: &str) {
     }
 }
 
-// include these variables only in debug mode
-/* 
-static INT_H_TEMPLATE:&str = include_str!("../templates/homeTemplate.html");
-static INT_C_TEMPLATE:&str = include_str!("../templates/charTemplate.html");
-static INT_CUL_TEMPLATE:&str = include_str!("../templates/cultureTemplate.html");
-static INT_DYN_TEMPLATE:&str = include_str!("../templates/dynastyTemplate.html");
-static INT_FAITH_TEMPLATE:&str = include_str!("../templates/faithTemplate.html");
-static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html");
-*/
-
 /// Main function. This is the entry point of the program.
 /// 
 /// # Arguments
@@ -74,7 +64,10 @@ fn main() {
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
+    #[cfg(internal)]
     let mut use_internal = false;
+    #[cfg(not(internal))]
+    let use_internal = false;
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
         stdout().flush().unwrap();
@@ -87,7 +80,13 @@ fn main() {
         // foreach argument above 1
         for arg in args.iter().skip(2) {
             if arg == "--internal" {
-                use_internal = true;
+                #[cfg(internal)]
+                {
+                    println!("Using internal templates");
+                    use_internal = true;
+                }
+                #[cfg(not(internal))]
+                panic!("Internal templates requested but not compiled in")
             }
         }
     }
@@ -197,19 +196,7 @@ fn main() {
         }
     }
     println!("Savefile parsing complete");
-    let mut env = create_env();
-    let h_template = fs::read_to_string("templates/homeTemplate.html").unwrap();
-    env.add_template("homeTemplate.html", h_template.as_str()).unwrap();
-    let c_template = fs::read_to_string("templates/charTemplate.html").unwrap();
-    env.add_template("charTemplate.html", c_template.as_str()).unwrap();
-    let cul_template = fs::read_to_string("templates/cultureTemplate.html").unwrap();
-    env.add_template("cultureTemplate.html", cul_template.as_str()).unwrap();
-    let dyn_template = fs::read_to_string("templates/dynastyTemplate.html").unwrap();
-    env.add_template("dynastyTemplate.html", dyn_template.as_str()).unwrap();
-    let faith_template = fs::read_to_string("templates/faithTemplate.html").unwrap();
-    env.add_template("faithTemplate.html", faith_template.as_str()).unwrap();
-    let title_template = fs::read_to_string("templates/titleTemplate.html").unwrap();
-    env.add_template("titleTemplate.html", title_template.as_str()).unwrap();
+    let env = create_env(use_internal);
     //TODO serialization is done multiple times, this is inefficient
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
