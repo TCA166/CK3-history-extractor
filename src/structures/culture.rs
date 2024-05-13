@@ -2,21 +2,20 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{Cullable, GameObjectDerived, Shared, serialize_array};
-use crate::game_object::GameObject;
-use std::rc::Rc;
+use super::{serialize_array, Cullable, GameId, GameObjectDerived, Shared};
+use crate::game_object::{GameObject, GameString, Wrapper};
 
 /// A struct representing a culture in the game
 pub struct Culture {
-    id: u32,
-    name: Rc<String>,
-    ethos: Rc<String>,
-    heritage: Rc<String>,
-    martial: Rc<String>,
-    date: Option<Rc<String>>,
+    id: GameId,
+    name: GameString,
+    ethos: GameString,
+    heritage: GameString,
+    martial: GameString,
+    date: Option<GameString>,
     parents: Vec<Shared<Culture>>,
-    traditions: Vec<Rc<String>>,
-    language: Rc<String>,
+    traditions: Vec<GameString>,
+    language: GameString,
     depth: usize
 }
 
@@ -25,13 +24,13 @@ fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&GameObject, game_state:&
     let parents_obj = base.get("parents");
     if parents_obj.is_some(){
         for p in parents_obj.unwrap().as_object().unwrap().get_array_iter(){
-            parents.push(game_state.get_culture(p.as_string().as_str()).clone());
+            parents.push(game_state.get_culture(&p.as_id()).clone());
         }
     }
 }
 
 /// Gets the traditions of the culture and appends them to the traditions vector
-fn get_traditions(traditions:&mut Vec<Rc<String>>, base:&&GameObject){
+fn get_traditions(traditions:&mut Vec<GameString>, base:&&GameObject){
     let traditions_obj = base.get("traditions");
     if traditions_obj.is_some(){
         for t in traditions_obj.unwrap().as_object().unwrap().get_array_iter(){
@@ -41,7 +40,7 @@ fn get_traditions(traditions:&mut Vec<Rc<String>>, base:&&GameObject){
 }
 
 /// Gets the creation date of the culture
-fn get_date(base:&GameObject) -> Option<Rc<String>>{
+fn get_date(base:&GameObject) -> Option<GameString>{
     let node = base.get("created");
     if node.is_some(){
         return Some(node.unwrap().as_string());
@@ -63,22 +62,22 @@ impl GameObjectDerived for Culture {
             date: get_date(&base),
             parents: parents,
             traditions: traditions,
-            id: base.get_name().parse::<u32>().unwrap(),
+            id: base.get_name().parse::<GameId>().unwrap(),
             language: base.get("language").unwrap().as_string(),
             depth: 0
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Culture{
-            name: Rc::new("".to_owned().into()),
-            ethos: Rc::new("".to_owned().into()),
-            heritage: Rc::new("".to_owned().into()),
-            martial: Rc::new("".to_owned().into()),
+            name: GameString::wrap("".to_owned().into()),
+            ethos: GameString::wrap("".to_owned().into()),
+            heritage: GameString::wrap("".to_owned().into()),
+            martial: GameString::wrap("".to_owned().into()),
             date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
-            language: Rc::new("".to_owned().into()),
+            language: GameString::wrap("".to_owned().into()),
             id: id,
             depth: 0
         }
@@ -95,11 +94,11 @@ impl GameObjectDerived for Culture {
         self.language = base.get("language").unwrap().as_string();
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.name.clone()
     }
 }

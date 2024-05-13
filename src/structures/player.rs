@@ -1,20 +1,17 @@
-
-use std::rc::Rc;
-
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::GameObject;
+use crate::game_object::{GameObject, GameString, Wrapper};
 
 use crate::game_state::GameState;
 
-use super::{renderer::{Cullable, Renderable}, Character, GameObjectDerived, LineageNode, Renderer, Shared};
+use super::{renderer::{Cullable, Renderable}, Character, GameId, GameObjectDerived, LineageNode, Renderer, Shared};
 
 /// A struct representing a player in the game
 pub struct Player {
-    pub name: Rc<String>,
-    pub id: u32,
+    pub name: GameString,
+    pub id: GameId,
     pub character: Option<Shared<Character>>,
     pub lineage: Vec<LineageNode>,
 }
@@ -32,18 +29,18 @@ impl GameObjectDerived for Player {
     fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
         let mut lineage: Vec<LineageNode> = Vec::new();
         get_lineage(&mut lineage, &base, game_state);
-        let key = base.get("character").unwrap().as_string();
+        let key = base.get("character").unwrap().as_id();
         Player {
             name: base.get("name").unwrap().as_string(),
-            id: base.get("player").unwrap().as_string().parse::<u32>().unwrap(),
-            character: Some(Rc::from(game_state.get_character(&key).clone())),
+            id: base.get("player").unwrap().as_id(),
+            character: Some(game_state.get_character(&key).clone()),
             lineage: lineage
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Player {
-            name: Rc::new("".to_owned().into()),
+            name: GameString::wrap("".to_owned().into()),
             id: id,
             character: None,
             lineage: Vec::new()
@@ -51,17 +48,17 @@ impl GameObjectDerived for Player {
     }
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        let key = base.get("character").unwrap().as_string();
-        self.character = Some(Rc::from(game_state.get_character(&key).clone()));
-        self.id = base.get("player").unwrap().as_string().parse::<u32>().unwrap();
+        let key = base.get("character").unwrap().as_id();
+        self.character = Some(game_state.get_character(&key).clone());
+        self.id = base.get("player").unwrap().as_string().parse::<GameId>().unwrap();
         get_lineage(&mut self.lineage, &base, game_state);
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.name.clone()
     }
 }

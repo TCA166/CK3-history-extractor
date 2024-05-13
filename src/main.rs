@@ -23,6 +23,8 @@ use structures::{Player, GameObjectDerived, Renderable, Renderer, Cullable};
 mod jinja_env;
 use jinja_env::create_env;
 
+use crate::game_object::GameId;
+
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
 fn create_dir_maybe(name: &str) {
@@ -170,7 +172,7 @@ fn main() {
                 for contract in active.get_obj_iter(){
                     let val = contract.1.as_object();
                     if val.is_some(){
-                        game_state.add_contract(contract.0, &val.unwrap().get_string_ref("vassal"))
+                        game_state.add_contract(&contract.0.parse::<GameId>().unwrap(), &val.unwrap().get("vassal").unwrap().as_id())
                     }
                 }
             }

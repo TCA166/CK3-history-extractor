@@ -1,20 +1,19 @@
 use minijinja::context;
-use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared};
+use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Shared};
 use super::renderer::Renderable;
-use crate::game_object::GameObject;
+use crate::game_object::{GameObject, GameString, Wrapper};
 use crate::game_state::GameState;
 
 /// A struct representing a faith in the game
 pub struct Faith {
-    id: u32,
-    name: Rc<String>,
-    tenets: Vec<Rc<String>>,
+    id: GameId,
+    name: GameString,
+    tenets: Vec<GameString>,
     head: Option<Shared<Character>>,
     fervor: f32,
-    doctrines: Vec<Rc<String>>,
+    doctrines: Vec<GameString>,
     depth: usize
 }
 
@@ -22,14 +21,14 @@ pub struct Faith {
 fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
     let current = base.get("religious_head");
     if current.is_some(){
-        let title = game_state.get_title(current.unwrap().as_string().as_str());
+        let title = game_state.get_title(&current.unwrap().as_id());
         return title.borrow().get_holder();
     }
     None
 }
 
 /// Gets the tenets of the faith and appends them to the tenets vector
-fn get_tenets(tenets:&mut Vec<Rc<String>>, array:&GameObject){
+fn get_tenets(tenets:&mut Vec<GameString>, array:&GameObject){
     for t in array.get_array_iter(){
         let s = t.as_string();
         if s.contains("tenet"){
@@ -39,7 +38,7 @@ fn get_tenets(tenets:&mut Vec<Rc<String>>, array:&GameObject){
 }
 
 /// Gets the doctrines of the faith and appends them to the doctrines vector
-fn get_doctrines(doctrines:&mut Vec<Rc<String>>, array:&GameObject){
+fn get_doctrines(doctrines:&mut Vec<GameString>, array:&GameObject){
     for d in array.get_array_iter(){
         let s = d.as_string();
         if !s.contains("tenet") {
@@ -49,7 +48,7 @@ fn get_doctrines(doctrines:&mut Vec<Rc<String>>, array:&GameObject){
 }
 
 /// Gets the name of the faith
-fn get_name(base:&GameObject) -> Rc<String>{
+fn get_name(base:&GameObject) -> GameString{
     let node = base.get("name");
     if node.is_some(){
         return node.unwrap().as_string();
@@ -72,14 +71,14 @@ impl GameObjectDerived for Faith {
             head: get_head(&base, game_state),
             fervor: base.get("fervor").unwrap().as_string().parse::<f32>().unwrap(),
             doctrines: doctrines,
-            id: base.get_name().parse::<u32>().unwrap(),
+            id: base.get_name().parse::<GameId>().unwrap(),
             depth: 0
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Faith{
-            name: Rc::new("".to_owned().into()),
+            name: GameString::wrap("".to_owned().into()),
             tenets: Vec::new(),
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
@@ -98,11 +97,11 @@ impl GameObjectDerived for Faith {
         self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.name.clone()
     }
 }

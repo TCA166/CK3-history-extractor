@@ -3,23 +3,22 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameObjectDerived, Shared};
-use crate::game_object::{GameObject, SaveFileValue};
+use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Shared};
+use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper};
 use crate::game_state::GameState;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 pub struct Dynasty{
-    id: u32,
+    id: GameId,
     parent: Option<Shared<Dynasty>>,
-    name: Option<Rc<String>>,
-    members: u32,
-    houses: u32,
+    name: Option<GameString>,
+    members: GameId,
+    houses: GameId,
     prestige_tot: f32,
     prestige: f32,
     perks: HashMap<String, u8>,
     leaders: Vec<Shared<Character>>,
-    found_date: Option<Rc<String>>,
+    found_date: Option<GameString>,
     depth: usize
 }
 
@@ -82,7 +81,7 @@ fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&GameObject, game_state
     let leaders_obj = base.get("historical");
     if leaders_obj.is_some(){
         for l in leaders_obj.unwrap().as_object().unwrap().get_array_iter(){
-            leaders.push(game_state.get_character(l.as_string().as_str()).clone());
+            leaders.push(game_state.get_character(&l.as_id()).clone());
         }
     }
 }
@@ -123,7 +122,7 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
     match parent_id {
         None => None,
         k => {
-            let p = game_state.get_dynasty(k.unwrap().as_string().as_str()).clone();
+            let p = game_state.get_dynasty(&k.unwrap().as_id()).clone();
             let m = p.try_borrow_mut();
             if m.is_err(){
                 return None;
@@ -134,14 +133,14 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
     }
 }
 
-fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
+fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> GameString{
     let mut n = base.get("name");
     if n.is_none(){
         n = base.get("localized_name");
         if n.is_none(){
             if parent.is_none(){
                 //TODO this happens for dynasties that exist at game start. WTF?
-                return Rc::new("".to_owned().into());
+                return GameString::wrap("".to_owned().into());
             }
             //this may happen for dynasties with a house with the same name
             return parent.unwrap().borrow().name.as_ref().unwrap().clone();
@@ -150,7 +149,7 @@ fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Rc<String>{
     n.unwrap().as_string()
 }
 
-fn get_date(base:&GameObject) -> Option<Rc<String>>{
+fn get_date(base:&GameObject) -> Option<GameString>{
     let date = base.get("found_date");
     if date.is_none(){
         return None;
@@ -178,14 +177,14 @@ impl GameObjectDerived for Dynasty {
             perks: perks,
             leaders: leaders,
             found_date: get_date(&base),
-            id: base.get_name().parse::<u32>().unwrap(),
+            id: base.get_name().parse::<GameId>().unwrap(),
             depth: 0
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Dynasty{
-            name: Some(Rc::new("".to_owned())),
+            name: Some(GameString::wrap("".to_owned())),
             parent: None,
             members: 0,
             houses: 0,
@@ -215,11 +214,11 @@ impl GameObjectDerived for Dynasty {
         self.found_date = get_date(&base);
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
     }
 }

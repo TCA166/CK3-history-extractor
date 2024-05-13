@@ -1,24 +1,22 @@
-use std::rc::Rc;
-
 use minijinja::context;
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::{GameObject, SaveFileValue};
+use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper};
 use crate::game_state::GameState;
 
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, DerivedRef, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderer, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
-    id: u32,
-    name: Rc<String>,
+    id: GameId,
+    name: GameString,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
-    history: Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)>,
+    history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
     depth: usize
 }
 
@@ -54,15 +52,15 @@ fn date_string_cmp(a:&str, b:&str) -> std::cmp::Ordering{
 }
 
 ///Gets the history of the title and returns a hashmap with the history entries
-fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)>{
-    let mut history: Vec<(Rc<String>, Option<Shared<Character>>, Rc<String>)> = Vec::new();
+fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(GameString, Option<Shared<Character>>, GameString)>{
+    let mut history: Vec<(GameString, Option<Shared<Character>>, GameString)> = Vec::new();
     let hist = base.get("history");
     if hist.is_some() {
         let hist_obj = hist.unwrap().as_object().unwrap();
         for h in hist_obj.get_keys(){
             let val = hist_obj.get(&h);
             let character;
-            let action:Rc<String>;
+            let action:GameString;
             match val{
                 Some(&SaveFileValue::Object(ref o)) => {
                     if o.is_array(){
@@ -75,7 +73,7 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
                                     let holder = o.get("holder");
                                     match holder{
                                         Some(h) => {
-                                            loc_character = Some(game_state.get_character(h.as_string().as_str()).clone());
+                                            loc_character = Some(game_state.get_character(&h.as_id()).clone());
                                         },
                                         None => {
                                             loc_character = None;
@@ -84,11 +82,11 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
                                     
                                 }
                                 SaveFileValue::String(ref o) => {
-                                    loc_action = Rc::new("Inherited".to_owned());
-                                    loc_character = Some(game_state.get_character(o.as_str()).clone());
+                                    loc_action = GameString::wrap("Inherited".to_owned());
+                                    loc_character = Some(game_state.get_character(&o.parse::<GameId>().unwrap()).clone());
                                 }
                             }
-                            history.push((Rc::new(h.to_string()), loc_character, loc_action))
+                            history.push((GameString::wrap(h.to_string()), loc_character, loc_action))
                         }
                         continue; //if it's an array we handled all the adding already in the loop above
                     }
@@ -97,7 +95,7 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
                         let holder = o.get("holder");
                         match holder{
                             Some(h) => {
-                                character = Some(game_state.get_character(h.as_string().as_str()).clone());
+                                character = Some(game_state.get_character(&h.as_id()).clone());
                             },
                             None => {
                                 character = None;
@@ -106,14 +104,14 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(Rc<String>, 
                     }
                 },
                 Some(&SaveFileValue::String(ref o)) => {
-                    action = Rc::new("Inherited".to_owned());
-                    character = Some(game_state.get_character(o.as_str()).clone());
+                    action = GameString::wrap("Inherited".to_owned());
+                    character = Some(game_state.get_character(&o.parse::<GameId>().unwrap()).clone());
                 }
                 _ => {
                     panic!("Invalid history entry")
                 }
             }
-            history.push((Rc::new(h.to_string()), character, action));
+            history.push((GameString::wrap(h.to_string()), character, action));
         }
     }
     //sort history by the first element of the tuple (the date) in descending order
@@ -127,12 +125,12 @@ impl GameObjectDerived for Title{
         //first we get the optional de_jure_liege and de_facto_liege
         let de_jure_id = base.get("de_jure_liege");
         let de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(de_jure.as_string().as_str()).clone()),
+            Some(de_jure) => Some(game_state.get_title(&de_jure.as_id()).clone()),
             None => None
         };
         let de_facto_id = base.get("de_facto_liege");
         let de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(de_facto.as_string().as_str()).clone()),
+            Some(de_facto) => Some(game_state.get_title(&de_facto.as_id()).clone()),
             None => None
         };
         let mut vassals = Vec::new();
@@ -140,11 +138,11 @@ impl GameObjectDerived for Title{
         let vas = base.get("vassals");
         if !vas.is_none(){
             for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(v.as_string().as_str()).clone());
+                vassals.push(game_state.get_title(&v.as_id()).clone());
             }
         }
         let name = base.get("name").unwrap().as_string().clone();
-        let id = base.get_name().parse::<u32>().unwrap();
+        let id = base.get_name().parse::<GameId>().unwrap();
         let history = get_history(base, game_state);
         Title{
             name: name,
@@ -157,13 +155,13 @@ impl GameObjectDerived for Title{
         }
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Title{
-            name: Rc::new("Dummy".to_owned()),
+            name: GameString::wrap("Dummy".to_owned()),
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
@@ -176,19 +174,19 @@ impl GameObjectDerived for Title{
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
         let de_jure_id = base.get("de_jure_liege");
         self.de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(de_jure.as_string().as_str()).clone()),
+            Some(de_jure) => Some(game_state.get_title(&de_jure.as_id()).clone()),
             None => None
         };
         let de_facto_id = base.get("de_facto_liege");
         self.de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(de_facto.as_string().as_str()).clone()),
+            Some(de_facto) => Some(game_state.get_title(&de_facto.as_id()).clone()),
             None => None
         };
         let mut vassals = Vec::new();
         let vas = base.get("vassals");
         if !vas.is_none(){
             for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(v.as_string().as_str()).clone());
+                vassals.push(game_state.get_title(&v.as_id()).clone());
             }
         }
         self.vassals = vassals;
@@ -197,7 +195,7 @@ impl GameObjectDerived for Title{
         self.history = history;
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.name.clone()
     
     }

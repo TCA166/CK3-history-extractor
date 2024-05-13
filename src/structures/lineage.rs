@@ -1,25 +1,26 @@
-use std::rc::Rc;
-
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
+use crate::game_object::GameString;
 use crate::game_object::SaveFileValue;
 use crate::game_object::GameObject;
+use crate::game_object::Wrapper;
 use crate::game_state::GameState;
 
+use super::GameId;
 use super::{Character, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode{
     character: Option<Shared<Character>>,
-    date: Rc<String>,
+    date: GameString,
     score: i32,
     prestige: i32,
     piety: i32,
     dread:f32,
-    lifestyle: Option<Rc<String>>,
-    perks:Vec<Rc<String>>, //in older version this was a list, guess it no longer is
-    id: u32
+    lifestyle: Option<GameString>,
+    perks:Vec<GameString>, //in older version this was a list, guess it no longer is
+    id: GameId
 }
 
 impl LineageNode {
@@ -30,7 +31,7 @@ impl LineageNode {
 }
 
 ///Gets the perk of the lineage node
-fn get_perks(perks:&mut Vec<Rc<String>>, base:&GameObject){
+fn get_perks(perks:&mut Vec<GameString>, base:&GameObject){
     let perks_node = base.get("perk");
     if perks_node.is_some(){
         let node = perks_node.unwrap();
@@ -98,7 +99,7 @@ fn get_piety(base: &GameObject) -> i32 {
 }
 
 ///Gets the lifestyle of the lineage node
-fn get_lifestyle(base: &GameObject) -> Option<Rc<String>>{
+fn get_lifestyle(base: &GameObject) -> Option<GameString>{
     let lifestyle_node = base.get("lifestyle");
     if lifestyle_node.is_some() {
         Some(lifestyle_node.unwrap().as_string())
@@ -109,8 +110,8 @@ fn get_lifestyle(base: &GameObject) -> Option<Rc<String>>{
 
 impl GameObjectDerived for LineageNode{
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
-        let id = base.get_string_ref("character");
-        let char = game_state.get_character(id.as_str());
+        let id = base.get("character").unwrap().as_id();
+        let char = game_state.get_character(&id);
         let mut perks = Vec::new();
         get_perks(&mut perks, base);
         LineageNode { 
@@ -122,14 +123,14 @@ impl GameObjectDerived for LineageNode{
             dread: get_dread(&base),
             lifestyle: get_lifestyle(&base),
             perks: perks,
-            id: id.parse::<u32>().unwrap()
+            id: id
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         LineageNode{
             character: None,
-            date: Rc::new(String::new().into()),
+            date: GameString::wrap(String::new().into()),
             score: 0,
             prestige: 0,
             piety: 0,
@@ -141,8 +142,8 @@ impl GameObjectDerived for LineageNode{
     }
 
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
-        let character_id = base.get_string_ref("character");
-        self.character = Some(game_state.get_character(character_id.as_str()));
+        let character_id = base.get("character").unwrap().as_id();
+        self.character = Some(game_state.get_character(&character_id));
         self.score = get_score(&base);
         self.prestige = get_prestige(&base);
         self.piety = get_piety(&base);
@@ -151,11 +152,11 @@ impl GameObjectDerived for LineageNode{
         get_perks(&mut self.perks, base);
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.character.as_ref().unwrap().borrow().get_name()
     }
 }

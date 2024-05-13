@@ -1,16 +1,16 @@
-use std::rc::Rc;
-
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use super::{Cullable, Wrapper, GameObjectDerived, Shared};
+use crate::game_object::GameString;
+
+use super::{Cullable, GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
 /// The idea is to provide the id and name of the object, without serializing the whole object.
 /// This is useful for serializing references to objects that are not in the current scope.
 pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
-    id: u32,
-    name: Rc<String>,
+    id: GameId,
+    name: GameString,
     obj: Shared<T>
 }
 
@@ -32,7 +32,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     pub fn dummy() -> Self{
         DerivedRef{
             id: 0,
-            name: Rc::new("".to_string()),
+            name: GameString::wrap("".to_string()),
             obj: Shared::wrap(T::dummy(0))
         }
     }

@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use minijinja::Environment;
 use serde::Serialize;
 
-use super::GameObjectDerived;
+use super::{GameId, GameObjectDerived};
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
 pub struct Renderer<'a>{
     env: &'a Environment<'a>,
-    rendered: HashMap<&'static str, HashMap<u32, bool>>,
+    rendered: HashMap<&'static str, HashMap<GameId, bool>>,
     path: String
 }
 
@@ -24,7 +24,7 @@ impl<'a> Renderer<'a>{
     }
 
     /// Returns true if the object has already been rendered.
-    fn is_rendered<T: Renderable>(&self, id: u32) -> bool{
+    fn is_rendered<T: Renderable>(&self, id: GameId) -> bool{
         let rendered = self.rendered.get(T::get_subdir());
         if rendered.is_none(){
             return false

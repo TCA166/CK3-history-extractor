@@ -1,7 +1,7 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
-use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title, Wrapper};
-use crate::game_object::GameObject;
+use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
+use crate::game_object::{GameId, GameObject, GameString, Wrapper};
 
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
@@ -9,21 +9,21 @@ use crate::game_object::GameObject;
 /// This is mainly used during the process of gathering data from the parsed save file.
 pub struct GameState{
     /// A character id->Character transform
-    characters: HashMap<String, Shared<Character>>,
+    characters: HashMap<GameId, Shared<Character>>,
     /// A title id->Title transform
-    titles: HashMap<String, Shared<Title>>,
+    titles: HashMap<GameId, Shared<Title>>,
     /// A faith id->Title transform
-    faiths: HashMap<String, Shared<Faith>>,
+    faiths: HashMap<GameId, Shared<Faith>>,
     /// A culture id->Culture transform
-    cultures: HashMap<String, Shared<Culture>>,
+    cultures: HashMap<GameId, Shared<Culture>>,
     /// A dynasty id->Dynasty transform
-    dynasties: HashMap<String, Shared<Dynasty>>,
+    dynasties: HashMap<GameId, Shared<Dynasty>>,
     /// A memory id->Memory transform
-    memories: HashMap<String, Shared<Memory>>,
+    memories: HashMap<GameId, Shared<Memory>>,
     /// A trait id->Trait identifier transform
-    traits_lookup: Vec<Rc<String>>,
+    traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
-    contract_transform: HashMap<String, Shared<DerivedRef<Character>>>
+    contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>
 }
 
 impl GameState{
@@ -42,20 +42,20 @@ impl GameState{
     }
 
     /// Add a lookup table for traits
-    pub fn add_lookup(&mut self, array:Vec<Rc<String>>){
+    pub fn add_lookup(&mut self, array:Vec<GameString>){
         self.traits_lookup = array;
     }
 
     /// Get a trait by id
-    pub fn get_trait(&self, id:u32) -> Rc<String>{
+    pub fn get_trait(&self, id:u16) -> GameString{
         self.traits_lookup[id as usize].clone()
     }
 
     /// Get a character by key
-    pub fn get_character(&mut self, key: &str) -> Shared<Character>{
+    pub fn get_character(&mut self, key: &GameId) -> Shared<Character>{
         if !self.characters.contains_key(key){
-            let v = Shared::wrap(Character::dummy(key.parse::<u32>().unwrap()));
-            self.characters.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Character::dummy(*key));
+            self.characters.insert(*key, v.clone());
             v
         }
         else{
@@ -64,10 +64,10 @@ impl GameState{
     }
 
     /// Gets the vassal associated with the contract with the given id
-    pub fn get_vassal(&mut self, contract_id: &str) -> Shared<DerivedRef<Character>>{
+    pub fn get_vassal(&mut self, contract_id: &GameId) -> Shared<DerivedRef<Character>>{
         if !self.contract_transform.contains_key(contract_id){
             let v = Shared::wrap(DerivedRef::dummy());
-            self.contract_transform.insert(contract_id.to_string(), v.clone());
+            self.contract_transform.insert(*contract_id, v.clone());
             v
         }
         else{
@@ -76,23 +76,23 @@ impl GameState{
     }
 
     /// Adds a new vassal contract
-    pub fn add_contract(&mut self, contract_id: &str, character_id: &String) {
-        let char = self.get_character(character_id.as_str());
+    pub fn add_contract(&mut self, contract_id:&GameId, character_id: &GameId) {
+        let char = self.get_character(character_id);
         if self.contract_transform.contains_key(contract_id){
             let entry = self.contract_transform.get(contract_id).unwrap();
             entry.borrow_mut().init(char);
         }
         else{
             let r = Shared::wrap(DerivedRef::from_derived(char));
-            self.contract_transform.insert(contract_id.to_string(), r);
+            self.contract_transform.insert(*contract_id, r);
         }
     }
 
     /// Get a title by key
-    pub fn get_title(&mut self, key: &str) -> Shared<Title>{
+    pub fn get_title(&mut self, key: &GameId) -> Shared<Title>{
         if !self.titles.contains_key(key){
-            let v = Shared::wrap(Title::dummy(key.parse::<u32>().unwrap()));
-            self.titles.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Title::dummy(*key));
+            self.titles.insert(*key, v.clone());
             v
         }
         else{
@@ -101,56 +101,56 @@ impl GameState{
     }
 
     /// Get a faith by key
-    pub fn get_faith(&mut self, key: &str) -> Shared<Faith>{
+    pub fn get_faith(&mut self, key: &GameId) -> Shared<Faith>{
         if self.faiths.contains_key(key){
             self.faiths.get(key).unwrap().clone()
         }
         else{
-            let v = Shared::wrap(Faith::dummy(key.parse::<u32>().unwrap()));
-            self.faiths.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Faith::dummy(*key));
+            self.faiths.insert(*key, v.clone());
             v
         }
     }
 
     /// Get a culture by key
-    pub fn get_culture(&mut self, key: &str) -> Shared<Culture>{
+    pub fn get_culture(&mut self, key: &GameId) -> Shared<Culture>{
         if self.cultures.contains_key(key){
             self.cultures.get(key).unwrap().clone()
         }
         else{
-            let v = Shared::wrap(Culture::dummy(key.parse::<u32>().unwrap()));
-            self.cultures.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Culture::dummy(*key));
+            self.cultures.insert(*key, v.clone());
             v
         }
     }
 
     /// Get a dynasty by key
-    pub fn get_dynasty(&mut self, key: &str) -> Shared<Dynasty>{
+    pub fn get_dynasty(&mut self, key: &GameId) -> Shared<Dynasty>{
         if self.dynasties.contains_key(key){
             self.dynasties.get(key).unwrap().clone()
         }
         else{
-            let v = Shared::wrap(Dynasty::dummy(key.parse::<u32>().unwrap()));
-            self.dynasties.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Dynasty::dummy(*key));
+            self.dynasties.insert(*key, v.clone());
             v
         }
     }
 
     /// Get a memory by key
-    pub fn get_memory(&mut self, key: &str) -> Shared<Memory>{
+    pub fn get_memory(&mut self, key: &GameId) -> Shared<Memory>{
         if self.memories.contains_key(key){
             self.memories.get(key).unwrap().clone()
         }
         else{
-            let v = Shared::wrap(Memory::dummy(key.parse::<u32>().unwrap()));
-            self.memories.insert(key.to_string(), v.clone());
+            let v = Shared::wrap(Memory::dummy(*key));
+            self.memories.insert(*key, v.clone());
             v
         }
     }
 
     /// Add a character to the game state    
     pub fn add_character(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.characters.contains_key(&key){
             let c = self.characters.get(&key).unwrap().clone();
             c.borrow_mut().init(value, self);
@@ -163,7 +163,7 @@ impl GameState{
 
     /// Add a title to the game state
     pub fn add_title(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.titles.contains_key(&key){
             let t = self.titles.get(&key).unwrap().clone();
             t.borrow_mut().init(value, self);
@@ -176,7 +176,7 @@ impl GameState{
 
     /// Add a faith to the game state
     pub fn add_faith(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.faiths.contains_key(&key){
             let f = self.faiths.get(&key).unwrap().clone();
             f.borrow_mut().init(value, self);
@@ -189,7 +189,7 @@ impl GameState{
 
     /// Add a culture to the game state
     pub fn add_culture(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.cultures.contains_key(&key){
             let c = self.cultures.get(&key).unwrap().clone();
             c.borrow_mut().init(value, self);
@@ -202,9 +202,9 @@ impl GameState{
 
     /// Add a dynasty to the game state
     pub fn add_dynasty(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.dynasties.contains_key(&key){
-            let d = self.dynasties.get(key.as_str()).unwrap().clone();
+            let d = self.dynasties.get(&key).unwrap().clone();
             d.borrow_mut().init(value, self);
         }
         else{
@@ -215,9 +215,9 @@ impl GameState{
 
     /// Add a memory to the game state
     pub fn add_memory(&mut self, value: &GameObject){
-        let key = value.get_name().to_string();
+        let key = value.get_name().parse::<GameId>().unwrap();
         if self.memories.contains_key(&key){
-            let m = self.memories.get(key.as_str()).unwrap().clone();
+            let m = self.memories.get(&key).unwrap().clone();
             m.borrow_mut().init(value, self);
         }
         else{

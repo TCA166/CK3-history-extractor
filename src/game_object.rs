@@ -1,9 +1,32 @@
 use std::{collections::{hash_map, HashMap}, rc::Rc, slice, fmt::Debug};
 
+/// A trait for objects that wrap a certain value.
+/// Allows us to create opaque type aliases for certain types.
+/// For example [GameString] is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
+pub trait Wrapper<T> {
+    /// Wrap a value in the object
+    fn wrap(t:T) -> Self;
+}
+
+/// A type alias for a game object id.
+pub type GameId = u32;
+
+// implementing the Wrapper trait for GameId is overkill, the opaqueness is not needed as it's always going to be a numeric type
+
+/// A type alias for a game string.
+/// Roughly meant to represent a raw string from a save file, reference counted so that it exists once in memory.
+pub type GameString = Rc<String>;
+
+impl Wrapper<String> for GameString {
+    fn wrap(t:String) -> Self {
+        Rc::new(t)
+    }
+}
+
 /// A value that can be stored in a SaveFile and is held by a GameObject.
 /// This is a wrapper around a String or a GameObject.
 pub enum SaveFileValue{
-    String(Rc<String>),
+    String(GameString),
     Object(GameObject)
 }
 
@@ -18,11 +41,15 @@ impl SaveFileValue {
     /// # Returns
     /// 
     /// A reference to the string
-    pub fn as_string(&self) -> Rc<String>{
+    pub fn as_string(&self) -> GameString{
         match self{
             SaveFileValue::String(s) => s.clone(),
             _ => panic!("Invalid value")
         }
+    }
+
+    pub fn as_id(&self) -> GameId{
+        self.as_string().parse::<GameId>().unwrap()
     }
 
     /// Get the value as a GameObject reference
@@ -160,7 +187,7 @@ impl GameObject{
     /// 
     /// If the key is missing or the value is not a string
     /// 
-    pub fn get_string_ref(&self, key: &str) -> Rc<String>{
+    pub fn get_string_ref(&self, key: &str) -> GameString{
         self.inner.get(key).unwrap().as_string()
     }
 

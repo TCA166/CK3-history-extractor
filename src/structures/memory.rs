@@ -1,15 +1,14 @@
-use std::rc::Rc;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameObjectDerived, Shared, Renderable};
-use crate::game_object::GameObject;
+use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderable, Shared};
+use crate::game_object::{GameObject, GameString, Wrapper};
 use crate::game_state::GameState;
 
 /// A struct representing a memory in the game
 pub struct Memory {
-    id: u32,
-    date: Rc<String>,
-    r#type: Rc<String>,
+    id: GameId,
+    date: GameString,
+    r#type: GameString,
     participants: Vec<(String, Shared<Character>)>,
     depth: usize
 }
@@ -19,7 +18,7 @@ fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ga
     let participants_node = base.get("participants");
     if participants_node.is_some(){
         for part in participants_node.unwrap().as_object().unwrap().get_obj_iter(){
-            participants.push((part.0.clone(), game_state.get_character(part.1.as_string().as_str()).clone()));
+            participants.push((part.0.clone(), game_state.get_character(&part.1.as_id()).clone()));
         }
     }
 }
@@ -32,15 +31,15 @@ impl GameObjectDerived for Memory {
             date: base.get("creation_date").unwrap().as_string(),
             r#type: base.get("type").unwrap().as_string(),
             participants: participants,
-            id: base.get_name().parse::<u32>().unwrap(),
+            id: base.get_name().parse::<GameId>().unwrap(),
             depth: 0
         }
     }
 
-    fn dummy(id:u32) -> Self {
+    fn dummy(id:GameId) -> Self {
         Memory{
-            date: Rc::new("".to_owned()),
-            r#type: Rc::new("".to_owned()),
+            date: GameString::wrap("".to_owned()),
+            r#type: GameString::wrap("".to_owned()),
             participants: Vec::new(),
             id: id,
             depth: 0
@@ -53,11 +52,11 @@ impl GameObjectDerived for Memory {
         get_participants(&mut self.participants, &base, game_state);
     }
 
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         self.id
     }
 
-    fn get_name(&self) -> Rc<String> {
+    fn get_name(&self) -> GameString {
         self.r#type.clone()
     }
 }
