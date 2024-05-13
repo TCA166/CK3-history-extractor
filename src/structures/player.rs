@@ -95,10 +95,8 @@ impl Renderable for Player{
     }
 
     fn render_all(&self, renderer: &mut Renderer){
-        println!("Rendering player");
         renderer.render(self);
         for char in self.lineage.iter(){
-            println!("Rendering character");
             char.get_character().borrow().render_all(renderer);
         }
     }

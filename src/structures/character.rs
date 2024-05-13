@@ -10,9 +10,10 @@ use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
 pub struct Character {
     id: GameId,
-    name: GameString,
+    /// The name of the character, you can assume this is always present.
+    name: Option<GameString>,
     nick: Option<GameString>,
-    birth: GameString,
+    birth: Option<GameString>,
     dead: bool,
     date: Option<GameString>,
     reason: Option<GameString>,
@@ -306,9 +307,9 @@ impl GameObjectDerived for Character {
         //find house
         let house = get_dynasty(&base, game_state);
         Character{
-            name: base.get("first_name").unwrap().as_string(),
+            name: Some(base.get("first_name").unwrap().as_string()),
             nick: base.get("nickname").map(|v| v.as_string()),
-            birth: base.get("birth").unwrap().as_string(),
+            birth: Some(base.get("birth").unwrap().as_string()),
             dead: dead,
             date: date,
             reason: reason,
@@ -340,9 +341,9 @@ impl GameObjectDerived for Character {
 
     fn dummy(id:GameId) -> Self {
         Character{
-            name: GameString::wrap("".to_owned().into()),
+            name: None,
             nick: None,
-            birth: GameString::wrap("".to_owned().into()),
+            birth: None,
             dead: false,
             date: None,
             reason: None,
@@ -394,9 +395,9 @@ impl GameObjectDerived for Character {
         get_landed_data(&mut self.dread, &mut self.strength, &mut self.titles, &mut self.vassals, &base, game_state);
         //find house
         let house = get_dynasty(&base, game_state);
-        self.name.clone_from(&base.get("first_name").unwrap().as_string());
+        self.name = Some(base.get("first_name").unwrap().as_string());
         self.nick = base.get("nickname").map(|v| v.as_string());
-        self.birth.clone_from(&base.get("birth").unwrap().as_string());
+        self.birth = Some(base.get("birth").unwrap().as_string());
         self.house = house.clone();
         self.faith = get_faith(&base, game_state);
         self.culture = get_culture(&base, game_state);
@@ -408,7 +409,11 @@ impl GameObjectDerived for Character {
     }
 
     fn get_name(&self) -> GameString {
-        self.name.clone()
+        if self.name.is_none(){
+            //FIXME wtf?
+            return GameString::wrap("".to_string())
+        }
+        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -418,7 +423,7 @@ impl Serialize for Character {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Character", 28)?;
-        state.serialize_field("name", &self.name)?;
+        state.serialize_field("name", &self.get_name())?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
         state.serialize_field("dead", &self.dead)?;

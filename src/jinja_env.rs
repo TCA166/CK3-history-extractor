@@ -68,7 +68,8 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.
 /// The function must be rendered without html escape.
 fn render_ref(reference: Value, subdir:Option<String>) -> String{
-    if reference.is_none() {
+    //FIXME why can reference be undefined here? where are we calling render_ref on undefined?
+    if reference.is_none() || reference.is_undefined() {
         return "none".to_string();
     }
     let n = reference.get_attr("name").unwrap();
