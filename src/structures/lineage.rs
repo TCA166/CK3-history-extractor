@@ -165,7 +165,7 @@ impl Serialize for LineageNode{
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("LineageNode", 11)?;
+        let mut state = serializer.serialize_struct("LineageNode", 9)?;
         state.serialize_field("character", &self.character)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("score", &self.score)?;

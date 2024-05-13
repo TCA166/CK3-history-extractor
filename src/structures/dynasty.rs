@@ -35,6 +35,20 @@ impl Dynasty {
     pub fn get_culture(&self) -> Option<Shared<Culture>> {
         self.leaders.last().unwrap().borrow().get_culture()
     }
+
+    pub fn register_house(&mut self){
+        self.houses += 1;
+    }
+
+    pub fn register_member(&mut self){
+        self.members += 1;
+        if self.parent.as_ref().is_some(){
+            let mut p = self.parent.as_ref().unwrap().try_borrow_mut();
+            if p.is_ok(){
+                p.as_mut().unwrap().register_member();
+            }
+        }
+    }
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
@@ -108,7 +122,15 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
     let parent_id = base.get("dynasty");
     match parent_id {
         None => None,
-        k => Some(game_state.get_dynasty(k.unwrap().as_string().as_str()).clone())
+        k => {
+            let p = game_state.get_dynasty(k.unwrap().as_string().as_str()).clone();
+            let m = p.try_borrow_mut();
+            if m.is_err(){
+                return None;
+            }
+            m.unwrap().register_house();
+            Some(p)
+        }
     }
 }
 
@@ -191,8 +213,6 @@ impl GameObjectDerived for Dynasty {
             self.name = Some(name);
         }
         self.found_date = get_date(&base);
-        self.members = 0;
-        self.houses = 0;
     }
 
     fn get_id(&self) -> u32 {
@@ -209,7 +229,7 @@ impl Serialize for Dynasty {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Dynasty", 8)?;
+        let mut state = serializer.serialize_struct("Dynasty", 9)?;
         if self.parent.as_ref().is_some(){
             let parent = DerivedRef::<Dynasty>::from_derived(self.parent.as_ref().unwrap().clone());
             state.serialize_field("parent", &parent)?;

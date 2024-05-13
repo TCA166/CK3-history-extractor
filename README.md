@@ -47,9 +47,20 @@ That file is your actual file the program is expecting.
 ### Running the program
 
 Depending on the version this might vary a bit, but the program expects to find the ```templates``` directory in your current working directory.
-Make sure then you download it from this repository and place it so that the program will find it.
+If it's not there the program will attempt to use internal templates, which are immutable, but if you are just an ordinary user that means you can do without copying the templates folder.
 Then just run it and follow the prompts.
 The program will create a new directory in your current working directory for each player within your save file.
+
+Here is how you can run the Rust version of the utility:
+
+```sh
+./ck3_history_extractor <save file path> <arg1> <arg2> ...
+```
+
+And here are the arguments that the utility accepts as of right now:
+
+1. ```--internal``` forces the utility to use the internal templates.
+2. ```--depth %d``` sets the maximum depth of the data to retrieve in the savefile. The characters you played have depth=0, their relatives have depth=1 and so on.
 
 ## Output example
 

@@ -69,6 +69,7 @@ fn main() {
     let mut use_internal = false;
     #[cfg(not(internal))]
     let use_internal = false;
+    let mut depth = 3;
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
         stdout().flush().unwrap();
@@ -79,15 +80,25 @@ fn main() {
     else{
         filename = args[1].clone();
         // foreach argument above 1
-        for arg in args.iter().skip(2) {
-            if arg == "--internal" {
-                #[cfg(internal)]
-                {
-                    println!("Using internal templates");
-                    use_internal = true;
+        for arg in args.iter().skip(2).enumerate() {
+            match arg.1.as_str() {
+                "--internal" => {
+                    #[cfg(internal)]
+                    {
+                        println!("Using internal templates");
+                        use_internal = true;
+                    }
+                    #[cfg(not(internal))]
+                    panic!("Internal templates requested but not compiled in")
                 }
-                #[cfg(not(internal))]
-                panic!("Internal templates requested but not compiled in")
+                "--depth" => {
+                    let depth_str = args.get(arg.0 + 1).expect("Depth argument requires a value");
+                    depth = depth_str.parse::<usize>().expect("Depth argument must be a number");
+                }
+                _ => {
+                    println!("Unknown argument: {}", arg.1);
+                }
+            
             }
         }
     }
@@ -199,7 +210,6 @@ fn main() {
     }
     println!("Savefile parsing complete");
     let env = create_env(use_internal);
-    //TODO serialization is done multiple times, this is inefficient
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
         let folder_name = player.name.to_string() + "'s history";
@@ -209,7 +219,7 @@ fn main() {
         create_dir_maybe(format!("{}/titles", &folder_name).as_str());
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
-        player.set_depth(3);
+        player.set_depth(depth);
         let mut renderer = Renderer::new(&env, folder_name.clone());
         player.render_all(&mut renderer);
     }

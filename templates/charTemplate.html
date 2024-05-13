@@ -16,7 +16,7 @@
                     Date of birth: {{character.birth}}<br />
                     {%if character.dead%}
                     Date of death: {{character.date}}<br />
-                    Reason of death: {{character.reason}}<br />
+                    Reason of death: {%if character.reason != none%}{{character.reason}}{%else%}Natural causes{%endif%}<br />
                     {%endif%}
                     {%if character.culture != none%}
                     Culture: {{character.culture|render_ref("cultures")}} <br>
@@ -83,8 +83,13 @@
                             Family
                         </div>
                         <ul class="list-group list-group-flush" style="text-align:left">
+                            <li class="list-group-item">Parents: {%for parent in character.parents%} {{parent|render_ref}} {%endfor%}</li>
+                            {%if not character.dead%}
                             <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {{spouse|render_ref}} {%endfor%}</li>
+                            {%endif%}
+                            {%if character.former|length > 0%}
                             <li class="list-group-item">Former spouses: {%for spouse in character.former%} {{spouse|render_ref}} {%endfor%}</li>
+                            {%endif%}
                             <li class="list-group-item">Children: {%for child in character.children%} {{child|render_ref}} {%endfor%}</li>
                         </ul>
                     </div>

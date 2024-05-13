@@ -27,6 +27,7 @@ pub struct Character {
     spouses: Vec<Shared<Character>>,
     former: Vec<Shared<Character>>,
     children: Vec<Shared<Character>>,
+    parents: Vec<Shared<Character>>,
     dna: Option<Rc<String>>,
     memories: Vec<Shared<Memory>>,
     titles: Vec<Shared<Title>>,
@@ -102,7 +103,7 @@ fn get_recessive(recessive:&mut Vec<Rc<String>>, base:&GameObject){
 }
 
 /// Parses the family_data field of the character
-fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Shared<Character>>, children:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
+fn get_family(self_id:u32, spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Shared<Character>>, children:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
     let family_data = base.get("family_data");
     if family_data.is_some(){
         let f = family_data.unwrap().as_object().unwrap();
@@ -144,8 +145,11 @@ fn get_family(spouses:&mut Vec<Shared<Character>>, former_spouses:&mut Vec<Share
         }
         let children_node = f.get("child");
         if children_node.is_some() {
+            let parent = game_state.get_character(self_id.to_string().as_str());
             for s in children_node.unwrap().as_object().unwrap().get_array_iter(){
-                children.push(game_state.get_character(s.as_string().as_str()).clone());
+                let c = game_state.get_character(s.as_string().as_str()).clone();
+                c.borrow_mut().register_parent(parent.clone());
+                children.push(c);
             }
         }
     }
@@ -229,7 +233,9 @@ fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Tit
 fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){
-        return Some(game_state.get_dynasty(dynasty_id.unwrap().as_string().as_str()));
+        let d = game_state.get_dynasty(dynasty_id.unwrap().as_string().as_str());
+        d.borrow_mut().register_member();
+        return Some(d);
     }
     None
 }
@@ -250,11 +256,16 @@ impl Character {
         }
         None
     }
+
+    pub fn register_parent(&mut self, parent:Shared<Character>){
+        self.parents.push(parent);
+    }
 }
 
 impl GameObjectDerived for Character {
 
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
+        let id = base.get_name().parse::<u32>().unwrap();
         let mut dead = false;
         let mut reason = None;
         let mut date = None;
@@ -270,7 +281,7 @@ impl GameObjectDerived for Character {
         let mut spouses = Vec::new();
         let mut former_spouses = Vec::new();
         let mut children = Vec::new();
-        get_family(&mut spouses, &mut former_spouses, &mut children, &base, game_state);
+        get_family(id, &mut spouses, &mut former_spouses, &mut children, &base, game_state);
         //find dna
         let dna = match base.get("dna"){
             Some(d) => Some(d.as_string()),
@@ -323,7 +334,8 @@ impl GameObjectDerived for Character {
             kills: kills,
             languages: languages,
             vassals: vassals,
-            id: base.get_name().parse::<u32>().unwrap(),
+            id: id,
+            parents: Vec::new(),
             depth: 0
         }    
     }
@@ -345,6 +357,7 @@ impl GameObjectDerived for Character {
             spouses: Vec::new(),
             former: Vec::new(),
             children: Vec::new(),
+            parents: Vec::new(),
             dna: None,
             memories: Vec::new(),
             titles: Vec::new(),
@@ -367,7 +380,7 @@ impl GameObjectDerived for Character {
         get_skills(&mut self.skills, &base);
         //find recessive traits
         get_recessive(&mut self.recessive, &base);
-        get_family(&mut self.spouses, &mut self.former, &mut self.children, &base, game_state);
+        get_family(self.id, &mut self.spouses, &mut self.former, &mut self.children, &base, game_state);
         //find dna
         let dna = match base.get("dna"){
             Some(d) => Some(d.as_string()),
@@ -406,7 +419,7 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Character", 27)?;
+        let mut state = serializer.serialize_struct("Character", 28)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
@@ -448,6 +461,9 @@ impl Serialize for Character {
         //serialize children as DerivedRef
         let children = serialize_array::<Character>(&self.children);
         state.serialize_field("children", &children)?;
+        //serialize parents as DerivedRef
+        let parents = serialize_array::<Character>(&self.parents);
+        state.serialize_field("parents", &parents)?;
         state.serialize_field("dna", &self.dna)?;
         //serialize memories as DerivedRef
         state.serialize_field("memories", &self.memories)?;
@@ -505,6 +521,9 @@ impl Renderable for Character {
         for s in self.children.iter(){
             s.as_ref().borrow().render_all(renderer);
         }
+        for s in self.parents.iter(){
+            s.as_ref().borrow().render_all(renderer);
+        }
         for s in self.kills.iter(){
             s.as_ref().borrow().render_all(renderer);
         }
@@ -539,6 +558,12 @@ impl Cullable for Character {
             }
         }
         for s in self.children.iter(){
+            let o = s.try_borrow_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1);
+            }
+        }
+        for s in self.parents.iter(){
             let o = s.try_borrow_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);

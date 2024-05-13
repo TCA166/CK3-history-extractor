@@ -15,9 +15,16 @@ static INT_FAITH_TEMPLATE:&str = include_str!("../templates/faithTemplate.html")
 #[cfg(internal)]
 static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html");
 
+/// Create a new [Environment] with the filters and templates needed for the project.
+/// If the internal flag is set to true, it will use the internal templates, otherwise it will use the templates in the templates folder.
+/// If the templates folder does not exist, it will attempt use the internal templates regardless of the setting.
+/// The environment will have the following filters:
+/// - [render_ref] - renders a reference to another object
+/// - [demangle_generic] - demangles a generic name
 pub fn create_env(internal:bool) -> Environment<'static>{
     let mut env = Environment::new();
     env.add_filter("render_ref", render_ref);
+    env.add_filter("demangle_generic", demangle_generic);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
     if internal || !Path::new("./templates").exists(){
         #[cfg(internal)]
@@ -75,4 +82,16 @@ fn render_ref(reference: Value, subdir:Option<String>) -> String{
         }
         format!("<a href=\"../{}/{}.html\">{}</a>", subdir.unwrap(), reference.get_attr("id").unwrap(), name)
     }
+}
+
+/// A function that demangles a generic name.
+/// It will replace underscores with spaces and capitalize the first letter.
+fn demangle_generic(input:Value) -> String{
+    if input.is_none(){
+        return "none".to_owned();
+    }
+    let mut s = input.as_str().unwrap().replace("_", " ");
+    let bytes = unsafe { s.as_bytes_mut() };
+    bytes[0] = bytes[0].to_ascii_uppercase();
+    s
 }

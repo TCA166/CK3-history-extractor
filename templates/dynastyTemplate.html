@@ -11,7 +11,7 @@
     <main style="margin:15px">
         <div class="row card-deck" style="text-align: left; margin-bottom:5px">
             <div class="col">
-                {%if dynasty.found_date != ""%}
+                {%if dynasty.found_date != "" and dynasty.found_date != none%}
                 Creation Date: {{dynasty.found_date}}
                 <br />
                 {%endif%}
