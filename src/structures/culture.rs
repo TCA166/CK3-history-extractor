@@ -3,7 +3,8 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{serialize_array, Cullable, GameId, GameObjectDerived, Shared};
-use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
+use crate::game_object::{GameObject, GameString};
+use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
 pub struct Culture {

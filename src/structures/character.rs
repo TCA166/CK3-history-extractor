@@ -2,7 +2,7 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue, Wrapper, WrapperMut}, game_state::GameState};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 

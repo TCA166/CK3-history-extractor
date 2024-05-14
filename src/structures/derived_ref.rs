@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::{GameString, WrapperMut};
+use crate::{game_object::GameString, types::WrapperMut};
 
 use super::{Cullable, GameId, GameObjectDerived, Shared, Wrapper};
 

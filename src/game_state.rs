@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
-use crate::game_object::{GameId, GameObject, GameString, Wrapper, WrapperMut};
+use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Title};
+use crate::game_object::{GameId, GameObject, GameString};
+use crate::types::{Shared, Wrapper, WrapperMut};
 
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.

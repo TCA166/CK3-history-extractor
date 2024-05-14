@@ -1,7 +1,8 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderable, Shared};
-use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
+use crate::game_object::{GameObject, GameString};
+use crate::types::{Wrapper, WrapperMut};
 use crate::game_state::GameState;
 
 /// A struct representing a memory in the game

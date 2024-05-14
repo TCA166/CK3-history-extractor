@@ -2,9 +2,11 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
+use crate::game_object::{GameObject, GameString};
 
 use crate::game_state::GameState;
+
+use crate::types::{Wrapper, WrapperMut};
 
 use super::{renderer::{Cullable, Renderable}, Character, GameId, GameObjectDerived, LineageNode, Renderer, Shared};
 

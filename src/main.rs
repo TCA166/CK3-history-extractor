@@ -1,5 +1,8 @@
 use std::{env, fs, time::SystemTime, io::{stdout, stdin, prelude::*}};
 
+/// A submodule that provides opaque types commonly used in the project
+mod types;
+
 /// A submodule that provides the intermediate parsing interface for the save file.
 /// The [crate::save_file] module uses [crate::game_object::GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.
 mod game_object;

@@ -3,14 +3,11 @@
 mod renderer;
 pub use renderer::{Cullable, Renderer, Renderable};
 
-use std::rc::Rc;
-use std::cell::{BorrowMutError, RefCell, RefMut};
-
-use crate::game_object::{GameString, RefOrRaw, WrapperMut};
-
-use super::game_object::{GameObject, GameId, Wrapper};
+use crate::game_object::{GameString, GameObject, GameId};
 
 use super::game_state::GameState;
+
+use super::types::{Wrapper, Shared};
 
 /// A submodule that provides the [Player] object.
 mod player;
@@ -47,46 +44,6 @@ pub use lineage::LineageNode;
 /// A submodule that provides an object that can be used on the frontend as a shallow reference to another [GameObjectDerived] object.
 mod derived_ref;
 pub use derived_ref::{DerivedRef, serialize_array};
-
-/// A type alias for shared objects.
-/// Aliases: [std::rc::GameString]<[std::cell::RefCell]<>>
-/// 
-/// # Example
-/// 
-/// ```
-/// let obj:Shared<String> = Shared::wrap("Hello");
-/// 
-/// let value:Ref<String> = obj.get_internal();
-/// ```
-pub type Shared<T> = Rc<RefCell<T>>;
-
-impl<T> Wrapper<T> for Shared<T> {
-    fn wrap(t:T) -> Self {
-        Rc::new(RefCell::new(t))
-    }
-
-    fn get_internal(&self) -> RefOrRaw<T> {
-        RefOrRaw::Ref(self.borrow())
-    }
-
-    fn try_get_internal(&self) -> Result<RefOrRaw<T>, std::cell::BorrowError> {
-        let r = self.try_borrow();
-        match r {
-            Ok(r) => Ok(RefOrRaw::Ref(r)),
-            Err(e) => Err(e)
-        }
-    }
-}
-
-impl<T> WrapperMut<T> for Shared<T> {
-    fn get_internal_mut(&self) -> RefMut<T> {
-        self.borrow_mut()
-    }
-
-    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError> {
-        self.try_borrow_mut()
-    }
-}
 
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].

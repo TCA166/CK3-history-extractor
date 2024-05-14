@@ -4,8 +4,9 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Shared};
-use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper, WrapperMut};
+use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
+use crate::types::{Wrapper, WrapperMut};
 use std::collections::HashMap;
 
 pub struct Dynasty{

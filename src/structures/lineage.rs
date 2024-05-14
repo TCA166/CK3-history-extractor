@@ -1,14 +1,12 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::GameString;
-use crate::game_object::SaveFileValue;
-use crate::game_object::GameObject;
-use crate::game_object::Wrapper;
+use crate::game_object::{GameString, GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
-use super::GameId;
-use super::{Character, GameObjectDerived, Shared};
+use crate::types::Wrapper;
+
+use super::{Character, GameObjectDerived, Shared, GameId};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode{

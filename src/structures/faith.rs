@@ -3,8 +3,9 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Shared};
 use super::renderer::Renderable;
-use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
+use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
+use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a faith in the game
 pub struct Faith {
