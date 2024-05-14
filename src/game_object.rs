@@ -221,6 +221,7 @@ impl GameObject{
     }
 
     /// Checks if the dictionary and array are empty
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool{
         self.inner.is_empty() && self.array.is_empty()
     }

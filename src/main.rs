@@ -114,7 +114,7 @@ fn main() {
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
     //TODO add multiprocessing? mutlithreading?
-    for mut i in save{
+    for mut i in save.into_iter(){
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());
             stdout().flush().unwrap();
@@ -122,11 +122,12 @@ fn main() {
         }
         match i.get_name(){ //the order is kept consistent with the order in the save file
             "traits_lookup" => {
-                game_state.add_lookup(i.to_object().unwrap().get_array_iter().map(|x| x.as_string()).collect());
+                let r = i.to_object();
+                game_state.add_lookup(r.get_array_iter().map(|x| x.as_string()).collect());
             }
             "landed_titles" => {
-                let o = i.to_object().unwrap();
-                let landed = o.get_object_ref("landed_titles");
+                let r = i.to_object();
+                let landed = r.get_object_ref("landed_titles");
                 for v in landed.get_obj_iter(){
                     let o = v.1.as_object();
                     if o.is_none(){
@@ -137,7 +138,8 @@ fn main() {
                 }
             }
             "dynasties" => {
-                for d in i.to_object().unwrap().get_obj_iter(){
+                let r = i.to_object();
+                for d in r.get_obj_iter(){
                     let o = d.1.as_object().unwrap();
                     if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
                         for h in o.get_obj_iter(){
@@ -151,20 +153,20 @@ fn main() {
                 }
             }
             "living" => {
-                let o = i.to_object().unwrap();
-                for l in o.get_obj_iter(){
+                let r = i.to_object();
+                for l in r.get_obj_iter(){
                     game_state.add_character(l.1.as_object().unwrap());
                 }
             }
             "dead_unprunable" => {
-                let o = i.to_object().unwrap();
-                for d in o.get_obj_iter(){
+                let r = i.to_object();
+                for d in r.get_obj_iter(){
                     game_state.add_character(d.1.as_object().unwrap());   
                 }
             }
             "vassal_contracts" => {
-                let o = i.to_object().unwrap();
-                let active = o.get_object_ref("active");
+                let r = i.to_object();
+                let active = r.get_object_ref("active");
                 for contract in active.get_obj_iter(){
                     let val = contract.1.as_object();
                     if val.is_some(){
@@ -173,22 +175,22 @@ fn main() {
                 }
             }
             "religion" => {
-                let o = i.to_object().unwrap();
-                let faiths = o.get_object_ref("faiths");
+                let r = i.to_object();
+                let faiths = r.get_object_ref("faiths");
                 for f in faiths.get_obj_iter(){
                     game_state.add_faith(f.1.as_object().unwrap());
                 }
             }
             "culture_manager" => {
-                let o = i.to_object().unwrap();
-                let cultures = o.get_object_ref("cultures");
+                let r = i.to_object();
+                let cultures = r.get_object_ref("cultures");
                 for c in cultures.get_obj_iter(){
                     game_state.add_culture(c.1.as_object().unwrap());
                 }
             }
             "character_memory_manager" => {
-                let o = i.to_object().unwrap();
-                let database = o.get_object_ref("database");
+                let r = i.to_object();
+                let database = r.get_object_ref("database");
                 for d in database.get_obj_iter(){
                     let mem = d.1.as_object();
                     if mem.is_none() {
@@ -198,7 +200,8 @@ fn main() {
                 }
             } 
             "played_character" => {
-                let p = Player::from_game_object(&i.to_object().unwrap(), &mut game_state);
+                let r = i.to_object();
+                let p = Player::from_game_object(&r, &mut game_state);
                 players.push(p);
             }
             _ => {

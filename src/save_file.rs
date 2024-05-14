@@ -1,28 +1,15 @@
-use std::{fs::File, io::prelude::*, mem, rc::Rc};
-use crate::game_object::{GameObject, SaveFileValue};
-
-/// A function that reads a single character from a file
-/// 
-/// # Returns
-/// 
-/// The character read or None if the end of the file is reached
-fn fgetc(file: &mut File) -> Option<char> {
-    let mut buffer = [0; 1];
-    if file.read_exact(&mut buffer).is_err() {
-        return None;
-    }
-    Some(buffer[0] as char)
-}
-
+use std::{mem, rc::Rc};
+use crate::{game_object::{GameObject, SaveFileValue}, types::{Shared, Wrapper, WrapperMut}};
 
 /// A struct that represents a section in a ck3 save file.
-/// Each section has a name, and holds a file handle to the section.
+/// Each section has a name, holds a reference to the contents of the save file and the current parsing offset.
+/// This means that all sections of the save file share a single parsing state.
 /// 
 /// # Validity
 /// 
-/// The section is guaranteed to be valid when you get it.
-/// However once you call [Section::to_object] or [Section::skip] the section becomes invalid.
-/// Trying to do anything with an invalid section will panic.
+/// A section is valid until it is converted into a [GameObject] using [Section::to_object] or skipped using [Section::skip].
+/// After that, the section is invalidated and any further attempts to convert it will result in a panic.
+/// This is done to prevent double parsing of the same section.
 /// 
 /// # Example
 /// 
@@ -33,15 +20,19 @@ fn fgetc(file: &mut File) -> Option<char> {
 /// ```
 pub struct Section{
     name: String,
-    file:Option<File>
+    contents: Rc<String>,
+    offset: Shared<usize>,
+    valid: bool
 }
 
 impl Section{
     /// Create a new section
-    fn new(name: String, file: File) -> Section{
+    fn new(name: String, contents: Rc<String>, offset: Shared<usize>) -> Self{
         Section{
             name: name,
-            file: Some(file)
+            contents: contents,
+            offset: offset,
+            valid: true
         }
     }
 
@@ -50,25 +41,25 @@ impl Section{
         &self.name
     }
 
-    /// Invalidate the section
+    /// Invalidate the section.
+    /// Both [Section::to_object] and [Section::skip] will panic if the section is invalid.
     fn invalidate(&mut self){
-        self.file = None;
+        self.valid = false;
     }
 
-    /// Convert the section to a GameObject and invalidate it.
+    /// Convert the section to a GameObject.
     /// This is a rather costly process as it has to read the entire section contents and parse them.
     /// You can then make a choice if you want to parse the object or [Section::skip] it.
-    /// The section must be valid.
     /// 
     /// # Panics
     /// 
-    /// If the section is invalid
-    pub fn to_object(&mut self) -> Option<GameObject>{
-        if self.file.is_none(){
-            panic!("Invalid section");
+    /// Panics if the section is invalid, or a parsing error occurs.
+    pub fn to_object(&mut self) -> GameObject{
+        if !self.valid{
+            panic!("Section {} is invalid", self.name);
         }
+        self.invalidate();
         let mut quotes = false;
-        let file = &mut self.file.as_mut().unwrap();
         // storage
         let mut key = String::new();
         let mut val = String::new();
@@ -78,8 +69,9 @@ impl Section{
         //initialize the object stack
         let mut stack: Vec<GameObject> = Vec::new();
         stack.push(object);
+        let mut off = self.offset.get_internal_mut();
         //initialize the key stack
-        while let Some(c) = fgetc(file) { 
+        for (ind, c) in self.contents[*off..].char_indices() { 
             match c{ // we parse the byte
                 '{' => { // we have a new object, we push a new hashmap to the stack
                     depth += 1;
@@ -109,10 +101,11 @@ impl Section{
                         }
                     }
                     else if depth == 0{ // we have reached the end of the object we are parsing, we return the object
+                        *off += ind + 1;
                         break;
                     }
                     else { // sanity check
-                        panic!("Depth is negative");
+                        panic!("Depth is negative at {}", *off);
                     }
                 }
                 '"' => { // we have a quote, we toggle the quotes flag
@@ -163,28 +156,25 @@ impl Section{
             }
         }
         object = stack.pop().unwrap();
-        object.rename(self.name.clone());
-        self.invalidate();
-        if object.is_empty(){
-            return None;
-        }
-        return Some(object);
+        object.rename(self.name.to_string());
+        return object;
     }
 
-    /// Skip the current section and invalidate it.
-    /// This is a rather cheap operation as it only reads the file until the end of the section.
-    /// The section must be valid.
+    /// Skip the current section.
+    /// Adds the length of the section to the offset and returns.
+    /// This is useful if you are not interested in the contents of the section.
     /// 
     /// # Panics
     /// 
-    /// If the section is invalid
+    /// Panics if the section is invalid.
     pub fn skip(&mut self){
-        if self.file.is_none(){
-            panic!("Invalid section");
+        if !self.valid{
+            panic!("Section {} is invalid", self.name);
         }
+        self.invalidate();
         let mut depth = 0;
-        let file = &mut self.file.as_mut().unwrap();
-        while let Some(c) = fgetc(file) {
+        let mut off = self.offset.get_internal_mut();
+        for (ind, c) in self.contents[*off..].char_indices() {
             match c{
                 '{' => {
                     depth += 1;
@@ -192,18 +182,26 @@ impl Section{
                 '}' => {
                     depth -= 1;
                     if depth == 0{
+                        *off += ind + 1;
                         break;
                     }
                 }
                 _ => {}
             }
         }
-        self.invalidate();
     }
 }
 
 /// A struct that represents a ck3 save file.
 /// This struct is an iterator that returns sections from the save file.
+/// The save file is loaded once, and then parsed iteratively as needed.
+/// If the parsing is done correctly the process should be O(n) speed and memory wise.
+/// 
+/// # Iterative behavior
+/// 
+/// The idea behind the iterative behavior is that the save file is parsed as needed.
+/// Some sections are skipped, some are parsed into [GameObject].
+/// The choice is up to the user, after they are given the returned [Section] objects where they can check the section name using [Section::get_name].
 /// 
 /// # Example
 /// 
@@ -213,7 +211,10 @@ impl Section{
 ///    println!("Section: {}", section.get_name());
 /// }
 pub struct SaveFile{
-    file: File
+    /// The contents of the save file, shared between all sections
+    contents: Rc<String>,
+    /// A single shared byte offset for all sections inside of [SaveFile::contents]
+    offset: Shared<usize>,
 }
 
 impl SaveFile{
@@ -221,8 +222,10 @@ impl SaveFile{
     /// Create a new SaveFile instance.
     /// The filename must be valid of course.
     pub fn new(filename: &str) -> SaveFile{
+        let contents = std::fs::read_to_string(filename).unwrap();
         SaveFile{
-            file: File::open(filename).unwrap(),
+            contents: Rc::new(contents),
+            offset: Shared::wrap(0),
         }
     }
 
@@ -233,16 +236,17 @@ impl Iterator for SaveFile{
     type Item = Section;
 
     /// Get the next object in the save file
-    /// If the file pointer has reached the end of the file then it will return None.
+    /// If the file pointer has reached the end of the save file then it will return None.
     fn next(&mut self) -> Option<Section>{
         let mut key = String::new();
-        let file = &mut self.file;
-        while let Some(c) = fgetc(file) {
+        let mut off = self.offset.get_internal_mut();
+        for (ind, c) in self.contents[*off..].char_indices(){
             match c{
                 '{' | '}' | '"' => {
-                    panic!("Unexpected character");
+                    panic!("Unexpected character at {}", *off);
                 }
                 '=' => {
+                    *off += ind + 1;
                     break;
                 }
                 '\n' => {
@@ -260,7 +264,7 @@ impl Iterator for SaveFile{
         if key.is_empty(){
             return None;
         }
-        return Some(Section::new(key, self.file.try_clone().unwrap()));
+        return Some(Section::new(key, self.contents.clone(), self.offset.clone()));
     }
 }
 
@@ -274,6 +278,8 @@ mod tests {
 
     #[allow(unused_imports)]
     use crate::game_object::GameObject;
+    #[allow(unused_imports)]
+    use crate::types::{Shared, Wrapper};
 
     #[test]
     fn test_save_file(){
@@ -286,7 +292,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         let test3 = test2.get_string_ref("test3");
@@ -307,7 +313,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         let test2_val = test2;
@@ -335,7 +341,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         assert_eq!(*(test2.get_string_ref("1")) , "2".to_string());
@@ -351,7 +357,7 @@ mod tests {
             }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
         assert_eq!(*(test2.get_index(0).unwrap().as_string()) , "1".to_string());
@@ -385,7 +391,7 @@ mod tests {
         }
         ").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         let variables = object.get_object_ref("variables");
         let data = variables.get_object_ref("data");
         assert!(!data.is_empty());
@@ -430,7 +436,7 @@ mod tests {
             artifact_claims={ 83888519 }
         }").unwrap();
         let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
-        let object = save_file.next().unwrap().to_object().unwrap();
+        let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(*(object.get_string_ref("name")) , "dynn_Sao".to_string());
         let historical = object.get_object_ref("historical");
