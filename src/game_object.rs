@@ -1,4 +1,22 @@
-use std::{collections::{hash_map, HashMap}, rc::Rc, slice, fmt::Debug};
+use std::{cell::{BorrowError, BorrowMutError, Ref, RefMut}, collections::{hash_map, HashMap}, fmt::Debug, ops::Deref, rc::Rc, slice};
+
+/// A reference or a raw value. I have no clue why this isn't a standard library type.
+/// A [Ref] and a raw reference are both dereferencable to the same type.
+pub enum RefOrRaw<'a, T: 'a> {
+    Ref(Ref<'a, T>),
+    Raw(&'a T),
+}
+
+impl<'a, T> Deref for RefOrRaw<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            RefOrRaw::Ref(r) => r.deref(),
+            RefOrRaw::Raw(r) => r,
+        }
+    }
+}
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
@@ -6,6 +24,18 @@ use std::{collections::{hash_map, HashMap}, rc::Rc, slice, fmt::Debug};
 pub trait Wrapper<T> {
     /// Wrap a value in the object
     fn wrap(t:T) -> Self;
+
+    fn get_internal(&self) -> RefOrRaw<T>;
+
+    fn try_get_internal(&self) -> Result<RefOrRaw<T>, BorrowError>;
+}
+
+/// A trait for objects that wrap a certain value and allow mutation.
+/// Allows us to create opaque type aliases for certain types.
+pub trait WrapperMut<T> {
+    fn get_internal_mut(&self) -> RefMut<T>;
+
+    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError>;
 }
 
 /// A type alias for a game object id.
@@ -20,6 +50,14 @@ pub type GameString = Rc<String>;
 impl Wrapper<String> for GameString {
     fn wrap(t:String) -> Self {
         Rc::new(t)
+    }
+
+    fn get_internal(&self) -> RefOrRaw<String>{
+        RefOrRaw::Raw(self.as_ref())
+    }
+
+    fn try_get_internal(&self) -> Result<RefOrRaw<String>, BorrowError> {
+        Ok(self.get_internal())
     }
 }
 

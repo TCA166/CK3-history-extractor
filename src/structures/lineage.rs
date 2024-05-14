@@ -157,7 +157,7 @@ impl GameObjectDerived for LineageNode{
     }
 
     fn get_name(&self) -> GameString {
-        self.character.as_ref().unwrap().borrow().get_name()
+        self.character.as_ref().unwrap().get_internal().get_name()
     }
 }
 

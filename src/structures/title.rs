@@ -3,7 +3,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper};
+use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper, WrapperMut};
 use crate::game_state::GameState;
 
 use super::renderer::Renderable;
@@ -251,17 +251,17 @@ impl Renderable for Title {
             return;
         }
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().borrow().render_all(renderer);
+            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer);
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().borrow().render_all(renderer);
+            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer);
         }
         for v in &self.vassals{
-            v.as_ref().borrow().render_all(renderer);
+            v.get_internal().render_all(renderer);
         }
         for o in &self.history{
             if o.1.is_some(){
-                o.1.as_ref().unwrap().borrow().render_all(renderer);
+                o.1.as_ref().unwrap().get_internal().render_all(renderer);
             }
         }
     }
@@ -274,17 +274,17 @@ impl Cullable for Title {
         }
         self.depth = depth;
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+            self.de_jure.as_ref().unwrap().get_internal_mut().set_depth(depth-1);
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().borrow_mut().set_depth(depth-1);
+            self.de_facto.as_ref().unwrap().get_internal_mut().set_depth(depth-1);
         }
         for v in &self.vassals{
-            v.borrow_mut().set_depth(depth-1);
+            v.get_internal_mut().set_depth(depth-1);
         }
         for o in &self.history{
             if o.1.is_some(){
-                let c = o.1.as_ref().unwrap().try_borrow_mut();
+                let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok(){
                     c.unwrap().set_depth(depth-1);
                 }

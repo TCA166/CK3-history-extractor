@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Shared};
-use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper};
+use crate::game_object::{GameObject, GameString, SaveFileValue, Wrapper, WrapperMut};
 use crate::game_state::GameState;
 use std::collections::HashMap;
 
@@ -26,13 +26,13 @@ impl Dynasty {
     /// Gets the faith of the dynasty.
     /// Really this is just the faith of the current house leader.
     pub fn get_faith(&self) -> Option<Shared<Faith>> {
-        self.leaders.last().unwrap().borrow().get_faith()
+        self.leaders.last().unwrap().get_internal().get_faith()
     }
 
     /// Gets the culture of the dynasty.
     /// Really this is just the culture of the current house leader.
     pub fn get_culture(&self) -> Option<Shared<Culture>> {
-        self.leaders.last().unwrap().borrow().get_culture()
+        self.leaders.last().unwrap().get_internal().get_culture()
     }
 
     pub fn register_house(&mut self){
@@ -42,7 +42,7 @@ impl Dynasty {
     pub fn register_member(&mut self){
         self.members += 1;
         if self.parent.as_ref().is_some(){
-            let mut p = self.parent.as_ref().unwrap().try_borrow_mut();
+            let mut p = self.parent.as_ref().unwrap().try_get_internal_mut();
             if p.is_ok(){
                 p.as_mut().unwrap().register_member();
             }
@@ -123,7 +123,7 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
         None => None,
         k => {
             let p = game_state.get_dynasty(&k.unwrap().as_id()).clone();
-            let m = p.try_borrow_mut();
+            let m = p.try_get_internal_mut();
             if m.is_err(){
                 return None;
             }
@@ -143,7 +143,7 @@ fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> GameString{
                 return GameString::wrap("".to_owned().into());
             }
             //this may happen for dynasties with a house with the same name
-            return parent.unwrap().borrow().name.as_ref().unwrap().clone();
+            return parent.unwrap().get_internal().name.as_ref().unwrap().clone();
         }
     }
     n.unwrap().as_string()
@@ -265,7 +265,7 @@ impl Renderable for Dynasty {
             return;
         }
         for leader in self.leaders.iter(){
-            leader.borrow().render_all(renderer);
+            leader.get_internal().render_all(renderer);
         }
     }
 }
@@ -277,13 +277,13 @@ impl Cullable for Dynasty {
         }
         self.depth = depth;
         for leader in self.leaders.iter(){
-            let o = leader.try_borrow_mut();
+            let o = leader.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         if self.parent.as_ref().is_some(){
-            let o = self.parent.as_ref().unwrap().try_borrow_mut();
+            let o = self.parent.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }

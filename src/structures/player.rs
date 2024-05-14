@@ -2,7 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::{GameObject, GameString, Wrapper};
+use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
 
 use crate::game_state::GameState;
 
@@ -97,7 +97,7 @@ impl Renderable for Player{
     fn render_all(&self, renderer: &mut Renderer){
         renderer.render(self);
         for char in self.lineage.iter(){
-            char.get_character().borrow().render_all(renderer);
+            char.get_character().get_internal().render_all(renderer);
         }
     }
 }
@@ -105,7 +105,7 @@ impl Renderable for Player{
 impl Cullable for Player{
     fn set_depth(&mut self, depth: usize){
         for node in self.lineage.iter(){
-            node.get_character().borrow_mut().set_depth(depth);
+            node.get_character().get_internal_mut().set_depth(depth);
         }
     }
 

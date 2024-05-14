@@ -3,7 +3,7 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{serialize_array, Cullable, GameId, GameObjectDerived, Shared};
-use crate::game_object::{GameObject, GameString, Wrapper};
+use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
 pub struct Culture {
@@ -140,7 +140,7 @@ impl Renderable for Culture {
             return;
         }
         for p in &self.parents{
-            p.borrow().render_all(renderer);
+            p.get_internal().render_all(renderer);
         }
     }
 }
@@ -156,7 +156,7 @@ impl Cullable for Culture {
         }
         self.depth = depth;
         for p in &self.parents{
-            p.borrow_mut().set_depth(depth-1);
+            p.get_internal_mut().set_depth(depth-1);
         }
     }
 }

@@ -2,7 +2,7 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue, Wrapper}, game_state::GameState};
+use crate::{game_object::{GameObject, GameString, SaveFileValue, Wrapper, WrapperMut}, game_state::GameState};
 
 use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
@@ -118,7 +118,7 @@ fn get_family(self_id:GameId, spouses:&mut Vec<Shared<Character>>, former_spouse
                 SaveFileValue::Object(o) => {
                     for s in o.get_array_iter(){
                         let c = game_state.get_character(&s.as_id()).clone();
-                        let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+                        let contains = former_spouses.iter().any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                         if !contains{
                             spouses.push(c);
                         }
@@ -126,7 +126,7 @@ fn get_family(self_id:GameId, spouses:&mut Vec<Shared<Character>>, former_spouse
                 }
                 SaveFileValue::String(o) => {
                     let c = game_state.get_character(&o.parse::<GameId>().unwrap()).clone();
-                    let contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+                    let contains = former_spouses.iter().any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                     if !contains{
                         spouses.push(c);
                     }
@@ -136,8 +136,8 @@ fn get_family(self_id:GameId, spouses:&mut Vec<Shared<Character>>, former_spouse
         let primary_spouse_node = f.get("primary_spouse");
         if primary_spouse_node.is_some() {
             let c = game_state.get_character(&primary_spouse_node.unwrap().as_id()).clone();
-            let mut contains = former_spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
-            contains = contains || spouses.iter().any(|x| x.as_ref().borrow().get_id() == c.as_ref().borrow().get_id());
+            let mut contains = former_spouses.iter().any(|x| x.get_internal().get_id() == c.get_internal().get_id());
+            contains = contains || spouses.iter().any(|x| x.get_internal().get_id() == c.get_internal().get_id());
             if !contains{
                 spouses.push(c);
             }
@@ -147,7 +147,7 @@ fn get_family(self_id:GameId, spouses:&mut Vec<Shared<Character>>, former_spouse
             let parent = game_state.get_character(&self_id);
             for s in children_node.unwrap().as_object().unwrap().get_array_iter(){
                 let c = game_state.get_character(&s.as_id()).clone();
-                c.borrow_mut().register_parent(parent.clone());
+                c.get_internal_mut().register_parent(parent.clone());
                 children.push(c);
             }
         }
@@ -233,7 +233,7 @@ fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyn
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){
         let d = game_state.get_dynasty(&dynasty_id.unwrap().as_id());
-        d.borrow_mut().register_member();
+        d.get_internal_mut().register_member();
         return Some(d);
     }
     None
@@ -436,11 +436,11 @@ impl Serialize for Character {
             let rd = DerivedRef::<Dynasty>::from_derived(h.clone());
             state.serialize_field("house", &rd)?;
             if faith.is_none(){
-                let o = h.as_ref().borrow();
+                let o = h.get_internal();
                 faith = o.get_faith();
             }
             if culture.is_none(){
-                let o = h.as_ref().borrow();
+                let o = h.get_internal();
                 culture = o.get_culture();
             }
         }
@@ -507,37 +507,37 @@ impl Renderable for Character {
             return;
         }
         if self.faith.is_some(){
-            self.faith.as_ref().unwrap().as_ref().borrow().render_all(renderer);
+            self.faith.as_ref().unwrap().get_internal().render_all(renderer);
         }
         if self.culture.is_some(){
-            self.culture.as_ref().unwrap().as_ref().borrow().render_all(renderer);
+            self.culture.as_ref().unwrap().get_internal().render_all(renderer);
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().as_ref().borrow().render_all(renderer);
+            self.house.as_ref().unwrap().get_internal().render_all(renderer);
         }
         for s in self.spouses.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for s in self.former.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for s in self.children.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for s in self.parents.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for s in self.kills.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for s in self.vassals.iter(){
-            s.as_ref().borrow().get_ref().as_ref().borrow().render_all(renderer);
+            s.get_internal().get_ref().get_internal().render_all(renderer);
         }
         for s in self.titles.iter(){
-            s.as_ref().borrow().render_all(renderer);
+            s.get_internal().render_all(renderer);
         }
         for m in self.memories.iter() {
-            m.as_ref().borrow().render_participants(renderer);
+            m.get_internal().render_participants(renderer);
         }
     }
 }
@@ -549,64 +549,64 @@ impl Cullable for Character {
         }
         self.depth = depth;
         for s in self.spouses.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.former.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.children.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.parents.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.kills.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.vassals.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().get_ref().as_ref().borrow_mut().set_depth(depth - 1);
+                o.unwrap().get_ref().get_internal_mut().set_depth(depth - 1);
             }
         }
         if self.culture.is_some(){
-            let o = self.culture.as_ref().unwrap().try_borrow_mut();
+            let o = self.culture.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         if self.faith.is_some(){
-            let o = self.faith.as_ref().unwrap().try_borrow_mut();
+            let o = self.faith.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.titles.iter(){
-            let o = s.try_borrow_mut();
+            let o = s.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.memories.iter(){
-            s.borrow_mut().set_depth(depth - 1);
+            s.get_internal_mut().set_depth(depth - 1);
         }
         if self.house.is_some(){
-            let o = self.house.as_ref().unwrap().try_borrow_mut();
+            let o = self.house.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1);
             }

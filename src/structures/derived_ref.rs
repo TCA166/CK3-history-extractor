@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::GameString;
+use crate::game_object::{GameString, WrapperMut};
 
 use super::{Cullable, GameId, GameObjectDerived, Shared, Wrapper};
 
@@ -18,7 +18,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     /// Create a new DerivedRef from a [Shared] object.
     /// This will clone the object and store a reference to it.
     pub fn from_derived(obj:Shared<T>) -> Self{
-        let o = obj.borrow();
+        let o = obj.get_internal();
         DerivedRef{
             id: o.get_id(),
             name: o.get_name(),
@@ -39,8 +39,8 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
 
     /// Initialize the DerivedRef with a [Shared] object.
     pub fn init(&mut self, obj:Shared<T>){
-        self.id = obj.borrow().get_id();
-        self.name = obj.borrow().get_name();
+        self.id = obj.get_internal().get_id();
+        self.name = obj.get_internal().get_name();
         self.obj = obj;
     }
 
@@ -63,7 +63,7 @@ impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{
         let mut state = serializer.serialize_struct("DerivedRef", 3)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        let shallow = self.obj.borrow().get_depth() == 0;
+        let shallow = self.obj.get_internal().get_depth() == 0;
         state.serialize_field("shallow", &shallow)?;
         state.end()
     }
@@ -71,10 +71,10 @@ impl<T> Serialize for DerivedRef<T> where T:GameObjectDerived + Cullable{
 
 impl<T> Cullable for DerivedRef<T> where T:GameObjectDerived + Cullable{
     fn get_depth(&self) -> usize {
-        self.obj.borrow().get_depth()
+        self.obj.get_internal().get_depth()
     }
 
     fn set_depth(&mut self, depth:usize) {
-        self.obj.borrow_mut().set_depth(depth);
+        self.obj.get_internal_mut().set_depth(depth);
     }
 }

@@ -3,7 +3,7 @@ use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Shared};
 use super::renderer::Renderable;
-use crate::game_object::{GameObject, GameString, Wrapper};
+use crate::game_object::{GameObject, GameString, Wrapper, WrapperMut};
 use crate::game_state::GameState;
 
 /// A struct representing a faith in the game
@@ -22,7 +22,7 @@ fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> O
     let current = base.get("religious_head");
     if current.is_some(){
         let title = game_state.get_title(&current.unwrap().as_id());
-        return title.borrow().get_holder();
+        return title.get_internal().get_holder();
     }
     None
 }
@@ -142,7 +142,7 @@ impl Renderable for Faith {
             return;
         }
         if self.head.is_some(){
-            self.head.as_ref().unwrap().borrow().render_all(renderer);
+            self.head.as_ref().unwrap().get_internal().render_all(renderer);
         }
     }
 }
@@ -158,7 +158,7 @@ impl Cullable for Faith {
         }
         self.depth = depth;
         if self.head.is_some(){
-            let o = self.head.as_ref().unwrap().try_borrow_mut();
+            let o = self.head.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth-1);
             }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Shared, Title};
-use crate::game_object::{GameId, GameObject, GameString, Wrapper};
+use crate::game_object::{GameId, GameObject, GameString, Wrapper, WrapperMut};
 
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
@@ -80,7 +80,7 @@ impl GameState{
         let char = self.get_character(character_id);
         if self.contract_transform.contains_key(contract_id){
             let entry = self.contract_transform.get(contract_id).unwrap();
-            entry.borrow_mut().init(char);
+            entry.get_internal_mut().init(char);
         }
         else{
             let r = Shared::wrap(DerivedRef::from_derived(char));
@@ -153,7 +153,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.characters.contains_key(&key){
             let c = self.characters.get(&key).unwrap().clone();
-            c.borrow_mut().init(value, self);
+            c.get_internal_mut().init(value, self);
         }
         else{
             let c = Character::from_game_object(value, self);
@@ -166,7 +166,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.titles.contains_key(&key){
             let t = self.titles.get(&key).unwrap().clone();
-            t.borrow_mut().init(value, self);
+            t.get_internal_mut().init(value, self);
         }
         else{
             let t = Title::from_game_object(value, self);
@@ -179,7 +179,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.faiths.contains_key(&key){
             let f = self.faiths.get(&key).unwrap().clone();
-            f.borrow_mut().init(value, self);
+            f.get_internal_mut().init(value, self);
         }
         else{
             let f = Faith::from_game_object(value, self);
@@ -192,7 +192,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.cultures.contains_key(&key){
             let c = self.cultures.get(&key).unwrap().clone();
-            c.borrow_mut().init(value, self);
+            c.get_internal_mut().init(value, self);
         }
         else{
             let c = Culture::from_game_object(value, self);
@@ -205,7 +205,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.dynasties.contains_key(&key){
             let d = self.dynasties.get(&key).unwrap().clone();
-            d.borrow_mut().init(value, self);
+            d.get_internal_mut().init(value, self);
         }
         else{
             let d = Dynasty::from_game_object(value, self);
@@ -218,7 +218,7 @@ impl GameState{
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.memories.contains_key(&key){
             let m = self.memories.get(&key).unwrap().clone();
-            m.borrow_mut().init(value, self);
+            m.get_internal_mut().init(value, self);
         }
         else{
             let m = Memory::from_game_object(value, self);
