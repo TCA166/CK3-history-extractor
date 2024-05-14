@@ -1,9 +1,9 @@
-use std::{cell::{BorrowError, BorrowMutError, Ref, RefCell, RefMut}, ops::Deref, rc::Rc};
+use std::{ops::Deref, sync::{Arc, Mutex, MutexGuard, TryLockError}};
 
 /// A reference or a raw value. I have no clue why this isn't a standard library type.
 /// A [Ref] and a raw reference are both dereferencable to the same type.
 pub enum RefOrRaw<'a, T: 'a> {
-    Ref(Ref<'a, T>),
+    Ref(MutexGuard<'a, T>),
     Raw(&'a T),
 }
 
@@ -27,15 +27,15 @@ pub trait Wrapper<T> {
 
     fn get_internal(&self) -> RefOrRaw<T>;
 
-    fn try_get_internal(&self) -> Result<RefOrRaw<T>, BorrowError>;
+    fn try_get_internal(&self) -> Result<RefOrRaw<T>, TryLockError<MutexGuard<T>>>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
 /// Allows us to create opaque type aliases for certain types.
 pub trait WrapperMut<T> {
-    fn get_internal_mut(&self) -> RefMut<T>;
+    fn get_internal_mut(&self) -> MutexGuard<T>;
 
-    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError>;
+    fn try_get_internal_mut(&self) -> Result<MutexGuard<T>, TryLockError<MutexGuard<T>>>;
 }
 
 /// A type alias for shared objects.
@@ -48,32 +48,32 @@ pub trait WrapperMut<T> {
 /// 
 /// let value:Ref<String> = obj.get_internal();
 /// ```
-pub type Shared<T> = Rc<RefCell<T>>;
+pub type Shared<T> = Arc<Mutex<T>>;
 
 impl<T> Wrapper<T> for Shared<T> {
     fn wrap(t:T) -> Self {
-        Rc::new(RefCell::new(t))
+        Arc::new(Mutex::new(t))
     }
 
     fn get_internal(&self) -> RefOrRaw<T> {
-        RefOrRaw::Ref(self.borrow())
+        RefOrRaw::Ref(self.lock().unwrap())
     }
 
-    fn try_get_internal(&self) -> Result<RefOrRaw<T>, std::cell::BorrowError> {
-        let r = self.try_borrow();
+    fn try_get_internal(&self) -> Result<RefOrRaw<T>, TryLockError<MutexGuard<T>>> {
+        let r = self.try_lock();
         match r {
             Ok(r) => Ok(RefOrRaw::Ref(r)),
-            Err(e) => Err(e)
+            Err(e) => Err(e) // Fix: Provide the missing argument 'e' in the Err() variant
         }
     }
 }
 
 impl<T> WrapperMut<T> for Shared<T> {
-    fn get_internal_mut(&self) -> RefMut<T> {
-        self.borrow_mut()
+    fn get_internal_mut(&self) -> MutexGuard<T> {
+        self.lock().unwrap()
     }
 
-    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError> {
-        self.try_borrow_mut()
+    fn try_get_internal_mut(&self) -> Result<MutexGuard<T>, TryLockError<MutexGuard<T>>> {
+        self.try_lock()
     }
 }

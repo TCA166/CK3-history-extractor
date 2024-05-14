@@ -1,5 +1,5 @@
-use std::{fs::File, io::prelude::*, mem, rc::Rc};
-use crate::game_object::{GameObject, SaveFileValue};
+use std::{fs::File, io::prelude::*, mem};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, types::Wrapper};
 
 /// A function that reads a single character from a file
 /// 
@@ -89,12 +89,12 @@ impl Section{
                 '}' => { // we have reached the end of an object
                     // if there was an assignment, we insert the key value pair
                     if past_eq && !val.is_empty() {
-                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
+                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(GameString::wrap(mem::take(&mut val))));
                         past_eq = false;
                     }
                     // if there wasn't an assignment but we still gathered some data
                     else if !key.is_empty() {
-                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        stack.last_mut().unwrap().push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                     }
                     depth -= 1;
                     if depth > 0 { // if we are still in an object, we pop the object and insert it into the parent object
@@ -120,11 +120,11 @@ impl Section{
                 }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
                     if past_eq { // we have a key value pair
-                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
+                        stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(GameString::wrap(mem::take(&mut val))));
                         past_eq = false; // we reset the past_eq flag
                     }
                     else if !key.is_empty(){ // we have just a key { \n key \n }
-                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        stack.last_mut().unwrap().push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                     }
                 }
                 //TODO sometimes a text will precede an array like this color=rgb {} we should handle this
@@ -132,11 +132,11 @@ impl Section{
                     if !quotes{ // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() { // in case {something=else something=else}
-                            stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
+                            stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(GameString::wrap(mem::take(&mut val))));
                             past_eq = false;
                         }
                         else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                            stack.last_mut().unwrap().push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         }
                     }
                 } 
@@ -199,6 +199,17 @@ impl Section{
             }
         }
         self.invalidate();
+    }
+}
+
+//TODO add function for 'diverging' a new instance
+
+impl Clone for Section {
+    fn clone(&self) -> Self {
+        Section{
+            name: self.name.clone(),
+            file: self.file.as_ref().map(|f| f.try_clone().unwrap())
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{cell::BorrowError, collections::{hash_map, HashMap}, fmt::Debug, rc::Rc, slice};
+use std::{collections::{hash_map, HashMap}, fmt::Debug, slice, sync::{Arc, MutexGuard, TryLockError}};
 
 use crate::types::{RefOrRaw, Wrapper};
 
@@ -9,18 +9,18 @@ pub type GameId = u32;
 
 /// A type alias for a game string.
 /// Roughly meant to represent a raw string from a save file, reference counted so that it exists once in memory.
-pub type GameString = Rc<String>;
+pub type GameString = Arc<String>;
 
 impl Wrapper<String> for GameString {
     fn wrap(t:String) -> Self {
-        Rc::new(t)
+        Arc::new(t)
     }
 
     fn get_internal(&self) -> RefOrRaw<String>{
         RefOrRaw::Raw(self.as_ref())
     }
 
-    fn try_get_internal(&self) -> Result<RefOrRaw<String>, BorrowError> {
+    fn try_get_internal(&self) -> Result<RefOrRaw<String>, TryLockError<MutexGuard<String>>> {
         Ok(self.get_internal())
     }
 }

@@ -1,4 +1,4 @@
-use std::{env, fs, time::SystemTime, io::{stdout, stdin, prelude::*}};
+use std::{env, fs, io::{prelude::*, stdin, stdout}, sync::{Arc, Mutex}, thread, time::SystemTime};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -110,10 +110,9 @@ fn main() {
     //initialize the save file
     let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
     // this is sort of like the first round of filtering where we store the objects we care about
-    let mut game_state:GameState = GameState::new();
+    let game_state = Arc::new(Mutex::new(GameState::new()));
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
-    //TODO add multiprocessing? mutlithreading?
     for mut i in save{
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());
@@ -122,83 +121,109 @@ fn main() {
         }
         match i.get_name(){ //the order is kept consistent with the order in the save file
             "traits_lookup" => {
-                game_state.add_lookup(i.to_object().unwrap().get_array_iter().map(|x| x.as_string()).collect());
+                game_state.lock().unwrap().add_lookup(i.to_object().unwrap().get_array_iter().map(|x| x.as_string()).collect());
             }
             "landed_titles" => {
-                let o = i.to_object().unwrap();
-                let landed = o.get_object_ref("landed_titles");
-                for v in landed.get_obj_iter(){
-                    let o = v.1.as_object();
-                    if o.is_none(){
-                        // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
-                        continue;
+                let state = game_state.clone();
+                let mut section = i.clone();
+                //FIXME the threading brakes the parsing
+                thread::spawn(move || {
+                    let o = section.to_object().unwrap();
+                    for v in o.get_obj_iter(){
+                        let o = v.1.as_object();
+                        if o.is_none(){
+                            // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
+                            continue;
+                        }
+                        state.lock().unwrap().add_title(o.unwrap());
                     }
-                    game_state.add_title(o.unwrap());
-                }
+                });
+                i.skip();
             }
             "dynasties" => {
-                for d in i.to_object().unwrap().get_obj_iter(){
-                    let o = d.1.as_object().unwrap();
-                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
-                        for h in o.get_obj_iter(){
-                            let house = h.1.as_object();
-                            if house.is_none(){
-                                continue;
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    for d in i.to_object().unwrap().get_obj_iter(){
+                        let o = d.1.as_object().unwrap();
+                        if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
+                            for h in o.get_obj_iter(){
+                                let house = h.1.as_object();
+                                if house.is_none(){
+                                    continue;
+                                }
+                                state.lock().unwrap().add_dynasty(house.unwrap());
                             }
-                            game_state.add_dynasty(house.unwrap());
                         }
                     }
-                }
+                });
             }
             "living" => {
-                let o = i.to_object().unwrap();
-                for l in o.get_obj_iter(){
-                    game_state.add_character(l.1.as_object().unwrap());
-                }
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    for l in o.get_obj_iter(){
+                        state.lock().unwrap().add_character(l.1.as_object().unwrap());
+                    }
+                });
             }
             "dead_unprunable" => {
-                let o = i.to_object().unwrap();
-                for d in o.get_obj_iter(){
-                    game_state.add_character(d.1.as_object().unwrap());   
-                }
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    for d in o.get_obj_iter(){
+                        state.lock().unwrap().add_character(d.1.as_object().unwrap());   
+                    }
+                });
             }
             "vassal_contracts" => {
-                let o = i.to_object().unwrap();
-                let active = o.get_object_ref("active");
-                for contract in active.get_obj_iter(){
-                    let val = contract.1.as_object();
-                    if val.is_some(){
-                        game_state.add_contract(&contract.0.parse::<GameId>().unwrap(), &val.unwrap().get("vassal").unwrap().as_id())
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    let active = o.get_object_ref("active");
+                    for contract in active.get_obj_iter(){
+                        let val = contract.1.as_object();
+                        if val.is_some(){
+                            state.lock().unwrap().add_contract(&contract.0.parse::<GameId>().unwrap(), &val.unwrap().get("vassal").unwrap().as_id())
+                        }
                     }
-                }
+                });
             }
             "religion" => {
-                let o = i.to_object().unwrap();
-                let faiths = o.get_object_ref("faiths");
-                for f in faiths.get_obj_iter(){
-                    game_state.add_faith(f.1.as_object().unwrap());
-                }
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    let faiths = o.get_object_ref("faiths");
+                    for f in faiths.get_obj_iter(){
+                        state.lock().unwrap().add_faith(f.1.as_object().unwrap());
+                    }
+                });
             }
             "culture_manager" => {
-                let o = i.to_object().unwrap();
-                let cultures = o.get_object_ref("cultures");
-                for c in cultures.get_obj_iter(){
-                    game_state.add_culture(c.1.as_object().unwrap());
-                }
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    let cultures = o.get_object_ref("cultures");
+                    for c in cultures.get_obj_iter(){
+                        state.lock().unwrap().add_culture(c.1.as_object().unwrap());
+                    }
+                });
             }
             "character_memory_manager" => {
-                let o = i.to_object().unwrap();
-                let database = o.get_object_ref("database");
-                for d in database.get_obj_iter(){
-                    let mem = d.1.as_object();
-                    if mem.is_none() {
-                        continue;
+                let state = game_state.clone();
+                thread::spawn(move || {
+                    let o = i.to_object().unwrap();
+                    let database = o.get_object_ref("database");
+                    for d in database.get_obj_iter(){
+                        let mem = d.1.as_object();
+                        if mem.is_none() {
+                            continue;
+                        }
+                        state.lock().unwrap().add_memory(mem.unwrap());
                     }
-                    game_state.add_memory(mem.unwrap());
-                }
+                });
             } 
             "played_character" => {
-                let p = Player::from_game_object(&i.to_object().unwrap(), &mut game_state);
+                let p = Player::from_game_object(&i.to_object().unwrap(), &mut game_state.lock().unwrap());
                 players.push(p);
             }
             _ => {
