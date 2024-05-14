@@ -12,6 +12,9 @@ mod game_object;
 mod save_file;
 use save_file::SaveFile;
 
+mod localizer;
+use localizer::Localizer;
+
 /// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
 mod game_state;
@@ -43,6 +46,9 @@ fn create_dir_maybe(name: &str) {
 /// # Arguments
 /// 
 /// 1. `filename` - The name of the save file to parse. If not provided as a command line argument, the program will prompt the user to enter it.
+/// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
+/// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
+/// 4. `--localization` - A flag that tells the program where to find the localization files. If not provided, the program will use a crude localization.
 /// 
 /// # Process
 /// 
@@ -74,6 +80,7 @@ fn main() {
     let mut use_internal = false;
     #[cfg(not(internal))]
     let use_internal = false;
+    let mut localization_path = None;
     let mut depth = 3;
     if args.len() < 2{
         stdout().write_all(b"Enter the filename: ").unwrap();
@@ -97,23 +104,27 @@ fn main() {
                     panic!("Internal templates requested but not compiled in")
                 }
                 "--depth" => {
-                    let depth_str = args.get(arg.0 + 1).expect("Depth argument requires a value");
+                    let depth_str = args.get(arg.0 + 3).expect("Depth argument requires a value");
                     depth = depth_str.parse::<usize>().expect("Depth argument must be a number");
                 }
-                _ => {
+                "--localization" => {
+                    localization_path = Some(args.get(arg.0 + 3).expect("Localization argument requires a value").clone());
+                } 
+                _ => { //TODO flag arguments aren't skipped later
                     println!("Unknown argument: {}", arg.1);
                 }
             
             }
         }
     }
+    let localizer = Localizer::new(localization_path);
     //initialize the save file
     let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
-    //TODO add multiprocessing? mutlithreading?
+    //MAYBE add multiprocessing? mutlithreading?
     for mut i in save.into_iter(){
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());
