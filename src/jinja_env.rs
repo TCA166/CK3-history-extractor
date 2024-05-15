@@ -66,9 +66,9 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
 /// May be used in the templates as filter(using [Environment::add_filter]) or function(using [Environment::add_function]) to render a reference to another object.
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.
 /// The function must be rendered without html escape.
+/// Calling this on an undefined reference will fail.
 fn render_ref(reference: Value, subdir:Option<String>) -> String{
-    //FIXME why can reference be undefined here? where are we calling render_ref on undefined?
-    if reference.is_none() || reference.is_undefined() {
+    if reference.is_none() {
         return "none".to_string();
     }
     let n = reference.get_attr("name").unwrap();

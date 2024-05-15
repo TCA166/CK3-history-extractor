@@ -275,10 +275,16 @@ impl Cullable for Title {
         }
         self.depth = depth;
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().get_internal_mut().set_depth(depth-1);
+            let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
+            if c.is_ok(){
+                c.unwrap().set_depth(depth-1);
+            }
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().get_internal_mut().set_depth(depth-1);
+            let c = self.de_facto.as_ref().unwrap().try_get_internal_mut();
+            if c.is_ok(){
+                c.unwrap().set_depth(depth-1);
+            }
         }
         for v in &self.vassals{
             v.get_internal_mut().set_depth(depth-1);

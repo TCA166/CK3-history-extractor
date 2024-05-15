@@ -18,10 +18,10 @@
                     Date of death: {{character.date}}<br />
                     Reason of death: {%if character.reason != none%}{{character.reason}}{%else%}Natural causes{%endif%}<br />
                     {%endif%}
-                    {%if character.culture != none%}
+                    {%if character.culture is defined%}
                     Culture: {{character.culture|render_ref("cultures")}} <br>
                     {%endif%}
-                    {%if character.faith != none%}
+                    {%if character.faith is defined%}
                     Faith: {{character.faith|render_ref("faiths")}} <br>
                     {%endif%}
                     Dynastic House: {%if character.house is defined%}{{character.house|render_ref("dynasties")}}{%else%}Lowborn{%endif%}<br />
