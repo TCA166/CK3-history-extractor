@@ -10,7 +10,7 @@ use super::{Cullable, GameId, GameObjectDerived, Shared, Wrapper};
 /// This is useful for serializing references to objects that are not in the current scope.
 pub struct DerivedRef<T> where T:GameObjectDerived + Cullable{
     id: GameId,
-    name: GameString,
+    name: Option<GameString>,
     obj: Shared<T>
 }
 
@@ -21,7 +21,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
         let o = obj.get_internal();
         DerivedRef{
             id: o.get_id(),
-            name: o.get_name(),
+            name: Some(o.get_name()),
             obj: obj.clone()
         }
     }
@@ -32,7 +32,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     pub fn dummy() -> Self{
         DerivedRef{
             id: 0,
-            name: GameString::wrap("".to_string()),
+            name: None,
             obj: Shared::wrap(T::dummy(0))
         }
     }
@@ -40,7 +40,7 @@ impl<T> DerivedRef<T> where T:GameObjectDerived + Cullable{
     /// Initialize the DerivedRef with a [Shared] object.
     pub fn init(&mut self, obj:Shared<T>){
         self.id = obj.get_internal().get_id();
-        self.name = obj.get_internal().get_name();
+        self.name = Some(obj.get_internal().get_name());
         self.obj = obj;
     }
 

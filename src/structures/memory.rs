@@ -8,8 +8,8 @@ use crate::game_state::GameState;
 /// A struct representing a memory in the game
 pub struct Memory {
     id: GameId,
-    date: GameString,
-    r#type: GameString,
+    date: Option<GameString>,
+    r#type: Option<GameString>,
     participants: Vec<(String, Shared<Character>)>,
     depth: usize
 }
@@ -29,8 +29,8 @@ impl GameObjectDerived for Memory {
         let mut participants = Vec::new();
         get_participants(&mut participants, &base, game_state);
         Memory{
-            date: base.get("creation_date").unwrap().as_string(),
-            r#type: base.get("type").unwrap().as_string(),
+            date: Some(base.get("creation_date").unwrap().as_string()),
+            r#type: Some(base.get("type").unwrap().as_string()),
             participants: participants,
             id: base.get_name().parse::<GameId>().unwrap(),
             depth: 0
@@ -39,8 +39,8 @@ impl GameObjectDerived for Memory {
 
     fn dummy(id:GameId) -> Self {
         Memory{
-            date: GameString::wrap("".to_owned()),
-            r#type: GameString::wrap("".to_owned()),
+            date: None,
+            r#type: None,
             participants: Vec::new(),
             id: id,
             depth: 0
@@ -48,8 +48,8 @@ impl GameObjectDerived for Memory {
     }
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        self.date = base.get("creation_date").unwrap().as_string();
-        self.r#type = base.get("type").unwrap().as_string();
+        self.date = Some(base.get("creation_date").unwrap().as_string());
+        self.r#type = Some(base.get("type").unwrap().as_string());
         get_participants(&mut self.participants, &base, game_state);
     }
 
@@ -58,7 +58,7 @@ impl GameObjectDerived for Memory {
     }
 
     fn get_name(&self) -> GameString {
-        self.r#type.clone()
+        self.r#type.as_ref().unwrap().clone()
     }
 }
 
