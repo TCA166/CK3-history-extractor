@@ -2,6 +2,7 @@
 /// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;
 pub use renderer::{Cullable, Renderer, Renderable};
+use serde::Serialize;
 
 use crate::game_object::{GameString, GameObject, GameId};
 
@@ -48,7 +49,7 @@ pub use derived_ref::{DerivedRef, serialize_array};
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
-pub trait GameObjectDerived{
+pub trait GameObjectDerived : Serialize + Cullable{
     /// Create a new object from a GameObject and auxiliary data from the game state.
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self;
 

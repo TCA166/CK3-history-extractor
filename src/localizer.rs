@@ -12,6 +12,9 @@ fn demangle_generic(input:&str) -> String{
     s
 }
 
+/// An object that localizes strings.
+/// It reads localization data from a directory and provides localized strings.
+/// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
 pub struct Localizer{
     data: Option<HashMap<String, Rc<String>>>
 }
@@ -56,14 +59,15 @@ impl Localizer{
         }
     }
 
-    pub fn localize(&self, key: &str) -> String{
+    /// Localizes a string.
+    pub fn localize(&self, key: &str) -> Rc<String>{
         if self.data.is_none(){
-            return demangle_generic(key)
+            return Rc::new(demangle_generic(key))
         }
         let data = self.data.as_ref().unwrap();
         if data.contains_key(key){
-            return data.get(key).unwrap().as_str().to_string()
+            return data.get(key).unwrap().clone();
         }
-        demangle_generic(key)
+        Rc::new(demangle_generic(key))
     }
 }

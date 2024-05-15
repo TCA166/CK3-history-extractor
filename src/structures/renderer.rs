@@ -55,7 +55,7 @@ impl<'a> Renderer<'a>{
 /// Trait for objects that can be rendered into a html page.
 /// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
-pub trait Renderable: GameObjectDerived{
+pub trait Renderable: Serialize + GameObjectDerived{
     /// Returns the template file name.
     fn get_template() -> &'static str;
 
@@ -77,7 +77,7 @@ pub trait Renderable: GameObjectDerived{
 /// Trait for objects that can be culled.
 /// This is used to limit object serialization to a certain depth.
 /// Not all [Renderable] objects need to implement this trait.
-pub trait Cullable: Serialize{
+pub trait Cullable{
     /// Set the depth of the object.
     /// Ideally this should be called on the root object once and the depth should be propagated to all children.
     /// Also ideally should do nothing if the depth is less than or equal to the current depth.

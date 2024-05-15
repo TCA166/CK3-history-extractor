@@ -199,7 +199,7 @@ impl GameObjectDerived for Dynasty {
         }
     }
 
-    fn init(&mut self, base:&GameObject, game_state:&mut crate::game_state::GameState) {
+    fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
         get_perks(&mut self.perks, &base);
         get_leaders(&mut self.leaders, &base, game_state);
         let res = get_prestige(&base);

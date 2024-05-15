@@ -4,9 +4,9 @@ use serde::ser::SerializeStruct;
 use crate::game_object::{GameString, GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
-use crate::types::Wrapper;
+use crate::types::{Wrapper, WrapperMut};
 
-use super::{Character, GameObjectDerived, Shared, GameId};
+use super::{Character, Cullable, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode{
@@ -175,5 +175,15 @@ impl Serialize for LineageNode{
         state.serialize_field("perks", &self.perks)?;
         state.serialize_field("id", &self.id)?;
         state.end()
+    }
+}
+
+impl Cullable for LineageNode{
+    fn get_depth(&self) -> usize {
+        self.character.as_ref().unwrap().get_internal().get_depth()
+    }
+
+    fn set_depth(&mut self, depth:usize) {
+        self.character.as_ref().unwrap().get_internal_mut().set_depth(depth);
     }
 }

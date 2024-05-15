@@ -4,6 +4,7 @@ use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
 use super::{serialize_array, Cullable, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString};
+use crate::game_state::GameState;
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
@@ -21,7 +22,7 @@ pub struct Culture {
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
-fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&GameObject, game_state:&mut crate::game_state::GameState){
+fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&GameObject, game_state:&mut GameState){
     let parents_obj = base.get("parents");
     if parents_obj.is_some(){
         for p in parents_obj.unwrap().as_object().unwrap().get_array_iter(){
@@ -50,7 +51,7 @@ fn get_date(base:&GameObject) -> Option<GameString>{
 }
 
 impl GameObjectDerived for Culture {
-    fn from_game_object(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Self {
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         let mut parents = Vec::new();
         get_parents(&mut parents, base, game_state);
         let mut traditions = Vec::new();
@@ -84,7 +85,7 @@ impl GameObjectDerived for Culture {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut crate::game_state::GameState) {
+    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
         get_parents(&mut self.parents, &base, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = base.get("name").unwrap().as_string();

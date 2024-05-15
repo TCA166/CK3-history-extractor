@@ -92,8 +92,9 @@ fn main() {
     else{
         filename = args[1].clone();
         // foreach argument above 1
-        for arg in args.iter().skip(2).enumerate() {
-            match arg.1.as_str() {
+        let mut iter = args.iter().skip(2);
+        while let Some(arg) = iter.next(){
+            match arg.as_str() {
                 "--internal" => {
                     #[cfg(internal)]
                     {
@@ -104,14 +105,16 @@ fn main() {
                     panic!("Internal templates requested but not compiled in")
                 }
                 "--depth" => {
-                    let depth_str = args.get(arg.0 + 3).expect("Depth argument requires a value");
+                    let depth_str = iter.next().expect("Depth argument requires a value");
                     depth = depth_str.parse::<usize>().expect("Depth argument must be a number");
+                    println!("Setting depth to {}", depth)
                 }
                 "--localization" => {
-                    localization_path = Some(args.get(arg.0 + 3).expect("Localization argument requires a value").clone());
+                    localization_path = Some(iter.next().expect("Localization argument requires a value").clone());
+                    println!("Using localization from {}", localization_path.as_ref().unwrap());
                 } 
-                _ => { //TODO flag arguments aren't skipped later
-                    println!("Unknown argument: {}", arg.1);
+                _ => {
+                    println!("Unknown argument: {}", arg);
                 }
             
             }
