@@ -1,7 +1,8 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderable, Shared};
+use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderable, Renderer, Shared};
 use crate::game_object::{GameObject, GameString};
+use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 use crate::game_state::GameState;
 
@@ -81,7 +82,7 @@ impl Serialize for Memory {
 }
 
 impl Cullable for Memory {
-    fn set_depth(&mut self, depth:usize){
+    fn set_depth(&mut self, depth:usize, localization:&Localizer){
         if depth <= self.depth || depth == 0{
             return;
         }
@@ -89,7 +90,7 @@ impl Cullable for Memory {
         for part in self.participants.iter_mut(){
             let o = part.1.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
     }
@@ -100,7 +101,7 @@ impl Cullable for Memory {
 }
 
 impl Memory{
-    pub fn render_participants(&self, renderer: &mut super::Renderer) {
+    pub fn render_participants(&self, renderer: &mut Renderer) {
         for part in self.participants.iter() {
             let o = part.1.try_get_internal();
             if o.is_ok() {

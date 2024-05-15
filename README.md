@@ -61,6 +61,7 @@ And here are the arguments that the utility accepts as of right now:
 
 1. ```--internal``` forces the utility to use the internal templates.
 2. ```--depth %d``` sets the maximum depth of the data to retrieve in the savefile. The characters you played have depth=0, their relatives have depth=1 and so on.
+3. ```--localization %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate
 
 ## Output example
 

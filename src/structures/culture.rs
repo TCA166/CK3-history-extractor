@@ -2,9 +2,10 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Cullable, GameId, GameObjectDerived, Shared};
+use super::{serialize_array, Cullable, GameId, GameObjectDerived, Renderer, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
+use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
@@ -137,7 +138,7 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, renderer: &mut super::Renderer) {
+    fn render_all(&self, renderer: &mut Renderer) {
         if !renderer.render(self){
             return;
         }
@@ -152,13 +153,14 @@ impl Cullable for Culture {
         self.depth
     }
 
-    fn set_depth(&mut self, depth:usize) {
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
         if depth <= self.depth || depth == 0{
             return;
         }
+        //TODO localize
         self.depth = depth;
         for p in &self.parents{
-            p.get_internal_mut().set_depth(depth-1);
+            p.get_internal_mut().set_depth(depth-1, localization);
         }
     }
 }

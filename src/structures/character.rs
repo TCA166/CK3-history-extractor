@@ -2,9 +2,9 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, localizer::Localizer, types::{Wrapper, WrapperMut}};
 
-use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
+use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, Dynasty, Faith, GameId, GameObjectDerived, Memory, Renderer, Shared, Title};
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
@@ -502,7 +502,7 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, renderer: &mut super::Renderer){
+    fn render_all(&self, renderer: &mut Renderer){
         if !renderer.render(self){
             return;
         }
@@ -543,72 +543,73 @@ impl Renderable for Character {
 }
 
 impl Cullable for Character {
-    fn set_depth(&mut self, depth:usize) {
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
         if depth <= self.depth || depth == 0 {
             return;
         }
+        //TODO localize
         self.depth = depth;
         for s in self.spouses.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.former.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.children.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.parents.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.kills.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.vassals.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().get_ref().get_internal_mut().set_depth(depth - 1);
+                o.unwrap().get_ref().get_internal_mut().set_depth(depth - 1, localization);
             }
         }
         if self.culture.is_some(){
             let o = self.culture.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         if self.faith.is_some(){
             let o = self.faith.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.titles.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         for s in self.memories.iter(){
-            s.get_internal_mut().set_depth(depth - 1);
+            s.get_internal_mut().set_depth(depth - 1, localization);
         }
         if self.house.is_some(){
             let o = self.house.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
     }

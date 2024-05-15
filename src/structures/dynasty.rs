@@ -3,9 +3,10 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Shared};
+use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Renderer, Shared};
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
+use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 use std::collections::HashMap;
 
@@ -261,7 +262,7 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, renderer: &mut super::Renderer) {
+    fn render_all(&self, renderer: &mut Renderer) {
         if !renderer.render(self){
             return;
         }
@@ -272,21 +273,22 @@ impl Renderable for Dynasty {
 }
 
 impl Cullable for Dynasty {
-    fn set_depth(&mut self, depth:usize) {
+    fn set_depth(&mut self, depth:usize, locazation:&Localizer) {
         if depth <= self.depth || depth == 0 {
             return;
         }
+        //TODO localize
         self.depth = depth;
         for leader in self.leaders.iter(){
             let o = leader.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, locazation);
             }
         }
         if self.parent.as_ref().is_some(){
             let o = self.parent.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1);
+                o.unwrap().set_depth(depth - 1, locazation);
             }
         }
     }

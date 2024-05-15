@@ -1,16 +1,17 @@
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Shared};
+use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderer, Shared};
 use super::renderer::Renderable;
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
+use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a faith in the game
 pub struct Faith {
     id: GameId,
-    name: GameString,
+    name: Option<GameString>,
     tenets: Vec<GameString>,
     head: Option<Shared<Character>>,
     fervor: f32,
@@ -67,7 +68,7 @@ impl GameObjectDerived for Faith {
         let mut doctrines = Vec::new();
         get_doctrines(&mut doctrines, doctrines_array);
         Faith{
-            name: get_name(&base),
+            name: Some(get_name(&base)),
             tenets: tenets,
             head: get_head(&base, game_state),
             fervor: base.get("fervor").unwrap().as_string().parse::<f32>().unwrap(),
@@ -79,7 +80,7 @@ impl GameObjectDerived for Faith {
 
     fn dummy(id:GameId) -> Self {
         Faith{
-            name: GameString::wrap("".to_owned().into()),
+            name: None,
             tenets: Vec::new(),
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
             fervor: 0.0,
@@ -94,7 +95,7 @@ impl GameObjectDerived for Faith {
         get_tenets(&mut self.tenets, doctrines_array);
         self.head.clone_from(&get_head(&base, game_state));
         get_doctrines(&mut self.doctrines, doctrines_array);
-        self.name = get_name(&base);
+        self.name = Some(get_name(&base));
         self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
     }
 
@@ -103,7 +104,7 @@ impl GameObjectDerived for Faith {
     }
 
     fn get_name(&self) -> GameString {
-        self.name.clone()
+        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -138,7 +139,7 @@ impl Renderable for Faith {
         "faiths"
     }
 
-    fn render_all(&self, renderer: &mut super::Renderer) {
+    fn render_all(&self, renderer: &mut Renderer) {
         if !renderer.render(self){
             return;
         }
@@ -153,15 +154,16 @@ impl Cullable for Faith {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize) {
+    fn set_depth(&mut self, depth: usize, localization:&Localizer) {
         if depth <= self.depth || depth == 0{
             return;
         }
+        //TODO localize
         self.depth = depth;
         if self.head.is_some(){
             let o = self.head.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth-1);
+                o.unwrap().set_depth(depth-1, localization);
             }
         }
     }

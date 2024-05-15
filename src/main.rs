@@ -234,7 +234,7 @@ fn main() {
         create_dir_maybe(format!("{}/titles", &folder_name).as_str());
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
-        player.set_depth(depth);
+        player.set_depth(depth, &localizer);
         let mut renderer = Renderer::new(&env, folder_name.clone());
         player.render_all(&mut renderer);
     }

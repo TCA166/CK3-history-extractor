@@ -5,6 +5,7 @@ use serde::ser::SerializeStruct;
 
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
+use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 
 use super::renderer::Renderable;
@@ -13,7 +14,7 @@ use super::{serialize_array, Character, Cullable, DerivedRef, GameId, GameObject
 /// A struct representing a title in the game
 pub struct Title {
     id: GameId,
-    name: GameString,
+    name: Option<GameString>,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
@@ -146,7 +147,7 @@ impl GameObjectDerived for Title{
         let id = base.get_name().parse::<GameId>().unwrap();
         let history = get_history(base, game_state);
         Title{
-            name: name,
+            name: Some(name),
             de_jure: de_jure,
             de_facto: de_facto,
             vassals: vassals,
@@ -162,7 +163,7 @@ impl GameObjectDerived for Title{
 
     fn dummy(id:GameId) -> Self {
         Title{
-            name: GameString::wrap("Dummy".to_owned()),
+            name: None,
             de_jure: None,
             de_facto: None,
             vassals: Vec::new(),
@@ -191,14 +192,13 @@ impl GameObjectDerived for Title{
             }
         }
         self.vassals = vassals;
-        self.name = base.get("name").unwrap().as_string().clone();
+        self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
     }
 
     fn get_name(&self) -> GameString {
-        self.name.clone()
-    
+        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -269,31 +269,32 @@ impl Renderable for Title {
 }
 
 impl Cullable for Title {
-    fn set_depth(&mut self, depth:usize) {
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
         if depth <= self.depth || depth == 0{
             return;
         }
+        //TODO localize
         self.depth = depth;
         if self.de_jure.is_some(){
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok(){
-                c.unwrap().set_depth(depth-1);
+                c.unwrap().set_depth(depth-1, localization);
             }
         }
         if self.de_facto.is_some(){
             let c = self.de_facto.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok(){
-                c.unwrap().set_depth(depth-1);
+                c.unwrap().set_depth(depth-1, localization);
             }
         }
         for v in &self.vassals{
-            v.get_internal_mut().set_depth(depth-1);
+            v.get_internal_mut().set_depth(depth-1, localization);
         }
         for o in &self.history{
             if o.1.is_some(){
                 let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok(){
-                    c.unwrap().set_depth(depth-1);
+                    c.unwrap().set_depth(depth-1, localization);
                 }
             }
         }

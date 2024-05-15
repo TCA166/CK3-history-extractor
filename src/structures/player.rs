@@ -6,6 +6,7 @@ use crate::game_object::{GameObject, GameString};
 
 use crate::game_state::GameState;
 
+use crate::localizer::Localizer;
 use crate::types::Wrapper;
 
 use super::{renderer::{Cullable, Renderable}, Character, GameId, GameObjectDerived, LineageNode, Renderer, Shared};
@@ -105,9 +106,9 @@ impl Renderable for Player{
 }
 
 impl Cullable for Player{
-    fn set_depth(&mut self, depth: usize){
+    fn set_depth(&mut self, depth: usize, localization:&Localizer){
         for node in self.lineage.iter_mut(){
-            node.set_depth(depth);
+            node.set_depth(depth, localization);
         }
     }
 
