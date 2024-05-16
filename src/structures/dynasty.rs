@@ -23,6 +23,8 @@ pub struct Dynasty{
     depth: usize
 }
 
+//TODO it's possible that dynasties sometimes are stored within history files like characters
+
 impl Dynasty {
     /// Gets the faith of the dynasty.
     /// Really this is just the faith of the current house leader.
@@ -72,6 +74,20 @@ fn get_perks(perks:&mut Vec<(GameString, u8)>, base:&GameObject){
             if key.is_none(){
                 continue;
             }
+            let mut added = false;
+            for perk in perks.iter_mut(){
+                if perk.0.as_str() == key.unwrap(){
+                    if perk.1 < val{
+                        perk.1 = val;
+                    }
+                    added = true;
+                    break;
+                }
+            }
+            if added{
+                continue;
+            }
+            //if the perk is not found, add it
             perks.push((GameString::wrap(key.unwrap().to_owned()), val));
         }
     }
@@ -134,20 +150,24 @@ fn get_parent(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dyna
     }
 }
 
-fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> GameString{
+fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Option<GameString>{
     let mut n = base.get("name");
     if n.is_none(){
         n = base.get("localized_name");
         if n.is_none(){
             if parent.is_none(){
-                //TODO this happens for dynasties that exist at game start. WTF?
-                return GameString::wrap("".to_owned().into());
+                //println!("{:?}", base);
+                return None;
+            }
+            let p = parent.as_ref().unwrap().get_internal();
+            if p.name.is_none(){
+                return None;
             }
             //this may happen for dynasties with a house with the same name
-            return parent.unwrap().get_internal().name.as_ref().unwrap().clone();
+            return Some(p.name.as_ref().unwrap().clone());
         }
     }
-    n.unwrap().as_string()
+    Some(n.unwrap().as_string())
 }
 
 fn get_date(base:&GameObject) -> Option<GameString>{
@@ -169,7 +189,7 @@ impl GameObjectDerived for Dynasty {
         let res = get_prestige(&base);
         let p = get_parent(&base, game_state);
         Dynasty{
-            name: Some(get_name(&base, p.clone())),
+            name: get_name(&base, p.clone()),
             parent: p,
             members: 0,
             houses: 0,
@@ -185,7 +205,7 @@ impl GameObjectDerived for Dynasty {
 
     fn dummy(id:GameId) -> Self {
         Dynasty{
-            name: Some(GameString::wrap("".to_owned())),
+            name: None,
             parent: None,
             members: 0,
             houses: 0,
@@ -209,8 +229,8 @@ impl GameObjectDerived for Dynasty {
         }
         self.parent = get_parent(&base, game_state);
         let name = get_name(&base, self.parent.clone());
-        if !name.is_empty() || self.name.is_none(){
-            self.name = Some(name);
+        if self.name.is_none() {
+            self.name = name;
         }
         self.found_date = get_date(&base);
     }
@@ -220,6 +240,9 @@ impl GameObjectDerived for Dynasty {
     }
 
     fn get_name(&self) -> GameString {
+        if self.name.is_none(){
+            return GameString::wrap("Unknown".to_owned());
+        }
         self.name.as_ref().unwrap().clone()
     }
 }
@@ -273,14 +296,21 @@ impl Renderable for Dynasty {
 
 impl Cullable for Dynasty {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        //TODO deal with weird name chicanery
+        { //localization
+            for perk in self.perks.iter_mut(){
+                perk.0 = localization.localize(perk.0.as_str());
+            }
+            if self.name.is_some() {
+                self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+            }
+            else{
+                self.name = Some(GameString::wrap("Unknown".to_owned()));
+            }
+        }
         if depth <= self.depth || depth == 0 {
             return;
         }
-        //localize the keys
-        for perk in self.perks.iter_mut(){
-            perk.0 = localization.localize(perk.0.as_str());
-        }
-        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         self.depth = depth;
         for leader in self.leaders.iter(){
             let o = leader.try_get_internal_mut();

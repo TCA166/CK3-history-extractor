@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::{fs, mem};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::game_object::GameString;
 use crate::types::Wrapper;
@@ -30,59 +30,73 @@ impl Localizer{
             let mut data: HashMap<String, GameString> = HashMap::new();
             let path = Path::new(&path);
             if path.is_dir() {
-                if let Ok(entries) = fs::read_dir(path) {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            //TODO check if the file has localization data we care about
-                            if let Ok(file_type) = entry.file_type() {
-                                if file_type.is_file() && entry.file_name().to_str().unwrap().ends_with(".yml"){
-                                    // read the file to string
-                                    let contents = fs::read_to_string(entry.path()).unwrap();
-                                    //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
-                                    //so we doing the thing ourselves :)
-
-                                    //parse the 'yaml' file
-                                    let mut key = String::new();
-                                    let mut value = String::new();
-                                    let mut past = false;
-                                    let mut quotes = false;
-                                    for char in contents.chars(){
-                                        match char{
-                                            ' ' | '\t' => {
-                                                if quotes {
-                                                    value.push(char);
-                                                }
-                                            },
-                                            '\n' => {
-                                                if past && !quotes && !value.is_empty(){
-                                                    data.insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
-                                                }
-                                                past = false;
-                                                quotes = false;
-                                            }
-                                            ':' => {
-                                                past = true;
-                                            }
-                                            '"' => {
-                                                quotes = !quotes;
-                                            }
-                                            _ => {
-                                                if past {
-                                                    if quotes {
-                                                        value.push(char);
-                                                    }
-                                                } else {
-                                                    key.push(char);
-                                                }
-                                            }
-                                        }
+                // a stack to keep track of the directories
+                let mut stack: Vec<PathBuf> = Vec::new();
+                stack.push(PathBuf::from(path));
+                // a vector to keep track of all the files
+                let mut all_files: Vec<PathBuf> = Vec::new();
+                while !stack.is_empty() {
+                    let entry = stack.pop().unwrap();
+                    if let Ok(entries) = fs::read_dir(entry) {
+                        for entry in entries {
+                            if let Ok(entry) = entry {
+                                if let Ok(file_type) = entry.file_type() {
+                                    if file_type.is_dir() {
+                                        stack.push(entry.path());
+                                    } else if entry.file_name().to_str().unwrap().ends_with(".yml"){
+                                        all_files.push(entry.path());
                                     }
                                 }
                             }
                         }
                     }
-                    hmap = Some(data);
                 }
+                // having gone through all the directories, we can now read the files
+                for entry in all_files {
+                    // read the file to string
+                    let contents = fs::read_to_string(entry).unwrap();
+                    //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
+                    //so we doing the thing ourselves :)
+
+                    //parse the 'yaml' file
+                    let mut key = String::new();
+                    let mut value = String::new();
+                    let mut past = false;
+                    let mut quotes = false;
+                    for char in contents.chars(){
+                        match char{
+                            ' ' | '\t' => {
+                                if quotes {
+                                    value.push(char);
+                                }
+                            },
+                            '\n' => {
+                                if past && !quotes && !value.is_empty(){
+                                    data.insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
+                                }
+                                past = false;
+                                quotes = false;
+                            }
+                            ':' => {
+                                past = true;
+                            }
+                            '"' => {
+                                quotes = !quotes;
+                            }
+                            _ => {
+                                if past {
+                                    if quotes {
+                                        value.push(char);
+                                    }
+                                } else {
+                                    key.push(char);
+                                }
+                            }
+                        }
+                    }
+                }
+                //TODO resolve the localization functions
+                hmap = Some(data);
             }
         }
         Localizer{

@@ -89,6 +89,7 @@ impl Cullable for Memory {
         self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
         self.depth = depth;
         for part in self.participants.iter_mut(){
+            part.0 = localization.localize(&part.0).to_string();
             let o = part.1.try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1, localization);

@@ -12,6 +12,7 @@ mod game_object;
 mod save_file;
 use save_file::SaveFile;
 
+/// A submodule handling game localization.
 mod localizer;
 use localizer::Localizer;
 

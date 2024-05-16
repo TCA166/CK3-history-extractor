@@ -274,10 +274,12 @@ impl Renderable for Title {
 
 impl Cullable for Title {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        { //localization
+            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
+        }
         if depth <= self.depth || depth == 0{
             return;
         }
-        self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
         self.depth = depth;
         if self.de_jure.is_some(){
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();

@@ -154,10 +154,19 @@ impl Cullable for Culture {
     }
 
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        { //localization
+            self.name = localization.localize(self.name.as_str());
+            self.ethos = localization.localize(self.ethos.as_str());
+            self.heritage = localization.localize(self.heritage.as_str());
+            self.martial = localization.localize(self.martial.as_str());
+            self.language = localization.localize(self.language.as_str());
+            for t in &mut self.traditions{
+                *t = localization.localize(t.as_str());
+            }
+        }
         if depth <= self.depth || depth == 0{
             return;
         }
-        //TODO localize
         self.depth = depth;
         for p in &self.parents{
             p.get_internal_mut().set_depth(depth-1, localization);

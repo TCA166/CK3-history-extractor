@@ -41,6 +41,8 @@ pub struct Character {
     depth: usize
 }
 
+//TODO some characters are stored within history files. Will need to parse those too godamit
+
 // So both faith and culture can be stored for a character in the latest leader of their house. 
 // The problem with reading that now is that while Houses are already likely loaded,
 // the characters that the houses hold reference to are likely still dummy, so we can't read the faith and culture from the house leader.
@@ -410,8 +412,7 @@ impl GameObjectDerived for Character {
 
     fn get_name(&self) -> GameString {
         if self.name.is_none(){
-            //FIXME wtf?
-            return GameString::wrap("".to_string())
+            return GameString::wrap("Unknown".to_string())
         }
         self.name.as_ref().unwrap().clone()
     }
@@ -544,10 +545,32 @@ impl Renderable for Character {
 
 impl Cullable for Character {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        { // localization
+            if self.name.is_none() {
+                self.name = Some(GameString::wrap("Unknown".to_string()));
+            }
+            else{
+                self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+            }
+            if self.nick.is_some(){
+                self.nick = Some(localization.localize(self.nick.as_ref().unwrap().as_str()));
+            }
+            if self.reason.is_some(){
+                self.reason = Some(localization.localize(self.reason.as_ref().unwrap().as_str()));
+            }
+            for t in self.traits.iter_mut(){
+                *t = localization.localize(t.as_str());
+            }
+            for t in self.recessive.iter_mut(){
+                *t = localization.localize(t.as_str());
+            }
+            for t in self.languages.iter_mut(){
+                *t = localization.localize(t.as_str());
+            }
+        }
         if depth <= self.depth || depth == 0 {
             return;
         }
-        //TODO localize
         self.depth = depth;
         for s in self.spouses.iter(){
             let o = s.try_get_internal_mut();

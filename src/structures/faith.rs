@@ -155,14 +155,17 @@ impl Cullable for Faith {
     }
 
     fn set_depth(&mut self, depth: usize, localization:&Localizer) {
+        { //localization
+            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+            for tenet in self.tenets.iter_mut(){
+                *tenet = localization.localize(tenet.as_str());
+            }
+            for doctrine in self.doctrines.iter_mut(){
+                *doctrine = localization.localize(doctrine.as_str());
+            }
+        }
         if depth <= self.depth || depth == 0{
             return;
-        }
-        for tenet in self.tenets.iter_mut(){
-            *tenet = localization.localize(tenet.as_str());
-        }
-        for doctrine in self.doctrines.iter_mut(){
-            *doctrine = localization.localize(doctrine.as_str());
         }
         self.depth = depth;
         if self.head.is_some(){

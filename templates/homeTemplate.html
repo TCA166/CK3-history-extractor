@@ -28,7 +28,7 @@
                     {% if node.lifestyle != none %}
                     <li class="list-group-item">Reached a score of: {{node.score}}</li>
                     <li class="list-group-item">Had a keen interest in {{node.lifestyle}}</li>
-                    <li class="list-group-item">{% if node.perks|length != 0%}Was a: {%for perk in node.perks%}{{perk}}, {%endfor%} {%else%}Didn't master a specific field{%endif%}</li>
+                    <li class="list-group-item">{% if node.perks|length != 0%}Was a: {%for perk in node.perks%}{{perk}}  {%endfor%}{%else%}Didn't master a specific field{%endif%}</li>
                     {% else %}
                     <li class="list-group-item">This character has yet to prove himself.</li>
                     {% endif %}
