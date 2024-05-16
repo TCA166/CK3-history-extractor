@@ -14,6 +14,7 @@ use super::{serialize_array, Character, Cullable, DerivedRef, GameId, GameObject
 /// A struct representing a title in the game
 pub struct Title {
     id: GameId,
+    key: Option<GameString>,
     name: Option<GameString>,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
@@ -147,6 +148,7 @@ impl GameObjectDerived for Title{
         let id = base.get_name().parse::<GameId>().unwrap();
         let history = get_history(base, game_state);
         Title{
+            key: Some(base.get_string_ref("key")),
             name: Some(name),
             de_jure: de_jure,
             de_facto: de_facto,
@@ -163,6 +165,7 @@ impl GameObjectDerived for Title{
 
     fn dummy(id:GameId) -> Self {
         Title{
+            key: None,
             name: None,
             de_jure: None,
             de_facto: None,
@@ -174,6 +177,7 @@ impl GameObjectDerived for Title{
     }
 
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
+        self.key = Some(base.get_string_ref("key"));
         let de_jure_id = base.get("de_jure_liege");
         self.de_jure = match de_jure_id{
             Some(de_jure) => Some(game_state.get_title(&de_jure.as_id()).clone()),
@@ -273,7 +277,7 @@ impl Cullable for Title {
         if depth <= self.depth || depth == 0{
             return;
         }
-        //TODO localize
+        self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
         self.depth = depth;
         if self.de_jure.is_some(){
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
@@ -290,7 +294,8 @@ impl Cullable for Title {
         for v in &self.vassals{
             v.get_internal_mut().set_depth(depth-1, localization);
         }
-        for o in &self.history{
+        for o in self.history.iter_mut(){
+            o.2 = localization.localize(o.2.as_str());
             if o.1.is_some(){
                 let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok(){

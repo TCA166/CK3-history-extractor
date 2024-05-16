@@ -86,6 +86,7 @@ impl Cullable for Memory {
         if depth <= self.depth || depth == 0{
             return;
         }
+        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
         self.depth = depth;
         for part in self.participants.iter_mut(){
             let o = part.1.try_get_internal_mut();

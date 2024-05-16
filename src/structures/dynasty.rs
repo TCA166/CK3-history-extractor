@@ -8,7 +8,6 @@ use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
-use std::collections::HashMap;
 
 pub struct Dynasty{
     id: GameId,
@@ -18,7 +17,7 @@ pub struct Dynasty{
     houses: GameId,
     prestige_tot: f32,
     prestige: f32,
-    perks: HashMap<String, u8>,
+    perks: Vec<(GameString, u8)>,
     leaders: Vec<Shared<Character>>,
     found_date: Option<GameString>,
     depth: usize
@@ -53,7 +52,7 @@ impl Dynasty {
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
-fn get_perks(perks:&mut HashMap<String, u8>, base:&GameObject){
+fn get_perks(perks:&mut Vec<(GameString, u8)>, base:&GameObject){
     let perks_obj = base.get("perk");
     if perks_obj.is_some(){
         for p in perks_obj.unwrap().as_object().unwrap().get_array_iter(){
@@ -73,7 +72,7 @@ fn get_perks(perks:&mut HashMap<String, u8>, base:&GameObject){
             if key.is_none(){
                 continue;
             }
-            perks.insert(key.unwrap().to_owned(), val);
+            perks.push((GameString::wrap(key.unwrap().to_owned()), val));
         }
     }
 }
@@ -162,7 +161,7 @@ fn get_date(base:&GameObject) -> Option<GameString>{
 impl GameObjectDerived for Dynasty {
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         //get the dynasty legacies
-        let mut perks = HashMap::new();
+        let mut perks = Vec::new();
         get_perks(&mut perks, &base);
         //get the array of leaders
         let mut leaders = Vec::new();
@@ -192,7 +191,7 @@ impl GameObjectDerived for Dynasty {
             houses: 0,
             prestige_tot: 0.0,
             prestige: 0.0,
-            perks: HashMap::new(),
+            perks: Vec::new(),
             leaders: Vec::new(),
             found_date: None,
             id: id,
@@ -273,22 +272,26 @@ impl Renderable for Dynasty {
 }
 
 impl Cullable for Dynasty {
-    fn set_depth(&mut self, depth:usize, locazation:&Localizer) {
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
         if depth <= self.depth || depth == 0 {
             return;
         }
-        //TODO localize
+        //localize the keys
+        for perk in self.perks.iter_mut(){
+            perk.0 = localization.localize(perk.0.as_str());
+        }
+        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         self.depth = depth;
         for leader in self.leaders.iter(){
             let o = leader.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1, locazation);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
         if self.parent.as_ref().is_some(){
             let o = self.parent.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().set_depth(depth - 1, locazation);
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
     }

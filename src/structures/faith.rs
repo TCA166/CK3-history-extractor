@@ -158,7 +158,12 @@ impl Cullable for Faith {
         if depth <= self.depth || depth == 0{
             return;
         }
-        //TODO localize
+        for tenet in self.tenets.iter_mut(){
+            *tenet = localization.localize(tenet.as_str());
+        }
+        for doctrine in self.doctrines.iter_mut(){
+            *doctrine = localization.localize(doctrine.as_str());
+        }
         self.depth = depth;
         if self.head.is_some(){
             let o = self.head.as_ref().unwrap().try_get_internal_mut();
