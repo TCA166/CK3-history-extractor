@@ -16,7 +16,8 @@ pub struct Faith {
     head: Option<Shared<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
-    depth: usize
+    depth: usize,
+    localized: bool
 }
 
 /// Gets the head of the faith
@@ -74,7 +75,8 @@ impl GameObjectDerived for Faith {
             fervor: base.get("fervor").unwrap().as_string().parse::<f32>().unwrap(),
             doctrines: doctrines,
             id: base.get_name().parse::<GameId>().unwrap(),
-            depth: 0
+            depth: 0,
+            localized: false
         }
     }
 
@@ -86,7 +88,8 @@ impl GameObjectDerived for Faith {
             fervor: 0.0,
             doctrines: Vec::new(),
             id: id,
-            depth: 0
+            depth: 0,
+            localized: false
         }
     }
 
@@ -155,18 +158,25 @@ impl Cullable for Faith {
     }
 
     fn set_depth(&mut self, depth: usize, localization:&Localizer) {
-        { //localization
+        if depth <= self.depth{
+            return;
+        }
+        if !self.localized{
             self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        }
+        if depth == 0{
+            return;
+        }
+        if !self.localized{
             for tenet in self.tenets.iter_mut(){
                 *tenet = localization.localize(tenet.as_str());
             }
             for doctrine in self.doctrines.iter_mut(){
                 *doctrine = localization.localize(doctrine.as_str());
             }
+            self.localized = true;
         }
-        if depth <= self.depth || depth == 0{
-            return;
-        }
+        
         self.depth = depth;
         if self.head.is_some(){
             let o = self.head.as_ref().unwrap().try_get_internal_mut();

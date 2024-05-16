@@ -20,7 +20,8 @@ pub struct Dynasty{
     perks: Vec<(GameString, u8)>,
     leaders: Vec<Shared<Character>>,
     found_date: Option<GameString>,
-    depth: usize
+    depth: usize,
+    localized:bool
 }
 
 //TODO it's possible that dynasties sometimes are stored within history files like characters
@@ -199,7 +200,8 @@ impl GameObjectDerived for Dynasty {
             leaders: leaders,
             found_date: get_date(&base),
             id: base.get_name().parse::<GameId>().unwrap(),
-            depth: 0
+            depth: 0,
+            localized:false
         }
     }
 
@@ -215,7 +217,8 @@ impl GameObjectDerived for Dynasty {
             leaders: Vec::new(),
             found_date: None,
             id: id,
-            depth: 0
+            depth: 0,
+            localized:false
         }
     }
 
@@ -296,11 +299,11 @@ impl Renderable for Dynasty {
 
 impl Cullable for Dynasty {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        if depth <= self.depth{
+            return;
+        }
         //TODO deal with weird name chicanery
-        { //localization
-            for perk in self.perks.iter_mut(){
-                perk.0 = localization.localize(perk.0.as_str());
-            }
+        if !self.localized{
             if self.name.is_some() {
                 self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             }
@@ -308,8 +311,14 @@ impl Cullable for Dynasty {
                 self.name = Some(GameString::wrap("Unknown".to_owned()));
             }
         }
-        if depth <= self.depth || depth == 0 {
+        if depth == 0 {
             return;
+        }
+        if !self.localized{
+            for perk in self.perks.iter_mut(){
+                perk.0 = localization.localize(perk.0.as_str());
+            }
+            self.localized = true;
         }
         self.depth = depth;
         for leader in self.leaders.iter(){

@@ -20,7 +20,8 @@ pub struct Title {
     de_facto: Option<Shared<Title>>,
     vassals: Vec<Shared<Title>>,
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
-    depth: usize
+    depth: usize,
+    localized:bool
 }
 
 /// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
@@ -155,7 +156,8 @@ impl GameObjectDerived for Title{
             vassals: vassals,
             history: history,
             id: id,
-            depth: 0
+            depth: 0,
+            localized: false
         }
     }
 
@@ -172,7 +174,8 @@ impl GameObjectDerived for Title{
             vassals: Vec::new(),
             history: Vec::new(),
             id: id,
-            depth: 0
+            depth: 0,
+            localized: false
         }
     }
 
@@ -274,12 +277,16 @@ impl Renderable for Title {
 
 impl Cullable for Title {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        { //localization
-            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
-        }
-        if depth <= self.depth || depth == 0{
+        if depth <= self.depth {
             return;
         }
+        if !self.localized { //localization
+            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
+        }
+        if depth == 0{
+            return;
+        }
+        self.localized = true;
         self.depth = depth;
         if self.de_jure.is_some(){
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
@@ -297,7 +304,9 @@ impl Cullable for Title {
             v.get_internal_mut().set_depth(depth-1, localization);
         }
         for o in self.history.iter_mut(){
-            o.2 = localization.localize(o.2.as_str());
+            if !self.localized{
+                o.2 = localization.localize(o.2.as_str());
+            }
             if o.1.is_some(){
                 let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok(){

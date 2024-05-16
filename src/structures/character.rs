@@ -38,7 +38,8 @@ pub struct Character {
     kills: Vec<Shared<Character>>,
     languages: Vec<GameString>,
     vassals: Vec<Shared<DerivedRef<Character>>>,
-    depth: usize
+    depth: usize,
+    localized: bool
 }
 
 //TODO some characters are stored within history files. Will need to parse those too godamit
@@ -337,7 +338,8 @@ impl GameObjectDerived for Character {
             vassals: vassals,
             id: id,
             parents: Vec::new(),
-            depth: 0
+            depth: 0,
+            localized:false
         }    
     }
 
@@ -371,7 +373,8 @@ impl GameObjectDerived for Character {
             languages: Vec::new(),
             vassals: Vec::new(),
             id: id,
-            depth: 0
+            depth: 0,
+            localized:false
         }
     }
 
@@ -545,13 +548,21 @@ impl Renderable for Character {
 
 impl Cullable for Character {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        { // localization
+        if depth <= self.depth {
+            return;
+        }
+        if !self.localized {
             if self.name.is_none() {
                 self.name = Some(GameString::wrap("Unknown".to_string()));
             }
             else{
                 self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             }
+        }
+        if depth == 0 {
+            return;
+        }
+        if !self.localized {
             if self.nick.is_some(){
                 self.nick = Some(localization.localize(self.nick.as_ref().unwrap().as_str()));
             }
@@ -567,10 +578,9 @@ impl Cullable for Character {
             for t in self.languages.iter_mut(){
                 *t = localization.localize(t.as_str());
             }
+            self.localized = true;
         }
-        if depth <= self.depth || depth == 0 {
-            return;
-        }
+        //cullable set
         self.depth = depth;
         for s in self.spouses.iter(){
             let o = s.try_get_internal_mut();

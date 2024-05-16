@@ -19,7 +19,8 @@ pub struct Culture {
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
     language: GameString,
-    depth: usize
+    depth: usize,
+    localized: bool
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
@@ -67,7 +68,8 @@ impl GameObjectDerived for Culture {
             traditions: traditions,
             id: base.get_name().parse::<GameId>().unwrap(),
             language: base.get("language").unwrap().as_string(),
-            depth: 0
+            depth: 0,
+            localized:false
         }
     }
 
@@ -82,7 +84,8 @@ impl GameObjectDerived for Culture {
             traditions: Vec::new(),
             language: GameString::wrap("".to_owned().into()),
             id: id,
-            depth: 0
+            depth: 0,
+            localized:false
         }
     }
 
@@ -154,8 +157,16 @@ impl Cullable for Culture {
     }
 
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        { //localization
+        if depth <= self.depth {
+            return;
+        }
+        if !self.localized {
             self.name = localization.localize(self.name.as_str());
+        }
+        if depth == 0{
+            return;
+        }
+        if !self.localized {
             self.ethos = localization.localize(self.ethos.as_str());
             self.heritage = localization.localize(self.heritage.as_str());
             self.martial = localization.localize(self.martial.as_str());
@@ -163,9 +174,7 @@ impl Cullable for Culture {
             for t in &mut self.traditions{
                 *t = localization.localize(t.as_str());
             }
-        }
-        if depth <= self.depth || depth == 0{
-            return;
+            self.localized = true;
         }
         self.depth = depth;
         for p in &self.parents{
