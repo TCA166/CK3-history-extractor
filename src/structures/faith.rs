@@ -158,7 +158,7 @@ impl Cullable for Faith {
     }
 
     fn set_depth(&mut self, depth: usize, localization:&Localizer) {
-        if depth <= self.depth{
+        if depth <= self.depth && depth != 0{
             return;
         }
         if !self.localized{

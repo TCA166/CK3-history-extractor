@@ -214,11 +214,33 @@ impl Serialize for Title {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Title", 5)?;
+        let mut state = serializer.serialize_struct("Title", 6)?;
         state.serialize_field("name", &self.name)?;
         if self.de_jure.is_some(){
             let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
             state.serialize_field("de_jure", &de_jure)?;
+        }
+        //match the first character of key
+        let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
+        match first_char{
+            'e' => {
+                state.serialize_field("tier", "Empire of")?;
+            },
+            'k' => {
+                state.serialize_field("tier", "Kingdom of")?;
+            },
+            'd' => {
+                state.serialize_field("tier", "Duchy of")?;
+            },
+            'c' => {
+                state.serialize_field("tier", "County of")?;
+            },
+            'b' => {
+                state.serialize_field("tier", "Barony of")?;
+            },
+            _ => {
+                state.serialize_field("tier", "")?;
+            }
         }
         if self.de_facto.is_some(){
             let de_facto = DerivedRef::from_derived(self.de_facto.as_ref().unwrap().clone());
@@ -277,7 +299,7 @@ impl Renderable for Title {
 
 impl Cullable for Title {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        if depth <= self.depth {
+        if depth <= self.depth && depth != 0{
             return;
         }
         if !self.localized { //localization

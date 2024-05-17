@@ -299,7 +299,7 @@ impl Renderable for Dynasty {
 
 impl Cullable for Dynasty {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        if depth <= self.depth{
+        if depth <= self.depth && depth != 0{
             return;
         }
         //TODO deal with weird name chicanery

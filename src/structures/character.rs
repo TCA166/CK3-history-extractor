@@ -548,9 +548,10 @@ impl Renderable for Character {
 
 impl Cullable for Character {
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        if depth <= self.depth {
+        if depth <= self.depth && depth != 0{
             return;
         }
+        //TODO add separate toggle for name localization
         if !self.localized {
             if self.name.is_none() {
                 self.name = Some(GameString::wrap("Unknown".to_string()));
@@ -572,9 +573,11 @@ impl Cullable for Character {
             for t in self.traits.iter_mut(){
                 *t = localization.localize(t.as_str());
             }
+            /* 
             for t in self.recessive.iter_mut(){
                 *t = localization.localize(t.as_str());
             }
+            */
             for t in self.languages.iter_mut(){
                 *t = localization.localize(t.as_str());
             }

@@ -8,7 +8,11 @@ use crate::types::Wrapper;
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.
 fn demangle_generic(input:&str) -> String{
-    let mut s = input.replace("_", " ");
+    let mut s = input.trim_start_matches("dynn_").trim_start_matches("nick_").trim_end_matches("_perk").trim_start_matches("death_")
+    .trim_start_matches("tenet_").trim_start_matches("doctrine_")
+    .trim_start_matches("ethos_").trim_start_matches("heritage_").trim_start_matches("language_").trim_start_matches("martial_custom_").trim_start_matches("tradition_")
+    .trim_start_matches("e_").trim_start_matches("k_").trim_start_matches("d_").trim_start_matches("c_").trim_start_matches("b_")
+    .replace("_", " ");
     let bytes = unsafe { s.as_bytes_mut() };
     bytes[0] = bytes[0].to_ascii_uppercase();
     s
@@ -72,7 +76,14 @@ impl Localizer{
                             },
                             '\n' => {
                                 if past && !quotes && !value.is_empty(){
+                                    //Removing trait_? good idea because the localisation isnt consistent enough with trait names
+                                    //Removing _name though... controversial. Possibly a bad idea
+                                    //MAYBE only do this in certain files
+                                    key = key.trim_start_matches("trait_").trim_end_matches("_name").to_string();
                                     data.insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
+                                }
+                                else{
+                                    key.clear()
                                 }
                                 past = false;
                                 quotes = false;
@@ -95,10 +106,16 @@ impl Localizer{
                         }
                     }
                 }
+                /* 
+                From what I can gather there are two types of special localisation invocations:
+                - $key$ - use that key instead of the key that was used to look up the string
+                - [function(arg).function(arg)...] handling this one is going to be a nightmare
+                */
                 //TODO resolve the localization functions
                 hmap = Some(data);
             }
         }
+        //println!("{:?}", hmap);
         Localizer{
             data: hmap
         }
@@ -111,7 +128,12 @@ impl Localizer{
         }
         let data = self.data.as_ref().unwrap();
         if data.contains_key(key){
-            return data.get(key).unwrap().clone();
+            let d = data.get(key).unwrap().clone();
+            if d.starts_with("$") && d.ends_with("$"){
+                return self.localize(&d[1..d.len()-1]);
+            } else {
+                return d;
+            }
         }
         //println!("Key not found: {}", key);
         GameString::wrap(demangle_generic(key))
