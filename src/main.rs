@@ -84,11 +84,14 @@ fn main() {
     let mut localization_path = None;
     let mut depth = 3;
     if args.len() < 2{
-        stdout().write_all(b"Enter the filename: ").unwrap();
-        stdout().flush().unwrap();
+        println!("Enter the filename: ");
         //raw file contents
         stdin().read_line(&mut filename).unwrap();
         filename = filename.trim().to_string();
+        println!("Enter the localization path(You can just leave this empty): ");
+        let mut inp = String::new();
+        stdin().read_line(&mut inp).unwrap();
+        localization_path = Some(inp);
     }
     else{
         filename = args[1].clone();

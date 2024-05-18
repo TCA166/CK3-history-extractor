@@ -31,7 +31,7 @@ jobs:
       - name: Make doc
         run: make doc
       - name: Add example
-        run: unzip 'examples/TCA166's history.zip' -d target/doc/
+        run: unzip "examples/TCA166's history.zip" -d target/doc/
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

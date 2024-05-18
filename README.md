@@ -3,7 +3,7 @@
 [![GitHub Pages Documentation](https://img.shields.io/badge/GitHub_Pages-Documentation-blue)](https://tca166.github.io/CK3-history-extractor/ck3_history_extractor)
 [![Rust](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml/badge.svg)](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml)
 
-A program designed for creating an encyclopedia of sorts containing your ck3 history  
+A program designed for creating an encyclopedia containing your ck3 history  
 It goes through the lineage of every player in the save file (meaning multiplayer save files also work) and extracts data about every character it encounters and their associates
 
 ## Usage
@@ -61,7 +61,7 @@ And here are the arguments that the utility accepts as of right now:
 
 1. ```--internal``` forces the utility to use the internal templates.
 2. ```--depth %d``` sets the maximum depth of the data to retrieve in the savefile. The characters you played have depth=0, their relatives have depth=1 and so on.
-3. ```--localization %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate
+3. ```--localization %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate. Assuming you have the game installed via Steam you can do the following ```--localization "*YOUR STEAM PATH*/steamapps/common/Crusader Kings III/game/localization/english"```
 
 ## Output example
 
@@ -74,9 +74,8 @@ Just unzip the files contained within and witness the glory of my dynasty!
 
 ## Development status
 
-Currently I'm rewriting the tool in Rust.
-This means updated game support, faster speeds and no need for a Python installed.
-Stay tuned for updates!
+The tool has been rewritten using Rust.
+Currently I'm working on new features.
 
 ## License
 
