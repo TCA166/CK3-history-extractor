@@ -18,8 +18,10 @@ pub struct Title {
     name: Option<GameString>,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
-    vassals: Vec<Shared<Title>>,
+    de_jure_vassals: Vec<Shared<Title>>,
+    de_facto_vassals: Vec<Shared<Title>>,
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
+    claims: Vec<Shared<Character>>,
     depth: usize,
     localized:bool,
     name_localized:bool
@@ -124,6 +126,16 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(GameString, 
     history
 }
 
+impl Title {
+    pub fn add_jure_vassal(&mut self, vassal:Shared<Title>){
+        self.de_jure_vassals.push(vassal);
+    }
+
+    pub fn add_facto_vassal(&mut self, vassal:Shared<Title>){
+        self.de_facto_vassals.push(vassal);
+    }
+}
+
 impl DummyInit for Title {
     fn dummy(id:GameId) -> Self {
         Title{
@@ -131,8 +143,10 @@ impl DummyInit for Title {
             name: None,
             de_jure: None,
             de_facto: None,
-            vassals: Vec::new(),
+            de_jure_vassals: Vec::new(),
+            de_facto_vassals: Vec::new(),
             history: Vec::new(),
+            claims: Vec::new(),
             id: id,
             depth: 0,
             localized: false,
@@ -143,23 +157,29 @@ impl DummyInit for Title {
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
         self.key = Some(base.get_string_ref("key"));
         let de_jure_id = base.get("de_jure_liege");
-        self.de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(&de_jure.as_id()).clone()),
-            None => None
-        };
+        if de_jure_id.is_some(){
+            let o = game_state.get_title(&de_jure_id.unwrap().as_id()).clone();
+            self.de_jure = Some(o.clone());
+            o.get_internal_mut().add_jure_vassal(game_state.get_title(&self.id).clone());
+        }
         let de_facto_id = base.get("de_facto_liege");
-        self.de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(&de_facto.as_id()).clone()),
-            None => None
-        };
-        let mut vassals = Vec::new();
-        let vas = base.get("vassals");
-        if !vas.is_none(){
-            for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(&v.as_id()).clone());
+        if de_facto_id.is_some(){
+            let o = game_state.get_title(&de_facto_id.unwrap().as_id()).clone();
+            self.de_facto = Some(o.clone());
+            o.get_internal_mut().add_facto_vassal(game_state.get_title(&self.id).clone());
+        }
+        let claim_node = base.get("claim");
+        if claim_node.is_some(){
+            let c = claim_node.unwrap();
+            if let Some(claim) = c.as_object(){
+                for claim in claim.get_array_iter(){
+                    self.claims.push(game_state.get_character(&claim.as_id()).clone());
+                }
+            }
+            else{
+                self.claims.push(game_state.get_character(&c.as_id()).clone());
             }
         }
-        self.vassals = vassals;
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
@@ -181,7 +201,7 @@ impl Serialize for Title {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Title", 6)?;
+        let mut state = serializer.serialize_struct("Title", 8)?;
         state.serialize_field("name", &self.name)?;
         if self.de_jure.is_some(){
             let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
@@ -213,8 +233,8 @@ impl Serialize for Title {
             let de_facto = DerivedRef::from_derived(self.de_facto.as_ref().unwrap().clone());
             state.serialize_field("de_facto", &de_facto)?;
         }
-        let vassals = serialize_array(&self.vassals);
-        state.serialize_field("vassals", &vassals)?;
+        state.serialize_field("de_jure_vassals", &serialize_array(&self.de_jure_vassals))?;
+        state.serialize_field("de_facto_vassals", &serialize_array(&self.de_facto_vassals))?;
         let mut history = Vec::new();
         for h in self.history.iter(){
             let mut o = (h.0.clone(), None, h.2.clone());
@@ -224,7 +244,8 @@ impl Serialize for Title {
             }
             history.push(o);
         }
-        state.serialize_field("history", &self.history)?;
+        state.serialize_field("claims", &serialize_array(&self.claims))?;
+        state.serialize_field("history", &history)?;
         state.end()
     }
 }
@@ -253,7 +274,7 @@ impl Renderable for Title {
         if self.de_facto.is_some(){
             self.de_facto.as_ref().unwrap().get_internal().render_all(renderer);
         }
-        for v in &self.vassals{
+        for v in &self.de_jure_vassals{
             v.get_internal().render_all(renderer);
         }
         for o in &self.history{
@@ -289,8 +310,17 @@ impl Cullable for Title {
                 c.unwrap().set_depth(depth-1, localization);
             }
         }
-        for v in &self.vassals{
-            v.get_internal_mut().set_depth(depth-1, localization);
+        for v in &self.de_jure_vassals{
+            let o = v.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth-1, localization);
+            }
+        }
+        for v in &self.de_facto_vassals{
+            let o = v.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth-1, localization);
+            }
         }
         for o in self.history.iter_mut(){
             if !self.localized{

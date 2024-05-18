@@ -8,9 +8,9 @@
         <p class="h1 my-0 me-md-auto fw-normal">{%if dynasty.parent is defined and dynasty.parent != dynasty %}House{%endif%} {{dynasty.name}}</p>
         <a class="btn btn-outline-primary" href="../index.html">Home</a>
     </header>
-    <main style="margin:15px">
-        <div class="row card-deck" style="text-align: left; margin-bottom:5px">
-            <div class="col">
+    <main class="m-2">
+        <div class="row" style="text-align: left">
+            <div class="col w-50">
                 {%if dynasty.found_date != "" and dynasty.found_date != none%}
                 Creation Date: {{dynasty.found_date}}
                 <br />
@@ -44,19 +44,17 @@
                 </table>
                 {%endif%}
             </div>
-            <div class="col">
+            <div class="col w-50">
                 {%if dynasty.leaders|length > 0%}
                 <div class="card">
                     <div class="card-header">
                         House head history:
                     </div>
-                    <div class="card-body">
-                        <ol>
-                            {%for leader in dynasty.leaders%}
-                            <li>{{leader|render_ref("characters")}}</li>
-                            {%endfor%}
-                        </ol>
-                    </div>
+                    <ol class="list-group list-group-numbered list-group-flush">
+                        {%for leader in dynasty.leaders%}
+                        <li class="list-group-item">{{leader|render_ref("characters")}}</li>
+                        {%endfor%}
+                    </ol>
                 </div>
                 {%endif%}
             </div>

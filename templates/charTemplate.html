@@ -9,7 +9,7 @@
         <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick if character.nick != none}}</p>
         <a class="btn btn-outline-primary" href="../index.html">Home</a>
     </header>
-    <main style="margin:15px">
+    <main class="m-2">
         <div class="container-fluid" style="text-align: center">
             <div class="row" style="text-align: left">
                 <div class="col">
@@ -28,8 +28,8 @@
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">
-                <div class="col">
-                    <div class="card" style="width: 50rem;">
+                <div class="col" class="w-50">
+                    <div class="card">
                         <div class="card-header">
                             Base Skills
                         </div>
@@ -57,8 +57,8 @@
                         </table>
                     </div>
                 </div>
-                <div class="col">
-                    <div class="card" style="width: 50rem;">
+                <div class="col" class="w-50">
+                    <div class="card">
                         <div class="card-header">
                             Traits
                         </div>
@@ -67,7 +67,6 @@
                                 {%for trait in character.traits%}
                                 {{trait}} |
                                 {%endfor%}
-                                <br />
                                 <!-- ignored for now
                                 {%for trait in character.recessive%}
                                 {{trait}} |
@@ -79,8 +78,8 @@
                 </div>
             </div>
             <div class="row" style="margin-bottom:10px">
-                <div class="col">
-                    <div class="card" style="width: 50rem;">
+                <div class="col" class="w-50">
+                    <div class="card">
                         <div class="card-header">
                             Family
                         </div>
@@ -96,7 +95,7 @@
                         </ul>
                     </div>
                     {%if character.dna != none%}
-                    <div class="card" style="width: 50rem;">
+                    <div class="card">
                         <div class="card-header">
                             Character DNA
                             <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
@@ -109,7 +108,7 @@
                     </div>
                     {%endif%}
                     {%if character.memories|length != 0%}
-                    <div class="card" style="width: 50rem;">
+                    <div class="card">
                         <div class="card-header">
                             Character Memories
                             <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
@@ -131,9 +130,10 @@
                     </div>
                     {%endif%}
                 </div>
-                <div class="col">
+                <div class="col" class="w-50">
                     {%if character.dead %}
-                    <div class="card" style="width: 50rem;">
+                    {%if character.titles|length > 0%}
+                    <div class="card">
                         <div class="card-header">
                             Titles
                         </div>
@@ -143,8 +143,9 @@
                             {%endfor%}
                         </div>
                     </div>
+                    {%endif%}
                     {%else%}
-                    <div class="card" style="width: 50rem;">
+                    <div class="card">
                         <div class="card-header">
                             Domain
                         </div>

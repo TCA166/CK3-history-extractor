@@ -38,6 +38,7 @@ pub struct Character {
     kills: Vec<Shared<Character>>,
     languages: Vec<GameString>,
     vassals: Vec<Shared<DerivedRef<Character>>>,
+    female:bool,
     depth: usize,
     localized: bool,
     name_localized: bool
@@ -293,6 +294,7 @@ impl DummyInit for Character{
             kills: Vec::new(),
             languages: Vec::new(),
             vassals: Vec::new(),
+            female: false,
             id: id,
             depth: 0,
             localized:false,
@@ -301,6 +303,10 @@ impl DummyInit for Character{
     }
 
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
+        let female = base.get("female");
+        if female.is_some(){
+            self.female = female.unwrap().as_string().as_str() == "yes";
+        }
         get_dead(&mut self.dead, &mut self.reason, &mut self.date, &mut self.titles, &base, game_state);
         //find skills
         get_skills(&mut self.skills, &base);

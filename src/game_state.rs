@@ -171,9 +171,10 @@ impl GameState{
             t.get_internal_mut().init(value, self);
         }
         else{
-            let mut t = Title::dummy(key);
-            t.init(value, self);
-            self.titles.insert(key.clone(), Shared::wrap(t));
+            let t = Shared::wrap(Title::dummy(key));
+            self.titles.insert(key.clone(), t.clone());
+            t.get_internal_mut().init(value, self);
+            
         }
     }
 
@@ -185,9 +186,9 @@ impl GameState{
             f.get_internal_mut().init(value, self);
         }
         else{
-            let mut f = Faith::dummy(key);
-            f.init(value, self);
-            self.faiths.insert(key.clone(), Shared::wrap(f));
+            let f = Shared::wrap(Faith::dummy(key));
+            self.faiths.insert(key.clone(), f.clone());
+            f.get_internal_mut().init(value, self);
         }
     }
 
@@ -199,9 +200,9 @@ impl GameState{
             c.get_internal_mut().init(value, self);
         }
         else{
-            let mut c = Culture::dummy(key);
-            c.init(value, self);
-            self.cultures.insert(key.clone(), Shared::wrap(c));
+            let c = Shared::wrap(Culture::dummy(key));
+            self.cultures.insert(key.clone(), c.clone());
+            c.get_internal_mut().init(value, self);
         }
     }
 
@@ -213,9 +214,9 @@ impl GameState{
             d.get_internal_mut().init(value, self);
         }
         else{
-            let mut d = Dynasty::dummy(key);
-            d.init(value, self);
-            self.dynasties.insert(key.clone(), Shared::wrap(d));
+            let d = Shared::wrap(Dynasty::dummy(key));
+            self.dynasties.insert(key.clone(), d.clone());
+            d.get_internal_mut().init(value, self);
         }
     }
 
@@ -227,9 +228,9 @@ impl GameState{
             m.get_internal_mut().init(value, self);
         }
         else{
-            let mut m = Memory::dummy(key);
-            m.init(value, self);
-            self.memories.insert(key.clone(), Shared::wrap(m));
+            let m = Shared::wrap(Memory::dummy(key));
+            self.memories.insert(key.clone(), m.clone());
+            m.get_internal_mut().init(value, self);
         }
     }
 

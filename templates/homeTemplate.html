@@ -12,13 +12,13 @@
             </svg>
         </a>
     </header>
-    <main style="margin:8px" >
+    <main class="m-3">
         <h3>
             This is your character history:
         </h3>
         <div class="card-deck">
             {% for node in player.lineage %}
-            <div class="card" style="width: 28rem;display: inline-block;margin:2px;">
+            <div class="card m-1" style="width: 28rem;display: inline-block;">
                 <div class="card-body">
                     <h5 class="card-title">{{node.character.name}} {{node.character.nick if node.character.nick != none}}</h5>
                     <p class="card-text">Of house {{node.character.house.name}}</p>
