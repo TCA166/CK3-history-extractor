@@ -77,6 +77,7 @@ fn main() {
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
+    let mut compressed = false;
     #[cfg(internal)]
     let mut use_internal = false;
     #[cfg(not(internal))]
@@ -116,7 +117,10 @@ fn main() {
                 "--localization" => {
                     localization_path = Some(iter.next().expect("Localization argument requires a value").clone());
                     println!("Using localization from {}", localization_path.as_ref().unwrap());
-                } 
+                }
+                "--zip" => {
+                    compressed = true;
+                }
                 _ => {
                     println!("Unknown argument: {}", arg);
                 }
