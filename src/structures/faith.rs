@@ -1,7 +1,7 @@
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderer, Shared};
+use super::{Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
 use super::renderer::Renderable;
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
@@ -62,26 +62,7 @@ fn get_name(base:&GameObject) -> GameString{
     }
 }
 
-impl GameObjectDerived for Faith {
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
-        let mut tenets = Vec::new();
-        let doctrines_array = base.get("doctrine").unwrap().as_object().unwrap();
-        get_tenets(&mut tenets, doctrines_array);
-        let mut doctrines = Vec::new();
-        get_doctrines(&mut doctrines, doctrines_array);
-        Faith{
-            name: Some(get_name(&base)),
-            tenets: tenets,
-            head: get_head(&base, game_state),
-            fervor: base.get("fervor").unwrap().as_string().parse::<f32>().unwrap(),
-            doctrines: doctrines,
-            id: base.get_name().parse::<GameId>().unwrap(),
-            depth: 0,
-            localized: false,
-            name_localized: false
-        }
-    }
-
+impl DummyInit for Faith {
     fn dummy(id:GameId) -> Self {
         Faith{
             name: None,
@@ -104,7 +85,9 @@ impl GameObjectDerived for Faith {
         self.name = Some(get_name(&base));
         self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
     }
+}
 
+impl GameObjectDerived for Faith {
     fn get_id(&self) -> GameId {
         self.id
     }

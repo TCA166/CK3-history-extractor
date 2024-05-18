@@ -1,6 +1,6 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderable, Renderer, Shared};
+use super::{Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderable, Renderer, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
@@ -26,20 +26,7 @@ fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&Ga
     }
 }
 
-impl GameObjectDerived for Memory {
-    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
-        let mut participants = Vec::new();
-        get_participants(&mut participants, &base, game_state);
-        Memory{
-            date: Some(base.get("creation_date").unwrap().as_string()),
-            r#type: Some(base.get("type").unwrap().as_string()),
-            participants: participants,
-            id: base.get_name().parse::<GameId>().unwrap(),
-            depth: 0,
-            localized:false
-        }
-    }
-
+impl DummyInit for Memory {
     fn dummy(id:GameId) -> Self {
         Memory{
             date: None,
@@ -56,7 +43,9 @@ impl GameObjectDerived for Memory {
         self.r#type = Some(base.get("type").unwrap().as_string());
         get_participants(&mut self.participants, &base, game_state);
     }
+}
 
+impl GameObjectDerived for Memory {
     fn get_id(&self) -> GameId {
         self.id
     }

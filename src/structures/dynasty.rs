@@ -3,7 +3,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, Culture, DerivedRef, Faith, GameId, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Character, Cullable, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived, Renderer, Shared};
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
@@ -24,8 +24,6 @@ pub struct Dynasty{
     localized:bool,
     name_localized: bool,
 }
-
-//TODO it's possible that dynasties sometimes are stored within history files like characters
 
 impl Dynasty {
     /// Gets the faith of the dynasty.
@@ -180,33 +178,7 @@ fn get_date(base:&GameObject) -> Option<GameString>{
     Some(date.unwrap().as_string())
 }
 
-impl GameObjectDerived for Dynasty {
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
-        //get the dynasty legacies
-        let mut perks = Vec::new();
-        get_perks(&mut perks, &base);
-        //get the array of leaders
-        let mut leaders = Vec::new();
-        get_leaders(&mut leaders, &base, game_state);
-        let res = get_prestige(&base);
-        let p = get_parent(&base, game_state);
-        Dynasty{
-            name: get_name(&base, p.clone()),
-            parent: p,
-            members: 0,
-            houses: 0,
-            prestige_tot: res.0,
-            prestige: res.1,
-            perks: perks,
-            leaders: leaders,
-            found_date: get_date(&base),
-            id: base.get_name().parse::<GameId>().unwrap(),
-            depth: 0,
-            localized:false,
-            name_localized: false
-        }
-    }
-
+impl DummyInit for Dynasty {
     fn dummy(id:GameId) -> Self {
         Dynasty{
             name: None,
@@ -240,7 +212,9 @@ impl GameObjectDerived for Dynasty {
         }
         self.found_date = get_date(&base);
     }
+}
 
+impl GameObjectDerived for Dynasty {
     fn get_id(&self) -> GameId {
         self.id
     }

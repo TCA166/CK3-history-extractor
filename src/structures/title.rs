@@ -9,7 +9,7 @@ use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 
 use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, DerivedRef, GameId, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
@@ -124,49 +124,7 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(GameString, 
     history
 }
 
-impl GameObjectDerived for Title{
-
-    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
-        //first we get the optional de_jure_liege and de_facto_liege
-        let de_jure_id = base.get("de_jure_liege");
-        let de_jure = match de_jure_id{
-            Some(de_jure) => Some(game_state.get_title(&de_jure.as_id()).clone()),
-            None => None
-        };
-        let de_facto_id = base.get("de_facto_liege");
-        let de_facto = match de_facto_id{
-            Some(de_facto) => Some(game_state.get_title(&de_facto.as_id()).clone()),
-            None => None
-        };
-        let mut vassals = Vec::new();
-        //if the title has vassals, we get them
-        let vas = base.get("vassals");
-        if !vas.is_none(){
-            for v in base.get_object_ref("vassals").get_array_iter(){
-                vassals.push(game_state.get_title(&v.as_id()).clone());
-            }
-        }
-        let name = base.get("name").unwrap().as_string().clone();
-        let id = base.get_name().parse::<GameId>().unwrap();
-        let history = get_history(base, game_state);
-        Title{
-            key: Some(base.get_string_ref("key")),
-            name: Some(name),
-            de_jure: de_jure,
-            de_facto: de_facto,
-            vassals: vassals,
-            history: history,
-            id: id,
-            depth: 0,
-            localized: false,
-            name_localized: false
-        }
-    }
-
-    fn get_id(&self) -> GameId {
-        self.id
-    }
-
+impl DummyInit for Title {
     fn dummy(id:GameId) -> Self {
         Title{
             key: None,
@@ -205,6 +163,12 @@ impl GameObjectDerived for Title{
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
+    }
+}
+
+impl GameObjectDerived for Title{
+    fn get_id(&self) -> GameId {
+        self.id
     }
 
     fn get_name(&self) -> GameString {

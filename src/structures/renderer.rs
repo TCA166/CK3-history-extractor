@@ -79,7 +79,7 @@ pub trait Renderable: Serialize + GameObjectDerived{
 /// Trait for objects that can be culled.
 /// This is used to limit object serialization to a certain depth.
 /// Not all [Renderable] objects need to implement this trait.
-pub trait Cullable{
+pub trait Cullable : GameObjectDerived{
     /// Set the depth of the object and performs localization.
     /// Ideally this should be called on the root object once and the depth should be propagated to all children.
     /// Also ideally should do nothing if the depth is less than or equal to the current depth.

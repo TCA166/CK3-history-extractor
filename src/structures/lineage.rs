@@ -7,7 +7,7 @@ use crate::game_state::GameState;
 use crate::localizer::Localizer;
 use crate::types::{Wrapper, WrapperMut};
 
-use super::{Character, Cullable, GameId, GameObjectDerived, Shared};
+use super::{Character, Cullable, FromGameObject, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode{
@@ -107,7 +107,7 @@ fn get_lifestyle(base: &GameObject) -> Option<GameString>{
     }
 }
 
-impl GameObjectDerived for LineageNode {
+impl FromGameObject for LineageNode{
     fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
         let id = base.get("character").unwrap().as_id();
         let char = game_state.get_character(&id);
@@ -125,33 +125,9 @@ impl GameObjectDerived for LineageNode {
             id: id
         }
     }
+}
 
-    fn dummy(id:GameId) -> Self {
-        LineageNode{
-            character: None,
-            date: None,
-            score: 0,
-            prestige: 0,
-            piety: 0,
-            dread: 0.0,
-            lifestyle: None,
-            perks: Vec::new(),
-            id: id
-        }
-    }
-
-    fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
-        let character_id = base.get("character").unwrap().as_id();
-        self.character = Some(game_state.get_character(&character_id));
-        self.score = get_score(&base);
-        self.prestige = get_prestige(&base);
-        self.piety = get_piety(&base);
-        self.dread = get_dread(&base);
-        self.lifestyle = get_lifestyle(&base);
-        self.date = Some(base.get("date").unwrap().as_string());
-        get_perks(&mut self.perks, base);
-    }
-
+impl GameObjectDerived for LineageNode {
     fn get_id(&self) -> GameId {
         self.id
     }

@@ -4,7 +4,7 @@ use serde::{Serialize, ser::SerializeStruct};
 
 use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, localizer::Localizer, types::{Wrapper, WrapperMut}};
 
-use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, Dynasty, Faith, GameId, GameObjectDerived, Memory, Renderer, Shared, Title};
+use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Renderer, Shared, Title};
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
@@ -42,8 +42,6 @@ pub struct Character {
     localized: bool,
     name_localized: bool
 }
-
-//TODO some characters are stored within history files. Will need to parse those too godamit
 
 // So both faith and culture can be stored for a character in the latest leader of their house. 
 // The problem with reading that now is that while Houses are already likely loaded,
@@ -265,86 +263,7 @@ impl Character {
     }
 }
 
-impl GameObjectDerived for Character {
-
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
-        let id = base.get_name().parse::<GameId>().unwrap();
-        let mut dead = false;
-        let mut reason = None;
-        let mut date = None;
-        let mut titles: Vec<Shared<Title>> = Vec::new();
-        get_dead(&mut dead, &mut reason, &mut date, &mut titles, &base, game_state);
-        //find skills
-        let mut skills = Vec::new();
-        get_skills(&mut skills, &base);
-        //find recessive traits
-        let mut recessive = Vec::new();
-        get_recessive(&mut recessive, &base);
-        //find family data
-        let mut spouses = Vec::new();
-        let mut former_spouses = Vec::new();
-        let mut children = Vec::new();
-        get_family(id, &mut spouses, &mut former_spouses, &mut children, &base, game_state);
-        //find dna
-        let dna = match base.get("dna"){
-            Some(d) => Some(d.as_string()),
-            None => None
-        };
-        //find traits
-        let mut traits = Vec::new();
-        get_traits(&mut traits, &base, game_state);
-        //find alive data
-        let mut gold = 0.0;
-        let mut piety = 0.0;
-        let mut prestige = 0.0;
-        let mut kills: Vec<Shared<Character>> = Vec::new();
-        let mut languages: Vec<GameString> = Vec::new();
-        let mut memories:Vec<Shared<Memory>> = Vec::new();
-        if !dead {
-            parse_alive_data(&base, &mut piety, &mut prestige, &mut gold, &mut kills, &mut languages, &mut traits, &mut memories, game_state);
-        }
-        //find landed data
-        let mut dread = 0.0;
-        let mut strength = 0.0;
-        let mut vassals:Vec<Shared<DerivedRef<Character>>> = Vec::new();
-        get_landed_data(&mut dread, &mut strength, &mut titles, &mut vassals, &base, game_state);
-        //find house
-        let house = get_dynasty(&base, game_state);
-        Character{
-            name: Some(base.get("first_name").unwrap().as_string()),
-            nick: base.get("nickname").map(|v| v.as_string()),
-            birth: Some(base.get("birth").unwrap().as_string()),
-            dead: dead,
-            date: date,
-            reason: reason,
-            house: house.clone(),
-            faith: get_faith(&base, game_state),
-            culture: get_culture(&base, game_state),
-            skills: skills,
-            traits: traits,
-            recessive:recessive,
-            spouses: spouses,
-            former: former_spouses,
-            children: children,
-            dna: dna,
-            memories: memories,
-            titles: titles,
-            piety: piety,
-            prestige: prestige,
-            dread: dread,
-            strength: strength,
-            gold: gold,
-            kills: kills,
-            languages: languages,
-            vassals: vassals,
-            id: id,
-            parents: Vec::new(),
-            depth: 0,
-            localized:false,
-            name_localized:false
-        }    
-    }
-
+impl DummyInit for Character{
     fn dummy(id:GameId) -> Self {
         Character{
             name: None,
@@ -411,7 +330,9 @@ impl GameObjectDerived for Character {
         self.culture = get_culture(&base, game_state);
         self.dna = dna;
     }
+}
 
+impl GameObjectDerived for Character {
     fn get_id(&self) -> GameId {
         self.id
     }
@@ -554,7 +475,6 @@ impl Cullable for Character {
         if depth <= self.depth && depth != 0{
             return;
         }
-        //TODO add separate toggle for name localization
         if !self.name_localized {
             if self.name.is_none() {
                 self.name = Some(GameString::wrap("Unknown".to_string()));

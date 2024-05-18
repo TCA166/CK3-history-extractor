@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, GameObjectDerived, Memory, Title};
+use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, DummyInit, Memory, Title};
 use crate::game_object::{GameId, GameObject, GameString};
 use crate::types::{Shared, Wrapper, WrapperMut};
 
@@ -157,8 +157,9 @@ impl GameState{
             c.get_internal_mut().init(value, self);
         }
         else{
-            let c = Character::from_game_object(value, self);
-            self.characters.insert(key.clone(), Shared::wrap(c));
+            let c = Shared::wrap(Character::dummy(key));
+            self.characters.insert(key.clone(), c.clone());
+            c.get_internal_mut().init(value, self);
         }
     }
 
@@ -170,7 +171,8 @@ impl GameState{
             t.get_internal_mut().init(value, self);
         }
         else{
-            let t = Title::from_game_object(value, self);
+            let mut t = Title::dummy(key);
+            t.init(value, self);
             self.titles.insert(key.clone(), Shared::wrap(t));
         }
     }
@@ -183,7 +185,8 @@ impl GameState{
             f.get_internal_mut().init(value, self);
         }
         else{
-            let f = Faith::from_game_object(value, self);
+            let mut f = Faith::dummy(key);
+            f.init(value, self);
             self.faiths.insert(key.clone(), Shared::wrap(f));
         }
     }
@@ -196,7 +199,8 @@ impl GameState{
             c.get_internal_mut().init(value, self);
         }
         else{
-            let c = Culture::from_game_object(value, self);
+            let mut c = Culture::dummy(key);
+            c.init(value, self);
             self.cultures.insert(key.clone(), Shared::wrap(c));
         }
     }
@@ -209,7 +213,8 @@ impl GameState{
             d.get_internal_mut().init(value, self);
         }
         else{
-            let d = Dynasty::from_game_object(value, self);
+            let mut d = Dynasty::dummy(key);
+            d.init(value, self);
             self.dynasties.insert(key.clone(), Shared::wrap(d));
         }
     }
@@ -222,7 +227,8 @@ impl GameState{
             m.get_internal_mut().init(value, self);
         }
         else{
-            let m = Memory::from_game_object(value, self);
+            let mut m = Memory::dummy(key);
+            m.init(value, self);
             self.memories.insert(key.clone(), Shared::wrap(m));
         }
     }

@@ -9,6 +9,7 @@ use crate::game_state::GameState;
 use crate::localizer::Localizer;
 use crate::types::Wrapper;
 
+use super::FromGameObject;
 use super::{renderer::{Cullable, Renderable}, Character, GameId, GameObjectDerived, LineageNode, Renderer, Shared};
 
 /// A struct representing a player in the game
@@ -28,7 +29,7 @@ fn get_lineage(lineage: &mut Vec<LineageNode>, base: &GameObject, game_state: &m
     }
 }
 
-impl GameObjectDerived for Player {
+impl FromGameObject for Player{
     fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
         let mut lineage: Vec<LineageNode> = Vec::new();
         get_lineage(&mut lineage, &base, game_state);
@@ -40,23 +41,9 @@ impl GameObjectDerived for Player {
             lineage: lineage
         }
     }
+}
 
-    fn dummy(id:GameId) -> Self {
-        Player {
-            name: GameString::wrap("".to_owned().into()),
-            id: id,
-            character: None,
-            lineage: Vec::new()
-        }
-    }
-
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        let key = base.get("character").unwrap().as_id();
-        self.character = Some(game_state.get_character(&key).clone());
-        self.id = base.get("player").unwrap().as_string().parse::<GameId>().unwrap();
-        get_lineage(&mut self.lineage, &base, game_state);
-    }
-
+impl GameObjectDerived for Player {
     fn get_id(&self) -> GameId {
         self.id
     }

@@ -24,13 +24,13 @@ use game_state::GameState;
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{Player, GameObjectDerived, Renderable, Renderer, Cullable};
+use structures::{Player, Renderable, Renderer, Cullable};
 
 /// A submodule that handles the creation of the minijinja [Environment] and loading of templates.
 mod jinja_env;
 use jinja_env::create_env;
 
-use crate::game_object::GameId;
+use crate::{game_object::GameId, structures::FromGameObject};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.

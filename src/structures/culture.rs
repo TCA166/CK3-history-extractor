@@ -2,7 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::renderer::Renderable;
-use super::{serialize_array, Cullable, GameId, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Cullable, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
@@ -53,28 +53,7 @@ fn get_date(base:&GameObject) -> Option<GameString>{
     None
 }
 
-impl GameObjectDerived for Culture {
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
-        let mut parents = Vec::new();
-        get_parents(&mut parents, base, game_state);
-        let mut traditions = Vec::new();
-        get_traditions(&mut traditions, &base);
-        Culture{
-            name: base.get("name").unwrap().as_string(),
-            ethos: base.get("ethos").unwrap().as_string(),
-            heritage: base.get("heritage").unwrap().as_string(),
-            martial: base.get("martial_custom").unwrap().as_string(),
-            date: get_date(&base),
-            parents: parents,
-            traditions: traditions,
-            id: base.get_name().parse::<GameId>().unwrap(),
-            language: base.get("language").unwrap().as_string(),
-            depth: 0,
-            localized:false,
-            name_localized:false
-        }
-    }
-
+impl DummyInit for Culture {
     fn dummy(id:GameId) -> Self {
         Culture{
             name: GameString::wrap("".to_owned().into()),
@@ -102,7 +81,9 @@ impl GameObjectDerived for Culture {
         self.date = get_date(&base);
         self.language = base.get("language").unwrap().as_string();
     }
+}
 
+impl GameObjectDerived for Culture {
     fn get_id(&self) -> GameId {
         self.id
     }

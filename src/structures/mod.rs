@@ -49,18 +49,7 @@ pub use derived_ref::{DerivedRef, serialize_array};
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
-pub trait GameObjectDerived : Serialize + Cullable{
-    /// Create a new object from a GameObject and auxiliary data from the game state.
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self;
-
-    /// Create a dummy object that can be used as a placeholder
-    /// Can be used to initialize an object from a section yet to be parsed.
-    fn dummy(id:GameId) -> Self;
-
-    /// Initialize the object (ideally dummy) with auxiliary data from the game state.
-    /// This can be called multiple times, but why would you do that?
-    fn init(&mut self, base:&GameObject, game_state:&mut GameState);
-
+pub trait GameObjectDerived : Serialize{
     /// Get the id of the object.
     /// All CK3 objects have an id that is a number.
     /// Within a given section that number is unique.
@@ -69,4 +58,21 @@ pub trait GameObjectDerived : Serialize + Cullable{
 
     /// Get the name of the object.
     fn get_name(&self) -> GameString;
+}
+
+/// A trait for [GameObjectDerived] objects that can be created as a dummy object, only later to be initialized.
+pub trait DummyInit : GameObjectDerived{
+    /// Create a dummy object that can be used as a placeholder
+    /// Can be used to initialize an object from a section yet to be parsed.
+    fn dummy(id:GameId) -> Self;
+
+    /// Initialize the object (ideally dummy) with auxiliary data from the game state.
+    /// This can be called multiple times, but why would you do that?
+    fn init(&mut self, base:&GameObject, game_state:&mut GameState);
+}
+
+/// A trait for [GameObjectDerived] objects that can be created from a [GameObject].
+pub trait FromGameObject : GameObjectDerived {
+    /// Create a new object from a [GameObject].
+    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self;
 }
