@@ -18,6 +18,33 @@ fn demangle_generic(input:&str) -> String{
     s
 }
 
+/// A function that handles the stack of function calls.
+/// It will replace characters from start to end in result according to the functions and arguments in the stack.
+fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, result:&mut String){
+    //TODO add more handling
+    match stack.len() {
+        2 => {
+            if stack[0].0 == "GetTrait" && stack[1].0 == "GetName"{
+                let l = stack[0].1[0].len();
+                result.replace_range(start..*end, stack[0].1[0].as_str().trim_matches('\''));
+                // move end to the end of the string
+                *end = start + l;
+            }
+        }
+        _ => {
+            let replace:String;
+            if stack.len() > 0 && stack[0].1.len() > 0{
+                replace = stack[0].1[0].clone();
+            }
+            else{
+                replace = "".to_owned();
+            }
+            result.replace_range(start..*end, &replace);
+            *end = start;
+        }
+    }
+}
+
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
@@ -111,7 +138,6 @@ impl Localizer{
                 - $key$ - use that key instead of the key that was used to look up the string
                 - [function(arg).function(arg)...] handling this one is going to be a nightmare
                 */
-                //TODO resolve the localization functions
                 hmap = Some(data);
             }
         }
@@ -129,9 +155,57 @@ impl Localizer{
         let data = self.data.as_ref().unwrap();
         if data.contains_key(key){
             let d = data.get(key).unwrap().clone();
-            if d.starts_with("$") && d.ends_with("$"){
+            if d.starts_with("$") && d.ends_with("$"){ //if we are provided with a different key to use instead then just do it
                 return self.localize(&d[1..d.len()-1]);
             } else {
+                //if the string contains []
+                if d.contains('[') && d.contains(']'){ //handle the special function syntax
+                    let mut value = d.to_string();
+                    let mut start = 0;
+                    let mut stack:Vec<(String, Vec<String>)> = Vec::new();
+                    { //create a call stack
+                        let mut call = String::new();
+                        let mut args:Vec<String> = Vec::new();
+                        let mut arg = String::new();
+                        let mut collect = false;
+                        let mut collect_args = false;
+                        let mut ind:usize = 1;
+                        for c in d.chars(){
+                            match c {
+                                '[' => {
+                                    collect = true;
+                                    start = ind - 1;
+                                },
+                                ']' => {
+                                    collect = false;
+                                    handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
+                                },
+                                '(' => {
+                                    collect_args = true;
+                                },
+                                ')' => {
+                                    collect_args = false;
+                                    args.push(mem::take(&mut arg));
+                                },
+                                ',' => {
+                                    args.push(mem::take(&mut arg));
+                                },
+                                '.' => {
+                                    stack.push((mem::take(&mut call), mem::take(&mut args)));
+                                },
+                                _ => {
+                                    if collect_args {
+                                        arg.push(c);
+                                    } else if collect {
+                                        call.push(c);
+                                    }
+                                }
+                            }
+                            ind += 1;
+                        }
+                    }
+                    return GameString::wrap(value);
+                }
                 return d;
             }
         }
