@@ -15,7 +15,7 @@
                     <div class="card-header">
                         Tenets:
                     </div>
-                    <table class="table table-bordered card-body">
+                    <table class="table table-bordered card-body mb-0">
                         <thead>
                             <tr>
                                 <th scope="col">{{faith.tenets[0]}}</th>
@@ -38,6 +38,11 @@
                         {%endif%}
                         </li>
                         <li class="list-group-item">Fervor: {{faith.fervor}}</li>
+                        {%for doctrine in faith.doctrines%}
+                        {%if loop.index > 18%}
+                        <li class="list-group-item">{{doctrine}}</li>
+                        {%endif%}
+                        {%endfor%}
                     </ul>
                 </div>
             </div>
@@ -46,11 +51,76 @@
                     <div class="card-header">
                         Doctrines:
                     </div>
-                    <ul class="list-group list-group-flush">
-                        {%for doctrine in faith.doctrines%}
-                        <li class="list-group-item">{{doctrine}}</li>
-                        {%endfor%}
-                    </ul>
+                    <table class="table table-bordered mb-0">
+                        <tr>
+                            <td>Marriage</td>
+                            <td>{{faith.doctrines[0]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Divorce</td>
+                            <td>{{faith.doctrines[1]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Bastard legitimacy</td>
+                            <td>{{faith.doctrines[2]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Same sex relations</td>
+                            <td>{{faith.doctrines[3]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Male adultery</td>
+                            <td>{{faith.doctrines[4]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Female adultery</td>
+                            <td>{{faith.doctrines[5]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Kinslaying</td>
+                            <td>{{faith.doctrines[6]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Deviancy</td>
+                            <td>{{faith.doctrines[7]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Witchcraft</td>
+                            <td>{{faith.doctrines[8]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Dominant Sex</td>
+                            <td>{{faith.doctrines[9]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Clergy</td>
+                            <td>{{faith.doctrines[12]}} {{faith.doctrines[15]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Consanguinity</td>
+                            <td>{{faith.doctrines[10]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Doctrine</td>
+                            <td>{{faith.doctrines[11]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Leadership</td>
+                            <td>{{faith.doctrines[13]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Clerical function</td>
+                            <td>{{faith.doctrines[14]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Clerical marriage</td>
+                            <td>{{faith.doctrines[16]}}</td>
+                        </tr>
+                        <tr>
+                            <td>Clerical appointment</td>
+                            <td>{{faith.doctrines[17]}}</td>
+                        </tr>
+                    </table>
                 </div>
             </div>
         </div>

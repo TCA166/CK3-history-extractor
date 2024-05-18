@@ -20,7 +20,8 @@ pub struct Culture {
     traditions: Vec<GameString>,
     language: GameString,
     depth: usize,
-    localized: bool
+    localized: bool,
+    name_localized: bool,
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
@@ -69,7 +70,8 @@ impl GameObjectDerived for Culture {
             id: base.get_name().parse::<GameId>().unwrap(),
             language: base.get("language").unwrap().as_string(),
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized:false
         }
     }
 
@@ -85,7 +87,8 @@ impl GameObjectDerived for Culture {
             language: GameString::wrap("".to_owned().into()),
             id: id,
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized:false
         }
     }
 
@@ -160,8 +163,9 @@ impl Cullable for Culture {
         if depth <= self.depth && depth != 0 {
             return;
         }
-        if !self.localized {
+        if !self.name_localized {
             self.name = localization.localize(self.name.as_str());
+            self.name_localized = true;
         }
         if depth == 0{
             return;

@@ -86,12 +86,14 @@ impl Serialize for Memory {
 
 impl Cullable for Memory {
     fn set_depth(&mut self, depth:usize, localization:&Localizer){
-        if depth <= self.depth || depth == 0{
+        if depth <= self.depth && depth != 0{
             return;
         }
-        self.localized = true;
         if !self.localized{
             self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
+        }
+        if depth == 0{
+            return;
         }
         self.depth = depth;
         for part in self.participants.iter_mut(){
@@ -103,6 +105,7 @@ impl Cullable for Memory {
                 o.unwrap().set_depth(depth - 1, localization);
             }
         }
+        self.localized = true;
     }
 
     fn get_depth(&self) -> usize{

@@ -39,7 +39,8 @@ pub struct Character {
     languages: Vec<GameString>,
     vassals: Vec<Shared<DerivedRef<Character>>>,
     depth: usize,
-    localized: bool
+    localized: bool,
+    name_localized: bool
 }
 
 //TODO some characters are stored within history files. Will need to parse those too godamit
@@ -339,7 +340,8 @@ impl GameObjectDerived for Character {
             id: id,
             parents: Vec::new(),
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized:false
         }    
     }
 
@@ -374,7 +376,8 @@ impl GameObjectDerived for Character {
             vassals: Vec::new(),
             id: id,
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized:false
         }
     }
 
@@ -552,13 +555,14 @@ impl Cullable for Character {
             return;
         }
         //TODO add separate toggle for name localization
-        if !self.localized {
+        if !self.name_localized {
             if self.name.is_none() {
                 self.name = Some(GameString::wrap("Unknown".to_string()));
             }
             else{
                 self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             }
+            self.name_localized = true;
         }
         if depth == 0 {
             return;

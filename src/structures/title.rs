@@ -21,7 +21,8 @@ pub struct Title {
     vassals: Vec<Shared<Title>>,
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
     depth: usize,
-    localized:bool
+    localized:bool,
+    name_localized:bool
 }
 
 /// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
@@ -157,7 +158,8 @@ impl GameObjectDerived for Title{
             history: history,
             id: id,
             depth: 0,
-            localized: false
+            localized: false,
+            name_localized: false
         }
     }
 
@@ -175,7 +177,8 @@ impl GameObjectDerived for Title{
             history: Vec::new(),
             id: id,
             depth: 0,
-            localized: false
+            localized: false,
+            name_localized: false
         }
     }
 
@@ -302,13 +305,13 @@ impl Cullable for Title {
         if depth <= self.depth && depth != 0{
             return;
         }
-        if !self.localized { //localization
+        if !self.name_localized { //localization
             self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
+            self.name_localized = true;
         }
         if depth == 0{
             return;
         }
-        self.localized = true;
         self.depth = depth;
         if self.de_jure.is_some(){
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
@@ -336,6 +339,7 @@ impl Cullable for Title {
                 }
             }
         }
+        self.localized = true;
     }
 
     fn get_depth(&self) -> usize {

@@ -21,7 +21,8 @@ pub struct Dynasty{
     leaders: Vec<Shared<Character>>,
     found_date: Option<GameString>,
     depth: usize,
-    localized:bool
+    localized:bool,
+    name_localized: bool,
 }
 
 //TODO it's possible that dynasties sometimes are stored within history files like characters
@@ -201,7 +202,8 @@ impl GameObjectDerived for Dynasty {
             found_date: get_date(&base),
             id: base.get_name().parse::<GameId>().unwrap(),
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized: false
         }
     }
 
@@ -218,7 +220,8 @@ impl GameObjectDerived for Dynasty {
             found_date: None,
             id: id,
             depth: 0,
-            localized:false
+            localized:false,
+            name_localized: false
         }
     }
 
@@ -303,13 +306,14 @@ impl Cullable for Dynasty {
             return;
         }
         //TODO deal with weird name chicanery
-        if !self.localized{
+        if !self.name_localized{
             if self.name.is_some() {
                 self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             }
             else{
                 self.name = Some(GameString::wrap("Unknown".to_owned()));
             }
+            self.name_localized = true;
         }
         if depth == 0 {
             return;
