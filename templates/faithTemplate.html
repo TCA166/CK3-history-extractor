@@ -1,129 +1,130 @@
 <html>
-<head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
-    <title>{{faith.name}}</title>
-</head>
-<body>
-    <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
-        <p class="h1 my-0 me-md-auto fw-normal">{{faith.name}}</p>
-        <a class="btn btn-outline-primary" href="../index.html">Home</a>
-    </header>
-    <main class="m-2">
-        <div class="row card-deck" style="text-align: left">
-            <div class="col">
-                <div class="card mb-2">
-                    <div class="card-header">
-                        Tenets:
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <title>{{faith.name}}</title>
+    </head>
+    <body>
+        <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
+            <p class="h1 my-0 me-md-auto fw-normal">{{faith.name}}</p>
+            <a class="btn btn-outline-primary" href="../index.html">Home</a>
+        </header>
+        <main class="m-2">
+            <div class="row card-deck" style="text-align: left">
+                <div class="col">
+                    <div class="card mb-2">
+                        <div class="card-header">
+                            Tenets:
+                        </div>
+                        <table class="table table-bordered card-body mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">{{faith.tenets[0]}}</th>
+                                    <th scope="col">{{faith.tenets[1]}}</th>
+                                    <th scope="col">{{faith.tenets[2]}}</th>
+                                </tr>
+                            </thead>
+                        </table>
                     </div>
-                    <table class="table table-bordered card-body mb-0">
-                        <thead>
+                    <div class="card">
+                        <div class="card-header">
+                            Other:
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Religion Head:
+                            {%if faith.head is defined%}
+                            {{faith.head|render_ref("characters")}}
+                            {%else%}
+                            None
+                            {%endif%}
+                            </li>
+                            <li class="list-group-item">Fervor: {{faith.fervor}}</li>
+                            {%for doctrine in faith.doctrines%}
+                            {%if loop.index > 18%}
+                            <li class="list-group-item">{{doctrine}}</li>
+                            {%endif%}
+                            {%endfor%}
+                        </ul>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card">
+                        <div class="card-header">
+                            Doctrines:
+                        </div>
+                        <table class="table table-bordered mb-0">
                             <tr>
-                                <th scope="col">{{faith.tenets[0]}}</th>
-                                <th scope="col">{{faith.tenets[1]}}</th>
-                                <th scope="col">{{faith.tenets[2]}}</th>
+                                <td>Marriage</td>
+                                <td>{{faith.doctrines[0]}}</td>
                             </tr>
-                        </thead>
-                    </table>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        Other:
+                            <tr>
+                                <td>Divorce</td>
+                                <td>{{faith.doctrines[1]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Bastard legitimacy</td>
+                                <td>{{faith.doctrines[2]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Same sex relations</td>
+                                <td>{{faith.doctrines[3]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Male adultery</td>
+                                <td>{{faith.doctrines[4]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Female adultery</td>
+                                <td>{{faith.doctrines[5]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Kinslaying</td>
+                                <td>{{faith.doctrines[6]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Deviancy</td>
+                                <td>{{faith.doctrines[7]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Witchcraft</td>
+                                <td>{{faith.doctrines[8]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Dominant Sex</td>
+                                <td>{{faith.doctrines[9]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Clergy</td>
+                                <td>{{faith.doctrines[12]}} {{faith.doctrines[15]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Consanguinity</td>
+                                <td>{{faith.doctrines[10]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Doctrine</td>
+                                <td>{{faith.doctrines[11]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Leadership</td>
+                                <td>{{faith.doctrines[13]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Clerical function</td>
+                                <td>{{faith.doctrines[14]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Clerical marriage</td>
+                                <td>{{faith.doctrines[16]}}</td>
+                            </tr>
+                            <tr>
+                                <td>Clerical appointment</td>
+                                <td>{{faith.doctrines[17]}}</td>
+                            </tr>
+                        </table>
                     </div>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">Religion Head:
-                        {%if faith.head is defined%}
-                        {{faith.head|render_ref("characters")}}
-                        {%else%}
-                        None
-                        {%endif%}
-                        </li>
-                        <li class="list-group-item">Fervor: {{faith.fervor}}</li>
-                        {%for doctrine in faith.doctrines%}
-                        {%if loop.index > 18%}
-                        <li class="list-group-item">{{doctrine}}</li>
-                        {%endif%}
-                        {%endfor%}
-                    </ul>
                 </div>
             </div>
-            <div class="col">
-                <div class="card">
-                    <div class="card-header">
-                        Doctrines:
-                    </div>
-                    <table class="table table-bordered mb-0">
-                        <tr>
-                            <td>Marriage</td>
-                            <td>{{faith.doctrines[0]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Divorce</td>
-                            <td>{{faith.doctrines[1]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Bastard legitimacy</td>
-                            <td>{{faith.doctrines[2]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Same sex relations</td>
-                            <td>{{faith.doctrines[3]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Male adultery</td>
-                            <td>{{faith.doctrines[4]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Female adultery</td>
-                            <td>{{faith.doctrines[5]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Kinslaying</td>
-                            <td>{{faith.doctrines[6]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Deviancy</td>
-                            <td>{{faith.doctrines[7]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Witchcraft</td>
-                            <td>{{faith.doctrines[8]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Dominant Sex</td>
-                            <td>{{faith.doctrines[9]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Clergy</td>
-                            <td>{{faith.doctrines[12]}} {{faith.doctrines[15]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Consanguinity</td>
-                            <td>{{faith.doctrines[10]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Doctrine</td>
-                            <td>{{faith.doctrines[11]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Leadership</td>
-                            <td>{{faith.doctrines[13]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Clerical function</td>
-                            <td>{{faith.doctrines[14]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Clerical marriage</td>
-                            <td>{{faith.doctrines[16]}}</td>
-                        </tr>
-                        <tr>
-                            <td>Clerical appointment</td>
-                            <td>{{faith.doctrines[17]}}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-</body>
+        </main>
+    </body>
 </html>

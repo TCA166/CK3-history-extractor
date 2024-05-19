@@ -1,5 +1,6 @@
-use std::{mem, rc::Rc};
+use std::{io::Read, mem, rc::Rc};
 use crate::{game_object::{GameObject, SaveFileValue}, types::{Shared, Wrapper, WrapperMut}};
+use zip::read::ZipArchive;
 
 /// A struct that represents a section in a ck3 save file.
 /// Each section has a name, holds a reference to the contents of the save file and the current parsing offset.
@@ -14,7 +15,7 @@ use crate::{game_object::{GameObject, SaveFileValue}, types::{Shared, Wrapper, W
 /// # Example
 /// 
 /// ```
-/// let save = SaveFile::new("save.ck3");
+/// let save = SaveFile::open("save.ck3");
 /// let section = save.next();
 /// let object = section.to_object().unwrap();
 /// ```
@@ -221,8 +222,22 @@ impl SaveFile{
 
     /// Create a new SaveFile instance.
     /// The filename must be valid of course.
-    pub fn new(filename: &str) -> SaveFile{
+    pub fn open(filename: &str) -> SaveFile{
         let contents = std::fs::read_to_string(filename).unwrap();
+        SaveFile{
+            contents: Rc::new(contents),
+            offset: Shared::wrap(0),
+        }
+    }
+
+    pub fn open_compressed(filename: &str) -> SaveFile{
+        let mut archive = ZipArchive::new(std::fs::File::open(filename).unwrap()).unwrap();
+        let mut gamestate = archive.by_index(0).unwrap();
+        if gamestate.is_dir(){
+            panic!("Gamestate is a directory");
+        }
+        let mut contents = String::new();
+        gamestate.read_to_string(&mut contents).unwrap();
         SaveFile{
             contents: Rc::new(contents),
             offset: Shared::wrap(0),
@@ -291,7 +306,7 @@ mod tests {
                 }
             }
         ").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -312,7 +327,7 @@ mod tests {
                 test3={ 1 2 3}
             }
         ").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -340,7 +355,7 @@ mod tests {
                 test5=42
             }
         ").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -356,7 +371,7 @@ mod tests {
                 test2={ 1 2 3 }
             }
         ").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -390,7 +405,7 @@ mod tests {
             }
         }
         ").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         let variables = object.get_object_ref("variables");
         let data = variables.get_object_ref("data");
@@ -435,7 +450,7 @@ mod tests {
             }
             artifact_claims={ 83888519 }
         }").unwrap();
-        let mut save_file = super::SaveFile::new(file.path().to_str().unwrap());
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(*(object.get_string_ref("name")) , "dynn_Sao".to_string());

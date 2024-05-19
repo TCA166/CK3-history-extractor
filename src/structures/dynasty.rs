@@ -279,7 +279,6 @@ impl Cullable for Dynasty {
         if depth <= self.depth && depth != 0{
             return;
         }
-        //TODO deal with weird name chicanery
         if !self.name_localized{
             if self.name.is_some() {
                 self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));

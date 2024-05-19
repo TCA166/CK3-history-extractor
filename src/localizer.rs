@@ -26,7 +26,8 @@ fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, r
         2 => {
             if stack[0].0 == "GetTrait" && stack[1].0 == "GetName"{
                 let l = stack[0].1[0].len();
-                result.replace_range(start..*end, stack[0].1[0].as_str().trim_matches('\''));
+                let replace = demangle_generic(stack[0].1[0].as_str().trim_matches('\''));
+                result.replace_range(start..*end, &replace);
                 // move end to the end of the string
                 *end = start + l;
             }

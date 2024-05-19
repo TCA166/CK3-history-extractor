@@ -50,6 +50,7 @@ fn create_dir_maybe(name: &str) {
 /// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
 /// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
 /// 4. `--localization` - A flag that tells the program where to find the localization files. If not provided, the program will use a crude localization.
+/// 5. `--zip` - A flag that tells the program that the input file is compressed into an archive.
 /// 
 /// # Process
 /// 
@@ -71,7 +72,6 @@ fn main() {
     if cfg!(debug_assertions) {
         env::set_var("RUST_BACKTRACE", "1");
     }
-    // TODO add decompression for compressed save files
     //Get the staring time
     let start_time = SystemTime::now();
     //User IO
@@ -130,7 +130,12 @@ fn main() {
     }
     let localizer = Localizer::new(localization_path);
     //initialize the save file
-    let save = SaveFile::new(filename.as_str()); // now we have an iterator we can work with that returns these large objects
+    let save:SaveFile;
+    if compressed {
+        save = SaveFile::open_compressed(filename.as_str());
+    } else {
+        save = SaveFile::open(filename.as_str());
+    }
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state:GameState = GameState::new();
     let mut last_name = String::new();

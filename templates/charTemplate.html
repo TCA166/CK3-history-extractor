@@ -1,171 +1,171 @@
 <html>
-<head>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
-    <title>{{character.name}} {{character.nick if character.nick != none}}</title>
-</head>
-<body>
-    <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
-        <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick if character.nick != none}}</p>
-        <a class="btn btn-outline-primary" href="../index.html">Home</a>
-    </header>
-    <main class="m-2">
-        <div class="container-fluid" style="text-align: center">
-            <div class="row" style="text-align: left">
-                <div class="col">
-                    Date of birth: {{character.birth}}<br />
-                    {%if character.dead%}
-                    Date of death: {{character.date}}<br />
-                    Reason of death: {%if character.reason != none%}{{character.reason}}{%else%}Natural causes{%endif%}<br />
-                    {%endif%}
-                    {%if character.culture is defined%}
-                    Culture: {{character.culture|render_ref("cultures")}} <br>
-                    {%endif%}
-                    {%if character.faith is defined%}
-                    Faith: {{character.faith|render_ref("faiths")}} <br>
-                    {%endif%}
-                    Dynastic House: {%if character.house is defined%}{{character.house|render_ref("dynasties")}}{%else%}Lowborn{%endif%}<br />
-                </div>
-            </div>
-            <div class="row" style="margin-bottom:10px">
-                <div class="col" class="w-50">
-                    <div class="card">
-                        <div class="card-header">
-                            Base Skills
-                        </div>
-                        <table class="table table-bordered mb-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Diplomacy</th>
-                                    <th scope="col">Stewardship</th>
-                                    <th scope="col">Martial</th>
-                                    <th scope="col">Intrigue</th>
-                                    <th scope="col">Learning</th>
-                                    <th scope="col">Prowess</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>{{character.skills[0]}}</td>
-                                    <td>{{character.skills[1]}}</td>
-                                    <td>{{character.skills[2]}}</td>
-                                    <td>{{character.skills[3]}}</td>
-                                    <td>{{character.skills[4]}}</td>
-                                    <td>{{character.skills[5]}}</td>
-                                </tr>
-                            </tbody>
-                        </table>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+        <title>{{character.name}} {{character.nick if character.nick != none}}</title>
+    </head>
+    <body>
+        <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
+            <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick if character.nick != none}}</p>
+            <a class="btn btn-outline-primary" href="../index.html">Home</a>
+        </header>
+        <main class="m-2">
+            <div class="container-fluid" style="text-align: center">
+                <div class="row" style="text-align: left">
+                    <div class="col">
+                        Date of birth: {{character.birth}}<br />
+                        {%if character.dead%}
+                        Date of death: {{character.date}}<br />
+                        Reason of death: {%if character.reason != none%}{{character.reason}}{%else%}Natural causes{%endif%}<br />
+                        {%endif%}
+                        {%if character.culture is defined%}
+                        Culture: {{character.culture|render_ref("cultures")}} <br>
+                        {%endif%}
+                        {%if character.faith is defined%}
+                        Faith: {{character.faith|render_ref("faiths")}} <br>
+                        {%endif%}
+                        Dynastic House: {%if character.house is defined%}{{character.house|render_ref("dynasties")}}{%else%}Lowborn{%endif%}<br />
                     </div>
                 </div>
-                <div class="col" class="w-50">
-                    <div class="card">
-                        <div class="card-header">
-                            Traits
+                <div class="row" style="margin-bottom:10px">
+                    <div class="col" class="w-50">
+                        <div class="card">
+                            <div class="card-header">
+                                Base Skills
+                            </div>
+                            <table class="table table-bordered mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Diplomacy</th>
+                                        <th scope="col">Stewardship</th>
+                                        <th scope="col">Martial</th>
+                                        <th scope="col">Intrigue</th>
+                                        <th scope="col">Learning</th>
+                                        <th scope="col">Prowess</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>{{character.skills[0]}}</td>
+                                        <td>{{character.skills[1]}}</td>
+                                        <td>{{character.skills[2]}}</td>
+                                        <td>{{character.skills[3]}}</td>
+                                        <td>{{character.skills[4]}}</td>
+                                        <td>{{character.skills[5]}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">
-                                {%for trait in character.traits%}
-                                {{trait}} |
-                                {%endfor%}
-                                <!-- ignored for now
-                                {%for trait in character.recessive%}
-                                {{trait}} |
-                                {%endfor%}
-                                -->
-                            </li>
-                        </ul>
+                    </div>
+                    <div class="col" class="w-50">
+                        <div class="card">
+                            <div class="card-header">
+                                Traits
+                            </div>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    {%for trait in character.traits%}
+                                    {{trait}} |
+                                    {%endfor%}
+                                    <!-- ignored for now
+                                    {%for trait in character.recessive%}
+                                    {{trait}} |
+                                    {%endfor%}
+                                    -->
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="row" style="margin-bottom:10px">
-                <div class="col" class="w-50">
-                    <div class="card">
-                        <div class="card-header">
-                            Family
-                        </div>
-                        <ul class="list-group list-group-flush" style="text-align:left">
-                            <li class="list-group-item">Parents: {%for parent in character.parents%} {{parent|render_ref}} {%endfor%}</li>
-                            {%if not character.dead%}
-                            <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {{spouse|render_ref}} {%endfor%}</li>
-                            {%endif%}
-                            {%if character.former|length > 0%}
-                            <li class="list-group-item">Former spouses: {%for spouse in character.former%} {{spouse|render_ref}} {%endfor%}</li>
-                            {%endif%}
-                            <li class="list-group-item">Children: {%for child in character.children%} {{child|render_ref}} {%endfor%}</li>
-                        </ul>
-                    </div>
-                    {%if character.dna != none%}
-                    <div class="card">
-                        <div class="card-header">
-                            Character DNA
-                            <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
-                                Show
-                            </a>
-                        </div>
-                        <div class="collapse" id="collapseDna">
-                            <textarea class="form-control" readonly>{{character.dna|safe}}</textarea>
-                        </div>
-                    </div>
-                    {%endif%}
-                    {%if character.memories|length != 0%}
-                    <div class="card">
-                        <div class="card-header">
-                            Character Memories
-                            <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
-                                Show
-                            </a>
-                        </div>
-                        <ul class="collapse list-group" id="collapseExample">
-                            {%for memory in character.memories%}
-                            <li class="list-group-item">
-                                {{memory.date}}:{{memory.type}}<br>
-                                {%if memory.participants is defined%}
-                                {%for key, value in memory.participants%}
-                                    {{key}}:{{value|render_ref}}
-                                {%endfor%}
+                <div class="row" style="margin-bottom:10px">
+                    <div class="col" class="w-50">
+                        <div class="card">
+                            <div class="card-header">
+                                Family
+                            </div>
+                            <ul class="list-group list-group-flush" style="text-align:left">
+                                <li class="list-group-item">Parents: {%for parent in character.parents%} {{parent|render_ref}} {%endfor%}</li>
+                                {%if not character.dead%}
+                                <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {{spouse|render_ref}} {%endfor%}</li>
                                 {%endif%}
-                            </li>
-                            {%endfor%}
-                        </ul>
+                                {%if character.former|length > 0%}
+                                <li class="list-group-item">Former spouses: {%for spouse in character.former%} {{spouse|render_ref}} {%endfor%}</li>
+                                {%endif%}
+                                <li class="list-group-item">Children: {%for child in character.children%} {{child|render_ref}} {%endfor%}</li>
+                            </ul>
+                        </div>
+                        {%if character.dna != none%}
+                        <div class="card">
+                            <div class="card-header">
+                                Character DNA
+                                <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
+                                    Show
+                                </a>
+                            </div>
+                            <div class="collapse" id="collapseDna">
+                                <textarea class="form-control" readonly>{{character.dna|safe}}</textarea>
+                            </div>
+                        </div>
+                        {%endif%}
+                        {%if character.memories|length != 0%}
+                        <div class="card">
+                            <div class="card-header">
+                                Character Memories
+                                <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
+                                    Show
+                                </a>
+                            </div>
+                            <ul class="collapse list-group" id="collapseExample">
+                                {%for memory in character.memories%}
+                                <li class="list-group-item">
+                                    {{memory.date}}:{{memory.type}}<br>
+                                    {%if memory.participants is defined%}
+                                    {%for key, value in memory.participants%}
+                                        {{key}}:{{value|render_ref}}
+                                    {%endfor%}
+                                    {%endif%}
+                                </li>
+                                {%endfor%}
+                            </ul>
+                        </div>
+                        {%endif%}
                     </div>
-                    {%endif%}
-                </div>
-                <div class="col" class="w-50">
-                    {%if character.dead %}
-                    {%if character.titles|length > 0%}
-                    <div class="card">
-                        <div class="card-header">
-                            Titles
-                        </div>
-                        <div class="card-body">
-                            {%for title in character.titles%} 
-                            {{title|render_ref("titles")}}
-                            {%endfor%}
-                        </div>
-                    </div>
-                    {%endif%}
-                    {%else%}
-                    <div class="card">
-                        <div class="card-header">
-                            Domain
-                        </div>
-                        <ul class="list-group list-group-flush" style="text-align:left">
-                            <li class="list-group-item">Titles: 
+                    <div class="col" class="w-50">
+                        {%if character.dead %}
+                        {%if character.titles|length > 0%}
+                        <div class="card">
+                            <div class="card-header">
+                                Titles
+                            </div>
+                            <div class="card-body">
                                 {%for title in character.titles%} 
                                 {{title|render_ref("titles")}}
                                 {%endfor%}
-                            </li>
-                            <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
-                            <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
-                            <li class="list-group-item">Kills: {%for killed in character.kills%} {{killed|render_ref}} {%endfor%}</li>
-                            <li class="list-group-item">Known Languages: {%for lang in character.languages%} {{lang}} {%endfor%}</li>
-                            <li class="list-group-item">Vassals: {%for vassal in character.vassals%} {{vassal|render_ref}} {%endfor%}</li>
-                        </ul>
+                            </div>
+                        </div>
+                        {%endif%}
+                        {%else%}
+                        <div class="card">
+                            <div class="card-header">
+                                Domain
+                            </div>
+                            <ul class="list-group list-group-flush" style="text-align:left">
+                                <li class="list-group-item">Titles: 
+                                    {%for title in character.titles%} 
+                                    {{title|render_ref("titles")}}
+                                    {%endfor%}
+                                </li>
+                                <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
+                                <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
+                                <li class="list-group-item">Kills: {%for killed in character.kills%} {{killed|render_ref}} {%endfor%}</li>
+                                <li class="list-group-item">Known Languages: {%for lang in character.languages%} {{lang}} {%endfor%}</li>
+                                <li class="list-group-item">Vassals: {%for vassal in character.vassals%} {{vassal|render_ref}} {%endfor%}</li>
+                            </ul>
+                        </div>
+                        {%endif%}
                     </div>
-                    {%endif%}
                 </div>
             </div>
-        </div>
-    </main>
-</body>
+        </main>
+    </body>
 </html>
