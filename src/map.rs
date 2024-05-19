@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use csv::ReaderBuilder;
 use image::{io::Reader as ImageReader, save_buffer};
 
-use crate::{game_object::GameId, save_file::SaveFile};
+use crate::{game_object::{GameId, GameString}, save_file::SaveFile};
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path:String) -> Vec<u8>{
@@ -22,22 +22,18 @@ fn create_title_province_map(game_path:&str) -> HashMap<String, GameId> {
         //DFS in the structure
         let mut stack = vec![&title_object];
         while let Some(o) = stack.pop(){
-            println!("{:?} {:?}", o.get_keys(), o.get_name());
             let pro = o.get("province");
             if pro.is_some(){
-                println!("{:?}", pro.unwrap());
                 let id = pro.unwrap().as_id();
                 map.insert(o.get_name().to_owned(), id);
             }
             for (_key, val) in o.get_obj_iter(){
-
                 if let Some(obj) = val.as_object(){
                     stack.push(obj);
                 }
             }
         }
     }
-    println!("{:?}", map);
     return map;
 }
 
@@ -53,7 +49,7 @@ pub struct GameMap{
 
 const WATER_COLOR:[u8; 3] = [20, 150, 255];
 const LAND_COLOR:[u8; 3] = [255, 255, 255];
-const BLACK_COLOR:[u8; 3] = [0, 0, 0];
+const NULL_COLOR:[u8; 3] = [0, 0, 0];
 
 const IMG_WIDTH:u32 = 8192;
 const IMG_HEIGHT:u32 = 4096;
@@ -71,7 +67,7 @@ impl GameMap{
         let mut x = 0;
         while x < len{
             if river_bytes[x] != 255 || river_bytes[x + 1] != 255 || river_bytes[x + 2] != 255{
-                provinces_bytes[x..x + 3].copy_from_slice(&BLACK_COLOR);
+                provinces_bytes[x..x + 3].copy_from_slice(&NULL_COLOR);
             }
             x += 3;
         }
@@ -100,36 +96,40 @@ impl GameMap{
         while y < IMG_HEIGHT{
             x = 0;
             while x < max_x{
-                let mut r:u16 = 0;
-                let mut g:u16 = 0;
-                let mut b:u16 = 0;
-                let mut count = 0;
+                //unique scaling algorithm here, we take the most common color in a SCALE x SCALE square and set all the pixels in that square to that color
+                //UNLESS a set amount are water, in which case we set the square to water
                 let mut water:u8 = 0;
+                let mut occurences = HashMap::new();
                 for i in 0..SCALE{
                     for j in 0..SCALE{
                         let idx = ((y + i) * IMG_WIDTH * 3 + (x + j) * 3) as usize;
-                        if provinces_bytes[idx..idx + 3] == BLACK_COLOR{
+                        let slc = &provinces_bytes[idx..idx + 3];
+                        if slc == &NULL_COLOR{
                             water += 1;
+                        } else {
+                            if occurences.contains_key(slc){
+                                *occurences.get_mut(slc).unwrap() += 1;
+                            } else{
+                                occurences.insert(slc, 1);
+                            }
                         }
-                        r += provinces_bytes[idx] as u16;
-                        g += provinces_bytes[idx + 1] as u16;
-                        b += provinces_bytes[idx + 2] as u16;
-                        count += 1;
                     }
                 }
                 x += SCALE;
-                if water > 2{
-                    new_bytes.push(0);
-                    new_bytes.push(0);
-                    new_bytes.push(0);
+                if water > 3{
+                    new_bytes.extend_from_slice(&NULL_COLOR);
                     continue;
                 }
-                r /= count;
-                g /= count;
-                b /= count;
-                new_bytes.push(r as u8);
-                new_bytes.push(g as u8);
-                new_bytes.push(b as u8);
+                //add the most common color in colors to the new bytes
+                let mut max = 0;
+                let mut max_color: &[u8] = &[0, 0, 0];
+                for (color, count) in occurences.iter(){
+                    if count > &max{
+                        max = *count;
+                        max_color = *color;
+                    }
+                }
+                new_bytes.extend_from_slice(max_color);
             }
             y += SCALE;
         }
@@ -163,14 +163,16 @@ impl GameMap{
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    pub fn create_map(&self, id_list:Vec<GameId>, target_color:[u8; 3], output_path:&str) {
+    pub fn create_map(&self, key_list:Vec<GameString>, target_color:[u8; 3], output_path:&str) {
+        //FIXME county capital not rendered?
+        //TODO needs more optimization! never enough here!
         let mut new_map = self.province_map.clone();
-        let colors = id_list.iter().map(|id| self.id_colors[*id as usize]).collect::<Vec<[u8; 3]>>();
+        let colors = key_list.iter().map(|id| self.id_colors[*self.title_province_map.get(id.as_ref()).unwrap() as usize]).collect::<Vec<[u8; 3]>>();
         let mut x = 0;
         while x < self.byte_sz{
             let pixel = &self.province_map[x..x + 3];
             let clr;
-            if pixel[0] == 0 && pixel[1] == 0 && pixel[2] == 0{ //if we find a black pixel = water
+            if pixel == NULL_COLOR{ //if we find a NULL pixel = water
                 clr = &WATER_COLOR;
             } else if colors.contains(&[pixel[0], pixel[1], pixel[2]]) { //if we find a color in the list of colors we want to change
                 clr = &target_color;

@@ -55,6 +55,7 @@ fn create_dir_maybe(name: &str) {
 /// 4. `--game-path` - A flag that tells the program where to find the game files. If not provided, the program will use a crude localization.
 /// 5. `--zip` - A flag that tells the program that the input file is compressed into an archive.
 /// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
+/// 7. `--no-vis` - A flag that tells the program not to render any images
 /// 
 /// # Process
 /// 
@@ -87,6 +88,7 @@ fn main() {
     let mut use_internal = false;
     #[cfg(not(internal))]
     let use_internal = false;
+    let mut no_vis = false;
     // The game path, if provided by the user
     let mut game_path = None; 
     // The language to use for localization
@@ -140,6 +142,9 @@ fn main() {
                     language = iter.next().expect("Language argument requires a value").clone();
                     println!("Using language {}", language);
                 }
+                "--no-vis" => {
+                    no_vis = true;
+                }
                 _ => {
                     println!("Unknown argument: {}", arg);
                 }
@@ -151,7 +156,12 @@ fn main() {
     let map;
     if game_path.is_some(){
         localization_path = Some(game_path.clone().unwrap() + "/localization/" + language.as_str());
-        map = Some(GameMap::new(&game_path.unwrap()));
+        if !no_vis{
+            map = Some(GameMap::new(&game_path.unwrap()));
+        }
+        else{
+            map = None;
+        }
     }
     else{
         localization_path = None;
@@ -169,6 +179,7 @@ fn main() {
     let mut game_state:GameState = GameState::new();
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
+    println!("Ready for save parsing...");
     //MAYBE add multiprocessing? mutlithreading?
     for mut i in save.into_iter(){
         if i.get_name() != last_name{

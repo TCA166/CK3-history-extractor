@@ -138,11 +138,14 @@ impl Title {
         self.de_facto_vassals.push(vassal);
     }
 
-    /// Recursively gets all the de facto provinces of the title
-    pub fn get_facto_provinces(&self) -> Vec<GameId>{
+    /// Recursively gets all the de facto barony keys of the title
+    pub fn get_barony_keys(&self) -> Vec<GameString>{
         let mut provinces = Vec::new();
+        if self.key.as_ref().unwrap().starts_with("b_"){
+            provinces.push(self.key.clone().unwrap());
+        }
         for v in &self.de_facto_vassals{
-            provinces.append(&mut v.get_internal().get_facto_provinces());
+            provinces.append(&mut v.get_internal().get_barony_keys());
         }
         provinces
     }
@@ -285,8 +288,7 @@ impl Renderable for Title {
             let map = game_map.unwrap();
             let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
             //TODO change the color
-            //FIXME the provinces are incorrect
-            map.create_map(self.get_facto_provinces(), [70, 255, 70], &path);
+            map.create_map(self.get_barony_keys(), [70, 255, 70], &path);
         }
         if self.de_jure.is_some(){
             self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map);

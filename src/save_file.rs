@@ -66,6 +66,7 @@ impl Section{
         let mut val = String::new();
         let mut past_eq = false; // we use this flag to determine if we are parsing a key or a value
         let mut comment = false;
+        let mut maybe_array = false;
         let mut depth = 0; // how deep we are in the object tree
         let mut object:GameObject = GameObject::new();
         //initialize the object stack
@@ -75,10 +76,12 @@ impl Section{
         //initialize the key stack
         for (ind, c) in self.contents[*off..].char_indices() { 
             match c{ // we parse the byte
+                '\r' => {} //what? BILL GATES! HE CAN'T KEEP GETTING AWAY WITH IT!!!!!!
                 '{' => { // we have a new object, we push a new hashmap to the stack
                     if comment{
                         continue;
                     }
+                    maybe_array = false;
                     depth += 1;
                     stack.push(GameObject::from_name(mem::take(&mut key)));
                     past_eq = false;
@@ -87,6 +90,7 @@ impl Section{
                     if comment{
                         continue;
                     }
+                    maybe_array = false;
                     // if there was an assignment, we insert the key value pair
                     if past_eq && !val.is_empty() {
                         stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
@@ -126,6 +130,7 @@ impl Section{
                     if comment{
                         comment = false;
                     }
+                    maybe_array = false;
                     if past_eq { // we have a key value pair
                         stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
                         past_eq = false; // we reset the past_eq flag
@@ -145,8 +150,8 @@ impl Section{
                             stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
                             past_eq = false;
                         }
-                        else if !key.is_empty() && !past_eq{ // in case { something something something } we want to preserve the spaces
-                            stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        else if !key.is_empty() && !past_eq{ // in case { something something something } OR key =value we want to preserve the spaces
+                            maybe_array = true;
                         }
                     }
                 } 
@@ -154,6 +159,7 @@ impl Section{
                     if comment{
                         continue;
                     }
+                    maybe_array = false;
                     // if we have an assignment, we toggle adding from key to value
                     if quotes{
                         if past_eq{
@@ -181,6 +187,10 @@ impl Section{
                 _ => { //the main content we append to the key or value
                     if comment{
                         continue;
+                    }
+                    if maybe_array { //we have a toggle that says that the last character was a space and key is not empty
+                        stack.last_mut().unwrap().push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        maybe_array = false;
                     }
                     if past_eq{
                         val.push(c);

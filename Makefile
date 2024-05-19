@@ -17,7 +17,7 @@ doc: src/*.rs src/structures/*.rs
 
 dependencies:
 	@echo "Installing dependencies..."
-	sudo dnf install rustup rust-src
+	sudo dnf install rustup rust-src cmake
 
 crosscompile:
 	@echo "Setting up cross-compilation..."

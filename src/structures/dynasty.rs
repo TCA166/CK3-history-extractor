@@ -222,6 +222,9 @@ impl GameObjectDerived for Dynasty {
 
     fn get_name(&self) -> GameString {
         if self.name.is_none(){
+            if self.parent.as_ref().is_some(){
+                return self.parent.as_ref().unwrap().get_internal().get_name();
+            }
             return GameString::wrap("Unknown".to_owned());
         }
         self.name.as_ref().unwrap().clone()
