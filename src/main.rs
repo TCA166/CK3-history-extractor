@@ -30,6 +30,9 @@ use structures::{Player, Renderable, Renderer, Cullable};
 mod jinja_env;
 use jinja_env::create_env;
 
+mod map;
+use map::GameMap;
+
 use crate::{game_object::GameId, structures::FromGameObject};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
@@ -49,8 +52,9 @@ fn create_dir_maybe(name: &str) {
 /// 1. `filename` - The name of the save file to parse. If not provided as a command line argument, the program will prompt the user to enter it.
 /// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
 /// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
-/// 4. `--localization` - A flag that tells the program where to find the localization files. If not provided, the program will use a crude localization.
+/// 4. `--game-path` - A flag that tells the program where to find the game files. If not provided, the program will use a crude localization.
 /// 5. `--zip` - A flag that tells the program that the input file is compressed into an archive.
+/// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
 /// 
 /// # Process
 /// 
@@ -77,22 +81,33 @@ fn main() {
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
+    // if we need to decompress the savefile
     let mut compressed = false;
     #[cfg(internal)]
     let mut use_internal = false;
     #[cfg(not(internal))]
     let use_internal = false;
-    let mut localization_path = None;
+    // The game path, if provided by the user
+    let mut game_path = None; 
+    // The language to use for localization
+    let mut language = "english".to_string();
+    // The depth to render the player's history
     let mut depth = 3;
     if args.len() < 2{
         println!("Enter the filename: ");
         //raw file contents
         stdin().read_line(&mut filename).unwrap();
         filename = filename.trim().to_string();
-        println!("Enter the localization path(You can just leave this empty): ");
+        println!("Enter the game path(You can just leave this empty): ");
         let mut inp = String::new();
         stdin().read_line(&mut inp).unwrap();
-        localization_path = Some(inp);
+        inp = inp.trim().to_string();
+        if inp.is_empty(){
+            game_path = None;
+        }
+        else{
+            game_path = Some(inp);
+        }
     }
     else{
         filename = args[1].clone();
@@ -114,12 +129,16 @@ fn main() {
                     depth = depth_str.parse::<usize>().expect("Depth argument must be a number");
                     println!("Setting depth to {}", depth)
                 }
-                "--localization" => {
-                    localization_path = Some(iter.next().expect("Localization argument requires a value").clone());
-                    println!("Using localization from {}", localization_path.as_ref().unwrap());
+                "--game-path" => {
+                    game_path = Some(iter.next().expect("Game path argument requires a value").clone());
+                    println!("Using game files from {}", game_path.as_ref().unwrap());
                 }
                 "--zip" => {
                     compressed = true;
+                }
+                "--language" => {
+                    language = iter.next().expect("Language argument requires a value").clone();
+                    println!("Using language {}", language);
                 }
                 _ => {
                     println!("Unknown argument: {}", arg);
@@ -127,6 +146,17 @@ fn main() {
             
             }
         }
+    }
+    let localization_path;
+    let map;
+    if game_path.is_some(){
+        localization_path = Some(game_path.clone().unwrap() + "/localization/" + language.as_str());
+        let map_path = game_path.clone().unwrap() + "/map_data";
+        map = Some(GameMap::new(&map_path));
+    }
+    else{
+        localization_path = None;
+        map = None;
     }
     let localizer = Localizer::new(localization_path);
     //initialize the save file
@@ -237,7 +267,7 @@ fn main() {
         }
     }
     println!("Savefile parsing complete");
-    let env = create_env(use_internal);
+    let env = create_env(use_internal, map.is_some());
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
         let folder_name = player.name.to_string() + "'s history";
@@ -249,7 +279,7 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         let mut renderer = Renderer::new(&env, folder_name.clone());
-        player.render_all(&mut renderer);
+        player.render_all(&mut renderer, map.as_ref());
     }
     //Get the ending time
     let end_time = SystemTime::now();

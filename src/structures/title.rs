@@ -6,6 +6,7 @@ use serde::ser::SerializeStruct;
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::{Wrapper, WrapperMut};
 
 use super::renderer::Renderable;
@@ -20,6 +21,7 @@ pub struct Title {
     de_facto: Option<Shared<Title>>,
     de_jure_vassals: Vec<Shared<Title>>,
     de_facto_vassals: Vec<Shared<Title>>,
+    capital: GameId,
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
     claims: Vec<Shared<Character>>,
     depth: usize,
@@ -127,12 +129,24 @@ fn get_history(base:&GameObject, game_state:&mut GameState) -> Vec<(GameString, 
 }
 
 impl Title {
+    /// Adds a de jure vassal to the title
     pub fn add_jure_vassal(&mut self, vassal:Shared<Title>){
         self.de_jure_vassals.push(vassal);
     }
 
+    /// Adds a de facto vassal to the title
     pub fn add_facto_vassal(&mut self, vassal:Shared<Title>){
         self.de_facto_vassals.push(vassal);
+    }
+
+    /// Recursively gets all the de facto provinces of the title
+    pub fn get_facto_provinces(&self) -> Vec<GameId>{
+        let mut provinces = Vec::new();
+        provinces.push(self.capital);
+        for v in &self.de_facto_vassals{
+            provinces.append(&mut v.get_internal().get_facto_provinces());
+        }
+        provinces
     }
 }
 
@@ -143,6 +157,7 @@ impl DummyInit for Title {
             name: None,
             de_jure: None,
             de_facto: None,
+            capital: 0,
             de_jure_vassals: Vec::new(),
             de_facto_vassals: Vec::new(),
             history: Vec::new(),
@@ -183,6 +198,10 @@ impl DummyInit for Title {
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
+        let cap = base.get("capital");
+        if cap.is_some(){
+            self.capital = cap.unwrap().as_id();
+        }
     }
 }
 
@@ -201,7 +220,8 @@ impl Serialize for Title {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Title", 8)?;
+        let mut state = serializer.serialize_struct("Title", 9)?;
+        state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         if self.de_jure.is_some(){
             let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
@@ -264,22 +284,29 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn render_all(&self, renderer: &mut Renderer) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
         if !renderer.render(self) {
             return;
         }
+        if game_map.is_some() && self.de_facto_vassals.len() > 0{
+            let map = game_map.unwrap();
+            let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
+            //TODO change the color
+            //FIXME the provinces are incorrect
+            map.create_map(self.get_facto_provinces(), [25, 25, 25], &path);
+        }
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer);
+            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer);
+            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
         for v in &self.de_jure_vassals{
-            v.get_internal().render_all(renderer);
+            v.get_internal().render_all(renderer, game_map);
         }
         for o in &self.history{
             if o.1.is_some(){
-                o.1.as_ref().unwrap().get_internal().render_all(renderer);
+                o.1.as_ref().unwrap().get_internal().render_all(renderer, game_map);
             }
         }
     }

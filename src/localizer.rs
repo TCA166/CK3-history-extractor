@@ -22,6 +22,7 @@ fn demangle_generic(input:&str) -> String{
 /// It will replace characters from start to end in result according to the functions and arguments in the stack.
 fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, result:&mut String){
     //TODO add more handling
+    //println!("{:?}", stack);
     match stack.len() {
         2 => {
             if stack[0].0 == "GetTrait" && stack[1].0 == "GetName"{

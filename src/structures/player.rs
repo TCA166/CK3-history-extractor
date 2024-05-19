@@ -7,6 +7,7 @@ use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::Wrapper;
 
 use super::FromGameObject;
@@ -84,10 +85,10 @@ impl Renderable for Player{
         "homeTemplate.html"
     }
 
-    fn render_all(&self, renderer: &mut Renderer){
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>){
         renderer.render(self);
         for char in self.lineage.iter(){
-            char.get_character().get_internal().render_all(renderer);
+            char.get_character().get_internal().render_all(renderer, game_map);
         }
     }
 }

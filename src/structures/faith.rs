@@ -6,6 +6,7 @@ use super::renderer::Renderable;
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a faith in the game
@@ -128,12 +129,12 @@ impl Renderable for Faith {
         "faiths"
     }
 
-    fn render_all(&self, renderer: &mut Renderer) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
         if !renderer.render(self){
             return;
         }
         if self.head.is_some(){
-            self.head.as_ref().unwrap().get_internal().render_all(renderer);
+            self.head.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use minijinja::Environment;
 use serde::Serialize;
 
-use crate::localizer::Localizer;
+use crate::{localizer::Localizer, map::GameMap};
 
 use super::{GameId, GameObjectDerived};
 
@@ -52,6 +52,10 @@ impl<'a> Renderer<'a>{
         rendered.insert(obj.get_id(), true);
         return true;
     }
+
+    pub fn get_path(&self) -> &str{
+        &self.path
+    }
 }
 
 /// Trait for objects that can be rendered into a html page.
@@ -73,7 +77,7 @@ pub trait Renderable: Serialize + GameObjectDerived{
     }
 
     /// Renders the object and all the references of the object if they are not already rendered.
-    fn render_all(&self, renderer: &mut Renderer);
+    fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>);
 }
 
 /// Trait for objects that can be culled.

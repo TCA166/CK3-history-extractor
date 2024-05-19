@@ -2,7 +2,7 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, localizer::Localizer, types::{Wrapper, WrapperMut}};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, localizer::Localizer, map::GameMap, types::{Wrapper, WrapperMut}};
 
 use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Renderer, Shared, Title};
 
@@ -436,42 +436,42 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, renderer: &mut Renderer){
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>){
         if !renderer.render(self){
             return;
         }
         if self.faith.is_some(){
-            self.faith.as_ref().unwrap().get_internal().render_all(renderer);
+            self.faith.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
         if self.culture.is_some(){
-            self.culture.as_ref().unwrap().get_internal().render_all(renderer);
+            self.culture.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().get_internal().render_all(renderer);
+            self.house.as_ref().unwrap().get_internal().render_all(renderer, game_map);
         }
         for s in self.spouses.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for s in self.former.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for s in self.children.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for s in self.parents.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for s in self.kills.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for s in self.vassals.iter(){
-            s.get_internal().get_ref().get_internal().render_all(renderer);
+            s.get_internal().get_ref().get_internal().render_all(renderer, game_map);
         }
         for s in self.titles.iter(){
-            s.get_internal().render_all(renderer);
+            s.get_internal().render_all(renderer, game_map);
         }
         for m in self.memories.iter() {
-            m.get_internal().render_participants(renderer);
+            m.get_internal().render_participants(renderer, game_map);
         }
     }
 }

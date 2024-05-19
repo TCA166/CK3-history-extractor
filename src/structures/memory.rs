@@ -3,6 +3,7 @@ use serde::ser::SerializeStruct;
 use super::{Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderable, Renderer, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::{Wrapper, WrapperMut};
 use crate::game_state::GameState;
 
@@ -103,11 +104,11 @@ impl Cullable for Memory {
 }
 
 impl Memory{
-    pub fn render_participants(&self, renderer: &mut Renderer) {
+    pub fn render_participants(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
         for part in self.participants.iter() {
             let o = part.1.try_get_internal();
             if o.is_ok() {
-                o.unwrap().render_all(renderer);
+                o.unwrap().render_all(renderer, game_map);
             }
         }
     }

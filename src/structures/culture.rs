@@ -6,6 +6,7 @@ use super::{serialize_array, Cullable, DummyInit, GameId, GameObjectDerived, Ren
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
@@ -125,12 +126,12 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, renderer: &mut Renderer) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
         if !renderer.render(self){
             return;
         }
         for p in &self.parents{
-            p.get_internal().render_all(renderer);
+            p.get_internal().render_all(renderer, game_map);
         }
     }
 }

@@ -46,6 +46,16 @@
                         {%endfor%}
                     </ul>
                     {%endif%}
+                    {%if map_present and title.de_facto_vassals|length != 0%}
+                    <div class="card">
+                        <div class="card-header">
+                            Map
+                        </div>
+                        <div class="card-body">
+                            <img src="./{{title.id}}.png" class="img-fluid" alt="Map of {{title.name}}">
+                        </div>
+                    </div>
+                    {%endif%}
                 </div>
                 <div class="col w-50">
                     <div class="card">

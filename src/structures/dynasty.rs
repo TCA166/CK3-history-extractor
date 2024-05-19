@@ -7,6 +7,7 @@ use super::{serialize_array, Character, Cullable, Culture, DerivedRef, DummyInit
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
+use crate::map::GameMap;
 use crate::types::{Wrapper, WrapperMut};
 
 pub struct Dynasty{
@@ -264,12 +265,12 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, renderer: &mut Renderer) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
         if !renderer.render(self){
             return;
         }
         for leader in self.leaders.iter(){
-            leader.get_internal().render_all(renderer);
+            leader.get_internal().render_all(renderer, game_map);
         }
     }
 }
