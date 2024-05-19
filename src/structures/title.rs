@@ -21,7 +21,6 @@ pub struct Title {
     de_facto: Option<Shared<Title>>,
     de_jure_vassals: Vec<Shared<Title>>,
     de_facto_vassals: Vec<Shared<Title>>,
-    capital: GameId,
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
     claims: Vec<Shared<Character>>,
     depth: usize,
@@ -142,7 +141,6 @@ impl Title {
     /// Recursively gets all the de facto provinces of the title
     pub fn get_facto_provinces(&self) -> Vec<GameId>{
         let mut provinces = Vec::new();
-        provinces.push(self.capital);
         for v in &self.de_facto_vassals{
             provinces.append(&mut v.get_internal().get_facto_provinces());
         }
@@ -157,7 +155,6 @@ impl DummyInit for Title {
             name: None,
             de_jure: None,
             de_facto: None,
-            capital: 0,
             de_jure_vassals: Vec::new(),
             de_facto_vassals: Vec::new(),
             history: Vec::new(),
@@ -198,10 +195,6 @@ impl DummyInit for Title {
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
-        let cap = base.get("capital");
-        if cap.is_some(){
-            self.capital = cap.unwrap().as_id();
-        }
     }
 }
 
@@ -293,7 +286,7 @@ impl Renderable for Title {
             let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
             //TODO change the color
             //FIXME the provinces are incorrect
-            map.create_map(self.get_facto_provinces(), [25, 25, 25], &path);
+            map.create_map(self.get_facto_provinces(), [70, 255, 70], &path);
         }
         if self.de_jure.is_some(){
             self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map);

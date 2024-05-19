@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use csv::ReaderBuilder;
 use image::{io::Reader as ImageReader, save_buffer};
 
-use crate::game_object::GameId;
+use crate::{game_object::GameId, save_file::SaveFile};
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path:String) -> Vec<u8>{
@@ -11,6 +13,34 @@ fn read_png_bytes(path:String) -> Vec<u8>{
     bytes
 }
 
+fn create_title_province_map(game_path:&str) -> HashMap<String, GameId> {
+    let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
+    let file = SaveFile::open(&path);
+    let mut map = HashMap::new();
+    for mut title in file{
+        let title_object = title.to_object();
+        //DFS in the structure
+        let mut stack = vec![&title_object];
+        while let Some(o) = stack.pop(){
+            println!("{:?} {:?}", o.get_keys(), o.get_name());
+            let pro = o.get("province");
+            if pro.is_some(){
+                println!("{:?}", pro.unwrap());
+                let id = pro.unwrap().as_id();
+                map.insert(o.get_name().to_owned(), id);
+            }
+            for (_key, val) in o.get_obj_iter(){
+
+                if let Some(obj) = val.as_object(){
+                    stack.push(obj);
+                }
+            }
+        }
+    }
+    println!("{:?}", map);
+    return map;
+}
+
 /// A struct representing a game map, from which we can create [crate::structures::Title] maps
 pub struct GameMap{
     height: u32,
@@ -18,6 +48,7 @@ pub struct GameMap{
     byte_sz: usize,
     province_map: Vec<u8>,
     id_colors: Vec<[u8; 3]>,
+    title_province_map: HashMap<String, GameId>,
 }
 
 const WATER_COLOR:[u8; 3] = [20, 150, 255];
@@ -31,7 +62,8 @@ const SCALE:u32 = 4;
 
 impl GameMap{
     /// Creates a new GameMap from a province map and a definition.csv file located inside the provided path
-    pub fn new(map_path:&str) -> Self{
+    pub fn new(game_path:&str) -> Self{
+        let map_path = game_path.to_owned() + "/map_data";
         let mut provinces_bytes = read_png_bytes(map_path.to_owned() + "/provinces.png");
         let river_bytes = read_png_bytes(map_path.to_owned() + "/rivers.png");
         //apply river bytes as a mask to the provinces bytes so that non white pixels in rivers are black
@@ -126,6 +158,7 @@ impl GameMap{
             byte_sz: new_bytes.len(),
             province_map: new_bytes,
             id_colors: id_colors,
+            title_province_map: create_title_province_map(game_path),
         }
     }
 

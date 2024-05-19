@@ -151,8 +151,7 @@ fn main() {
     let map;
     if game_path.is_some(){
         localization_path = Some(game_path.clone().unwrap() + "/localization/" + language.as_str());
-        let map_path = game_path.clone().unwrap() + "/map_data";
-        map = Some(GameMap::new(&map_path));
+        map = Some(GameMap::new(&game_path.unwrap()));
     }
     else{
         localization_path = None;

@@ -65,6 +65,7 @@ impl Section{
         let mut key = String::new();
         let mut val = String::new();
         let mut past_eq = false; // we use this flag to determine if we are parsing a key or a value
+        let mut comment = false;
         let mut depth = 0; // how deep we are in the object tree
         let mut object:GameObject = GameObject::new();
         //initialize the object stack
@@ -75,11 +76,17 @@ impl Section{
         for (ind, c) in self.contents[*off..].char_indices() { 
             match c{ // we parse the byte
                 '{' => { // we have a new object, we push a new hashmap to the stack
+                    if comment{
+                        continue;
+                    }
                     depth += 1;
                     stack.push(GameObject::from_name(mem::take(&mut key)));
                     past_eq = false;
                 }
                 '}' => { // we have reached the end of an object
+                    if comment{
+                        continue;
+                    }
                     // if there was an assignment, we insert the key value pair
                     if past_eq && !val.is_empty() {
                         stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
@@ -110,9 +117,15 @@ impl Section{
                     }
                 }
                 '"' => { // we have a quote, we toggle the quotes flag
+                    if comment{
+                        continue;
+                    }
                     quotes = !quotes;
                 }
                 '\n' => { // we have reached the end of a line, we check if we have a key value pair
+                    if comment{
+                        comment = false;
+                    }
                     if past_eq { // we have a key value pair
                         stack.last_mut().unwrap().insert(mem::take(&mut key), SaveFileValue::String(Rc::new(mem::take(&mut val))));
                         past_eq = false; // we reset the past_eq flag
@@ -123,6 +136,9 @@ impl Section{
                 }
                 //TODO sometimes a text will precede an array like this color=rgb {} we should handle this
                 ' ' | '\t' => { //syntax sugar we ignore, most of the time, unless...
+                    if comment{
+                        continue;
+                    }
                     if !quotes{ // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() { // in case {something=else something=else}
@@ -135,6 +151,9 @@ impl Section{
                     }
                 } 
                 '=' => {
+                    if comment{
+                        continue;
+                    }
                     // if we have an assignment, we toggle adding from key to value
                     if quotes{
                         if past_eq{
@@ -147,7 +166,22 @@ impl Section{
                         past_eq = true;
                     }
                 }
+                '#' => {
+                    if quotes{
+                        if past_eq{
+                            val.push(c);
+                        }else{
+                            key.push(c);
+                        }
+                    }
+                    else{
+                        comment = true;
+                    }
+                }
                 _ => { //the main content we append to the key or value
+                    if comment{
+                        continue;
+                    }
                     if past_eq{
                         val.push(c);
                     }else{
@@ -254,20 +288,19 @@ impl Iterator for SaveFile{
     /// If the file pointer has reached the end of the save file then it will return None.
     fn next(&mut self) -> Option<Section>{
         let mut key = String::new();
-        let mut off = self.offset.get_internal_mut();
-        for (ind, c) in self.contents[*off..].char_indices(){
+        let off = self.offset.get_internal_mut();
+        for c in self.contents[*off..].chars(){
             match c{
-                '{' | '}' | '"' => {
+                '}' | '"' => {
                     panic!("Unexpected character at {}", *off);
                 }
-                '=' => {
-                    *off += ind + 1;
+                '{' => {
                     break;
                 }
                 '\n' => {
                     key.clear();
                 }
-                ' ' | '\t' => {
+                ' ' | '\t' | '=' => {
                     continue;
                 }
                 _ => {
@@ -461,5 +494,78 @@ mod tests {
         assert_eq!(*(historical.get_index(3).unwrap().as_string()) , "10021".to_string());
         assert_eq!(*(historical.get_index(4).unwrap().as_string()) , "33554966".to_string());
         assert_eq!(historical.get_array_iter().len(), 12);
+    }
+
+    #[test]
+    fn test_space() {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+        test = {
+            test2 = {
+                test3 = 1
+            }
+            test4 = { a b c}
+        }
+        ").unwrap();
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().to_object();
+        assert_eq!(object.get_name(), "test".to_string());
+        let test2 = object.get_object_ref("test2");
+        let test3 = test2.get_string_ref("test3");
+        assert_eq!(*(test3) , "1".to_string());
+        let test4 = object.get_object_ref("test4");
+        let test4_val = test4;
+        assert_eq!(*(test4_val.get_index(0).unwrap().as_string()) , "a".to_string());
+        assert_eq!(*(test4_val.get_index(1).unwrap().as_string()) , "b".to_string());
+        assert_eq!(*(test4_val.get_index(2).unwrap().as_string()) , "c".to_string());
+    }
+
+    #[test]
+    fn test_landed(){
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(b"
+        c_derby = {
+            color = { 255 50 20 }
+
+            cultural_names = {
+                name_list_norwegian = cn_djuraby
+                name_list_danish = cn_djuraby
+                name_list_swedish = cn_djuraby
+                name_list_norse = cn_djuraby
+            }
+
+            b_derby = {
+                province = 1621
+
+                color = { 255 89 89 }
+
+                cultural_names = {
+                    name_list_norwegian = cn_djuraby
+                    name_list_danish = cn_djuraby
+                    name_list_swedish = cn_djuraby
+                    name_list_norse = cn_djuraby
+                }
+            }
+            b_chesterfield = {
+                province = 1622
+
+                color = { 255 50 20 }
+            }
+            b_castleton = {
+                province = 1623
+
+                color = { 255 50 20 }
+            }
+        }
+        ").unwrap();
+        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().to_object();
+        assert_eq!(object.get_name(), "c_derby".to_string());
+        let b_derby = object.get_object_ref("b_derby");
+        assert_eq!(*(b_derby.get_string_ref("province")) , "1621".to_string());
+        let b_chesterfield = object.get_object_ref("b_chesterfield");
+        assert_eq!(*(b_chesterfield.get_string_ref("province")) , "1622".to_string());
+        let b_castleton = object.get_object_ref("b_castleton");
+        assert_eq!(*(b_castleton.get_string_ref("province")) , "1623".to_string());
     }
 }
