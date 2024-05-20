@@ -233,6 +233,51 @@ impl GameState{
             m.get_internal_mut().init(value, self);
         }
     }
+    
+    pub fn get_culture_graph_data(&self) -> HashMap<GameId, Vec<(u32, i32)>>{
+        let mut cultures = HashMap::new();
+        for (_, character) in &self.characters {
+            let char = character.get_internal();
+            let c = char.get_culture();
+            if c.is_none(){
+                continue;
+            }
+            let culture = c.unwrap();
+            let death_date = char.get_death_date();
+            if death_date.is_none() {
+                continue;
+            }
+            let death_date = death_date.unwrap();
+            let death_year:u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
+            let culture_id = culture.get_internal().get_id();
+            if cultures.contains_key(&culture_id){
+                let entry: &mut HashMap<u32, i32> = cultures.get_mut(&culture_id).unwrap();
+                if entry.contains_key(&death_year){
+                    let count = entry.get_mut(&death_year).unwrap();
+                    *count += 1;
+                }
+                else{
+                    entry.insert(death_year, 1);
+                }
+            }
+            else{
+                let mut entry = HashMap::new();
+                entry.insert(death_year, 1);
+                cultures.insert(culture_id, entry);
+            }
+        }
+        // convert the internal hashmaps to vectors
+        let mut res = HashMap::new();
+        for (culture_id, data) in cultures {
+            let mut v = Vec::new();
+            for (year, count) in data {
+                v.push((year, count));
+            }
+            v.sort_by(|a, b| a.0.cmp(&b.0));
+            res.insert(culture_id, v);
+        }
+        return res;
+    }
 
     /// Returns a hashmap year->number of deaths for a given faith
     pub fn get_faiths_graph_data(&self) -> HashMap<GameId, Vec<(u32, i32)>>{

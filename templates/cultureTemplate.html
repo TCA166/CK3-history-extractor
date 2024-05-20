@@ -10,29 +10,48 @@
             <a class="btn btn-outline-primary" href="../index.html">Home</a>
         </header>
         <main class="m-2">
-            Nature: {{culture.ethos}}
-            <br />
-            Heritage: {{culture.heritage}}
-            <br />
-            Language: {{culture.language}}
-            <br />
-            Martial Customs: {{culture.martial}}
-            <br />
-            {%if culture.date != none and culture.date != '1.1.1'%}
-            Culture Creation Date: {{culture.date}}
-            <br />
-            {%endif%}
-            {%if culture.parents|length > 0%}
-            Created from:
-            {%for parent in culture.parents%}
-            {{parent|render_ref}}
-            {%endfor%}
-            <br />
-            {%endif%}
-            Traditions:
-            {%for tradition in culture.traditions%}
-            {{tradition}} |
-            {%endfor%}
+            <div class="row">
+                <div class="col w-50">
+                    Nature: {{culture.ethos}}
+                    <br />
+                    Heritage: {{culture.heritage}}
+                    <br />
+                    Language: {{culture.language}}
+                    <br />
+                    Martial Customs: {{culture.martial}}
+                    <br />
+                    {%if culture.date != none and culture.date != '1.1.1'%}
+                    Culture Creation Date: {{culture.date}}
+                    <br />
+                    {%endif%}
+                    {%if culture.parents|length > 0%}
+                    Created from:
+                    {%for parent in culture.parents%}
+                    {{parent|render_ref}}
+                    {%endfor%}
+                    <br />
+                    {%endif%}
+                    {%if not no_vis%}
+                    <div class="card">
+                        <div class="card-body">
+                            <a href="./{{culture.id}}.svg" target="_blank"><img src="./{{culture.id}}.svg" class="img-fluid" alt="Graph of culture members through time"></a>
+                        </div>
+                    </div>
+                    {%endif%}
+                </div>
+                <div class="col w-50">
+                    <div class="card">
+                        <div class="card-header">
+                            Traditions:
+                        </div>
+                        <div class="card-body card-deck d-flex">
+                            {%for tradition in culture.traditions%}
+                            <div class="card card-body" style="display: inline-block;">{{tradition}}</div>
+                            {%endfor%}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </body>
 </html>

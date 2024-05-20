@@ -132,6 +132,10 @@ impl Renderable for Culture {
         if !renderer.render(self){
             return;
         }
+        if grapher.is_some() {
+            let path = format!("{}/cultures/{}.svg", renderer.get_path(), self.id);
+            grapher.unwrap().create_culture_graph(self.id, &path);
+        }
         for p in &self.parents{
             p.get_internal().render_all(renderer, game_map, grapher);
         }
