@@ -2,9 +2,11 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, localizer::Localizer, map::GameMap, types::{Wrapper, WrapperMut}};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, types::{Wrapper, WrapperMut}};
 
-use super::{renderer::Renderable, serialize_array, Cullable, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Renderer, Shared, Title};
+use crate::renderer::{Cullable, Renderable, Renderer};
+
+use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
@@ -262,6 +264,10 @@ impl Character {
     pub fn register_parent(&mut self, parent:Shared<Character>){
         self.parents.push(parent);
     }
+
+    pub fn get_death_date(&self) -> Option<GameString> {
+        self.date.clone()
+    }
 }
 
 impl DummyInit for Character{
@@ -436,42 +442,42 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>){
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
         if !renderer.render(self){
             return;
         }
         if self.faith.is_some(){
-            self.faith.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.faith.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
         if self.culture.is_some(){
-            self.culture.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.culture.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.house.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.spouses.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.former.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.children.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.parents.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.kills.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.vassals.iter(){
-            s.get_internal().get_ref().get_internal().render_all(renderer, game_map);
+            s.get_internal().get_ref().get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.titles.iter(){
-            s.get_internal().render_all(renderer, game_map);
+            s.get_internal().render_all(renderer, game_map, grapher);
         }
         for m in self.memories.iter() {
-            m.get_internal().render_participants(renderer, game_map);
+            m.get_internal().render_participants(renderer, game_map, grapher);
         }
     }
 }

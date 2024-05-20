@@ -1,6 +1,6 @@
 use std::{cell::BorrowError, collections::{hash_map, HashMap}, fmt::Debug, rc::Rc, slice};
 
-use crate::types::{RefOrRaw, Wrapper};
+use super::types::{RefOrRaw, Wrapper};
 
 /// A type alias for a game object id.
 pub type GameId = u32;

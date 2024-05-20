@@ -1,6 +1,8 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderable, Renderer, Shared};
+use crate::graph::Grapher;
+use crate::renderer::{Cullable, Renderable, Renderer};
+use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::localizer::Localizer;
 use crate::map::GameMap;
@@ -104,11 +106,11 @@ impl Cullable for Memory {
 }
 
 impl Memory{
-    pub fn render_participants(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
+    pub fn render_participants(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         for part in self.participants.iter() {
             let o = part.1.try_get_internal();
             if o.is_ok() {
-                o.unwrap().render_all(renderer, game_map);
+                o.unwrap().render_all(renderer, game_map, grapher);
             }
         }
     }

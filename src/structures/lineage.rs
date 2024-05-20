@@ -5,9 +5,10 @@ use crate::game_object::{GameString, GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
 use crate::localizer::Localizer;
+use crate::renderer::Cullable;
 use crate::types::{Wrapper, WrapperMut};
 
-use super::{Character, Cullable, FromGameObject, GameId, GameObjectDerived, Shared};
+use super::{Character, FromGameObject, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode{

@@ -5,12 +5,13 @@ use serde::ser::SerializeStruct;
 
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
+use crate::graph::Grapher;
 use crate::localizer::Localizer;
 use crate::map::GameMap;
+use crate::renderer::{Cullable, Renderable, Renderer};
 use crate::types::{Wrapper, WrapperMut};
 
-use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
+use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
@@ -280,28 +281,28 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self) {
             return;
         }
         if game_map.is_some() && self.de_facto_vassals.len() > 0{
             let map = game_map.unwrap();
-            let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
+            let path = format!("{}/titles/{}.svg", renderer.get_path(), self.id);
             //TODO change the color
             map.create_map(self.get_barony_keys(), [70, 255, 70], &path);
         }
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
         for v in &self.de_jure_vassals{
-            v.get_internal().render_all(renderer, game_map);
+            v.get_internal().render_all(renderer, game_map, grapher);
         }
         for o in &self.history{
             if o.1.is_some(){
-                o.1.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+                o.1.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
             }
         }
     }

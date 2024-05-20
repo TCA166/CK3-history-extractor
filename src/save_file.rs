@@ -1,5 +1,5 @@
 use std::{io::Read, mem, rc::Rc};
-use crate::{game_object::{GameObject, SaveFileValue}, types::{Shared, Wrapper, WrapperMut}};
+use super::{game_object::{GameObject, SaveFileValue}, types::{Shared, Wrapper, WrapperMut}};
 use zip::read::ZipArchive;
 
 /// A struct that represents a section in a ck3 save file.

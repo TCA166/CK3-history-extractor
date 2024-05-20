@@ -1,8 +1,9 @@
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::renderer::Renderable;
-use super::{serialize_array, Cullable, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
+use crate::graph::Grapher;
+use crate::renderer::{Cullable, Renderable, Renderer};
+use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
@@ -126,12 +127,12 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self){
             return;
         }
         for p in &self.parents{
-            p.get_internal().render_all(renderer, game_map);
+            p.get_internal().render_all(renderer, game_map, grapher);
         }
     }
 }

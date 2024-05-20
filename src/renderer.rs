@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use minijinja::Environment;
 use serde::Serialize;
 
-use crate::{localizer::Localizer, map::GameMap};
-
-use super::{GameId, GameObjectDerived};
+use crate::{game_object::GameId, graph::Grapher, localizer::Localizer, map::GameMap, structures::GameObjectDerived};
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
@@ -77,7 +75,7 @@ pub trait Renderable: Serialize + GameObjectDerived{
     }
 
     /// Renders the object and all the references of the object if they are not already rendered.
-    fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>);
+    fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>);
 }
 
 /// Trait for objects that can be culled.

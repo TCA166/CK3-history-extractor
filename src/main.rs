@@ -6,6 +6,7 @@ mod types;
 /// A submodule that provides the intermediate parsing interface for the save file.
 /// The [crate::save_file] module uses [crate::game_object::GameObject] to store the parsed data and structures in [crate::structures] are initialized from these objects.
 mod game_object;
+use game_object::GameId;
 
 /// A submodule that provides the macro save file parsing.
 /// It provides objects for handling entire [save files](SaveFile) and [sections](Section) of save files.
@@ -21,19 +22,26 @@ use localizer::Localizer;
 mod game_state;
 use game_state::GameState;
 
+
+/// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
+mod renderer;
+use renderer::{Renderer, Renderable, Cullable};
+
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{Player, Renderable, Renderer, Cullable};
+use structures::{Player, FromGameObject};
 
 /// A submodule that handles the creation of the minijinja [Environment] and loading of templates.
 mod jinja_env;
 use jinja_env::create_env;
 
+/// A submodule that handles map rendering and province mapping.
 mod map;
 use map::GameMap;
 
-use crate::{game_object::GameId, structures::FromGameObject};
+mod graph;
+use graph::Grapher;
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -277,7 +285,14 @@ fn main() {
         }
     }
     println!("Savefile parsing complete");
-    let env = create_env(use_internal, map.is_some());
+    let grapher;
+    if !no_vis{
+        grapher = Some(Grapher::new(game_state));
+    }
+    else{
+        grapher = None;
+    }
+    let env = create_env(use_internal, map.is_some(), no_vis);
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
         let folder_name = player.name.to_string() + "'s history";
@@ -289,7 +304,7 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         let mut renderer = Renderer::new(&env, folder_name.clone());
-        player.render_all(&mut renderer, map.as_ref());
+        player.render_all(&mut renderer, map.as_ref(), grapher.as_ref());
     }
     //Get the ending time
     let end_time = SystemTime::now();

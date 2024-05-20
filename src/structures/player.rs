@@ -6,12 +6,14 @@ use crate::game_object::{GameObject, GameString};
 
 use crate::game_state::GameState;
 
+use crate::graph::Grapher;
 use crate::localizer::Localizer;
 use crate::map::GameMap;
 use crate::types::Wrapper;
+use crate::renderer::{Cullable, Renderable, Renderer};
 
 use super::FromGameObject;
-use super::{renderer::{Cullable, Renderable}, Character, GameId, GameObjectDerived, LineageNode, Renderer, Shared};
+use super::{Character, GameId, GameObjectDerived, LineageNode, Shared};
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -85,10 +87,10 @@ impl Renderable for Player{
         "homeTemplate.html"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>){
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
         renderer.render(self);
         for char in self.lineage.iter(){
-            char.get_character().get_internal().render_all(renderer, game_map);
+            char.get_character().get_internal().render_all(renderer, game_map, grapher);
         }
     }
 }

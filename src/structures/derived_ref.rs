@@ -1,9 +1,9 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::{localizer::Localizer, types::WrapperMut};
+use crate::{localizer::Localizer, renderer::Cullable, types::WrapperMut};
 
-use super::{Cullable, GameId, GameObjectDerived, Shared, Wrapper};
+use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
 /// The idea is to provide the id and name of the object, without serializing the whole object.

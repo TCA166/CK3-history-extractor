@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::structures::{Character, Culture, DerivedRef, Dynasty, Faith, DummyInit, Memory, Title};
-use crate::game_object::{GameId, GameObject, GameString};
-use crate::types::{Shared, Wrapper, WrapperMut};
+use super::structures::{Character, Culture, DerivedRef, Dynasty, Faith, DummyInit, Memory, Title, GameObjectDerived};
+use super::game_object::{GameId, GameObject, GameString};
+use super::types::{Shared, Wrapper, WrapperMut};
 
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
@@ -232,6 +232,38 @@ impl GameState{
             self.memories.insert(key.clone(), m.clone());
             m.get_internal_mut().init(value, self);
         }
+    }
+
+    /// Returns a hashmap year->number of deaths for a given faith
+    pub fn get_faith_graph_data(&self, faith_id:GameId) -> Vec<(u16, i32)>{
+        let mut res = HashMap::new();
+        for (_, character) in &self.characters {
+            let char = character.get_internal();
+            let f = char.get_faith();
+            if f.is_none(){
+                continue;
+            }
+            let faith = f.unwrap();
+            if faith.get_internal().get_id() != faith_id {
+                continue;
+            }
+            let death_date = char.get_death_date();
+            if death_date.is_none() {
+                continue;
+            }
+            let death_date = death_date.unwrap();
+            let death_year:u16 = death_date.split_once('.').unwrap().0.parse().unwrap();
+            if res.contains_key(&death_year){
+                let entry = res.get_mut(&death_year).unwrap();
+                *entry += 1;
+            }
+            else{
+                res.insert(death_year, 1);
+            }
+        }
+        let mut res:Vec<(u16, i32)> = res.into_iter().collect();
+        res.sort_by(|a, b| a.0.cmp(&b.0));
+        return res;
     }
 
 }

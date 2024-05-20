@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::{fs, mem};
 use std::path::{Path, PathBuf};
 
-use crate::game_object::GameString;
-use crate::types::Wrapper;
+use super::game_object::GameString;
+use super::types::Wrapper;
 
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.

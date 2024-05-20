@@ -1,8 +1,9 @@
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::{Character, Cullable, DerivedRef, DummyInit, GameId, GameObjectDerived, Renderer, Shared};
-use super::renderer::Renderable;
+use crate::graph::Grapher;
+use crate::renderer::{Cullable, Renderable, Renderer};
+use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
@@ -129,12 +130,16 @@ impl Renderable for Faith {
         "faiths"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self){
             return;
         }
+        if grapher.is_some(){
+            let path = format!("{}/faiths/{}.svg", renderer.get_path(), self.id);
+            grapher.unwrap().create_faith_graph(self.id, &path);
+        }
         if self.head.is_some(){
-            self.head.as_ref().unwrap().get_internal().render_all(renderer, game_map);
+            self.head.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
     }
 }

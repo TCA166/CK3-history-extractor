@@ -21,10 +21,11 @@ static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html")
 /// The environment will have the following filters:
 /// - [render_ref] - renders a reference to another object
 /// - [demangle_generic] - demangles a generic name
-pub fn create_env(internal:bool, map_present:bool) -> Environment<'static>{
+pub fn create_env(internal:bool, map_present:bool, no_vis:bool) -> Environment<'static>{
     let mut env = Environment::new();
     env.add_filter("render_ref", render_ref);
     env.add_global("map_present", map_present);
+    env.add_global("no_vis", no_vis);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
     if internal || !Path::new("./templates").exists(){
         #[cfg(internal)]

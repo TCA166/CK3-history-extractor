@@ -2,8 +2,9 @@ use minijinja::context;
 
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use super::renderer::Renderable;
-use super::{serialize_array, Character, Cullable, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived, Renderer, Shared};
+use crate::graph::Grapher;
+use crate::renderer::{Cullable, Renderable, Renderer};
+use super::{serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use crate::localizer::Localizer;
@@ -268,12 +269,12 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>) {
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self){
             return;
         }
         for leader in self.leaders.iter(){
-            leader.get_internal().render_all(renderer, game_map);
+            leader.get_internal().render_all(renderer, game_map, grapher);
         }
     }
 }
