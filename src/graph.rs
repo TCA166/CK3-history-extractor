@@ -1,29 +1,34 @@
+use std::collections::HashMap;
+
 use crate::{game_object::GameId, game_state::GameState};
 
 use plotters::prelude::*;
 
 /// An object that can create graphs from the game state
 pub struct Grapher {
-    game_state: GameState
+    //game_state: GameState,
+    /// Stored graph data for all faiths, certainly less memory efficient but the speed is worth it
+    faith_graph_complete: HashMap<GameId, Vec<(u32, i32)>>
 }
 
 impl Grapher{
     pub fn new(game_state:GameState) -> Self{
         Grapher{
-            game_state
+            faith_graph_complete: game_state.get_faiths_graph_data(),
+            //game_state,
         }
     }
 
     /// Creates a death graph for a faith
     pub fn create_faith_graph(&self, faith_id:GameId, output_path:&str){
-        let data = self.game_state.get_faith_graph_data(faith_id);
+        let data = self.faith_graph_complete.get(&faith_id).unwrap();
 
         let mut min_x:i32 = 0;
         let mut max_x:i32 = 0;
         let mut min_y = 0;
         let mut max_y = 0;
-        for (x, y) in &data {
-            if (*x as i32) < min_x {
+        for (x, y) in data {
+            if (*x as i32) < min_x || min_x == 0{
                 min_x = *x as i32;
             }
             if (*x as i32) > max_x {

@@ -26,7 +26,7 @@
                             </thead>
                         </table>
                     </div>
-                    <div class="card">
+                    <div class="card mb-2">
                         <div class="card-header">
                             Other:
                         </div>
@@ -46,6 +46,13 @@
                             {%endfor%}
                         </ul>
                     </div>
+                    {%if not no_vis%}
+                    <div class="card">
+                        <div class="card-body">
+                            <a href="./{{faith.id}}.svg" target="_blank"><img src="./{{faith.id}}.svg" class="img-fluid" alt="Graph of adherent deaths through time"></a>
+                        </div>
+                    </div>
+                    {%endif%}
                 </div>
                 <div class="col">
                     <div class="card">

@@ -235,8 +235,8 @@ impl GameState{
     }
 
     /// Returns a hashmap year->number of deaths for a given faith
-    pub fn get_faith_graph_data(&self, faith_id:GameId) -> Vec<(u16, i32)>{
-        let mut res = HashMap::new();
+    pub fn get_faiths_graph_data(&self) -> HashMap<GameId, Vec<(u32, i32)>>{
+        let mut faiths = HashMap::new();
         for (_, character) in &self.characters {
             let char = character.get_internal();
             let f = char.get_faith();
@@ -244,25 +244,39 @@ impl GameState{
                 continue;
             }
             let faith = f.unwrap();
-            if faith.get_internal().get_id() != faith_id {
-                continue;
-            }
             let death_date = char.get_death_date();
             if death_date.is_none() {
                 continue;
             }
             let death_date = death_date.unwrap();
-            let death_year:u16 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            if res.contains_key(&death_year){
-                let entry = res.get_mut(&death_year).unwrap();
-                *entry += 1;
+            let death_year:u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
+            let faith_id = faith.get_internal().get_id();
+            if faiths.contains_key(&faith_id){
+                let entry: &mut HashMap<u32, i32> = faiths.get_mut(&faith_id).unwrap();
+                if entry.contains_key(&death_year){
+                    let count = entry.get_mut(&death_year).unwrap();
+                    *count += 1;
+                }
+                else{
+                    entry.insert(death_year, 1);
+                }
             }
             else{
-                res.insert(death_year, 1);
+                let mut entry = HashMap::new();
+                entry.insert(death_year, 1);
+                faiths.insert(faith_id, entry);
             }
         }
-        let mut res:Vec<(u16, i32)> = res.into_iter().collect();
-        res.sort_by(|a, b| a.0.cmp(&b.0));
+        // convert the internal hashmaps to vectors
+        let mut res = HashMap::new();
+        for (faith_id, data) in faiths {
+            let mut v = Vec::new();
+            for (year, count) in data {
+                v.push((year, count));
+            }
+            v.sort_by(|a, b| a.0.cmp(&b.0));
+            res.insert(faith_id, v);
+        }
         return res;
     }
 

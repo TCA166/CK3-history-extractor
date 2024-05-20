@@ -104,7 +104,8 @@ impl Serialize for Faith {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Faith", 5)?;
+        let mut state = serializer.serialize_struct("Faith", 6)?;
+        state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("tenets", &self.tenets)?;
         if self.head.is_some(){

@@ -100,7 +100,8 @@ impl Serialize for Culture {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Culture", 8)?;
+        let mut state = serializer.serialize_struct("Culture", 9)?;
+        state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("ethos", &self.ethos)?;
         state.serialize_field("heritage", &self.heritage)?;

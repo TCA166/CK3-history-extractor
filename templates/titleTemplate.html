@@ -65,7 +65,11 @@
                         {%if title.history|length != 0%}
                         <ul class="list-group list-group-flush">
                             {%for item in title.history%}
+                            {%if item[1] != none%}
                             <li class="list-group-item">{{item[0]}}:{{item[1]|render_ref("characters")}} {{item[2]}}</li>
+                            {%else%}
+                            <li class="list-group-item">{{item[0]}}:{{item[2]}}</li>
+                            {%endif%}
                             {%endfor%}
                         </ul>
                         {%else%}
