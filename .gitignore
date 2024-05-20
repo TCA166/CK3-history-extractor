@@ -6,3 +6,6 @@ target*
 *'s history
 *.svg
 *.zip
+!examples/*
+*.data
+*.old

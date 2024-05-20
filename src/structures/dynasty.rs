@@ -40,10 +40,12 @@ impl Dynasty {
         self.leaders.last().unwrap().get_internal().get_culture()
     }
 
+    /// Registers a new house in the dynasty
     pub fn register_house(&mut self){
         self.houses += 1;
     }
 
+    /// Registers a new member in the dynasty
     pub fn register_member(&mut self){
         self.members += 1;
         if self.parent.as_ref().is_some(){
@@ -52,6 +54,10 @@ impl Dynasty {
                 p.as_mut().unwrap().register_member();
             }
         }
+    }
+
+    pub fn get_founder(&self) -> Shared<Character> {
+        self.leaders.first().unwrap().clone()
     }
 }
 

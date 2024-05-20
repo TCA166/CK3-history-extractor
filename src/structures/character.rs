@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
@@ -261,12 +263,19 @@ impl Character {
         None
     }
 
+    /// Adds a character as a parent of this character
     pub fn register_parent(&mut self, parent:Shared<Character>){
         self.parents.push(parent);
     }
 
+    /// Gets the death date string of the character
     pub fn get_death_date(&self) -> Option<GameString> {
         self.date.clone()
+    }
+
+    /// Gets the iterator of the children of the character
+    pub fn get_children_iter(&self) ->  Iter<Shared<Character>>{
+        self.children.iter()
     }
 }
 
