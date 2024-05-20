@@ -26,7 +26,8 @@ pub struct Title {
     claims: Vec<Shared<Character>>,
     depth: usize,
     localized:bool,
-    name_localized:bool
+    name_localized:bool,
+    color: [u8; 3]
 }
 
 /// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
@@ -166,11 +167,16 @@ impl DummyInit for Title {
             id: id,
             depth: 0,
             localized: false,
-            name_localized: false
+            name_localized: false,
+            color: [70, 255, 70]
         }
     }
 
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
+        if base.get_array_iter().len() > 3{
+            let color = base.get_array_iter().map(|x| x.as_string().parse().unwrap()).collect::<Vec<u8>>();
+            self.color = [color[0], color[1], color[2]];
+        }
         self.key = Some(base.get_string_ref("key"));
         let de_jure_id = base.get("de_jure_liege");
         if de_jure_id.is_some(){
@@ -287,9 +293,8 @@ impl Renderable for Title {
         }
         if game_map.is_some() && self.de_facto_vassals.len() > 0{
             let map = game_map.unwrap();
-            let path = format!("{}/titles/{}.svg", renderer.get_path(), self.id);
-            //TODO change the color
-            map.create_map(self.get_barony_keys(), [70, 255, 70], &path);
+            let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
+            map.create_map(self.get_barony_keys(), &self.color, &path);
         }
         if self.de_jure.is_some(){
             self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);

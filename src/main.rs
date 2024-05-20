@@ -188,7 +188,7 @@ fn main() {
     let mut last_name = String::new();
     let mut players:Vec<Player> = Vec::new();
     println!("Ready for save parsing...");
-    //MAYBE add multiprocessing? mutlithreading?
+    //MAYBE add multiprocessing? mutlithreading? Not necessary, not much IO happening
     for mut i in save.into_iter(){
         if i.get_name() != last_name{
             print!("{:?}\n", i.get_name());

@@ -21,7 +21,7 @@ fn demangle_generic(input:&str) -> String{
 /// A function that handles the stack of function calls.
 /// It will replace characters from start to end in result according to the functions and arguments in the stack.
 fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, result:&mut String){
-    //TODO add more handling
+    //TODO add more handling, will improve the accuracy of localization, especially for memories
     //println!("{:?}", stack);
     match stack.len() {
         2 => {
@@ -107,7 +107,7 @@ impl Localizer{
                                 if past && !quotes && !value.is_empty(){
                                     //Removing trait_? good idea because the localisation isnt consistent enough with trait names
                                     //Removing _name though... controversial. Possibly a bad idea
-                                    //MAYBE only do this in certain files
+                                    //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
                                     key = key.trim_start_matches("trait_").trim_end_matches("_name").to_string();
                                     data.insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
                                 }

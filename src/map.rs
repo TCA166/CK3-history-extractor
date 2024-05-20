@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use csv::ReaderBuilder;
 use image::{io::Reader as ImageReader, save_buffer};
@@ -13,6 +13,7 @@ fn read_png_bytes(path:String) -> Vec<u8>{
     bytes
 }
 
+/// Creates a mapping from barony title keys to province ids
 fn create_title_province_map(game_path:&str) -> HashMap<String, GameId> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
     let file = SaveFile::open(&path);
@@ -163,18 +164,17 @@ impl GameMap{
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    pub fn create_map(&self, key_list:Vec<GameString>, target_color:[u8; 3], output_path:&str) {
-        //FIXME county capital not rendered?
+    pub fn create_map(&self, key_list:Vec<GameString>, target_color:&[u8; 3], output_path:&str) {
         //TODO needs more optimization! never enough here!
         let mut new_map = self.province_map.clone();
-        let colors = key_list.iter().map(|id| self.id_colors[*self.title_province_map.get(id.as_ref()).unwrap() as usize]).collect::<Vec<[u8; 3]>>();
+        let colors: HashSet<_> = key_list.iter().map(|id| self.id_colors[*self.title_province_map.get(id.as_ref()).unwrap() as usize]).collect();
         let mut x = 0;
         while x < self.byte_sz{
             let pixel = &self.province_map[x..x + 3];
             let clr;
             if pixel == NULL_COLOR{ //if we find a NULL pixel = water
                 clr = &WATER_COLOR;
-            } else if colors.contains(&[pixel[0], pixel[1], pixel[2]]) { //if we find a color in the list of colors we want to change
+            } else if colors.contains(pixel) { //if we find a color in the list of colors we want to change
                 clr = &target_color;
             } else{ //if we find something else we set it to white
                 clr = &LAND_COLOR;
