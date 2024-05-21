@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 
-use crate::{game_object::GameId, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::Wrapper, renderer::Cullable};
+use crate::{game_object::GameId, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::Wrapper};
+use plotters::{coord::types::RangedCoordf64, prelude::*};
 
-use layout::{backends::svg::SVGWriter, core::{base::Orientation, geometry::Point, style::StyleAttr, utils::save_to_file}, std_shapes::shapes::{Arrow, Element, ShapeKind}, topo::layout::VisualGraph};
-use plotters::prelude::*;
+// This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
+//https://github.com/zxch3n/tidy/tree/master it is sort of tiny so here github link in case it goes down
+use tidy_tree::TidyTree;
 
 const GRAPH_SIZE:(u32, u32) = (1024, 768);
+
+const TREE_SCALE:f64 = 1.5;
 
 /// An object that can create graphs from the game state
 pub struct Grapher {
@@ -23,16 +27,21 @@ impl Grapher{
     }
 
     pub fn create_dynasty_graph(&self, dynasty:&Dynasty, output_path:&str){
-        let mut vg = VisualGraph::new(Orientation::TopToBottom);
-        let sz = Point::new(100., 100.);
-        let edge = Arrow::simple("");
-        let look = StyleAttr::simple();
+        let mut tree = TidyTree::with_layered_tidy(TREE_SCALE * 4.0, TREE_SCALE * 4.0);
         let founder = dynasty.get_founder();
+        let mut storage = HashMap::new();
+        let fnt = ("sans-serif", 10.0).into_font();
         let handle;
         {
-            let shape = ShapeKind::new_box(&founder.get_internal().get_name());
-            let node = Element::create(shape, look.clone(), Orientation::LeftToRight, sz);
-            handle = vg.add_node(node);
+            let nd = founder.get_internal();
+            handle = nd.get_id() as usize;
+            let name = nd.get_name().clone();
+            let sz = fnt.box_size(&name).unwrap();
+            let node_width = sz.0 as f64 * TREE_SCALE;
+            let node_height = sz.1 as f64 * TREE_SCALE;
+            let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
+            tree.add_node(handle, node_width, node_height, usize::MAX);
+            storage.insert(handle, (usize::MAX, name, (node_width, node_height), txt_point));
         }
         let mut stack = vec![(handle, founder)];
         while let Some(current) = stack.pop(){
@@ -40,23 +49,75 @@ impl Grapher{
             let children_iter = char.get_children_iter();
             for child in children_iter{
                 let ch = child.get_internal();
-                let shape;
-                if !ch.is_ok(){
-                    shape = ShapeKind::new_connector("...");
-                }
-                else{
-                    shape = ShapeKind::new_box(&ch.get_name());
-                    stack.push((handle, child.clone()));
-                }
-                let node = Element::create(shape, look.clone(), Orientation::LeftToRight, sz);
-                let handle = vg.add_node(node);
-                vg.add_edge(edge.clone(), current.0, handle);
+                let id = ch.get_id() as usize;
+                let name = ch.get_name().clone();
+                let sz = fnt.box_size(&name).unwrap();
+                let node_width = sz.0 as f64 * TREE_SCALE;
+                let node_height = sz.1 as f64 * TREE_SCALE;
+                let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
+                tree.add_node(id, node_width, node_height, current.0);
+                stack.push((id, child.clone()));
+                storage.insert(id, (current.0, name, (node_width, node_height), txt_point));
             }
         }
-        let mut svg = SVGWriter::new();
-        vg.do_it(false, false, false, &mut svg);
-        save_to_file(output_path, &svg.finalize()).unwrap();
         
+        tree.layout(); //this calls the layout algorithm
+        //the layout is complete, get the compressed layout where pos is a matrix 3xN (id, x, y)
+        let layout = tree.get_pos();
+
+        let mut min_x = 0.0;
+        let mut max_x = 0.0;
+        let mut min_y = 0.0;
+        let mut max_y = 0.0;
+        for i in 0..layout.len() / 3{
+            let x = layout[i * 3 + 1];
+            let y = layout[i * 3 + 2];
+            if x < min_x || min_x == 0.0{
+                min_x = x;
+            }
+            if x > max_x {
+                max_x = x;
+            }
+            if y < min_y {
+                min_y = y;
+            }
+            if y > max_y {
+                max_y = y;
+            }
+        }
+
+        let x_size = ((max_x - min_x) * 1.005) as u32;
+        let y_size = ((max_y - min_y) * 1.02) as u32;
+
+        let root = SVGBackend::new(output_path, (x_size, y_size)).into_drawing_area();
+
+        root.fill(&WHITE).unwrap();
+
+        let root = root.apply_coord_spec(Cartesian2d::<RangedCoordf64, RangedCoordf64>::new(
+            min_x..max_x,
+            min_y..max_y,
+            ((x_size / 100) as i32 .. ((x_size / 100) * 99) as i32, (y_size / 25) as i32 .. (y_size / 25 * 24) as i32),
+        ));
+        
+        //TODO add lines
+
+        //foreach set of 3 values in the layout
+        for i in 0..layout.len() / 3{
+            let node = &layout[i * 3..i * 3 + 3];
+            let node_data = storage.get(&(node[0] as usize)).unwrap();
+            root.draw(&(EmptyElement::at((node[1], node[2])) + Rectangle::new(
+        [
+                    (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2), 
+                    (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
+                ],
+                Into::<ShapeStyle>::into(&GREEN).filled(),
+            ) + Text::new(
+                format!("{}", node_data.1),
+                node_data.3,
+                fnt.clone(),
+            ))).unwrap();
+        }
+        root.present().unwrap();
     }
 
     pub fn create_culture_graph(&self, culture_id:GameId, output_path:&str){
