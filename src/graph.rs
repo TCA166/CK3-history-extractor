@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::GameId, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::Wrapper};
+use crate::{game_object::GameId, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::Wrapper, renderer::Cullable};
 
 use layout::{backends::svg::SVGWriter, core::{base::Orientation, geometry::Point, style::StyleAttr, utils::save_to_file}, std_shapes::shapes::{Arrow, Element, ShapeKind}, topo::layout::VisualGraph};
 use plotters::prelude::*;
@@ -39,14 +39,20 @@ impl Grapher{
             let char = current.1.get_internal();
             let children_iter = char.get_children_iter();
             for child in children_iter{
-                let shape = ShapeKind::new_box(&child.get_internal().get_name());
+                let ch = child.get_internal();
+                let shape;
+                if !ch.is_ok(){
+                    shape = ShapeKind::new_connector("...");
+                }
+                else{
+                    shape = ShapeKind::new_box(&ch.get_name());
+                    stack.push((handle, child.clone()));
+                }
                 let node = Element::create(shape, look.clone(), Orientation::LeftToRight, sz);
                 let handle = vg.add_node(node);
                 vg.add_edge(edge.clone(), current.0, handle);
-                stack.push((handle, child.clone()));
             }
         }
-        //FIXME this is too slow
         let mut svg = SVGWriter::new();
         vg.do_it(false, false, false, &mut svg);
         save_to_file(output_path, &svg.finalize()).unwrap();
