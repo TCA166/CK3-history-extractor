@@ -279,6 +279,11 @@ impl Renderable for Dynasty {
         if !renderer.render(self){
             return;
         }
+        if grapher.is_some(){
+            let g = grapher.unwrap();
+            let path = format!("{}/dynasties/{}.svg", renderer.get_path(), self.id);
+            g.create_dynasty_graph(self, &path);
+        }
         for leader in self.leaders.iter(){
             leader.get_internal().render_all(renderer, game_map, grapher);
         }
