@@ -6,6 +6,7 @@
 
 A program designed for creating an encyclopedia containing your ck3 history  
 It goes through the lineage of every player in the save file (meaning multiplayer save files also work) and extracts data about every character it encounters and their associates.
+It even renders cool graphs that depict your history.
 You can preview how you can expect the result to look like in your browser [here](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html)
 
 ## Usage

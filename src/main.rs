@@ -22,7 +22,6 @@ use localizer::Localizer;
 mod game_state;
 use game_state::GameState;
 
-
 /// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;
 use renderer::{Renderer, Renderable, Cullable};
@@ -32,14 +31,15 @@ use renderer::{Renderer, Renderable, Cullable};
 mod structures;
 use structures::{Player, FromGameObject};
 
-/// A submodule that handles the creation of the minijinja [Environment] and loading of templates.
+/// The submodule responsible for creating the minijinja [Environment] and loading of templates.
 mod jinja_env;
 use jinja_env::create_env;
 
-/// A submodule that handles map rendering and province mapping.
+/// Map handling submodule.
 mod map;
 use map::GameMap;
 
+/// The graphing submodule that handles the creation of graphs from the game state.
 mod graph;
 use graph::Grapher;
 

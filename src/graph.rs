@@ -11,6 +11,10 @@ const GRAPH_SIZE:(u32, u32) = (1024, 768);
 
 const TREE_SCALE:f64 = 1.5;
 
+const NO_PARENT:usize = usize::MAX;
+
+/// Handles node initialization within the graph.
+/// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
 fn handle_node<T:GameObjectDerived>(node:Shared<T>, tree:&mut TidyTree, stack:&mut Vec<(usize, Shared<T>)>, storage:&mut HashMap<usize, (usize, GameString, (f64, f64), (i32, i32))>, fnt:FontDesc, parent:usize) -> usize{
     let ch = node.get_internal();
     let id = ch.get_id() as usize;
@@ -45,13 +49,17 @@ impl Grapher{
         }
     }
 
+    /// Creates a dynasty graph, meaning the family tree graph
     pub fn create_dynasty_graph(&self, dynasty:&Dynasty, output_path:&str){
         let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 4.0, TREE_SCALE * 4.0);
+        //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 10.0).into_font();
+        //BFS stack
         let mut stack = Vec::new();
+        //we get the founder and use it as root
         let founder = dynasty.get_founder();
-        handle_node(founder, &mut tree, &mut stack, &mut storage, fnt.clone(), usize::MAX);
+        handle_node(founder, &mut tree, &mut stack, &mut storage, fnt.clone(), NO_PARENT);
         while let Some(current) = stack.pop(){
             let char = current.1.get_internal();
             let children_iter = char.get_children_iter();
@@ -68,6 +76,7 @@ impl Grapher{
         { //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
             let layout = tree.get_pos(); //this isn't documented, but this function dumps the layout into a 3xN matrix (id, x, y)
 
+            //we need to find the area that the tree laying algorithm uses to draw the tree
             let mut min_x = 0.0;
             let mut max_x = 0.0;
             let mut min_y = 0.0;
@@ -110,28 +119,32 @@ impl Grapher{
                 ((x_size / 100) as i32 .. ((x_size / 100) * 99) as i32, (y_size / 25) as i32 .. (y_size / 25 * 24) as i32),
             ));
         }
-        
+        //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions{
             let node_data = storage.get(&id).unwrap();
-            if node_data.0 != usize::MAX{ //draw the line if applicable
+            if node_data.0 != NO_PARENT{ //draw the line if applicable
                 let (parent_x, parent_y) = positions.get(&node_data.0).unwrap();
+                //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
                     vec![(*x, *y), (*parent_x, *parent_y)],
                     Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
                 )).unwrap();
             }
         }
+        //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions{
             let node_data = storage.get(&id).unwrap();
             //draw the element after the line so that the line is behind the element
             root.draw(
         &(EmptyElement::at((*x, *y)) 
+                // the rectangle is defined by two points, the top left and the bottom right. We calculate the top left by subtracting half the size of the node from the center point
                 + Rectangle::new(
                     [
                         (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2), 
                         (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
                     ], 
                     Into::<ShapeStyle>::into(&GREEN).filled(),
+                //we add the text to the node, the text is drawn at the point we calculated earlier
                 ) + Text::new(
                     format!("{}", node_data.1),
                     node_data.3,
@@ -141,6 +154,7 @@ impl Grapher{
         root.present().unwrap();
     }
 
+    /// Creates a death graph for a culture
     pub fn create_culture_graph(&self, culture_id:GameId, output_path:&str){
         let data = self.culture_graph_complete.get(&culture_id).unwrap();
 
@@ -166,7 +180,7 @@ impl Grapher{
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let mut chart = ChartBuilder::on(&root)
-            .caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
+            //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
             .margin(5)
             .x_label_area_size(30)
             .y_label_area_size(30).build_cartesian_2d(min_x..max_x, min_y..(max_y + 10)).unwrap();
@@ -205,7 +219,7 @@ impl Grapher{
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         root.fill(&WHITE).unwrap();
         let mut chart = ChartBuilder::on(&root)
-            .caption("Deaths of adherents through time", ("sans-serif", 50).into_font())
+            //.caption("Deaths of adherents through time", ("sans-serif", 50).into_font())
             .margin(5)
             .x_label_area_size(30)
             .y_label_area_size(30).build_cartesian_2d(min_x..max_x, min_y..max_y).unwrap();

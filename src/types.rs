@@ -20,26 +20,30 @@ impl<'a, T> Deref for RefOrRaw<'a, T> {
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
-/// For example [GameString] is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
+/// For example [crate::game_object::GameString] is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
 pub trait Wrapper<T> {
     /// Wrap a value in the object
     fn wrap(t:T) -> Self;
 
+    /// Get the internal value as a reference or a raw value
     fn get_internal(&self) -> RefOrRaw<T>;
 
+    /// Try to get the internal value as a reference or a raw value
     fn try_get_internal(&self) -> Result<RefOrRaw<T>, BorrowError>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
 /// Allows us to create opaque type aliases for certain types.
 pub trait WrapperMut<T> {
+    /// Get the internal value as a mutable reference
     fn get_internal_mut(&self) -> RefMut<T>;
 
+    /// Try to get the internal value as a mutable reference
     fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError>;
 }
 
 /// A type alias for shared objects.
-/// Aliases: [std::rc::GameString]<[std::cell::RefCell]<>>
+/// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
 /// 
 /// # Example
 /// 
