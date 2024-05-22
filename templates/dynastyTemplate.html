@@ -44,6 +44,16 @@
                     {%endfor%}
                     </table>
                     {%endif%}
+                    {%if not no_vis%}
+                    <div class="card">
+                        <div class="card-header">
+                        Family tree:
+                        </div>
+                        <div class="card-body" style="overflow-x: auto;">
+                            <a href="./{{dynasty.id}}.svg" target="_blank"><img src="./{{dynasty.id}}.svg" alt="Family tree"></a>
+                        </div>
+                    </div>
+                    {%endif%}
                 </div>
                 <div class="col w-50">
                     {%if dynasty.leaders|length > 0%}

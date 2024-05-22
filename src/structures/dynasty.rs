@@ -243,7 +243,8 @@ impl Serialize for Dynasty {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Dynasty", 9)?;
+        let mut state = serializer.serialize_struct("Dynasty", 10)?;
+        state.serialize_field("id", &self.id)?;
         if self.parent.as_ref().is_some(){
             let parent = DerivedRef::<Dynasty>::from_derived(self.parent.as_ref().unwrap().clone());
             state.serialize_field("parent", &parent)?;

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::GameId, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::Wrapper};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::{Shared, Wrapper}};
 use plotters::{coord::types::RangedCoordf64, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
@@ -10,6 +10,25 @@ use tidy_tree::TidyTree;
 const GRAPH_SIZE:(u32, u32) = (1024, 768);
 
 const TREE_SCALE:f64 = 1.5;
+
+fn handle_node<T:GameObjectDerived>(node:Shared<T>, tree:&mut TidyTree, stack:&mut Vec<(usize, Shared<T>)>, storage:&mut HashMap<usize, (usize, GameString, (f64, f64), (i32, i32))>, fnt:FontDesc, parent:usize) -> usize{
+    let ch = node.get_internal();
+    let id = ch.get_id() as usize;
+    let name = ch.get_name().clone();
+    //box_size returns the size the text will take up
+    let sz = fnt.box_size(&name).unwrap();
+    //we use this to determine the size of the node adding a margin
+    let node_width = sz.0 as f64 * TREE_SCALE;
+    let node_height = sz.1 as f64 * TREE_SCALE;
+    //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
+    let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
+    //add node to tree
+    tree.add_node(id, node_width, node_height, parent);
+    stack.push((id, node.clone()));
+    //add aux data to storage because the nodes only store the id and no additional data
+    storage.insert(id, (parent, name, (node_width, node_height), txt_point));
+    return id;
+}
 
 /// An object that can create graphs from the game state
 pub struct Grapher {
@@ -27,94 +46,96 @@ impl Grapher{
     }
 
     pub fn create_dynasty_graph(&self, dynasty:&Dynasty, output_path:&str){
-        let mut tree = TidyTree::with_layered_tidy(TREE_SCALE * 4.0, TREE_SCALE * 4.0);
-        let founder = dynasty.get_founder();
+        let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 4.0, TREE_SCALE * 4.0);
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 10.0).into_font();
-        let handle;
-        {
-            let nd = founder.get_internal();
-            handle = nd.get_id() as usize;
-            let name = nd.get_name().clone();
-            let sz = fnt.box_size(&name).unwrap();
-            let node_width = sz.0 as f64 * TREE_SCALE;
-            let node_height = sz.1 as f64 * TREE_SCALE;
-            let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
-            tree.add_node(handle, node_width, node_height, usize::MAX);
-            storage.insert(handle, (usize::MAX, name, (node_width, node_height), txt_point));
-        }
-        let mut stack = vec![(handle, founder)];
+        let mut stack = Vec::new();
+        let founder = dynasty.get_founder();
+        handle_node(founder, &mut tree, &mut stack, &mut storage, fnt.clone(), usize::MAX);
         while let Some(current) = stack.pop(){
             let char = current.1.get_internal();
             let children_iter = char.get_children_iter();
             for child in children_iter{
-                let ch = child.get_internal();
-                let id = ch.get_id() as usize;
-                let name = ch.get_name().clone();
-                let sz = fnt.box_size(&name).unwrap();
-                let node_width = sz.0 as f64 * TREE_SCALE;
-                let node_height = sz.1 as f64 * TREE_SCALE;
-                let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
-                tree.add_node(id, node_width, node_height, current.0);
-                stack.push((id, child.clone()));
-                storage.insert(id, (current.0, name, (node_width, node_height), txt_point));
+                handle_node(child.clone(), &mut tree, &mut stack, &mut storage, fnt.clone(), current.0);
             }
         }
         
         tree.layout(); //this calls the layout algorithm
-        //the layout is complete, get the compressed layout where pos is a matrix 3xN (id, x, y)
-        let layout = tree.get_pos();
 
-        let mut min_x = 0.0;
-        let mut max_x = 0.0;
-        let mut min_y = 0.0;
-        let mut max_y = 0.0;
-        for i in 0..layout.len() / 3{
-            let x = layout[i * 3 + 1];
-            let y = layout[i * 3 + 2];
-            if x < min_x || min_x == 0.0{
-                min_x = x;
+        let root;
+
+        let mut positions = HashMap::new();
+        { //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
+            let layout = tree.get_pos(); //this isn't documented, but this function dumps the layout into a 3xN matrix (id, x, y)
+
+            let mut min_x = 0.0;
+            let mut max_x = 0.0;
+            let mut min_y = 0.0;
+            let mut max_y = 0.0;
+            for i in 0..layout.len() / 3{
+                let id = layout[i * 3] as usize;
+                let x = layout[i * 3 + 1];
+                let y = layout[i * 3 + 2];
+                positions.insert(id, (x, y));
+                if x < min_x || min_x == 0.0{
+                    min_x = x;
+                }
+                if x > max_x {
+                    max_x = x;
+                }
+                if y < min_y {
+                    min_y = y;
+                }
+                if y > max_y {
+                    max_y = y;
+                }
             }
-            if x > max_x {
-                max_x = x;
-            }
-            if y < min_y {
-                min_y = y;
-            }
-            if y > max_y {
-                max_y = y;
+
+            let x_size = ((max_x - min_x) * 1.005) as u32;
+            let y_size = ((max_y - min_y) * 1.02) as u32;
+
+            /* Note on scaling
+            I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
+            Their size is in i32, which means when we try to render a tree 10k units wide the rectangle size of 0.0001 is 0.
+            This is a limitation of the library, and I can't do anything about it.
+            */
+
+            let root_raw = SVGBackend::new(output_path, (x_size, y_size)).into_drawing_area();
+
+            root_raw.fill(&WHITE).unwrap();
+
+            root = root_raw.apply_coord_spec(Cartesian2d::<RangedCoordf64, RangedCoordf64>::new(
+                min_x..max_x,
+                min_y..max_y,
+                ((x_size / 100) as i32 .. ((x_size / 100) * 99) as i32, (y_size / 25) as i32 .. (y_size / 25 * 24) as i32),
+            ));
+        }
+        
+        for (id, (x, y)) in &positions{
+            let node_data = storage.get(&id).unwrap();
+            if node_data.0 != usize::MAX{ //draw the line if applicable
+                let (parent_x, parent_y) = positions.get(&node_data.0).unwrap();
+                root.draw(&PathElement::new(
+                    vec![(*x, *y), (*parent_x, *parent_y)],
+                    Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
+                )).unwrap();
             }
         }
-
-        let x_size = ((max_x - min_x) * 1.005) as u32;
-        let y_size = ((max_y - min_y) * 1.02) as u32;
-
-        let root = SVGBackend::new(output_path, (x_size, y_size)).into_drawing_area();
-
-        root.fill(&WHITE).unwrap();
-
-        let root = root.apply_coord_spec(Cartesian2d::<RangedCoordf64, RangedCoordf64>::new(
-            min_x..max_x,
-            min_y..max_y,
-            ((x_size / 100) as i32 .. ((x_size / 100) * 99) as i32, (y_size / 25) as i32 .. (y_size / 25 * 24) as i32),
-        ));
-        
-        //TODO add lines
-
-        //foreach set of 3 values in the layout
-        for i in 0..layout.len() / 3{
-            let node = &layout[i * 3..i * 3 + 3];
-            let node_data = storage.get(&(node[0] as usize)).unwrap();
-            root.draw(&(EmptyElement::at((node[1], node[2])) + Rectangle::new(
-        [
-                    (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2), 
-                    (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
-                ],
-                Into::<ShapeStyle>::into(&GREEN).filled(),
-            ) + Text::new(
-                format!("{}", node_data.1),
-                node_data.3,
-                fnt.clone(),
+        for (id, (x, y)) in &positions{
+            let node_data = storage.get(&id).unwrap();
+            //draw the element after the line so that the line is behind the element
+            root.draw(
+        &(EmptyElement::at((*x, *y)) 
+                + Rectangle::new(
+                    [
+                        (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2), 
+                        (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
+                    ], 
+                    Into::<ShapeStyle>::into(&GREEN).filled(),
+                ) + Text::new(
+                    format!("{}", node_data.1),
+                    node_data.3,
+                    fnt.clone(),
             ))).unwrap();
         }
         root.present().unwrap();
