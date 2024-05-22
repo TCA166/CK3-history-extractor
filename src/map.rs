@@ -44,7 +44,7 @@ pub struct GameMap{
     width: u32,
     byte_sz: usize,
     province_map: Vec<u8>,
-    id_colors: Vec<[u8; 3]>,
+    id_colors: HashMap<GameId, [u8; 3]>,
     title_province_map: HashMap<String, GameId>,
 }
 
@@ -138,20 +138,22 @@ impl GameMap{
         let height = IMG_HEIGHT / SCALE;
         //save_buffer("provinces.png", &new_bytes, width, height, image::ExtendedColorType::Rgb8).unwrap();
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
-        let mut id_colors = Vec::new();
-        let mut rdr = ReaderBuilder::new().delimiter(b';').from_path(map_path.to_owned() + "/definition.csv").unwrap();
+        let mut id_colors = HashMap::new();
+        let mut rdr = ReaderBuilder::new().comment(Some(b'#')).flexible(true).delimiter(b';').from_path(map_path.to_owned() + "/definition.csv").unwrap();
         for record in rdr.records(){
             if record.is_err(){
                 continue;
             }
             let record = record.unwrap();
-            if record[0].chars().next().unwrap() == '#'{
+            let id = record[0].parse::<GameId>();
+            if id.is_err(){
                 continue;
             }
+            let id = id.unwrap();
             let r = record[1].parse::<u8>().unwrap();
             let g = record[2].parse::<u8>().unwrap();
             let b = record[3].parse::<u8>().unwrap();
-            id_colors.push([r, g, b]);
+            id_colors.insert(id,[r, g, b]);
         }
         GameMap{
             height: height,
@@ -167,7 +169,7 @@ impl GameMap{
     pub fn create_map(&self, key_list:Vec<GameString>, target_color:&[u8; 3], output_path:&str) {
         //TODO needs more optimization! never enough here!
         let mut new_map = self.province_map.clone();
-        let colors: HashSet<_> = key_list.iter().map(|id| self.id_colors[*self.title_province_map.get(id.as_ref()).unwrap() as usize]).collect();
+        let colors: HashSet<_> = key_list.iter().map(|id| self.id_colors[self.title_province_map.get(id.as_ref()).unwrap()]).collect();
         let mut x = 0;
         while x < self.byte_sz{
             let pixel = &self.province_map[x..x + 3];

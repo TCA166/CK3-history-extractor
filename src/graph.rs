@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Dynasty, GameObjectDerived}, types::{Shared, Wrapper}};
-use plotters::{coord::types::RangedCoordf64, prelude::*};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
+use plotters::{coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32}, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
 //https://github.com/zxch3n/tidy/tree/master it is sort of tiny so here github link in case it goes down
@@ -42,7 +42,7 @@ pub struct Grapher {
 }
 
 impl Grapher{
-    pub fn new(game_state:GameState) -> Self{
+    pub fn new(game_state:&GameState) -> Self{
         Grapher{
             faith_graph_complete: game_state.get_faiths_graph_data(),
             culture_graph_complete: game_state.get_culture_graph_data(),
@@ -126,7 +126,7 @@ impl Grapher{
                 let (parent_x, parent_y) = positions.get(&node_data.0).unwrap();
                 //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
-                    vec![(*x, *y), (*parent_x, *parent_y)],
+                    vec![(*x, *y), (*parent_x, *parent_y + (node_data.2.1 / 2.0))],
                     Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
                 )).unwrap();
             }
@@ -230,6 +230,32 @@ impl Grapher{
             data.iter().map(|(x, y)| (*x as i32, *y)),
             &RED,
         )).unwrap();
+
+        root.present().unwrap();
+    }
+
+    pub fn create_timeline_graph(timespans:&Vec<(Shared<Title>, Vec<(u32, u32)>)>, events:Vec<(GameString, u32)>, max_date:u32, output_path:&str){
+        let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
+        
+        root.fill(&WHITE).unwrap();
+
+        let t_len = timespans.len() as i32;
+
+        let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
+            0..max_date,
+            -t_len..t_len,
+            (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
+        ));
+
+        root.draw(&PathElement::new([(0, 0), (max_date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+        const YEAR_INTERVAL:u32 = 25;
+        //every 10 years
+        for i in 0..max_date / YEAR_INTERVAL{
+            root.draw(&PathElement::new([(i * YEAR_INTERVAL, -1), (i * YEAR_INTERVAL, 1)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+        }
+        
+        //TODO add timespans
+        //TODO add events
 
         root.present().unwrap();
     }

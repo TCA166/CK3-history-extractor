@@ -43,6 +43,11 @@ use map::GameMap;
 mod graph;
 use graph::Grapher;
 
+use crate::timeline::Timeline;
+
+mod timeline;
+
+
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
 fn create_dir_maybe(name: &str) {
@@ -287,12 +292,20 @@ fn main() {
     println!("Savefile parsing complete");
     let grapher;
     if !no_vis{
-        grapher = Some(Grapher::new(game_state));
+        grapher = Some(Grapher::new(&game_state));
     }
     else{
         grapher = None;
     }
     let env = create_env(use_internal, map.is_some(), no_vis);
+    let timeline;
+    if !no_vis{
+        let mut tm = Timeline::new(&game_state);
+        tm.set_depth(depth, &localizer);
+        timeline = Some(tm);
+    } else{
+        timeline = None;
+    }
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
         let folder_name = player.name.to_string() + "'s history";
@@ -305,6 +318,9 @@ fn main() {
         player.set_depth(depth, &localizer);
         let mut renderer = Renderer::new(&env, folder_name.clone());
         player.render_all(&mut renderer, map.as_ref(), grapher.as_ref());
+        if !no_vis{
+            timeline.as_ref().unwrap().render_all(&mut renderer, map.as_ref(), grapher.as_ref());
+        }
     }
     //Get the ending time
     let end_time = SystemTime::now();

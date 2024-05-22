@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use minijinja::context;
 
 use serde::Serialize;
@@ -150,6 +152,14 @@ impl Title {
             provinces.append(&mut v.get_internal().get_barony_keys());
         }
         provinces
+    }
+
+    pub fn get_key(&self) -> Option<GameString>{
+        self.key.clone()
+    }
+
+    pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)>{
+        self.history.iter()
     }
 }
 

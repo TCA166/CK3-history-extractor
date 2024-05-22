@@ -14,6 +14,8 @@ static INT_DYN_TEMPLATE:&str = include_str!("../templates/dynastyTemplate.html")
 static INT_FAITH_TEMPLATE:&str = include_str!("../templates/faithTemplate.html");
 #[cfg(internal)]
 static INT_TITLE_TEMPLATE:&str = include_str!("../templates/titleTemplate.html");
+#[cfg(internal)]
+static INT_TIMELINE_TEMPLATE:&str = include_str!("../templates/timelineTemplate.html");
 
 /// Create a new [Environment] with the filters and templates needed for the project.
 /// If the internal flag is set to true, it will use the internal templates, otherwise it will use the templates in the templates folder.
@@ -36,6 +38,7 @@ pub fn create_env(internal:bool, map_present:bool, no_vis:bool) -> Environment<'
             env.add_template("dynastyTemplate.html", INT_DYN_TEMPLATE).unwrap();
             env.add_template("faithTemplate.html", INT_FAITH_TEMPLATE).unwrap();
             env.add_template("titleTemplate.html", INT_TITLE_TEMPLATE).unwrap();
+            env.add_template("timelineTemplate.html", INT_TIMELINE_TEMPLATE).unwrap();
         }
         #[cfg(not(internal))]
         {
@@ -56,6 +59,8 @@ pub fn create_env(internal:bool, map_present:bool, no_vis:bool) -> Environment<'
         env.add_template("faithTemplate.html", faith_template.leak()).unwrap();
         let title_template = Box::new(fs::read_to_string("templates/titleTemplate.html").unwrap());
         env.add_template("titleTemplate.html", title_template.leak()).unwrap();
+        let timeline_template = Box::new(fs::read_to_string("templates/timelineTemplate.html").unwrap());
+        env.add_template("timelineTemplate.html", timeline_template.leak()).unwrap();
     }
     env
 }

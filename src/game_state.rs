@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, hash_map::Iter};
 
 use super::structures::{Character, Culture, DerivedRef, Dynasty, Faith, DummyInit, Memory, Title, GameObjectDerived};
 use super::game_object::{GameId, GameObject, GameString};
@@ -323,6 +323,10 @@ impl GameState{
             res.insert(faith_id, v);
         }
         return res;
+    }
+
+    pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
+        self.titles.iter()
     }
 
 }
