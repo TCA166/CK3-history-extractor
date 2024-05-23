@@ -240,21 +240,46 @@ impl Grapher{
         root.fill(&WHITE).unwrap();
 
         let t_len = timespans.len() as i32;
+        let fnt = ("sans-serif", 10.0).into_font();
+        let lifespan_y = fnt.box_size("|").unwrap().1 as i32;
+        const MARGIN:i32 = 3;
+        let height = lifespan_y * t_len + MARGIN;
 
         let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
             0..max_date,
-            -t_len..t_len,
+            -height..height,
             (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
         ));
 
         root.draw(&PathElement::new([(0, 0), (max_date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
         const YEAR_INTERVAL:u32 = 25;
-        //every 10 years
+        //every n years
         for i in 0..max_date / YEAR_INTERVAL{
-            root.draw(&PathElement::new([(i * YEAR_INTERVAL, -1), (i * YEAR_INTERVAL, 1)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+            root.draw(&PathElement::new([(i * YEAR_INTERVAL + 1, -height), (i * YEAR_INTERVAL, MARGIN)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+        }
+        for i in 1..(max_date / 100){
+            let txt = (i * 100).to_string();
+            let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
+            root.draw(&Text::new(txt, (i * 100 - (txt_x / 2), MARGIN), fnt.clone())).unwrap();
         }
         
-        //TODO add timespans
+        for (i, (title, data)) in timespans.iter().enumerate(){
+            let mut txt_x = 0;
+            for (start, end) in data{
+                if *start < txt_x || txt_x == 0{
+                    txt_x = *start;
+                }
+                let real_end;
+                if *end == 0{
+                    real_end = max_date;
+                }
+                else{
+                    real_end = *end;
+                }
+                root.draw(&Rectangle::new([(*start, -lifespan_y * i as i32 - MARGIN), (real_end, -lifespan_y * (i + 1) as i32 - MARGIN)], Into::<ShapeStyle>::into(&GREEN).filled())).unwrap();
+            }
+            root.draw(&Text::new(title.get_internal().get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
+        }
         //TODO add events
 
         root.present().unwrap();

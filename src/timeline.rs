@@ -5,7 +5,7 @@ use serde::ser::SerializeStruct;
 use crate::{game_object::GameString, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}, structures::{GameObjectDerived, Title}, types::{Shared, Wrapper, WrapperMut}};
 
 //const CREATED_STR:&str = "Created";
-const DESTROYED_STR:&str = "Destroyed";
+const DESTROYED_STR:&str = "destroyed";
 
 pub struct Timeline{
     lifespans: Vec<(Shared<Title>, Vec<(u32, u32)>)>,
@@ -43,6 +43,7 @@ impl Timeline{
                 if !empty{
                     item.1.push((start, 0));
                 }
+                //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
                 lifespans.push(item);
             }
         }
@@ -109,13 +110,13 @@ impl Renderable for Timeline{
     }
 
     fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
-        for (title, _) in &self.lifespans{
-            title.get_internal().render_all(renderer, game_map, grapher);
-        }
         if grapher.is_some(){
             let path = format!("{}/timeline.svg", renderer.get_path());
             Grapher::create_timeline_graph(&self.lifespans, Vec::new(), self.latest_event, &path)
         }
         renderer.render(self);
+        for (title, _) in &self.lifespans{
+            title.get_internal().render_all(renderer, game_map, grapher);
+        }
     }
 }

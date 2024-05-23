@@ -317,10 +317,10 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         let mut renderer = Renderer::new(&env, folder_name.clone());
-        player.render_all(&mut renderer, map.as_ref(), grapher.as_ref());
         if !no_vis{
             timeline.as_ref().unwrap().render_all(&mut renderer, map.as_ref(), grapher.as_ref());
         }
+        player.render_all(&mut renderer, map.as_ref(), grapher.as_ref());
     }
     //Get the ending time
     let end_time = SystemTime::now();
