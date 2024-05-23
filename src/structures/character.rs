@@ -252,6 +252,16 @@ impl Character {
         if self.faith.is_some(){
             return Some(self.faith.as_ref().unwrap().clone());
         }
+        else{
+            if self.house.is_some(){
+                let h = self.house.as_ref().unwrap();
+                let o = h.get_internal();
+                let faith = o.get_faith();
+                if faith.is_some(){
+                    return Some(faith.unwrap().clone());
+                }
+            }
+        }
         None
     }
 
@@ -259,6 +269,16 @@ impl Character {
     pub fn get_culture(&self) -> Option<Shared<Culture>> {
         if self.culture.is_some(){
             return Some(self.culture.as_ref().unwrap().clone());
+        }
+        else{
+            if self.house.is_some(){
+                let h = self.house.as_ref().unwrap();
+                let o = h.get_internal();
+                let culture = o.get_culture();
+                if culture.is_some(){
+                    return Some(culture.unwrap().clone());
+                }
+            }
         }
         None
     }

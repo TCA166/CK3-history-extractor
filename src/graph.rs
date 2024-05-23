@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
 use plotters::{coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32}, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
@@ -12,6 +12,8 @@ const GRAPH_SIZE:(u32, u32) = (1024, 768);
 const TREE_SCALE:f64 = 1.5;
 
 const NO_PARENT:usize = usize::MAX;
+
+// TODO review performance
 
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
@@ -234,14 +236,14 @@ impl Grapher{
         root.present().unwrap();
     }
 
-    pub fn create_timeline_graph(timespans:&Vec<(Shared<Title>, Vec<(u32, u32)>)>, events:Vec<(GameString, u32)>, max_date:u32, output_path:&str){
+    pub fn create_timeline_graph(timespans:&Vec<(Shared<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, Shared<Character>, Shared<Title>, GameString)>, max_date:u32, output_path:&str){
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         
         root.fill(&WHITE).unwrap();
 
         let t_len = timespans.len() as i32;
         let fnt = ("sans-serif", 10.0).into_font();
-        let lifespan_y = fnt.box_size("|").unwrap().1 as i32;
+        let lifespan_y = fnt.box_size("L").unwrap().1 as i32;
         const MARGIN:i32 = 3;
         let height = lifespan_y * t_len + MARGIN;
 
@@ -257,7 +259,7 @@ impl Grapher{
         for i in 0..max_date / YEAR_INTERVAL{
             root.draw(&PathElement::new([(i * YEAR_INTERVAL + 1, -height), (i * YEAR_INTERVAL, MARGIN)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
         }
-        for i in 1..(max_date / 100){
+        for i in 1..(max_date / 100) + 1{
             let txt = (i * 100).to_string();
             let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
             root.draw(&Text::new(txt, (i * 100 - (txt_x / 2), MARGIN), fnt.clone())).unwrap();
@@ -280,7 +282,17 @@ impl Grapher{
             }
             root.draw(&Text::new(title.get_internal().get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
         }
-        //TODO add events
+
+        for (i, (date, char, title, action)) in events.iter().enumerate(){
+            let title_name = title.get_internal().get_name();
+            let char_name = char.get_internal().get_name();
+            let txt = format!("{} {} {}", char_name, action, title_name);
+            let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
+            //TODO redo the non overlapping algorithm
+            root.draw(&Text::new(txt, (date - txt_x - MARGIN as u32, MARGIN * 2 + (lifespan_y * i as i32)), fnt.clone())).unwrap();
+            root.draw(&PathElement::new([(*date, lifespan_y * (i + 1) as i32), (*date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+            root.draw(&Circle::new((*date, 0), 3, Into::<ShapeStyle>::into(&RED).filled())).unwrap();
+        }
 
         root.present().unwrap();
     }

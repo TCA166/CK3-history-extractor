@@ -29,6 +29,7 @@ pub struct Title {
     depth: usize,
     localized:bool,
     name_localized:bool,
+    capital: Option<Shared<Title>>,
     color: [u8; 3]
 }
 
@@ -178,7 +179,8 @@ impl DummyInit for Title {
             depth: 0,
             localized: false,
             name_localized: false,
-            color: [70, 255, 70]
+            color: [70, 255, 70],
+            capital: None
         }
     }
 
@@ -212,6 +214,10 @@ impl DummyInit for Title {
                 self.claims.push(game_state.get_character(&c.as_id()).clone());
             }
         }
+        let capital = base.get("capital");
+        if capital.is_some(){
+            self.capital = Some(game_state.get_title(&capital.unwrap().as_id()).clone());
+        }
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
         self.history = history;
@@ -233,7 +239,7 @@ impl Serialize for Title {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Title", 9)?;
+        let mut state = serializer.serialize_struct("Title", 10)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         if self.de_jure.is_some(){
@@ -279,6 +285,9 @@ impl Serialize for Title {
         }
         state.serialize_field("claims", &serialize_array(&self.claims))?;
         state.serialize_field("history", &history)?;
+        if self.capital.is_some(){
+            state.serialize_field("capital", &DerivedRef::from_derived(self.capital.as_ref().unwrap().clone()))?;
+        }
         state.end()
     }
 }
@@ -328,7 +337,7 @@ impl Cullable for Title {
         if depth <= self.depth && depth != 0{
             return;
         }
-        if !self.name_localized { //localization
+        if !self.name_localized && self.key.is_some() { //localization
             self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
             self.name_localized = true;
         }
