@@ -28,6 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - uses: actions/checkout@v3
+      - run: git lfs pull
       - name: Make doc
         run: make doc
       - name: Add example
