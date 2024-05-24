@@ -14,7 +14,9 @@ You can preview how you can expect the result to look like in your browser [here
 First you will need to decide what version of the program you want to use.
 There are three potential versions of the program:
 
-- **Release** - Every now and then I release a new GitHub release that has compiled binaries attached. You can simply download those binaries and use them.
+- **Release** - Every now and then I release a new GitHub release that has compiled binaries attached.
+    You can simply download those binaries and use them.
+    For those unfamiliar with GitHub [go here](https://github.com/TCA166/CK3-history-extractor/releases) and this is the version you should honestly use.
 - **Dev** - You can also just compile the program from source on your machine of choice. If you have no clue how the rust compilation system works just try running:
 
     ```sh
@@ -46,15 +48,13 @@ You will need to decompress the save file and convert the save file to the text 
 The save file is compressed using zlib, meaning any ordinary decompression program is capable of decompressing the save file.
 Just decompress it then as if it was an archive, then enter the new directory and copy the ```gamestate``` file inside.
 That file is your actual file the program is expecting.
+If the save file is compressed but you are sure the contents are plain text, you can run the tool with ```--zip``` which will make the tool decompress the input file as if it was an archive.
 
 ### Running the program
 
-Depending on the version this might vary a bit, but the program expects to find the ```templates``` directory in your current working directory.
-If it's not there the program will attempt to use internal templates, which are immutable, but if you are just an ordinary user that means you can do without copying the templates folder.
-Then just run it and follow the prompts.
-The program will create a new directory in your current working directory for each player within your save file.
-
-Here is how you can run the Rust version of the utility:
+You can run the program from the command line or just by double clicking it.
+If you ran it with no arguments it will ask you for the path to the file and for the path to the game.
+For users familiar with console environments here are details on that interface:
 
 ```sh
 ./ck3_history_extractor <save file path> <arg1> <arg2> ...
@@ -78,10 +78,19 @@ Additionally I simply deployed the result to GitHub pages meaning you can previe
 
 - [CK2-history-extractor](https://github.com/TCA166/CK2-history-extractor) is a tool like this for CK2
 
+## Problems
+
+If you encounter any problems please do let me know.
+The best way to do that is by creating a new issue on GitHub, this will let me track them better.
+This also applies to feature suggestions and general feedback.
+
 ## Development status
 
 The tool has been rewritten using Rust.
-Currently I'm working on new features.
+Currently I'm working on new features and bugfixes.
+Be sure to start this repository or watch it to get regular updates regarding the process.
+If you want to contribute feel free to do so!
+Plenty of things to be done, just read [this](./CONTRIBUTING.md).
 
 ## License
 
