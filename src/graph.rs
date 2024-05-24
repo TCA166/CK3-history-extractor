@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, DerivedRef, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
 use plotters::{coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32}, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
@@ -236,7 +236,7 @@ impl Grapher{
         root.present().unwrap();
     }
 
-    pub fn create_timeline_graph(timespans:&Vec<(Shared<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, Shared<Character>, Shared<Title>, GameString)>, max_date:u32, output_path:&str){
+    pub fn create_timeline_graph(timespans:&Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString)>, max_date:u32, output_path:&str){
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         
         root.fill(&WHITE).unwrap();
@@ -255,16 +255,17 @@ impl Grapher{
 
         root.draw(&PathElement::new([(0, 0), (max_date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
         const YEAR_INTERVAL:u32 = 25;
-        //every n years
+        //draw the tick
         for i in 0..max_date / YEAR_INTERVAL{
             root.draw(&PathElement::new([(i * YEAR_INTERVAL + 1, -height), (i * YEAR_INTERVAL, MARGIN)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
         }
+        //draw the century labels
         for i in 1..(max_date / 100) + 1{
             let txt = (i * 100).to_string();
             let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
             root.draw(&Text::new(txt, (i * 100 - (txt_x / 2), MARGIN), fnt.clone())).unwrap();
         }
-        
+        //draw the empire lifespans
         for (i, (title, data)) in timespans.iter().enumerate(){
             let mut txt_x = 0;
             for (start, end) in data{
@@ -280,20 +281,19 @@ impl Grapher{
                 }
                 root.draw(&Rectangle::new([(*start, -lifespan_y * i as i32 - MARGIN), (real_end, -lifespan_y * (i + 1) as i32 - MARGIN)], Into::<ShapeStyle>::into(&GREEN).filled())).unwrap();
             }
-            root.draw(&Text::new(title.get_internal().get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
+            root.draw(&Text::new(title.get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
         }
-
+        //draw the events
         for (i, (date, char, title, action)) in events.iter().enumerate(){
-            let title_name = title.get_internal().get_name();
-            let char_name = char.get_internal().get_name();
+            let title_name = title.get_name();
+            let char_name = char.get_name();
             let txt = format!("{} {} {}", char_name, action, title_name);
             let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
             //TODO redo the non overlapping algorithm
-            root.draw(&Text::new(txt, (date - txt_x - MARGIN as u32, MARGIN * 2 + (lifespan_y * i as i32)), fnt.clone())).unwrap();
+            root.draw(&Text::new(txt, (date - txt_x + (MARGIN * 6) as u32, MARGIN * 2 + ((lifespan_y) * i as i32)), fnt.clone())).unwrap();
             root.draw(&PathElement::new([(*date, lifespan_y * (i + 1) as i32), (*date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
-            root.draw(&Circle::new((*date, 0), 3, Into::<ShapeStyle>::into(&RED).filled())).unwrap();
+            root.draw(&Circle::new((*date, 0), 2, Into::<ShapeStyle>::into(&RED).filled())).unwrap();
         }
-
         root.present().unwrap();
     }
 }

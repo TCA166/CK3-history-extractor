@@ -12,8 +12,9 @@
         <main class="m-2">
             <div class="row">
                 <div class="col w-50">
-                    {%if title.capital is defined%}
+                    {%if title.capital is defined and title.capital.id != title.id%}
                     Capital: {{title.capital|render_ref}}
+                    <br>
                     {%endif%}
                     {%if title.de_jure is defined%}
                     De jure title liege: 

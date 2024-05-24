@@ -162,6 +162,10 @@ impl Title {
     pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)>{
         self.history.iter()
     }
+
+    pub fn get_capital(&self) -> Option<Shared<Title>>{
+        self.capital.clone()
+    }
 }
 
 impl DummyInit for Title {

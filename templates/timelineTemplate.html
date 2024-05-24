@@ -19,9 +19,35 @@
             </div>
         </header>
         <main class="m-3">
-            <div class="card">
-                <div class="card-body">
-                    <a href="./timeline.svg" target="_blank"><img src="./timeline.svg" class="img-fluid" alt="The timeline"></a>
+            <div class="row">
+                <div class="col">
+                    <div class="card m-3">
+                        <div class="card-body">
+                            <a href="./timeline.svg" target="_blank"><img src="./timeline.svg" class="img-fluid" alt="The timeline"></a>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            Notable events
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {%for event in timeline.events%}
+                            <li class="list-group-item">{{event[0]}}:{{event[1]|render_ref('characters', true)}} {{event[3]}} {{event[2]|render_ref('titles', true)}}</li>
+                            {%endfor%}
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-2">
+                    <div class="card">
+                        <div class="card-header">
+                            Great Empires of history
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            {%for span in timeline.lifespans%}
+                            <li class="list-group-item">{{span[0]|render_ref('titles', true)}}</li>
+                            {%endfor%}
+                        </ul>
+                    </div>
                 </div>
             </div>
         </main>

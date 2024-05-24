@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::{localizer::Localizer, renderer::Cullable, types::WrapperMut};
+use crate::{localizer::Localizer, renderer::{Cullable, Renderable}, types::WrapperMut};
 
 use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
@@ -83,5 +83,27 @@ impl<T> Cullable for DerivedRef<T> where T:Cullable{
 
     fn set_depth(&mut self, depth:usize, localization:&Localizer) {
         self.obj.as_ref().unwrap().get_internal_mut().set_depth(depth, localization);
+    }
+}
+
+impl<T> Renderable for DerivedRef<T> where T:Renderable + Cullable{
+    fn get_context(&self) -> minijinja::Value {
+        self.obj.as_ref().unwrap().get_internal().get_context()
+    }
+
+    fn get_path(&self, path: &str) -> String {
+        self.obj.as_ref().unwrap().get_internal().get_path(path)
+    }
+
+    fn get_subdir() -> &'static str {
+        T::get_subdir()
+    }
+
+    fn get_template() -> &'static str {
+        T::get_template()
+    }
+
+    fn render_all(&self, renderer: &mut crate::renderer::Renderer, game_map: Option<&crate::map::GameMap>, grapher: Option<&crate::graph::Grapher>) {
+        self.obj.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
     }
 }

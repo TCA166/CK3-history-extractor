@@ -13,6 +13,9 @@ fn demangle_generic(input:&str) -> String{
     .trim_start_matches("ethos_").trim_start_matches("heritage_").trim_start_matches("language_").trim_start_matches("martial_custom_").trim_start_matches("tradition_")
     .trim_start_matches("e_").trim_start_matches("k_").trim_start_matches("d_").trim_start_matches("c_").trim_start_matches("b_")
     .trim_end_matches("_name").replace("_", " ");
+    if s.is_empty(){
+        return s;
+    }
     let bytes = unsafe { s.as_bytes_mut() };
     bytes[0] = bytes[0].to_ascii_uppercase();
     s

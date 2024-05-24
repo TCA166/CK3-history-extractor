@@ -74,7 +74,7 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.
 /// The function must be rendered without html escape.
 /// Calling this on an undefined reference will fail.
-fn render_ref(reference: Value, subdir:Option<String>) -> String{
+fn render_ref(reference: Value, subdir:Option<String>, root:Option<bool>) -> String{
     if reference.is_none() {
         return "none".to_string();
     }
@@ -86,7 +86,11 @@ fn render_ref(reference: Value, subdir:Option<String>) -> String{
     else{
         if subdir.is_none() {
             return format!("<a href=\"./{}.html\">{}</a>", reference.get_attr("id").unwrap(), name);
+        } else if root.is_some() && root.unwrap(){
+            format!("<a href=\"{}/{}.html\">{}</a>", subdir.unwrap(), reference.get_attr("id").unwrap(), name)
         }
-        format!("<a href=\"../{}/{}.html\">{}</a>", subdir.unwrap(), reference.get_attr("id").unwrap(), name)
+        else{
+            format!("<a href=\"../{}/{}.html\">{}</a>", subdir.unwrap(), reference.get_attr("id").unwrap(), name)
+        }
     }
 }
