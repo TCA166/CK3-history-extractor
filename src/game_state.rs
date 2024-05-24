@@ -270,8 +270,14 @@ impl GameState{
         let mut res = HashMap::new();
         for (culture_id, data) in cultures {
             let mut v = Vec::new();
-            for (year, count) in data {
-                v.push((year, count));
+            for (year, count) in &data {
+                v.push((*year, *count));
+            }
+            let max_yr = data.keys().max().unwrap();
+            for yr in 0..=*max_yr {
+                if !data.contains_key(&yr) && (data.contains_key(&(yr-1)) || data.contains_key(&(yr+1))){
+                    v.push((yr, 0));
+                }
             }
             v.sort_by(|a, b| a.0.cmp(&b.0));
             res.insert(culture_id, v);
@@ -316,8 +322,14 @@ impl GameState{
         let mut res = HashMap::new();
         for (faith_id, data) in faiths {
             let mut v = Vec::new();
-            for (year, count) in data {
-                v.push((year, count));
+            for (year, count) in &data {
+                v.push((*year, *count));
+            }
+            let max_yr = data.keys().max().unwrap();
+            for yr in 0..=*max_yr {
+                if !data.contains_key(&yr) && (data.contains_key(&(yr-1)) || data.contains_key(&(yr+1))) {
+                    v.push((yr, 0));
+                }
             }
             v.sort_by(|a, b| a.0.cmp(&b.0));
             res.insert(faith_id, v);
