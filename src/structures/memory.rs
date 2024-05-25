@@ -43,7 +43,10 @@ impl DummyInit for Memory {
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
         self.date = Some(base.get("creation_date").unwrap().as_string());
-        self.r#type = Some(base.get("type").unwrap().as_string());
+        let tp = base.get("type");
+        if tp.is_some(){
+            self.r#type = Some(tp.unwrap().as_string());
+        }
         get_participants(&mut self.participants, &base, game_state);
     }
 }

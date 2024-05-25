@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, DerivedRef, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, DerivedRef, Dynasty, GameObjectDerived, Title}, timeline::RealmDifference, types::{Shared, Wrapper}};
 use plotters::{coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32}, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
@@ -53,7 +53,7 @@ impl Grapher{
 
     /// Creates a dynasty graph, meaning the family tree graph
     pub fn create_dynasty_graph(&self, dynasty:&Dynasty, output_path:&str){
-        let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 4.0, TREE_SCALE * 4.0);
+        let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 10.0).into_font();
@@ -102,8 +102,11 @@ impl Grapher{
                 }
             }
 
-            let x_size = ((max_x - min_x) * 1.005) as u32;
-            let y_size = ((max_y - min_y) * 1.02) as u32;
+            min_x *= 1.05;
+            max_x *= 1.05;
+
+            let x_size = ((max_x - min_x) * 1.02) as u32;
+            let y_size = ((max_y - min_y) * 1.04) as u32;
 
             /* Note on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
@@ -236,7 +239,7 @@ impl Grapher{
         root.present().unwrap();
     }
 
-    pub fn create_timeline_graph(timespans:&Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString)>, max_date:u32, output_path:&str){
+    pub fn create_timeline_graph(timespans:&Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString, RealmDifference)>, max_date:u32, output_path:&str){
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         
         root.fill(&WHITE).unwrap();
@@ -284,10 +287,10 @@ impl Grapher{
             root.draw(&Text::new(title.get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
         }
         //draw the events
-        for (i, (date, char, title, action)) in events.iter().enumerate(){
+        for (i, (date, char, title, group_desc, difference)) in events.iter().enumerate(){
             let title_name = title.get_name();
             let char_name = char.get_name();
-            let txt = format!("{} {} {}", char_name, action, title_name);
+            let txt = format!("{} conquered {} for the {} {}", char_name, title_name, difference.get_name(), group_desc);
             let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
             //TODO redo the non overlapping algorithm
             root.draw(&Text::new(txt, (date - txt_x + (MARGIN * 6) as u32, MARGIN * 2 + ((lifespan_y) * i as i32)), fnt.clone())).unwrap();

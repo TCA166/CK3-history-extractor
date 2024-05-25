@@ -81,6 +81,14 @@ impl Section{
                     if comment{
                         continue;
                     }
+                    if quotes {
+                        if past_eq{
+                            val.push(c);
+                        }else{
+                            key.push(c);
+                        }
+                        continue;
+                    }
                     maybe_array = false;
                     depth += 1;
                     stack.push(GameObject::from_name(mem::take(&mut key)));
@@ -88,6 +96,14 @@ impl Section{
                 }
                 '}' => { // we have reached the end of an object
                     if comment{
+                        continue;
+                    }
+                    if quotes {
+                        if past_eq{
+                            val.push(c);
+                        }else{
+                            key.push(c);
+                        }
                         continue;
                     }
                     maybe_array = false;
@@ -267,9 +283,23 @@ impl SaveFile{
     /// Create a new SaveFile instance.
     /// The filename must be valid of course.
     pub fn open(filename: &str) -> SaveFile{
-        let contents = std::fs::read_to_string(filename).unwrap();
+        let contents = std::fs::read_to_string(filename);
+        if contents.is_err() {
+            let err = contents.as_ref().err().unwrap();
+            match err.kind(){
+                std::io::ErrorKind::NotFound => {
+                    panic!("Save file not found: {}", filename);
+                }
+                std::io::ErrorKind::InvalidData => {
+                    panic!("Save file is not valid utf-8: {}. Is it compressed or iron man encoded?", filename);
+                }
+                _ => {
+                    panic!("Error opening save file: {}", err);
+                }
+            }
+        }
         SaveFile{
-            contents: Rc::new(contents),
+            contents: Rc::new(contents.unwrap()),
             offset: Shared::wrap(0),
         }
     }

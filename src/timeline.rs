@@ -2,17 +2,75 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::{game_object::GameString, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}, structures::{Character, DerivedRef, GameObjectDerived, Title}, types::Wrapper};
+use crate::{game_object::GameString, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}, structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title}, types::Wrapper};
 
 //const CREATED_STR:&str = "Created";
 const DESTROYED_STR:&str = "destroyed";
 const USURPED_STR:&str = "usurped";
 const CONQUERED_START_STR:&str = "conq"; //this should match both 'conquered' and 'conquest holy war'
 
+/// An enum representing the difference in faith or culture between two realms, really just a wrapper around DerivedRef
+pub enum RealmDifference{
+    Faith(DerivedRef<Faith>),
+    Culture(DerivedRef<Culture>)
+}
+
+impl Serialize for RealmDifference{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self{
+            RealmDifference::Faith(f) => {
+                f.serialize(serializer)
+            },
+            RealmDifference::Culture(c) => {
+                c.serialize(serializer)
+            }
+        }
+    }
+}
+
+impl GameObjectDerived for RealmDifference{
+    fn get_id(&self) -> u32 {
+        0
+    }
+
+    fn get_name(&self) -> GameString {
+        match self{
+            RealmDifference::Faith(f) => f.get_name(),
+            RealmDifference::Culture(c) => c.get_name()
+        }
+    }
+}
+
+impl Cullable for RealmDifference{
+    fn get_depth(&self) -> usize {
+        match self{
+            RealmDifference::Faith(f) => f.get_depth(),
+            RealmDifference::Culture(c) => c.get_depth()
+        }
+    }
+
+    fn is_ok(&self) -> bool {
+        match self{
+            RealmDifference::Faith(f) => f.is_ok(),
+            RealmDifference::Culture(c) => c.is_ok()
+        }
+    }
+
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        match self{
+            RealmDifference::Faith(f) => f.set_depth(depth, localization),
+            RealmDifference::Culture(c) => c.set_depth(depth, localization)
+        }
+    }
+}
+
 pub struct Timeline{
     lifespans: Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>,
     latest_event: u32,
-    events: Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString)> // (year, character, title, event_type<conquered, usurped, etc.
+    events: Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString, RealmDifference)> // (year, character, title, event_type<conquered, usurped, etc.
 }
 
 impl Timeline{
@@ -68,7 +126,7 @@ impl Timeline{
                 }
             }
         }
-        let mut events:Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString)> = Vec::new();
+        let mut events:Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString, RealmDifference)> = Vec::new();
         for title in event_checkout{
             let tit = title.get_internal();
             let mut hist = tit.get_history_iter();
@@ -90,12 +148,10 @@ impl Timeline{
                 if event == USURPED_STR || event.starts_with(CONQUERED_START_STR){
                     let year:u32 = entry.0.split_once('.').unwrap().0.parse().unwrap();
                     if ch_faith.get_id() != faith {
-                        let text = format!("claimed for the {} faith", ch_faith.get_name().clone());
-                        events.push((year, DerivedRef::from_derived(char.clone()), DerivedRef::from_derived(title.clone()), GameString::wrap(text)));
+                        events.push((year, DerivedRef::from_derived(char.clone()), DerivedRef::from_derived(title.clone()), GameString::wrap("faith".to_owned()), RealmDifference::Faith(DerivedRef::from_derived(char_faith.as_ref().unwrap().clone()))));
                         faith = ch_faith.get_id();
                     } else if ch_culture.get_id() != culture {
-                        let text = format!("conquered for the {} people", ch_culture.get_name().clone());
-                        events.push((year, DerivedRef::from_derived(char.clone()), DerivedRef::from_derived(title.clone()), GameString::wrap(text)));
+                        events.push((year, DerivedRef::from_derived(char.clone()), DerivedRef::from_derived(title.clone()), GameString::wrap("people".to_owned()), RealmDifference::Culture(DerivedRef::from_derived(char_culture.as_ref().unwrap().clone()))));
                         culture = ch_culture.get_id();
                     }
                 } else {
@@ -153,9 +209,13 @@ impl Cullable for Timeline{
         for (title, _) in self.lifespans.iter_mut(){
             title.set_depth(depth, localization);
         }
-        for (_, char, title, _) in self.events.iter_mut(){
+        for (_, char, title, _, difference) in self.events.iter_mut(){
             char.set_depth(depth, localization);
             title.set_depth(depth, localization);
+            match difference{
+                RealmDifference::Faith(f) => f.set_depth(depth, localization),
+                RealmDifference::Culture(c) => c.set_depth(depth, localization)
+            }
         }
     }
 }
@@ -185,6 +245,13 @@ impl Renderable for Timeline{
         renderer.render(self);
         for (title, _) in &self.lifespans{
             title.render_all(renderer, game_map, grapher);
+        }
+        for (_, char, _, _, difference) in &self.events{
+            char.render_all(renderer, game_map, grapher);
+            match difference{
+                RealmDifference::Faith(f) => f.render_all(renderer, game_map, grapher),
+                RealmDifference::Culture(c) => c.render_all(renderer, game_map, grapher)
+            }
         }
     }
 }

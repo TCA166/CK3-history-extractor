@@ -1,4 +1,5 @@
 use std::slice::Iter;
+use std::cmp::Ordering;
 
 use minijinja::context;
 
@@ -34,34 +35,34 @@ pub struct Title {
 }
 
 /// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
-fn date_string_cmp(a:&str, b:&str) -> std::cmp::Ordering{
+fn date_string_cmp(a:&str, b:&str) -> Ordering{
     let a_split: Vec<&str> = a.split('.').collect();
     let b_split: Vec<&str> = b.split('.').collect();
     let a_year = a_split[0].parse::<i32>().unwrap();
     let b_year = b_split[0].parse::<i32>().unwrap();
     if a_year < b_year{
-        return std::cmp::Ordering::Less;
+        return Ordering::Less;
     }
     else if a_year > b_year{
-        return std::cmp::Ordering::Greater;
+        return Ordering::Greater;
     }
     let a_month = a_split[1].parse::<i32>().unwrap();
     let b_month = b_split[1].parse::<i32>().unwrap();
     if a_month < b_month{
-        return std::cmp::Ordering::Less;
+        return Ordering::Less;
     }
     else if a_month > b_month{
-        return std::cmp::Ordering::Greater;
+        return Ordering::Greater;
     }
     let a_day = a_split[2].parse::<i32>().unwrap();
     let b_day = b_split[2].parse::<i32>().unwrap();
     if a_day < b_day{
-        return std::cmp::Ordering::Less;
+        return Ordering::Less;
     }
     else if a_day > b_day{
-        return std::cmp::Ordering::Greater;
+        return Ordering::Greater;
     }
-    std::cmp::Ordering::Equal
+    Ordering::Equal
 }
 
 ///Gets the history of the title and returns a hashmap with the history entries
@@ -194,6 +195,7 @@ impl DummyInit for Title {
             self.color = [color[0], color[1], color[2]];
         }
         self.key = Some(base.get_string_ref("key"));
+        //TODO possible custom name handling bug here
         let de_jure_id = base.get("de_jure_liege");
         if de_jure_id.is_some(){
             let o = game_state.get_title(&de_jure_id.unwrap().as_id()).clone();

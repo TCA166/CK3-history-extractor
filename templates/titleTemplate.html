@@ -7,7 +7,7 @@
     <body>
         <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
             <p class="h1 my-0 me-md-auto fw-normal">{{title.tier}} {{title.name}}</p>
-            <a class="btn btn-outline-primary" href="../index.html">Home</a>
+            <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
         </header>
         <main class="m-2">
             <div class="row">
@@ -46,7 +46,7 @@
                     Claimants:
                     <ul>
                         {%for claimant in title.claims%}
-                        {{claimant|render_ref("characters")}}
+                        {{claimant|render_ref}}
                         {%endfor%}
                     </ul>
                     {%endif%}
@@ -70,7 +70,7 @@
                         <ul class="list-group list-group-flush">
                             {%for item in title.history%}
                             {%if item[1] != none%}
-                            <li class="list-group-item">{{item[0]}}:{{item[1]|render_ref("characters")}} {{item[2]}}</li>
+                            <li class="list-group-item">{{item[0]}}:{{item[1]|render_ref}} {{item[2]}}</li>
                             {%else%}
                             <li class="list-group-item">{{item[0]}}:{{item[2]}}</li>
                             {%endif%}

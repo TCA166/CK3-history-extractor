@@ -7,7 +7,12 @@ use super::{game_object::{GameId, GameString}, save_file::SaveFile};
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path:String) -> Vec<u8>{
-    let img = ImageReader::open(path).unwrap().decode().unwrap();
+    let img = ImageReader::open(&path);
+    if img.is_err(){
+        let err = img.err().unwrap();
+        panic!("Error {} reading image at path: {}, are you sure you are pointing at the right directory?", err, path);
+    }
+    let img = img.unwrap().decode().unwrap();
     let buff = img.to_rgb8();
     let bytes = buff.into_raw();
     bytes

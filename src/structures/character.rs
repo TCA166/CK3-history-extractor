@@ -362,11 +362,10 @@ impl DummyInit for Character{
         //find landed data
         get_landed_data(&mut self.dread, &mut self.strength, &mut self.titles, &mut self.vassals, &base, game_state);
         //find house
-        let house = get_dynasty(&base, game_state);
         self.name = Some(base.get("first_name").unwrap().as_string());
         self.nick = base.get("nickname").map(|v| v.as_string());
         self.birth = Some(base.get("birth").unwrap().as_string());
-        self.house = house.clone();
+        self.house = get_dynasty(&base, game_state);
         self.faith = get_faith(&base, game_state);
         self.culture = get_culture(&base, game_state);
         self.dna = dna;
@@ -583,7 +582,11 @@ impl Cullable for Character {
         for s in self.vassals.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
-                o.unwrap().get_ref().get_internal_mut().set_depth(depth - 1, localization);
+                let char = o.unwrap().get_ref();
+                let m = char.try_get_internal_mut();
+                if m.is_ok(){
+                    m.unwrap().set_depth(depth - 1, localization);
+                }
             }
         }
         if self.culture.is_some(){

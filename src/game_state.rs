@@ -158,7 +158,7 @@ impl GameState{
         }
         else{
             let c = Shared::wrap(Character::dummy(key));
-            self.characters.insert(key.clone(), c.clone());
+            self.characters.insert(key, c.clone());
             c.get_internal_mut().init(value, self);
         }
     }
@@ -172,7 +172,7 @@ impl GameState{
         }
         else{
             let t = Shared::wrap(Title::dummy(key));
-            self.titles.insert(key.clone(), t.clone());
+            self.titles.insert(key, t.clone());
             t.get_internal_mut().init(value, self);
             
         }
@@ -187,7 +187,7 @@ impl GameState{
         }
         else{
             let f = Shared::wrap(Faith::dummy(key));
-            self.faiths.insert(key.clone(), f.clone());
+            self.faiths.insert(key, f.clone());
             f.get_internal_mut().init(value, self);
         }
     }
@@ -201,7 +201,7 @@ impl GameState{
         }
         else{
             let c = Shared::wrap(Culture::dummy(key));
-            self.cultures.insert(key.clone(), c.clone());
+            self.cultures.insert(key, c.clone());
             c.get_internal_mut().init(value, self);
         }
     }
@@ -215,7 +215,7 @@ impl GameState{
         }
         else{
             let d = Shared::wrap(Dynasty::dummy(key));
-            self.dynasties.insert(key.clone(), d.clone());
+            self.dynasties.insert(key, d.clone());
             d.get_internal_mut().init(value, self);
         }
     }
@@ -229,7 +229,7 @@ impl GameState{
         }
         else{
             let m = Shared::wrap(Memory::dummy(key));
-            self.memories.insert(key.clone(), m.clone());
+            self.memories.insert(key, m.clone());
             m.get_internal_mut().init(value, self);
         }
     }
@@ -275,7 +275,7 @@ impl GameState{
             }
             let max_yr = data.keys().max().unwrap();
             for yr in 0..=*max_yr {
-                if !data.contains_key(&yr) && (data.contains_key(&(yr-1)) || data.contains_key(&(yr+1))){
+                if !data.contains_key(&yr) && ((yr != 0 && data.contains_key(&(yr-1))) || data.contains_key(&(yr+1))){
                     v.push((yr, 0));
                 }
             }
@@ -327,7 +327,7 @@ impl GameState{
             }
             let max_yr = data.keys().max().unwrap();
             for yr in 0..=*max_yr {
-                if !data.contains_key(&yr) && (data.contains_key(&(yr-1)) || data.contains_key(&(yr+1))) {
+                if !data.contains_key(&yr) && ((yr != 0 && data.contains_key(&(yr-1))) || data.contains_key(&(yr+1))) {
                     v.push((yr, 0));
                 }
             }

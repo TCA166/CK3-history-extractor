@@ -77,7 +77,10 @@ impl DummyInit for Culture {
         get_parents(&mut self.parents, &base, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = base.get("name").unwrap().as_string();
-        self.ethos = base.get("ethos").unwrap().as_string();
+        let eth = base.get("ethos");
+        if eth.is_some() { //this is possible, shoutout u/Kinc4id
+            self.ethos = eth.unwrap().as_string();
+        }
         self.heritage = base.get("heritage").unwrap().as_string();
         self.martial = base.get("martial_custom").unwrap().as_string();
         self.date = get_date(&base);

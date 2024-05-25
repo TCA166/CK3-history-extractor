@@ -108,6 +108,17 @@ fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&GameObject, game_state
         for l in leaders_obj.unwrap().as_object().unwrap().get_array_iter(){
             leaders.push(game_state.get_character(&l.as_id()).clone());
         }
+    } else {
+        let current = base.get("dynasty_head");
+        if current.is_some(){
+            leaders.push(game_state.get_character(&current.unwrap().as_id()));
+        }
+        else{
+            let current = base.get("head_of_house");
+            if current.is_some(){
+                leaders.push(game_state.get_character(&current.unwrap().as_id()));
+            }
+        }
     }
 }
 
@@ -287,6 +298,9 @@ impl Renderable for Dynasty {
         }
         for leader in self.leaders.iter(){
             leader.get_internal().render_all(renderer, game_map, grapher);
+        }
+        if self.parent.as_ref().is_some(){
+            self.parent.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
     }
 }

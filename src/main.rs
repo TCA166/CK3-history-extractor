@@ -69,6 +69,7 @@ fn create_dir_maybe(name: &str) {
 /// 5. `--zip` - A flag that tells the program that the input file is compressed into an archive.
 /// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
 /// 7. `--no-vis` - A flag that tells the program not to render any images
+/// 8. `--output` - A flag that tells the program where to output the rendered files.
 /// 
 /// # Process
 /// 
@@ -257,6 +258,18 @@ fn main() {
                     let chr = d.1.as_object();
                     if chr.is_some(){
                         game_state.add_character(chr.unwrap());  
+                    }
+                }
+            }
+            "characters" => {
+                let r = i.to_object();
+                let dead_prunable = r.get("dead_prunable");
+                if dead_prunable.is_some(){
+                    for d in dead_prunable.unwrap().as_object().unwrap().get_obj_iter(){
+                        let chr = d.1.as_object();
+                        if chr.is_some(){
+                            game_state.add_character(chr.unwrap());
+                        }
                     }
                 }
             }

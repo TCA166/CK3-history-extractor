@@ -7,7 +7,7 @@
     <body>
         <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
             <p class="h1 my-0 me-md-auto fw-normal">{{character.name}} {{character.nick if character.nick != none}}</p>
-            <a class="btn btn-outline-primary" href="../index.html">Home</a>
+            <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
         </header>
         <main class="m-2">
             <div class="container-fluid" style="text-align: center">
@@ -19,12 +19,12 @@
                         Reason of death: {%if character.reason != none%}{{character.reason}}{%else%}Natural causes{%endif%}<br />
                         {%endif%}
                         {%if character.culture is defined%}
-                        Culture: {{character.culture|render_ref("cultures")}} <br>
+                        Culture: {{character.culture|render_ref}} <br>
                         {%endif%}
                         {%if character.faith is defined%}
-                        Faith: {{character.faith|render_ref("faiths")}} <br>
+                        Faith: {{character.faith|render_ref}} <br>
                         {%endif%}
-                        Dynastic House: {%if character.house is defined%}{{character.house|render_ref("dynasties")}}{%else%}Lowborn{%endif%}<br />
+                        Dynastic House: {%if character.house is defined%}{{character.house|render_ref}}{%else%}Lowborn{%endif%}<br />
                     </div>
                 </div>
                 <div class="row" style="margin-bottom:10px">
@@ -118,7 +118,7 @@
                             <ul class="collapse list-group" id="collapseExample">
                                 {%for memory in character.memories%}
                                 <li class="list-group-item">
-                                    {{memory.date}}:{{memory.type}}<br>
+                                    {{memory.date}}:{%if memory.type is defined%}{{memory.type}}{%endif%}<br>
                                     {%if memory.participants is defined%}
                                     {%for key, value in memory.participants%}
                                         {{key}}:{{value|render_ref}}
@@ -139,7 +139,7 @@
                             </div>
                             <div class="card-body">
                                 {%for title in character.titles%} 
-                                {{title|render_ref("titles")}}
+                                {{title|render_ref}}
                                 {%endfor%}
                             </div>
                         </div>
@@ -152,7 +152,7 @@
                             <ul class="list-group list-group-flush" style="text-align:left">
                                 <li class="list-group-item">Titles: 
                                     {%for title in character.titles%} 
-                                    {{title|render_ref("titles")}}
+                                    {{title|render_ref}}
                                     {%endfor%}
                                 </li>
                                 <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
