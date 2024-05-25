@@ -113,10 +113,12 @@ fn main() {
     let mut depth = 3;
     if args.len() < 2{
         print!("Enter the filename: ");
+        stdout().flush().unwrap();
         //raw file contents
         stdin().read_line(&mut filename).unwrap();
         filename = filename.trim().to_string();
         print!("Enter the game path(You can just leave this empty): ");
+        stdout().flush().unwrap();
         let mut inp = String::new();
         stdin().read_line(&mut inp).unwrap();
         inp = inp.trim().to_string();
@@ -243,13 +245,17 @@ fn main() {
             "living" => {
                 let r = i.to_object();
                 for l in r.get_obj_iter(){
-                    game_state.add_character(l.1.as_object().unwrap());
+                    let chr = l.1.as_object();
+                    if chr.is_some(){
+                        game_state.add_character(chr.unwrap());
+                    }
                 }
             }
             "dead_unprunable" => {
                 let r = i.to_object();
                 for d in r.get_obj_iter(){
-                    game_state.add_character(d.1.as_object().unwrap());   
+                    let chr = d.1.as_object();
+                    game_state.add_character(chr.unwrap());   
                 }
             }
             "vassal_contracts" => {
@@ -338,6 +344,7 @@ fn main() {
     //Print the time taken
     println!("\nTime taken: {}s\n", end_time.duration_since(start_time).unwrap().as_secs());
     print!("Press enter to exit...");
+    stdout().flush().unwrap();
     let mut inp = String::new();
     stdin().read_line(&mut inp).unwrap();
 }
