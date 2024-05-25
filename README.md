@@ -45,15 +45,21 @@ You will need to decompress the save file and convert the save file to the text 
 
 #### Decompressing your save file
 
-The save file is compressed using zlib, meaning any ordinary decompression program is capable of decompressing the save file.
-Just decompress it then as if it was an archive, then enter the new directory and copy the ```gamestate``` file inside.
+It is possible the save file is compressed, however it's also possible it's not.
+Depends on the settings and game version. 
+If you aren't sure if it is just try decompressing.
+Just decompress it then as if it was an archive.
+If the process fails, then the save file isn't compressed and the save file is ready to go.
+If it the file gets decompressed successfully then enter the newly created directory and copy the ```gamestate``` file inside.
 That file is your actual file the program is expecting.
-If the save file is compressed but you are sure the contents are plain text, you can run the tool with ```--zip``` which will make the tool decompress the input file as if it was an archive.
+If the save file is compressed but you are sure the contents are plain text, you can also just run the tool with ```--zip``` which will make the tool decompress the input file as if it was an archive.
 
 ### Running the program
 
 You can run the program from the command line or just by double clicking it.
 If you ran it with no arguments it will ask you for the path to the file and for the path to the game.
+**It is very important that game path provided points to the ```/game``` subdirectory in your ```Crusader Kings III folder```.
+Otherwise you will recieve errors when providing the path.
 For users familiar with console environments here are details on that interface:
 
 ```sh
@@ -64,7 +70,7 @@ And here are the arguments that the utility accepts as of right now:
 
 1. ```--internal``` forces the utility to use the internal templates.
 2. ```--depth %d``` sets the maximum depth of the data to retrieve in the savefile. The characters you played have depth=0, their relatives have depth=1 and so on.
-3. ```--game-path %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate. Assuming you have the game installed via Steam you can do the following ```--game-path "*YOUR STEAM PATH*/steamapps/common/Crusader Kings III/game"```
+3. ```--game-path %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate. Assuming you have the game installed via Steam you can do the following ```--game-path "*YOUR STEAM PATH*/steamapps/common/Crusader Kings III/game"```.
 4. ```--zip``` informs the program that the input file is a compressed archive
 5. ```--no-vis``` disables all forms of visualisation within the output
 
