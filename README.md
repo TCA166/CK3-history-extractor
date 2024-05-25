@@ -41,12 +41,15 @@ You will need to decompress the save file and convert the save file to the text 
 1. Backup your ironman savefile
 2. Run the game in debug mode (add -debug_mode to launch options)
 3. Load the Ironman savefile and let the game run for a month so that it saves the file in debug mode
-4. Congrats! your save file in the savefile folder is now no longer encrypted
+4. Congrats! your save file in the savefile folder is now no longer binary encoded
+
+If you want to make sure that's actually the case, open the file in a text editor and see if you can see any gibberish or weird symbols.
+If the save file has no gibberish(non ASCII characters) that means that the save file is ready to go.
 
 #### Decompressing your save file
 
-It is possible the save file is compressed, however it's also possible it's not.
-Depends on the settings and game version. 
+The save file may be compressed.
+This depends on the settings and game version.
 If you aren't sure if it is just try decompressing.
 Just decompress it then as if it was an archive.
 If the process fails, then the save file isn't compressed and the save file is ready to go.

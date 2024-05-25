@@ -101,7 +101,10 @@ fn main() {
     let mut use_internal = false;
     #[cfg(not(internal))]
     let use_internal = false;
+    // if we don't want to render any images
     let mut no_vis = false;
+    // The output path, if provided by the user
+    let mut output_path:Option<String> = None;
     // The game path, if provided by the user
     let mut game_path = None; 
     // The language to use for localization
@@ -109,11 +112,11 @@ fn main() {
     // The depth to render the player's history
     let mut depth = 3;
     if args.len() < 2{
-        println!("Enter the filename: ");
+        print!("Enter the filename: ");
         //raw file contents
         stdin().read_line(&mut filename).unwrap();
         filename = filename.trim().to_string();
-        println!("Enter the game path(You can just leave this empty): ");
+        print!("Enter the game path(You can just leave this empty): ");
         let mut inp = String::new();
         stdin().read_line(&mut inp).unwrap();
         inp = inp.trim().to_string();
@@ -122,6 +125,7 @@ fn main() {
         }
         else{
             game_path = Some(inp);
+            println!("Using game files from {}", game_path.as_ref().unwrap());
         }
     }
     else{
@@ -157,6 +161,10 @@ fn main() {
                 }
                 "--no-vis" => {
                     no_vis = true;
+                }
+                "--output" => {
+                    output_path = Some(iter.next().expect("Output path argument requires a value").clone());
+                    println!("Outputting to {}", output_path.as_ref().unwrap());
                 }
                 _ => {
                     println!("Unknown argument: {}", arg);
@@ -308,7 +316,10 @@ fn main() {
     }
     for player in players.iter_mut(){
         println!("Processing {:?}", player.name);
-        let folder_name = player.name.to_string() + "'s history";
+        let mut folder_name = player.name.to_string() + "'s history";
+        if output_path.is_some(){
+            folder_name = output_path.as_ref().unwrap().clone() + "/" + folder_name.as_str();
+        }
         create_dir_maybe(&folder_name);
         create_dir_maybe(format!("{}/characters", &folder_name).as_str());
         create_dir_maybe(format!("{}/dynasties", &folder_name).as_str());
@@ -326,4 +337,7 @@ fn main() {
     let end_time = SystemTime::now();
     //Print the time taken
     println!("\nTime taken: {}s\n", end_time.duration_since(start_time).unwrap().as_secs());
+    print!("Press enter to exit...");
+    let mut inp = String::new();
+    stdin().read_line(&mut inp).unwrap();
 }
