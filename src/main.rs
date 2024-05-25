@@ -255,7 +255,9 @@ fn main() {
                 let r = i.to_object();
                 for d in r.get_obj_iter(){
                     let chr = d.1.as_object();
-                    game_state.add_character(chr.unwrap());   
+                    if chr.is_some(){
+                        game_state.add_character(chr.unwrap());  
+                    }
                 }
             }
             "vassal_contracts" => {
