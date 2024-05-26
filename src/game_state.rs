@@ -250,21 +250,9 @@ impl GameState{
             let death_date = death_date.unwrap();
             let death_year:u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
             let culture_id = culture.get_internal().get_id();
-            if cultures.contains_key(&culture_id){
-                let entry: &mut HashMap<u32, u32> = cultures.get_mut(&culture_id).unwrap();
-                if entry.contains_key(&death_year){
-                    let count = entry.get_mut(&death_year).unwrap();
-                    *count += 1;
-                }
-                else{
-                    entry.insert(death_year, 1);
-                }
-            }
-            else{
-                let mut entry = HashMap::new();
-                entry.insert(death_year, 1);
-                cultures.insert(culture_id, entry);
-            }
+            let entry = cultures.entry(culture_id).or_insert(HashMap::new());
+            let count = entry.entry(death_year).or_insert(0);
+            *count += 1;
         }
         // convert the internal hashmaps to vectors
         let mut res = HashMap::new();
@@ -302,21 +290,9 @@ impl GameState{
             let death_date = death_date.unwrap();
             let death_year:u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
             let faith_id = faith.get_internal().get_id();
-            if faiths.contains_key(&faith_id){
-                let entry: &mut HashMap<u32, u32> = faiths.get_mut(&faith_id).unwrap();
-                if entry.contains_key(&death_year){
-                    let count = entry.get_mut(&death_year).unwrap();
-                    *count += 1;
-                }
-                else{
-                    entry.insert(death_year, 1);
-                }
-            }
-            else{
-                let mut entry = HashMap::new();
-                entry.insert(death_year, 1);
-                faiths.insert(faith_id, entry);
-            }
+            let entry = faiths.entry(faith_id).or_insert(HashMap::new());
+            let count = entry.entry(death_year).or_insert(0);
+            *count += 1;
         }
         // convert the internal hashmaps to vectors
         let mut res = HashMap::new();
@@ -327,7 +303,7 @@ impl GameState{
             }
             let max_yr = data.keys().max().unwrap();
             for yr in 0..=*max_yr {
-                if !data.contains_key(&yr) && ((yr != 0 && data.contains_key(&(yr-1))) || data.contains_key(&(yr+1))) {
+                if !data.contains_key(&yr) && ((yr != 0 && data.contains_key(&(yr - 1))) || data.contains_key(&(yr + 1))) {
                     v.push((yr, 0));
                 }
             }
