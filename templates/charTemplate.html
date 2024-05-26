@@ -25,6 +25,9 @@
                         Faith: {{character.faith|render_ref}} <br>
                         {%endif%}
                         Dynastic House: {%if character.house is defined%}{{character.house|render_ref}}{%else%}Lowborn{%endif%}<br />
+                        {%if character.liege is defined%}
+                        Liege: {{character.liege|render_ref}}<br>
+                        {%endif%}
                     </div>
                 </div>
                 <div class="row" style="margin-bottom:10px">
@@ -96,24 +99,18 @@
                         </div>
                         {%if character.dna != none%}
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
                                 Character DNA
-                                <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseDna" role="button" aria-expanded="false" aria-controls="collapseDna">
-                                    Show
-                                </a>
                             </div>
                             <div class="collapse" id="collapseDna">
-                                <textarea class="form-control" readonly>{{character.dna|safe}}</textarea>
+                                <textarea class="form-control" style="resize: none;" readonly>{{character.dna|safe}}</textarea>
                             </div>
                         </div>
                         {%endif%}
                         {%if character.memories|length != 0%}
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
                                 Character Memories
-                                <a class="btn btn-primary" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
-                                    Show
-                                </a>
                             </div>
                             <ul class="collapse list-group" id="collapseExample">
                                 {%for memory in character.memories%}
@@ -131,35 +128,28 @@
                         {%endif%}
                     </div>
                     <div class="col" class="w-50">
-                        {%if character.dead %}
-                        {%if character.titles|length > 0%}
-                        <div class="card">
-                            <div class="card-header">
-                                Titles
-                            </div>
-                            <div class="card-body">
-                                {%for title in character.titles%} 
-                                {{title|render_ref}}
-                                {%endfor%}
-                            </div>
-                        </div>
-                        {%endif%}
-                        {%else%}
+                        {%if character.titles|length > 0 or not character.dead%}
                         <div class="card">
                             <div class="card-header">
                                 Domain
                             </div>
                             <ul class="list-group list-group-flush" style="text-align:left">
+                                {%if character.titles|length > 0%}
                                 <li class="list-group-item">Titles: 
                                     {%for title in character.titles%} 
                                     {{title|render_ref}}
                                     {%endfor%}
                                 </li>
+                                {%endif%}
+                                {%if not character.dead%}
                                 <li class="list-group-item">Gold: {{character.gold}} | Piety: {{character.piety}} | Prestige: {{character.prestige}}</li>
                                 <li class="list-group-item">Dread: {{character.dread}} | Army: {{character.strength}}</li>
                                 <li class="list-group-item">Kills: {%for killed in character.kills%} {{killed|render_ref}} {%endfor%}</li>
                                 <li class="list-group-item">Known Languages: {%for lang in character.languages%} {{lang}} {%endfor%}</li>
+                                {%endif%}
+                                {%if character.vassals|length > 0%}
                                 <li class="list-group-item">Vassals: {%for vassal in character.vassals%} {{vassal|render_ref}} {%endfor%}</li>
+                                {%endif%}
                             </ul>
                         </div>
                         {%endif%}

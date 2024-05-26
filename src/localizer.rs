@@ -143,6 +143,30 @@ impl Localizer{
                 - $key$ - use that key instead of the key that was used to look up the string
                 - [function(arg).function(arg)...] handling this one is going to be a nightmare
                 */
+                let iterable_clone = data.clone();
+                for (key, value) in iterable_clone.iter(){ // resolve the borrowed keys
+                    let mut new_value = String::new();
+                    let mut foreign_key = String::new();
+                    let mut in_key = false;
+                    for c in value.chars(){
+                        if c == '$' {
+                            if in_key {
+                                let localized = data.get(&mem::take(&mut foreign_key));
+                                if localized.is_some(){
+                                    new_value.push_str(localized.unwrap().as_str());
+                                }
+                            }
+                            in_key = !in_key;
+                        } else {
+                            if in_key {
+                                foreign_key.push(c);
+                            } else {
+                                new_value.push(c);
+                            }
+                        }
+                    }
+                    data.insert(key.clone(), GameString::wrap(new_value));
+                }
                 hmap = Some(data);
             }
         }

@@ -236,6 +236,9 @@ impl GameObjectDerived for Title{
     }
 
     fn get_name(&self) -> GameString {
+        if self.name.is_none() {
+            return GameString::wrap("Unnamed".to_owned());
+        }
         self.name.as_ref().unwrap().clone()
     }
 }
@@ -335,6 +338,9 @@ impl Renderable for Title {
                 o.1.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
             }
         }
+        if self.capital.is_some(){
+            self.capital.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+        }
     }
 }
 
@@ -383,6 +389,15 @@ impl Cullable for Title {
                 let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok(){
                     c.unwrap().set_depth(depth-1, localization);
+                }
+            }
+        }
+        if self.capital.is_some(){
+            let c = self.capital.as_ref().unwrap().try_get_internal_mut();
+            if c.is_ok(){
+                let mut c = c.unwrap();
+                if c.id != self.id{
+                    c.set_depth(depth-1, localization);
                 }
             }
         }

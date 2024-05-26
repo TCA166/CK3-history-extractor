@@ -67,6 +67,7 @@ impl Cullable for RealmDifference{
     }
 }
 
+/// A struct representing the timeline of the game
 pub struct Timeline{
     lifespans: Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>,
     latest_event: u32,
@@ -74,6 +75,7 @@ pub struct Timeline{
 }
 
 impl Timeline{
+    /// Creates a new timeline from the game state
     pub fn new(game_state: &GameState) -> Self{
         let mut lifespans = Vec::new();
         let mut latest_event = 0;

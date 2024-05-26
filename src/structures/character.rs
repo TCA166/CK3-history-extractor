@@ -10,11 +10,96 @@ use crate::renderer::{Cullable, Renderable, Renderer};
 
 use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
+/// An enum that holds either a character or a reference to a character.
+enum Vassal {
+    Character(Shared<Character>),
+    Reference(Shared<DerivedRef<Character>>)
+}
+
+impl GameObjectDerived for Vassal{
+    fn get_id(&self) -> GameId {
+        match self{
+            Vassal::Character(c) => c.get_internal().get_id(),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_id()
+        }
+    }
+
+    fn get_name(&self) -> GameString {
+        match self{
+            Vassal::Character(c) => c.get_internal().get_name(),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_name()
+        }
+    }
+}
+
+impl Serialize for Vassal {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self{
+            Vassal::Character(c) => c.serialize(serializer),
+            Vassal::Reference(r) => r.serialize(serializer)
+        }
+    }
+}
+
+impl Cullable for Vassal {
+    fn is_ok(&self) -> bool {
+        match self{
+            Vassal::Character(c) => c.get_internal().is_ok(),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().is_ok()
+        }
+    }
+
+    fn get_depth(&self) -> usize {
+        match self{
+            Vassal::Character(c) => c.get_internal().get_depth(),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_depth()
+        }
+    }
+
+    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+        match self{
+            Vassal::Character(c) => {
+                let o = c.try_get_internal_mut();
+                if o.is_ok(){
+                    o.unwrap().set_depth(depth, localization);
+                }
+            },
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal_mut().set_depth(depth, localization)
+        }
+    }
+}
+
+impl Renderable for Vassal {
+    fn get_context(&self) -> minijinja::Value {
+        match self{
+            Vassal::Character(c) => c.get_internal().get_context(),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_context()
+        }
+    }
+
+    fn get_template() -> &'static str {
+        Character::get_template()
+    }
+
+    fn get_subdir() -> &'static str {
+        Character::get_subdir()
+    }
+
+    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+        match self{
+            Vassal::Character(c) => c.get_internal().render_all(renderer, game_map, grapher),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().render_all(renderer, game_map, grapher)
+        }
+    }
+}
+
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
 pub struct Character {
     id: GameId,
-    /// The name of the character, you can assume this is always present.
     name: Option<GameString>,
     nick: Option<GameString>,
     birth: Option<GameString>,
@@ -41,7 +126,8 @@ pub struct Character {
     strength: f32,
     kills: Vec<Shared<Character>>,
     languages: Vec<GameString>,
-    vassals: Vec<Shared<DerivedRef<Character>>>,
+    vassals: Vec<Vassal>,
+    liege: Option<DerivedRef<Character>>,
     female:bool,
     depth: usize,
     localized: bool,
@@ -79,7 +165,7 @@ fn get_skills(skills:&mut Vec<i8>, base:&GameObject){
 }
 
 /// Parses the dead_data field of the character
-fn get_dead(dead:&mut bool, reason:&mut Option<GameString>, data:&mut Option<GameString>, titles:&mut Vec<Shared<Title>>, base:&GameObject, game_state:&mut GameState){
+fn get_dead(dead:&mut bool, reason:&mut Option<GameString>, data:&mut Option<GameString>, titles:&mut Vec<Shared<Title>>, liege:&mut Option<DerivedRef<Character>>, self_id:&GameId, base:&GameObject, game_state:&mut GameState){
     let dead_data = base.get("dead_data");
     if dead_data.is_some(){
         *dead = true;
@@ -95,6 +181,19 @@ fn get_dead(dead:&mut bool, reason:&mut Option<GameString>, data:&mut Option<Gam
             }
         }
         *data = Some(o.get("date").unwrap().as_string());
+        let liege_node = o.get("liege");
+        if liege_node.is_some(){
+            let id = liege_node.unwrap().as_id();
+            if id == *self_id{
+                return;
+            }
+            let liege_chr = game_state.get_character(&id).clone();
+            *liege = Some(DerivedRef::<Character>::from_derived(liege_chr.clone()));
+            let o = liege_chr.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().add_vassal(game_state.get_character(self_id));
+            }
+        }
     }
 }
 
@@ -208,7 +307,7 @@ fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&m
 }
 
 /// Parses the landed_data field of the character
-fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Shared<DerivedRef<Character>>>, base:&GameObject, game_state:&mut GameState){
+fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Title>>, vassals:&mut Vec<Vassal>, base:&GameObject, game_state:&mut GameState){
     let landed_data_node = base.get("landed_data");
     if landed_data_node.is_some(){
         let landed_data = landed_data_node.unwrap().as_object().unwrap();
@@ -229,18 +328,18 @@ fn get_landed_data(dread:&mut f32, strength:&mut f32, titles:&mut Vec<Shared<Tit
         let vassals_node = landed_data.get("vassal_contracts");
         if vassals_node.is_some(){
             for v in vassals_node.unwrap().as_object().unwrap().get_array_iter(){
-                vassals.push(game_state.get_vassal(&v.as_id()));
+                vassals.push(Vassal::Reference(game_state.get_vassal(&v.as_id())));
             }
         }
     }
 }
 
 /// Gets the dynasty of the character
-fn get_dynasty(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Dynasty>>{
+fn get_dynasty(base:&GameObject, game_state:&mut GameState, self_id:&GameId) -> Option<Shared<Dynasty>>{
     let dynasty_id = base.get("dynasty_house");
     if dynasty_id.is_some(){
         let d = game_state.get_dynasty(&dynasty_id.unwrap().as_id());
-        d.get_internal_mut().register_member();
+        d.get_internal_mut().register_member(game_state.get_character(&self_id));
         return Some(d);
     }
     None
@@ -297,6 +396,15 @@ impl Character {
     pub fn get_children_iter(&self) ->  Iter<Shared<Character>>{
         self.children.iter()
     }
+
+    pub fn add_vassal(&mut self, vassal:Shared<Character>){
+        self.vassals.push(Vassal::Character(vassal));
+    }
+
+    //TODO implement this
+    pub fn set_liege(&mut self, liege:Shared<Character>){
+        self.liege = Some(DerivedRef::from_derived(liege));
+    }
 }
 
 impl DummyInit for Character{
@@ -329,6 +437,7 @@ impl DummyInit for Character{
             kills: Vec::new(),
             languages: Vec::new(),
             vassals: Vec::new(),
+            liege: None,
             female: false,
             id: id,
             depth: 0,
@@ -342,7 +451,7 @@ impl DummyInit for Character{
         if female.is_some(){
             self.female = female.unwrap().as_string().as_str() == "yes";
         }
-        get_dead(&mut self.dead, &mut self.reason, &mut self.date, &mut self.titles, &base, game_state);
+        get_dead(&mut self.dead, &mut self.reason, &mut self.date, &mut self.titles, &mut self.liege, &self.id, &base, game_state);
         //find skills
         get_skills(&mut self.skills, &base);
         //find recessive traits
@@ -365,7 +474,7 @@ impl DummyInit for Character{
         self.name = Some(base.get("first_name").unwrap().as_string());
         self.nick = base.get("nickname").map(|v| v.as_string());
         self.birth = Some(base.get("birth").unwrap().as_string());
-        self.house = get_dynasty(&base, game_state);
+        self.house = get_dynasty(&base, game_state, &self.id);
         self.faith = get_faith(&base, game_state);
         self.culture = get_culture(&base, game_state);
         self.dna = dna;
@@ -390,7 +499,7 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Character", 28)?;
+        let mut state = serializer.serialize_struct("Character", 29)?;
         state.serialize_field("name", &self.get_name())?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
@@ -450,9 +559,22 @@ impl Serialize for Character {
         let kills = serialize_array::<Character>(&self.kills);
         state.serialize_field("kills", &kills)?;
         state.serialize_field("languages", &self.languages)?;
-        //vassals is already serialized as DerivedRef
-        state.serialize_field("vassals", &self.vassals)?;
+        let mut vassals = Vec::new();
+        for vassal in self.vassals.iter(){
+            match vassal {
+                Vassal::Character(c) => {
+                    vassals.push(DerivedRef::from_derived(c.clone()));
+                },
+                Vassal::Reference(c) => {
+                    vassals.push(DerivedRef::from_derived(c.get_internal().get_ref().clone()))
+                }
+            }
+        }
+        state.serialize_field("vassals", &vassals)?;
         state.serialize_field("id", &self.id)?;
+        if self.liege.is_some(){
+            state.serialize_field("liege", &self.liege)?;
+        }
         state.end()
     }
 }
@@ -483,6 +605,9 @@ impl Renderable for Character {
         if self.house.is_some(){
             self.house.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
         }
+        if self.liege.is_some(){
+            self.liege.as_ref().unwrap().get_ref().get_internal().render_all(renderer, game_map, grapher);
+        }
         for s in self.spouses.iter(){
             s.get_internal().render_all(renderer, game_map, grapher);
         }
@@ -499,7 +624,7 @@ impl Renderable for Character {
             s.get_internal().render_all(renderer, game_map, grapher);
         }
         for s in self.vassals.iter(){
-            s.get_internal().get_ref().get_internal().render_all(renderer, game_map, grapher);
+            s.render_all(renderer, game_map, grapher);
         }
         for s in self.titles.iter(){
             s.get_internal().render_all(renderer, game_map, grapher);
@@ -549,6 +674,13 @@ impl Cullable for Character {
         }
         //cullable set
         self.depth = depth;
+        if self.liege.is_some(){
+            let o = self.liege.as_ref().unwrap().get_ref();
+            let o = o.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1, localization);
+            }
+        }
         for s in self.spouses.iter(){
             let o = s.try_get_internal_mut();
             if o.is_ok(){
@@ -579,15 +711,8 @@ impl Cullable for Character {
                 o.unwrap().set_depth(depth - 1, localization);
             }
         }
-        for s in self.vassals.iter(){
-            let o = s.try_get_internal_mut();
-            if o.is_ok(){
-                let char = o.unwrap().get_ref();
-                let m = char.try_get_internal_mut();
-                if m.is_ok(){
-                    m.unwrap().set_depth(depth - 1, localization);
-                }
-            }
+        for s in self.vassals.iter_mut(){
+            s.set_depth(depth - 1, localization);
         }
         if self.culture.is_some(){
             let o = self.culture.as_ref().unwrap().try_get_internal_mut();

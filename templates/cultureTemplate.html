@@ -12,8 +12,10 @@
         <main class="m-2">
             <div class="row">
                 <div class="col w-50">
+                    {%if culture.ethos is defined%}
                     Nature: {{culture.ethos}}
                     <br />
+                    {%endif%}
                     Heritage: {{culture.heritage}}
                     <br />
                     Language: {{culture.language}}

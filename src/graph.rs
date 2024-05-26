@@ -87,18 +87,19 @@ impl Grapher{
                 let id = layout[i * 3] as usize;
                 let x = layout[i * 3 + 1];
                 let y = layout[i * 3 + 2];
+                let node_data = storage.get(&id).unwrap();
                 positions.insert(id, (x, y));
                 if x < min_x || min_x == 0.0{
-                    min_x = x;
+                    min_x = x - node_data.3.0 as f64;
                 }
                 if x > max_x {
-                    max_x = x;
+                    max_x = x + node_data.3.0 as f64;
                 }
                 if y < min_y {
-                    min_y = y;
+                    min_y = y - node_data.3.1 as f64;
                 }
                 if y > max_y {
-                    max_y = y;
+                    max_y = y + node_data.3.1 as f64;
                 }
             }
 

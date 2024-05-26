@@ -15,8 +15,9 @@ pub struct Dynasty{
     id: GameId,
     parent: Option<Shared<Dynasty>>,
     name: Option<GameString>,
-    members: GameId,
-    houses: GameId,
+    members: u32,
+    member_list: Vec<Shared<Character>>,
+    houses: u32,
     prestige_tot: f32,
     prestige: f32,
     perks: Vec<(GameString, u8)>,
@@ -31,12 +32,18 @@ impl Dynasty {
     /// Gets the faith of the dynasty.
     /// Really this is just the faith of the current house leader.
     pub fn get_faith(&self) -> Option<Shared<Faith>> {
+        if self.leaders.is_empty(){
+            return self.member_list.last().unwrap().get_internal().get_faith();
+        }
         self.leaders.last().unwrap().get_internal().get_faith()
     }
 
     /// Gets the culture of the dynasty.
     /// Really this is just the culture of the current house leader.
     pub fn get_culture(&self) -> Option<Shared<Culture>> {
+        if self.leaders.is_empty(){
+            return self.member_list.last().unwrap().get_internal().get_culture();
+        }
         self.leaders.last().unwrap().get_internal().get_culture()
     }
 
@@ -46,17 +53,21 @@ impl Dynasty {
     }
 
     /// Registers a new member in the dynasty
-    pub fn register_member(&mut self){
+    pub fn register_member(&mut self, member:Shared<Character>){
         self.members += 1;
+        self.member_list.push(member.clone());
         if self.parent.as_ref().is_some(){
             let mut p = self.parent.as_ref().unwrap().try_get_internal_mut();
             if p.is_ok(){
-                p.as_mut().unwrap().register_member();
+                p.as_mut().unwrap().register_member(member);
             }
         }
     }
 
     pub fn get_founder(&self) -> Shared<Character> {
+        if self.leaders.is_empty(){
+            return self.member_list.first().unwrap().clone()
+        }
         self.leaders.first().unwrap().clone()
     }
 }
@@ -105,10 +116,13 @@ fn get_perks(perks:&mut Vec<(GameString, u8)>, base:&GameObject){
 fn get_leaders(leaders:&mut Vec<Shared<Character>>, base:&GameObject, game_state:&mut GameState){
     let leaders_obj = base.get("historical");
     if leaders_obj.is_some(){
+        if !leaders.is_empty(){
+            leaders.clear();
+        }
         for l in leaders_obj.unwrap().as_object().unwrap().get_array_iter(){
             leaders.push(game_state.get_character(&l.as_id()).clone());
         }
-    } else {
+    } else if leaders.is_empty(){
         let current = base.get("dynasty_head");
         if current.is_some(){
             leaders.push(game_state.get_character(&current.unwrap().as_id()));
@@ -175,7 +189,6 @@ fn get_name(base:&GameObject, parent:Option<Shared<Dynasty>>) -> Option<GameStri
         n = base.get("localized_name");
         if n.is_none(){
             if parent.is_none(){
-                //println!("{:?}", base);
                 return None;
             }
             let p = parent.as_ref().unwrap().get_internal();
@@ -212,11 +225,13 @@ impl DummyInit for Dynasty {
             id: id,
             depth: 0,
             localized:false,
-            name_localized: false
+            name_localized: false,
+            member_list: Vec::new(),
         }
     }
 
     fn init(&mut self, base:&GameObject, game_state:&mut GameState) {
+        //NOTE: dynasties can have their main house have the same id
         get_perks(&mut self.perks, &base);
         get_leaders(&mut self.leaders, &base, game_state);
         let res = get_prestige(&base);
@@ -339,6 +354,12 @@ impl Cullable for Dynasty {
             let o = self.parent.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok(){
                 o.unwrap().set_depth(depth - 1, localization);
+            }
+        }
+        for member in self.member_list.iter(){
+            let o = member.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(1, localization); //this will localize the character names
             }
         }
     }

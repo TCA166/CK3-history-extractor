@@ -45,6 +45,7 @@ use graph::Grapher;
 
 use crate::timeline::Timeline;
 
+/// A submodule handling the rendering of the timeline page
 mod timeline;
 
 
@@ -348,6 +349,7 @@ fn main() {
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
+        println!("Tree traversed");
         let mut renderer = Renderer::new(&env, folder_name.clone());
         if !no_vis{
             timeline.as_ref().unwrap().render_all(&mut renderer, map.as_ref(), grapher.as_ref());

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use minijinja::Environment;
 use serde::Serialize;
@@ -9,7 +9,7 @@ use crate::{game_object::GameId, graph::Grapher, localizer::Localizer, map::Game
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
 pub struct Renderer<'a>{
     env: &'a Environment<'a>,
-    rendered: HashMap<&'static str, HashMap<GameId, bool>>,
+    rendered: HashMap<&'static str, HashSet<GameId>>,
     path: String
 }
 
@@ -29,11 +29,7 @@ impl<'a> Renderer<'a>{
         if rendered.is_none(){
             return false
         }
-        let rendered = rendered.unwrap().get(&id);
-        if rendered.is_none(){
-            return false
-        }
-        *rendered.unwrap()
+        return rendered.unwrap().contains(&id);
     }
 
     /// Renders the object and returns true if it was rendered.
@@ -46,8 +42,8 @@ impl<'a> Renderer<'a>{
         let contents = self.env.get_template(T::get_template()).unwrap().render(&ctx).unwrap();
         let path = obj.get_path(&self.path);
         std::fs::write(path, contents).unwrap();
-        let rendered = self.rendered.entry(T::get_subdir()).or_insert(HashMap::new());
-        rendered.insert(obj.get_id(), true);
+        let rendered = self.rendered.entry(T::get_subdir()).or_insert(HashSet::new());
+        rendered.insert(obj.get_id());
         return true;
     }
 
