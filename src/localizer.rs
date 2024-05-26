@@ -11,7 +11,7 @@ fn demangle_generic(input:&str) -> String{
     let mut s = input.trim_start_matches("dynn_").trim_start_matches("nick_").trim_end_matches("_perk").trim_start_matches("death_")
     .trim_start_matches("tenet_").trim_start_matches("doctrine_")
     .trim_start_matches("ethos_").trim_start_matches("heritage_").trim_start_matches("language_").trim_start_matches("martial_custom_").trim_start_matches("tradition_")
-    .trim_start_matches("e_").trim_start_matches("k_").trim_start_matches("d_").trim_start_matches("c_").trim_start_matches("b_")
+    .trim_start_matches("e_").trim_start_matches("k_").trim_start_matches("d_").trim_start_matches("c_").trim_start_matches("b_").trim_start_matches("x_x_")
     .trim_end_matches("_name").replace("_", " ");
     if s.is_empty(){
         return s;

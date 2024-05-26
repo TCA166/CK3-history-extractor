@@ -195,7 +195,6 @@ impl DummyInit for Title {
             self.color = [color[0], color[1], color[2]];
         }
         self.key = Some(base.get_string_ref("key"));
-        //TODO possible custom name handling bug here
         let de_jure_id = base.get("de_jure_liege");
         if de_jure_id.is_some(){
             let o = game_state.get_title(&de_jure_id.unwrap().as_id()).clone();
@@ -350,7 +349,9 @@ impl Cullable for Title {
             return;
         }
         if !self.name_localized && self.key.is_some() { //localization
-            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
+            if self.name == self.key {
+                self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
+            }
             self.name_localized = true;
         }
         if depth == 0{

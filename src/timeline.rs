@@ -131,8 +131,13 @@ impl Timeline{
         let mut events:Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString, RealmDifference)> = Vec::new();
         for title in event_checkout{
             let tit = title.get_internal();
-            let mut hist = tit.get_history_iter();
-            let first_char = hist.next().as_ref().unwrap().1.as_ref().unwrap().get_internal();
+            //find the first event that has a character attached
+            let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
+            let next = hist.next();
+            if next.is_none(){
+                continue;
+            }
+            let first_char = next.unwrap().1.as_ref().unwrap().get_internal();
             let mut faith = first_char.get_faith().unwrap().get_internal().get_id();
             let mut culture = first_char.get_culture().unwrap().get_internal().get_id();
             for entry in hist{

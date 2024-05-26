@@ -162,8 +162,11 @@ impl Grapher{
 
     /// Creates a death graph for a culture
     pub fn create_culture_graph(&self, culture_id:GameId, output_path:&str){
-        let data = self.culture_graph_complete.get(&culture_id).unwrap();
-
+        let data = self.culture_graph_complete.get(&culture_id);
+        if data.is_none(){
+            return;
+        }
+        let data = data.unwrap();
         let mut min_x:u32 = 0;
         let mut max_x:u32 = 0;
         let mut min_y:u32 = 0;
