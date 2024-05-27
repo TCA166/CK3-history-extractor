@@ -1,12 +1,9 @@
 use minijinja::context;
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+
+use serde::{Serialize, ser::SerializeStruct};
+
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString};
-use crate::game_state::GameState;
-use super::super::display::{Localizer, Renderer, Cullable, Renderable};
-use crate::types::{Wrapper, WrapperMut};
+use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_object::{GameObject, GameString}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 /// A struct representing a faith in the game
 pub struct Faith {
@@ -22,7 +19,7 @@ pub struct Faith {
 }
 
 /// Gets the head of the faith
-fn get_head(base:&GameObject, game_state:&mut crate::game_state::GameState) -> Option<Shared<Character>>{
+fn get_head(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Character>>{
     let current = base.get("religious_head");
     if current.is_some(){
         let title = game_state.get_title(&current.unwrap().as_id());

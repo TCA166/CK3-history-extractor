@@ -1,13 +1,9 @@
 use minijinja::context;
 
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
+
 use super::{serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived, Shared};
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString, SaveFileValue};
-use crate::game_state::GameState;
-use super::super::display::{Localizer, Renderer, Cullable, Renderable};
-use crate::types::{Wrapper, WrapperMut};
+use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 pub struct Dynasty{
     id: GameId,

@@ -1,11 +1,6 @@
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
 
-use crate::game_object::{GameString, GameObject, SaveFileValue};
-use crate::game_state::GameState;
-
-use super::super::display::{Localizer, Cullable};
-use crate::types::{Wrapper, WrapperMut};
+use super::super::{display::{Localizer, Cullable}, types::{Wrapper, WrapperMut}, game_state::GameState, game_object::{GameString, GameObject, SaveFileValue}};
 
 use super::{Character, FromGameObject, GameId, GameObjectDerived, Shared};
 

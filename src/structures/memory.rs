@@ -1,11 +1,7 @@
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
+
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString};
-use super::super::display::{Localizer, Cullable};
-use crate::types::WrapperMut;
-use crate::game_state::GameState;
+use super::super::{display::{Localizer, Cullable, RenderableType}, game_object::{GameObject, GameString}, types::WrapperMut, game_state::GameState};
 
 /// A struct representing a memory in the game
 pub struct Memory {

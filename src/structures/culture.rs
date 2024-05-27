@@ -1,12 +1,9 @@
 use minijinja::context;
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+
+use serde::{Serialize, ser::SerializeStruct};
+
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString};
-use crate::game_state::GameState;
-use super::super::display::{Localizer, Renderer, Cullable, Renderable};
-use crate::types::{Wrapper, WrapperMut};
+use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_object::{GameObject, GameString}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 /// A struct representing a culture in the game
 pub struct Culture {

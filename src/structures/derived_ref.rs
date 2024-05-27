@@ -1,9 +1,6 @@
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
 
-use crate::display::RenderableType;
-
-use super::super::{display::{Localizer, Cullable, Renderable, Renderer}, types::WrapperMut};
+use super::super::{display::{Localizer, Cullable, Renderable, Renderer, RenderableType}, types::WrapperMut, game_object::GameString};
 use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
@@ -73,7 +70,7 @@ impl<T> GameObjectDerived for DerivedRef<T> where T:Renderable + Cullable{
         self.id
     }
 
-    fn get_name(&self) -> crate::game_object::GameString {
+    fn get_name(&self) -> GameString {
         self.obj.as_ref().unwrap().get_internal().get_name()
     }
 }

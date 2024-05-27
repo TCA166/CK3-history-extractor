@@ -2,10 +2,8 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::types::{Shared, WrapperMut};
-
-use super::{super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, Faith, GameObjectDerived, Title}, types::Wrapper}, RenderableType};
-use super::{graph::Grapher, localizer::Localizer, renderer::{Cullable, Renderable, Renderer}};
+use super::super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, Faith, GameObjectDerived, Title}, types::{Wrapper, Shared, WrapperMut}};
+use super::{graph::Grapher, localizer::Localizer, renderer::{Cullable, Renderable, Renderer}, RenderableType};
 
 //const CREATED_STR:&str = "Created";
 const DESTROYED_STR:&str = "destroyed";

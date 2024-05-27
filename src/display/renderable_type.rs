@@ -1,10 +1,7 @@
 use serde::Serialize;
 
-use crate::display::{Renderable, Renderer};
-use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title};
-use crate::types::{Shared, Wrapper, WrapperMut};
-
-use super::Cullable;
+use super::{Renderable, Renderer, Cullable};
+use super::super::{structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title}, types::{Shared, Wrapper, WrapperMut}};
 
 pub enum RenderableType<'a>{
     Character(Shared<Character>),

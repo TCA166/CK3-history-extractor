@@ -3,15 +3,9 @@ use std::cmp::Ordering;
 
 use minijinja::context;
 
-use serde::Serialize;
-use serde::ser::SerializeStruct;
+use serde::{Serialize, ser::SerializeStruct};
 
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString, SaveFileValue};
-use crate::game_state::GameState;
-use super::super::display::{Localizer, Renderer, Cullable, Renderable};
-use crate::types::{Wrapper, WrapperMut};
-
+use super::super::{game_object::{GameObject, GameString, SaveFileValue}, types::{Wrapper, WrapperMut}, display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_state::GameState};
 use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a title in the game

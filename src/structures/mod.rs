@@ -1,11 +1,7 @@
 
 use serde::Serialize;
 
-use crate::game_object::{GameString, GameObject, GameId};
-
-use super::game_state::GameState;
-
-use super::types::{Wrapper, Shared};
+use super::{game_state::GameState, types::{Wrapper, Shared}, game_object::{GameString, GameObject, GameId}};
 
 /// A submodule that provides the [Player] object.
 mod player;

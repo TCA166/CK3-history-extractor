@@ -1,17 +1,10 @@
 use minijinja::context;
-use serde::Serialize;
-use serde::ser::SerializeStruct;
 
-use crate::display::RenderableType;
-use crate::game_object::{GameObject, GameString};
+use serde::{Serialize, ser::SerializeStruct};
 
-use crate::game_state::GameState;
+use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, types::Wrapper, game_state::GameState, game_object::{GameObject, GameString}};
 
-use crate::types::Wrapper;
-use super::super::display::{Localizer, Renderer, Cullable, Renderable};
-
-use super::FromGameObject;
-use super::{Character, GameId, GameObjectDerived, LineageNode, Shared};
+use super::{Character, GameId, GameObjectDerived, LineageNode, Shared, FromGameObject};
 
 /// A struct representing a player in the game
 pub struct Player {
