@@ -13,18 +13,10 @@ use game_object::GameId;
 mod save_file;
 use save_file::SaveFile;
 
-/// A submodule handling game localization.
-mod localizer;
-use localizer::Localizer;
-
 /// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
 mod game_state;
 use game_state::GameState;
-
-/// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
-mod renderer;
-use renderer::{Renderer, Renderable, Cullable};
 
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
@@ -35,19 +27,9 @@ use structures::{Player, FromGameObject};
 mod jinja_env;
 use jinja_env::create_env;
 
-/// Map handling submodule.
-mod map;
-use map::GameMap;
-
-/// The graphing submodule that handles the creation of graphs from the game state.
-mod graph;
-use graph::Grapher;
-
-use crate::timeline::Timeline;
-
-/// A submodule handling the rendering of the timeline page
-mod timeline;
-
+// A module for handling the display of the parsed data.
+mod display;
+use display::{Cullable, GameMap, Grapher, Localizer, Renderable, Renderer, Timeline};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.

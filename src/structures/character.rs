@@ -4,9 +4,9 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, types::{Wrapper, WrapperMut}};
+use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
-use crate::renderer::{Cullable, Renderable, Renderer};
+use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
 
 use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 

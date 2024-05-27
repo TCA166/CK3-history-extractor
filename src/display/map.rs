@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use csv::ReaderBuilder;
 use image::{io::Reader as ImageReader, save_buffer};
 
-use super::{game_object::{GameId, GameString}, save_file::SaveFile};
+use super::super::{game_object::{GameId, GameString}, save_file::SaveFile};
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path:String) -> Vec<u8>{

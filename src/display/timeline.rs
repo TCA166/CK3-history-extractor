@@ -2,7 +2,8 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::{game_object::GameString, game_state::GameState, graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}, structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title}, types::Wrapper};
+use super::super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title}, types::Wrapper};
+use super::{graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}};
 
 //const CREATED_STR:&str = "Created";
 const DESTROYED_STR:&str = "destroyed";

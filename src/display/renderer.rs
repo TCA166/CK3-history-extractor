@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 use minijinja::Environment;
 use serde::Serialize;
 
-use crate::{game_object::GameId, graph::Grapher, localizer::Localizer, map::GameMap, structures::GameObjectDerived};
+use super::super::{game_object::GameId, structures::GameObjectDerived};
+use super::{graph::Grapher, localizer::Localizer, map::GameMap};
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.

@@ -6,11 +6,8 @@ use crate::game_object::{GameObject, GameString};
 
 use crate::game_state::GameState;
 
-use crate::graph::Grapher;
-use crate::localizer::Localizer;
-use crate::map::GameMap;
 use crate::types::Wrapper;
-use crate::renderer::{Cullable, Renderable, Renderer};
+use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
 
 use super::FromGameObject;
 use super::{Character, GameId, GameObjectDerived, LineageNode, Shared};

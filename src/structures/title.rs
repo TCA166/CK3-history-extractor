@@ -8,10 +8,7 @@ use serde::ser::SerializeStruct;
 
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
-use crate::graph::Grapher;
-use crate::localizer::Localizer;
-use crate::map::GameMap;
-use crate::renderer::{Cullable, Renderable, Renderer};
+use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
 use crate::types::{Wrapper, WrapperMut};
 
 use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};

@@ -1,13 +1,10 @@
 use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
-use crate::graph::Grapher;
-use crate::renderer::{Cullable, Renderable, Renderer};
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
-use crate::localizer::Localizer;
-use crate::map::GameMap;
+use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game

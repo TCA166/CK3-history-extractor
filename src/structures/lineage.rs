@@ -4,8 +4,7 @@ use serde::ser::SerializeStruct;
 use crate::game_object::{GameString, GameObject, SaveFileValue};
 use crate::game_state::GameState;
 
-use crate::localizer::Localizer;
-use crate::renderer::Cullable;
+use super::super::display::{Localizer, Cullable};
 use crate::types::{Wrapper, WrapperMut};
 
 use super::{Character, FromGameObject, GameId, GameObjectDerived, Shared};
