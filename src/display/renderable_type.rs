@@ -3,6 +3,7 @@ use serde::Serialize;
 use super::{Renderable, Renderer, Cullable};
 use super::super::{structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title}, types::{Shared, Wrapper, WrapperMut}};
 
+/// An enum representing the different types of [Renderable] objects
 pub enum RenderableType<'a>{
     Character(Shared<Character>),
     Culture(Shared<Culture>),
@@ -89,38 +90,9 @@ impl<'a> GameObjectDerived for RenderableType<'a> {
     }
 }
 
-impl<'a> Renderable for RenderableType<'a> {
-    fn get_context(&self) -> minijinja::Value {
-        match self{
-            RenderableType::Character(c) => c.get_internal().get_context(),
-            RenderableType::Culture(c) => c.get_internal().get_context(),
-            RenderableType::Dynasty(d) => d.get_internal().get_context(),
-            RenderableType::Faith(f) => f.get_internal().get_context(),
-            RenderableType::Title(t) => t.get_internal().get_context(),
-            RenderableType::Player(p) => p.get_context(),
-        }
-    }
-
-    fn get_path(&self, path: &str) -> String {
-        match self{
-            RenderableType::Character(c) => c.get_internal().get_path(path),
-            RenderableType::Culture(c) => c.get_internal().get_path(path),
-            RenderableType::Dynasty(d) => d.get_internal().get_path(path),
-            RenderableType::Faith(f) => f.get_internal().get_path(path),
-            RenderableType::Title(t) => t.get_internal().get_path(path),
-            RenderableType::Player(p) => p.get_path(path),
-        }
-    }
-
-    fn get_subdir() -> &'static str {
-        "."
-    }
-
-    fn get_template() -> &'static str {
-        "."
-    }
-
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
+// not a full implementation of Renderable because getting the static struct fields is not possible
+impl<'a> RenderableType<'a> {
+    pub fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
         match self{
             RenderableType::Character(c) => c.get_internal().render_all(stack, renderer),
             RenderableType::Culture(c) => c.get_internal().render_all(stack, renderer),
@@ -130,5 +102,4 @@ impl<'a> Renderable for RenderableType<'a> {
             RenderableType::Player(p) => p.render_all(stack, renderer),
         }
     }
-
 }

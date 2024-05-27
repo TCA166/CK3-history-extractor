@@ -9,6 +9,8 @@ use super::{graph::Grapher, localizer::Localizer, map::GameMap, RenderableType};
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
+/// Additionally holds references to the [GameMap] and [Grapher] objects, should they exist of course.
+/// It is meant to be used in the [Renderable] trait to render objects and generally act as a helper for rendering objects.
 pub struct Renderer<'a>{
     env: &'a Environment<'a>,
     rendered: HashMap<&'static str, HashSet<GameId>>,
@@ -53,14 +55,17 @@ impl<'a> Renderer<'a>{
         return true;
     }
 
+    /// Returns the root path of the rendered output
     pub fn get_path(&self) -> &str{
         &self.path
     }
 
+    /// Returns the [Grapher] object if it exists.
     pub fn get_grapher(&self) -> Option<&Grapher>{
         self.grapher
     }
 
+    /// Returns the [GameMap] object if it exists.
     pub fn get_map(&self) -> Option<&GameMap>{
         self.game_map
     }

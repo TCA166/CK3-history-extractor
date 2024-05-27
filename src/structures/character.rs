@@ -9,6 +9,8 @@ use crate::{display::{RenderableType, Localizer, Renderer, Cullable, Renderable}
 use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
 /// An enum that holds either a character or a reference to a character.
+/// Effectively either a vassal([Character]) or a vassal([DerivedRef]) contract.
+/// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
 enum Vassal {
     Character(Shared<Character>),
     Reference(Shared<DerivedRef<Character>>)
@@ -395,14 +397,18 @@ impl Character {
         self.children.iter()
     }
 
+    /// Adds a character as a vassal of this character
     pub fn add_vassal(&mut self, vassal:Shared<Character>){
         self.vassals.push(Vassal::Character(vassal));
     }
 
-    //TODO implement this
+    /* TODO implement this. 
+    The problem is that we cannot do this in the init, because the vassals aren't loaded, and within cull we don't have a shared reference
+    
     pub fn set_liege(&mut self, liege:Shared<Character>){
         self.liege = Some(DerivedRef::from_derived(liege));
     }
+    */
 }
 
 impl DummyInit for Character{
@@ -492,6 +498,7 @@ impl GameObjectDerived for Character {
     }
 }
 
+//TODO this is serialized multiple times: inefficient
 impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

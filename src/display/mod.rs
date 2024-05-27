@@ -6,7 +6,7 @@ pub use localizer::Localizer;
 mod renderer;
 pub use renderer::{Renderer, Renderable, Cullable};
 
-/// Map handling submodule.
+/// Map handling submodule. Provides a [GameMap] struct that can be used to render maps.
 mod map;
 pub use map::GameMap;
 
@@ -18,5 +18,6 @@ pub use graph::Grapher;
 mod timeline;
 pub use timeline::Timeline;
 
+/// A submodule that provides the [RenderableType] enum.
 mod renderable_type;
 pub use renderable_type::RenderableType;
