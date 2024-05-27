@@ -1,4 +1,4 @@
-use std::{cell::BorrowError, collections::{hash_map, HashMap}, fmt::Debug, rc::Rc, slice};
+use std::{collections::{hash_map, HashMap}, fmt::Debug, rc::Rc, slice};
 
 use super::types::{RefOrRaw, Wrapper};
 
@@ -18,10 +18,6 @@ impl Wrapper<String> for GameString {
 
     fn get_internal(&self) -> RefOrRaw<String>{
         RefOrRaw::Raw(self.as_ref())
-    }
-
-    fn try_get_internal(&self) -> Result<RefOrRaw<String>, BorrowError> {
-        Ok(self.get_internal())
     }
 }
 

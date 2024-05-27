@@ -1,4 +1,4 @@
-use std::{cell::{BorrowError, BorrowMutError, Ref, RefCell, RefMut}, ops::Deref, rc::Rc};
+use std::{cell::{BorrowMutError, Ref, RefCell, RefMut}, ops::Deref, rc::Rc};
 
 /// A reference or a raw value. I have no clue why this isn't a standard library type.
 /// A [Ref] and a raw reference are both dereferencable to the same type.
@@ -27,9 +27,6 @@ pub trait Wrapper<T> {
 
     /// Get the internal value as a reference or a raw value
     fn get_internal(&self) -> RefOrRaw<T>;
-
-    /// Try to get the internal value as a reference or a raw value
-    fn try_get_internal(&self) -> Result<RefOrRaw<T>, BorrowError>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
@@ -61,14 +58,6 @@ impl<T> Wrapper<T> for Shared<T> {
 
     fn get_internal(&self) -> RefOrRaw<T> {
         RefOrRaw::Ref(self.borrow())
-    }
-
-    fn try_get_internal(&self) -> Result<RefOrRaw<T>, std::cell::BorrowError> {
-        let r = self.try_borrow();
-        match r {
-            Ok(r) => Ok(RefOrRaw::Ref(r)),
-            Err(e) => Err(e)
-        }
     }
 }
 

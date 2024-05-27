@@ -29,7 +29,7 @@ use jinja_env::create_env;
 
 // A module for handling the display of the parsed data.
 mod display;
-use display::{Cullable, GameMap, Grapher, Localizer, Renderable, Renderer, Timeline};
+use display::{Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -333,10 +333,13 @@ fn main() {
         player.set_depth(depth, &localizer);
         println!("Tree traversed");
         let mut renderer = Renderer::new(&env, folder_name.clone());
+        let mut queue = vec![RenderableType::Player(player)];
         if !no_vis{
-            timeline.as_ref().unwrap().render_all(&mut renderer, map.as_ref(), grapher.as_ref());
+            timeline.as_ref().unwrap().render_all(&mut queue, &mut renderer, map.as_ref(), grapher.as_ref());
         }
-        player.render_all(&mut renderer, map.as_ref(), grapher.as_ref());
+        while let Some(obj) = queue.pop(){
+            obj.render_all(&mut queue, &mut renderer, map.as_ref(), grapher.as_ref())
+        }
     }
     //Get the ending time
     let end_time = SystemTime::now();

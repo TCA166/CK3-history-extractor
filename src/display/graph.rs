@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, DerivedRef, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
+use crate::{game_object::{GameId, GameString}, game_state::GameState, structures::{Character, Dynasty, GameObjectDerived, Title}, types::{Shared, Wrapper}};
 use plotters::{coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32}, prelude::*};
 
 // This is a cool little library that provides the TREE LAYOUT ALGORITHM, the rendering is done by plotters
@@ -245,7 +245,7 @@ impl Grapher{
         root.present().unwrap();
     }
 
-    pub fn create_timeline_graph(timespans:&Vec<(DerivedRef<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, DerivedRef<Character>, DerivedRef<Title>, GameString, RealmDifference)>, max_date:u32, output_path:&str){
+    pub fn create_timeline_graph(timespans:&Vec<(Shared<Title>, Vec<(u32, u32)>)>, events:&Vec<(u32, Shared<Character>, Shared<Title>, GameString, RealmDifference)>, max_date:u32, output_path:&str){
         let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
         
         root.fill(&WHITE).unwrap();
@@ -290,12 +290,12 @@ impl Grapher{
                 }
                 root.draw(&Rectangle::new([(*start, -lifespan_y * i as i32 - MARGIN), (real_end, -lifespan_y * (i + 1) as i32 - MARGIN)], Into::<ShapeStyle>::into(&GREEN).filled())).unwrap();
             }
-            root.draw(&Text::new(title.get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
+            root.draw(&Text::new(title.get_internal().get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
         }
         //draw the events
         for (i, (date, char, title, group_desc, difference)) in events.iter().enumerate(){
-            let title_name = title.get_name();
-            let char_name = char.get_name();
+            let title_name = title.get_internal().get_name();
+            let char_name = char.get_internal().get_name();
             let txt = format!("{} conquered {} for the {} {}", char_name, title_name, difference.get_name(), group_desc);
             let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
             //TODO redo the non overlapping algorithm

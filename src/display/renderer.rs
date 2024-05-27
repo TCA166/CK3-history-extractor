@@ -52,13 +52,6 @@ impl<'a> Renderer<'a>{
     pub fn get_path(&self) -> &str{
         &self.path
     }
-
-    pub fn render_all(&mut self, start:&RenderableType, game_map: Option<&GameMap>, grapher: Option<&Grapher>){
-        let mut queue = vec![start];
-        while let Some(obj) = queue.pop(){
-            
-        }
-    }
 }
 
 /// Trait for objects that can be rendered into a html page.

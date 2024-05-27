@@ -3,6 +3,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived, Shared};
+use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
@@ -299,7 +300,7 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self){
             return;
         }
@@ -309,10 +310,10 @@ impl Renderable for Dynasty {
             g.create_dynasty_graph(self, &path);
         }
         for leader in self.leaders.iter(){
-            leader.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(leader.clone()));
         }
         if self.parent.as_ref().is_some(){
-            self.parent.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Dynasty(self.parent.as_ref().unwrap().clone()));
         }
     }
 }

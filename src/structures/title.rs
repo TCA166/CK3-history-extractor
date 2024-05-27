@@ -6,6 +6,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
+use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
 use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
@@ -311,7 +312,7 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         if !renderer.render(self) {
             return;
         }
@@ -321,21 +322,21 @@ impl Renderable for Title {
             map.create_map(self.get_barony_keys(), &self.color, &path);
         }
         if self.de_jure.is_some(){
-            self.de_jure.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Title(self.de_jure.as_ref().unwrap().clone()));
         }
         if self.de_facto.is_some(){
-            self.de_facto.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Title(self.de_facto.as_ref().unwrap().clone()));
         }
         for v in &self.de_jure_vassals{
-            v.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Title(v.clone()));
         }
         for o in &self.history{
             if o.1.is_some(){
-                o.1.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+                stack.push(RenderableType::Character(o.1.as_ref().unwrap().clone()));
             }
         }
         if self.capital.is_some(){
-            self.capital.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Title(self.capital.as_ref().unwrap().clone()));
         }
     }
 }

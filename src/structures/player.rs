@@ -2,6 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
+use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString};
 
 use crate::game_state::GameState;
@@ -84,10 +85,10 @@ impl Renderable for Player{
         "homeTemplate.html"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
         renderer.render(self);
         for char in self.lineage.iter(){
-            char.get_character().get_internal().render_all(renderer, game_map, grapher);
+            char.get_character().get_internal().render_all(stack, renderer, game_map, grapher);
         }
     }
 }

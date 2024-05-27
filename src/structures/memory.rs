@@ -1,9 +1,10 @@
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
+use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString};
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
-use crate::types::{Wrapper, WrapperMut};
+use super::super::display::{Grapher, Localizer, Renderer, Cullable, GameMap};
+use crate::types::WrapperMut;
 use crate::game_state::GameState;
 
 /// A struct representing a memory in the game
@@ -106,12 +107,9 @@ impl Cullable for Memory {
 }
 
 impl Memory{
-    pub fn render_participants(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    pub fn render_participants(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
         for part in self.participants.iter() {
-            let o = part.1.try_get_internal();
-            if o.is_ok() {
-                o.unwrap().render_all(renderer, game_map, grapher);
-            }
+            stack.push(RenderableType::Character(part.1.clone()));
         }
     }
 }

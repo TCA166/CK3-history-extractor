@@ -4,7 +4,7 @@ use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
 
-use crate::{game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
+use crate::{display::RenderableType, game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
 
@@ -88,10 +88,10 @@ impl Renderable for Vassal {
         Character::get_subdir()
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
         match self{
-            Vassal::Character(c) => c.get_internal().render_all(renderer, game_map, grapher),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().render_all(renderer, game_map, grapher)
+            Vassal::Character(c) => c.get_internal().render_all(stack, renderer, game_map, grapher),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().render_all(stack, renderer, game_map, grapher)
         }
     }
 }
@@ -592,45 +592,48 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
         if !renderer.render(self){
             return;
         }
         if self.faith.is_some(){
-            self.faith.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Faith(self.faith.as_ref().unwrap().clone()));
         }
         if self.culture.is_some(){
-            self.culture.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Culture(self.culture.as_ref().unwrap().clone()));
         }
         if self.house.is_some(){
-            self.house.as_ref().unwrap().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Dynasty(self.house.as_ref().unwrap().clone()));
         }
         if self.liege.is_some(){
-            self.liege.as_ref().unwrap().get_ref().get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(self.liege.as_ref().unwrap().get_ref().clone()));
         }
         for s in self.spouses.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(s.clone()));
         }
         for s in self.former.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(s.clone()));
         }
         for s in self.children.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(s.clone()));
         }
         for s in self.parents.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(s.clone()));
         }
         for s in self.kills.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Character(s.clone()));
         }
         for s in self.vassals.iter(){
-            s.render_all(renderer, game_map, grapher);
+            match s {
+                Vassal::Character(c) => stack.push(RenderableType::Character(c.clone())),
+                Vassal::Reference(c) => stack.push(RenderableType::Character(c.get_internal().get_ref().clone()))
+            }
         }
         for s in self.titles.iter(){
-            s.get_internal().render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Title(s.clone()));
         }
         for m in self.memories.iter() {
-            m.get_internal().render_participants(renderer, game_map, grapher);
+            m.get_internal().render_participants(stack, renderer, game_map, grapher);
         }
     }
 }
