@@ -9,7 +9,7 @@ use serde::ser::SerializeStruct;
 use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
+use super::super::display::{Localizer, Renderer, Cullable, Renderable};
 use crate::types::{Wrapper, WrapperMut};
 
 use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
@@ -36,24 +36,24 @@ pub struct Title {
 fn date_string_cmp(a:&str, b:&str) -> Ordering{
     let a_split: Vec<&str> = a.split('.').collect();
     let b_split: Vec<&str> = b.split('.').collect();
-    let a_year = a_split[0].parse::<i32>().unwrap();
-    let b_year = b_split[0].parse::<i32>().unwrap();
+    let a_year = a_split[0].parse::<u16>().unwrap();
+    let b_year = b_split[0].parse::<u16>().unwrap();
     if a_year < b_year{
         return Ordering::Less;
     }
     else if a_year > b_year{
         return Ordering::Greater;
     }
-    let a_month = a_split[1].parse::<i32>().unwrap();
-    let b_month = b_split[1].parse::<i32>().unwrap();
+    let a_month = a_split[1].parse::<u8>().unwrap();
+    let b_month = b_split[1].parse::<u8>().unwrap();
     if a_month < b_month{
         return Ordering::Less;
     }
     else if a_month > b_month{
         return Ordering::Greater;
     }
-    let a_day = a_split[2].parse::<i32>().unwrap();
-    let b_day = b_split[2].parse::<i32>().unwrap();
+    let a_day = a_split[2].parse::<u8>().unwrap();
+    let b_day = b_split[2].parse::<u8>().unwrap();
     if a_day < b_day{
         return Ordering::Less;
     }
@@ -312,10 +312,11 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
         if !renderer.render(self) {
             return;
         }
+        let game_map = renderer.get_map();
         if game_map.is_some() && self.de_facto_vassals.len() > 0{
             let map = game_map.unwrap();
             let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);

@@ -3,7 +3,7 @@ use serde::ser::SerializeStruct;
 
 use crate::display::RenderableType;
 
-use super::super::{display::{Localizer, Cullable, Renderable, Renderer, Grapher, GameMap}, types::WrapperMut};
+use super::super::{display::{Localizer, Cullable, Renderable, Renderer}, types::WrapperMut};
 use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
@@ -105,7 +105,7 @@ impl<T> Renderable for DerivedRef<T> where T:Renderable + Cullable{
         T::get_template()
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
-        self.obj.as_ref().unwrap().get_internal().render_all(stack, renderer, game_map, grapher);
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
+        self.obj.as_ref().unwrap().get_internal().render_all(stack, renderer);
     }
 }

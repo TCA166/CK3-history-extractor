@@ -8,7 +8,7 @@ use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
 
 use crate::types::Wrapper;
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
+use super::super::display::{Localizer, Renderer, Cullable, Renderable};
 
 use super::FromGameObject;
 use super::{Character, GameId, GameObjectDerived, LineageNode, Shared};
@@ -85,10 +85,10 @@ impl Renderable for Player{
         "homeTemplate.html"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer){
         renderer.render(self);
         for char in self.lineage.iter(){
-            char.get_character().get_internal().render_all(stack, renderer, game_map, grapher);
+            char.get_character().get_internal().render_all(stack, renderer);
         }
     }
 }

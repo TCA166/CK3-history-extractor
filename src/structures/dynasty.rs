@@ -6,7 +6,7 @@ use super::{serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, G
 use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString, SaveFileValue};
 use crate::game_state::GameState;
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
+use super::super::display::{Localizer, Renderer, Cullable, Renderable};
 use crate::types::{Wrapper, WrapperMut};
 
 pub struct Dynasty{
@@ -300,10 +300,11 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
         if !renderer.render(self){
             return;
         }
+        let grapher = renderer.get_grapher();
         if grapher.is_some(){
             let g = grapher.unwrap();
             let path = format!("{}/dynasties/{}.svg", renderer.get_path(), self.id);

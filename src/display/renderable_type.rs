@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::display::{Renderable, GameMap, Grapher, Renderer};
+use crate::display::{Renderable, Renderer};
 use crate::structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title};
 use crate::types::{Shared, Wrapper, WrapperMut};
 
@@ -123,14 +123,14 @@ impl<'a> Renderable for RenderableType<'a> {
         "."
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
         match self{
-            RenderableType::Character(c) => c.get_internal().render_all(stack, renderer, game_map, grapher),
-            RenderableType::Culture(c) => c.get_internal().render_all(stack, renderer, game_map, grapher),
-            RenderableType::Dynasty(d) => d.get_internal().render_all(stack, renderer, game_map, grapher),
-            RenderableType::Faith(f) => f.get_internal().render_all(stack, renderer, game_map, grapher),
-            RenderableType::Title(t) => t.get_internal().render_all(stack, renderer, game_map, grapher),
-            RenderableType::Player(p) => p.render_all(stack, renderer, game_map, grapher),
+            RenderableType::Character(c) => c.get_internal().render_all(stack, renderer),
+            RenderableType::Culture(c) => c.get_internal().render_all(stack, renderer),
+            RenderableType::Dynasty(d) => d.get_internal().render_all(stack, renderer),
+            RenderableType::Faith(f) => f.get_internal().render_all(stack, renderer),
+            RenderableType::Title(t) => t.get_internal().render_all(stack, renderer),
+            RenderableType::Player(p) => p.render_all(stack, renderer),
         }
     }
 

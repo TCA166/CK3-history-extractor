@@ -5,7 +5,7 @@ use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString};
 use crate::game_state::GameState;
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
+use super::super::display::{Localizer, Renderer, Cullable, Renderable};
 use crate::types::{Wrapper, WrapperMut};
 
 /// A struct representing a culture in the game
@@ -129,10 +129,11 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
         if !renderer.render(self){
             return;
         }
+        let grapher = renderer.get_grapher();
         if grapher.is_some() {
             let path = format!("{}/cultures/{}.svg", renderer.get_path(), self.id);
             grapher.unwrap().create_culture_graph(self.id, &path);

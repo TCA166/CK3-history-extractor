@@ -15,18 +15,14 @@ const TREE_SCALE:f64 = 1.5;
 
 const NO_PARENT:usize = usize::MAX;
 
-// TODO review performance
-
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
-fn handle_node<T:GameObjectDerived>(node:Shared<T>, tree:&mut TidyTree, stack:&mut Vec<(usize, Shared<T>)>, storage:&mut HashMap<usize, (usize, GameString, (f64, f64), (i32, i32))>, fnt:FontDesc, parent:usize) -> usize{
+fn handle_node<T:GameObjectDerived>(node:Shared<T>, tree:&mut TidyTree, stack:&mut Vec<(usize, Shared<T>)>, storage:&mut HashMap<usize, (usize, GameString, (f64, f64), (i32, i32))>, parent:usize, sz:&(u32, u32)) -> usize{
     let ch = node.get_internal();
     let id = ch.get_id() as usize;
     let name = ch.get_name().clone();
-    //box_size returns the size the text will take up
-    let sz = fnt.box_size(&name).unwrap();
-    //we use this to determine the size of the node adding a margin
-    let node_width = sz.0 as f64 * TREE_SCALE;
+    //we use sz, which is the rough size of a character, to calculate the size of the node
+    let node_width = (sz.0 * name.len() as u32) as f64 * TREE_SCALE;
     let node_height = sz.1 as f64 * TREE_SCALE;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
     let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
@@ -59,16 +55,17 @@ impl Grapher{
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 10.0).into_font();
+        let sz = fnt.box_size("X").unwrap(); // from this we determine a rough size of a character
         //BFS stack
         let mut stack = Vec::new();
         //we get the founder and use it as root
         let founder = dynasty.get_founder();
-        handle_node(founder, &mut tree, &mut stack, &mut storage, fnt.clone(), NO_PARENT);
+        handle_node(founder, &mut tree, &mut stack, &mut storage, NO_PARENT, &sz);
         while let Some(current) = stack.pop(){
             let char = current.1.get_internal();
             let children_iter = char.get_children_iter();
             for child in children_iter{
-                handle_node(child.clone(), &mut tree, &mut stack, &mut storage, fnt.clone(), current.0);
+                handle_node(child.clone(), &mut tree, &mut stack, &mut storage, current.0, &sz);
             }
         }
         

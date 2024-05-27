@@ -6,7 +6,7 @@ use serde::{Serialize, ser::SerializeStruct};
 
 use crate::{display::RenderableType, game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, Renderable, GameMap};
+use super::super::display::{Localizer, Renderer, Cullable, Renderable};
 
 use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
@@ -88,10 +88,10 @@ impl Renderable for Vassal {
         Character::get_subdir()
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer){
         match self{
-            Vassal::Character(c) => c.get_internal().render_all(stack, renderer, game_map, grapher),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().render_all(stack, renderer, game_map, grapher)
+            Vassal::Character(c) => c.get_internal().render_all(stack, renderer),
+            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().render_all(stack, renderer)
         }
     }
 }
@@ -592,7 +592,7 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>){
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer){
         if !renderer.render(self){
             return;
         }
@@ -633,7 +633,7 @@ impl Renderable for Character {
             stack.push(RenderableType::Title(s.clone()));
         }
         for m in self.memories.iter() {
-            m.get_internal().render_participants(stack, renderer, game_map, grapher);
+            m.get_internal().render_participants(stack);
         }
     }
 }

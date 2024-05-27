@@ -3,7 +3,7 @@ use serde::ser::SerializeStruct;
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 use crate::display::RenderableType;
 use crate::game_object::{GameObject, GameString};
-use super::super::display::{Grapher, Localizer, Renderer, Cullable, GameMap};
+use super::super::display::{Localizer, Cullable};
 use crate::types::WrapperMut;
 use crate::game_state::GameState;
 
@@ -107,7 +107,7 @@ impl Cullable for Memory {
 }
 
 impl Memory{
-    pub fn render_participants(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map:Option<&GameMap>, grapher: Option<&Grapher>) {
+    pub fn render_participants(&self, stack:&mut Vec<RenderableType>) {
         for part in self.participants.iter() {
             stack.push(RenderableType::Character(part.1.clone()));
         }

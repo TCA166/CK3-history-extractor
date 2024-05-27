@@ -332,21 +332,23 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         println!("Tree traversed");
-        let mut renderer = Renderer::new(&env, folder_name.clone());
+        let mut renderer = Renderer::new(&env, folder_name.clone(), map.as_ref(), grapher.as_ref());
         let mut queue = vec![RenderableType::Player(player)];
         if !no_vis{
-            timeline.as_ref().unwrap().render_all(&mut queue, &mut renderer, map.as_ref(), grapher.as_ref());
+            timeline.as_ref().unwrap().render_all(&mut queue, &mut renderer);
         }
         while let Some(obj) = queue.pop(){
-            obj.render_all(&mut queue, &mut renderer, map.as_ref(), grapher.as_ref())
+            obj.render_all(&mut queue, &mut renderer);
         }
     }
     //Get the ending time
     let end_time = SystemTime::now();
     //Print the time taken
     println!("\nTime taken: {}s\n", end_time.duration_since(start_time).unwrap().as_secs());
-    print!("Press enter to exit...");
-    stdout().flush().unwrap();
-    let mut inp = String::new();
-    stdin().read_line(&mut inp).unwrap();
+    if !atty::is(atty::Stream::Stdin){
+        print!("Press enter to exit...");
+        stdout().flush().unwrap();
+        let mut inp = String::new();
+        stdin().read_line(&mut inp).unwrap();
+    }
 }

@@ -5,7 +5,7 @@ use serde::ser::SerializeStruct;
 use crate::types::{Shared, WrapperMut};
 
 use super::{super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, Faith, GameObjectDerived, Title}, types::Wrapper}, RenderableType};
-use super::{graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}};
+use super::{graph::Grapher, localizer::Localizer, renderer::{Cullable, Renderable, Renderer}};
 
 //const CREATED_STR:&str = "Created";
 const DESTROYED_STR:&str = "destroyed";
@@ -107,7 +107,6 @@ impl Timeline{
                 let mut item = (title.clone(), Vec::new());
                 let mut empty = true;
                 let mut start = 0;
-                //TODO review performance of this
                 for entry in hist{
                     let yr = entry.0.split_once('.').unwrap().0.parse().unwrap();
                     if yr > latest_event{
@@ -247,7 +246,8 @@ impl Renderable for Timeline{
         "timelineTemplate.html"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
+        let grapher = renderer.get_grapher();
         if grapher.is_some(){
             let path = format!("{}/timeline.svg", renderer.get_path());
             Grapher::create_timeline_graph(&self.lifespans, &self.events, self.latest_event, &path)

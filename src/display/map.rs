@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, thread};
 
 use csv::ReaderBuilder;
 use image::{io::Reader as ImageReader, save_buffer};
@@ -49,8 +49,7 @@ pub struct GameMap{
     width: u32,
     byte_sz: usize,
     province_map: Vec<u8>,
-    id_colors: HashMap<GameId, [u8; 3]>,
-    title_province_map: HashMap<String, GameId>,
+    title_color_map: HashMap<String, [u8; 3]>,
 }
 
 const WATER_COLOR:[u8; 3] = [20, 150, 255];
@@ -160,24 +159,24 @@ impl GameMap{
             let b = record[3].parse::<u8>().unwrap();
             id_colors.insert(id,[r, g, b]);
         }
+        let title_province_map = create_title_province_map(game_path);
         GameMap{
             height: height,
             width: width,
             byte_sz: new_bytes.len(),
             province_map: new_bytes,
-            id_colors: id_colors,
-            title_province_map: create_title_province_map(game_path),
+            title_color_map: title_province_map.iter().map(|(k, v)| (k.to_owned(), id_colors.get(v).unwrap().clone())).collect(),
         }
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
     pub fn create_map(&self, key_list:Vec<GameString>, target_color:&[u8; 3], output_path:&str) {
-        //TODO needs more optimization! never enough here!
-        let mut new_map = self.province_map.clone();
-        let colors: HashSet<_> = key_list.iter().map(|id| self.id_colors[self.title_province_map.get(id.as_ref()).unwrap()]).collect();
+        let mut new_map = Vec::with_capacity(self.province_map.len());
+        let colors: HashSet<_> = key_list.iter().map(|id| self.title_color_map[id.as_str()]).collect();
         let mut x = 0;
         while x < self.byte_sz{
-            let pixel = &self.province_map[x..x + 3];
+            let mut z = x + 3; // overkill, but saves us an arithmetic operation
+            let pixel:&[u8] = &self.province_map[x..z];
             let clr;
             if pixel == NULL_COLOR{ //if we find a NULL pixel = water
                 clr = &WATER_COLOR;
@@ -186,12 +185,22 @@ impl GameMap{
             } else{ //if we find something else we set it to white
                 clr = &LAND_COLOR;
             }
+            new_map.extend_from_slice(clr);
+            x = z;
+            z = x + 3;
             //this ending is a loop to minimize the number of times the checks above are done
-            while x < self.byte_sz && new_map[x..x + 3] == *pixel{
-                new_map[x..x + 3].copy_from_slice(clr);
-                x += 3;
+            while x < self.byte_sz && self.province_map[x..z] == *pixel{
+                new_map.extend_from_slice(clr);
+                x = z;
+                z = x + 3;
             }
         }
-        save_buffer(output_path, &new_map, self.width, self.height, image::ExtendedColorType::Rgb8).unwrap();
+        let width = self.width;
+        let height = self.height;
+        let output_path = output_path.to_owned();
+        //we move the writing process out into a thread because it's an IO heavy operation
+        thread::spawn(move || {
+            save_buffer(output_path, &new_map, width, height, image::ExtendedColorType::Rgb8).unwrap();
+        });
     }
 }

@@ -12,16 +12,20 @@ use super::{graph::Grapher, localizer::Localizer, map::GameMap};
 pub struct Renderer<'a>{
     env: &'a Environment<'a>,
     rendered: HashMap<&'static str, HashSet<GameId>>,
-    path: String
+    path: String,
+    game_map: Option<&'a GameMap>,
+    grapher: Option<&'a Grapher>
 }
 
 impl<'a> Renderer<'a>{
     /// Create a new Renderer with the given [Environment] and path.
-    pub fn new(env: &'a Environment<'a>, path: String) -> Self{
+    pub fn new(env: &'a Environment<'a>, path: String, game_map: Option<&'a GameMap>, grapher: Option<&'a Grapher>) -> Self{
         Renderer{
             env,
             rendered: HashMap::new(),
-            path
+            path,
+            game_map,
+            grapher
         }
     }
 
@@ -52,6 +56,14 @@ impl<'a> Renderer<'a>{
     pub fn get_path(&self) -> &str{
         &self.path
     }
+
+    pub fn get_grapher(&self) -> Option<&Grapher>{
+        self.grapher
+    }
+
+    pub fn get_map(&self) -> Option<&GameMap>{
+        self.game_map
+    }
 }
 
 /// Trait for objects that can be rendered into a html page.
@@ -73,7 +85,7 @@ pub trait Renderable: Serialize + GameObjectDerived{
     }
 
     /// Renders the object and all the references of the object if they are not already rendered.
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>);
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer);
 }
 
 /// Trait for objects that can be culled.
