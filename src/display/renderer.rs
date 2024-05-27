@@ -4,6 +4,7 @@ use minijinja::Environment;
 use serde::Serialize;
 
 use super::super::{game_object::GameId, structures::GameObjectDerived};
+use super::RenderableType;
 use super::{graph::Grapher, localizer::Localizer, map::GameMap};
 
 /// A struct that renders objects into html pages.
@@ -51,6 +52,13 @@ impl<'a> Renderer<'a>{
     pub fn get_path(&self) -> &str{
         &self.path
     }
+
+    pub fn render_all(&mut self, start:&RenderableType, game_map: Option<&GameMap>, grapher: Option<&Grapher>){
+        let mut queue = vec![start];
+        while let Some(obj) = queue.pop(){
+            
+        }
+    }
 }
 
 /// Trait for objects that can be rendered into a html page.
@@ -72,7 +80,7 @@ pub trait Renderable: Serialize + GameObjectDerived{
     }
 
     /// Renders the object and all the references of the object if they are not already rendered.
-    fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>);
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>);
 }
 
 /// Trait for objects that can be culled.

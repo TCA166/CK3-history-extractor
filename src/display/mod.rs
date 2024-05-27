@@ -17,3 +17,6 @@ pub use graph::Grapher;
 /// A submodule handling the rendering of the timeline page
 mod timeline;
 pub use timeline::Timeline;
+
+mod renderable_type;
+pub use renderable_type::RenderableType;

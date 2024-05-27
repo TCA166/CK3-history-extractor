@@ -2,7 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use super::super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title}, types::Wrapper};
+use super::{super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title}, types::Wrapper}, RenderableType};
 use super::{graph::Grapher, localizer::Localizer, map::GameMap, renderer::{Cullable, Renderable, Renderer}};
 
 //const CREATED_STR:&str = "Created";
@@ -245,14 +245,14 @@ impl Renderable for Timeline{
         "timelineTemplate.html"
     }
 
-    fn render_all(&self, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
+    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer, game_map: Option<&GameMap>, grapher: Option<&Grapher>) {
         if grapher.is_some(){
             let path = format!("{}/timeline.svg", renderer.get_path());
             Grapher::create_timeline_graph(&self.lifespans, &self.events, self.latest_event, &path)
         }
         renderer.render(self);
         for (title, _) in &self.lifespans{
-            title.render_all(renderer, game_map, grapher);
+            stack.push(RenderableType::Ref(*title.clone()));
         }
         for (_, char, _, _, difference) in &self.events{
             char.render_all(renderer, game_map, grapher);
