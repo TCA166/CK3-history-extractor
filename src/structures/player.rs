@@ -98,9 +98,19 @@ impl Renderable for Player {
             let mut file = File::create(&path).unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
             for char in self.lineage.iter() {
-                let char = char.get_character();
+                /* Note on timelapse:
+                Paradox doesn't save any data regarding top level liege changes.
+                Not even basic data that would allow us to reconstruct the map through implication.
+                We would need something as basic as adding liege changes to history, or even just storing dead character's vassal relations
+                I once had an idea that it could be possible to still have a timelapse by looking at dead vassals of the children of chars in lineage
+                But that idea got stuck at the recursive step of that algorithm, and even so the result would have NO accuracy
+                 */
+                let char = char.get_character(); //this variable for no reason other than compiler bitching
                 let char = char.get_internal();
-                let fbytes = map.create_map_buffer(char.get_barony_keys(), &[70, 255, 70]);
+                //we get the provinces held by the character and the vassals who died under their reign.
+                //This is the closes approximation we can get of changes in the map that are 100% accurate
+                let fbytes = map.create_map_buffer(char.get_de_jure_barony_keys(), &[70, 255, 70]);
+                //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();
                 let frame =

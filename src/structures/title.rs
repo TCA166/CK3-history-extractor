@@ -164,16 +164,51 @@ impl Title {
         provinces
     }
 
+    pub fn get_de_jure_barony_keys(&self) -> Vec<GameString> {
+        let mut provinces = Vec::new();
+        if self.key.as_ref().unwrap().starts_with("b_") {
+            provinces.push(self.key.clone().unwrap());
+        }
+        for v in &self.de_jure_vassals {
+            provinces.append(&mut v.get_internal().get_barony_keys());
+        }
+        provinces
+    }
+
+    /// Returns the key of the title
     pub fn get_key(&self) -> Option<GameString> {
         self.key.clone()
     }
 
+    /// Returns an iterator over the history of the title
     pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)> {
         self.history.iter()
     }
 
+    /// Returns the capital of the title
     pub fn get_capital(&self) -> Option<Shared<Title>> {
         self.capital.clone()
+    }
+
+    /// Returns true if the character is the current ruler of the title at the given date
+    pub fn ruled(&self, char:&Character, point:GameString) -> bool{
+        let ruler:Option<Shared<Character>> = self.get_holder_at(point);
+        if ruler.is_some() {
+            return ruler.unwrap().get_internal().get_id() == char.get_id();
+        }
+        false
+    }
+
+    /// Gets the holder of the title at a specific point in time
+    pub fn get_holder_at(&self, point:GameString) -> Option<Shared<Character>>{
+        let mut ruler:Option<Shared<Character>> = None;
+        for (date, character, _) in self.history.iter() {
+            if date_string_cmp(&point, date).is_gt(){
+                break;
+            }
+            ruler = character.clone();
+        }
+        ruler
     }
 }
 

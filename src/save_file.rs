@@ -197,6 +197,12 @@ impl Section {
                             // in case { something something something } OR key =value we want to preserve the spaces
                             maybe_array = true;
                         }
+                    } else {
+                        if past_eq {
+                            val.push(c);
+                        } else {
+                            key.push(c);
+                        }
                     }
                 }
                 '=' => {
