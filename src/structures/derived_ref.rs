@@ -1,59 +1,75 @@
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{display::{Localizer, Cullable, Renderable, Renderer, RenderableType}, types::WrapperMut, game_object::GameString};
+use super::super::{
+    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+    game_object::GameString,
+    types::WrapperMut,
+};
 use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
 /// The idea is to provide the id and name of the object, without serializing the whole object.
 /// This is useful for serializing references to objects that are not in the current scope.
-pub struct DerivedRef<T> where T:Renderable{
+pub struct DerivedRef<T>
+where
+    T: Renderable,
+{
     id: GameId,
-    obj: Option<Shared<T>>
+    obj: Option<Shared<T>>,
 }
 
-impl<T> DerivedRef<T> where T:Renderable{
+impl<T> DerivedRef<T>
+where
+    T: Renderable,
+{
     /// Create a new DerivedRef from a [Shared] object.
     /// This will clone the object and store a reference to it.
-    pub fn from_derived(obj:Shared<T>) -> Self{
+    pub fn from_derived(obj: Shared<T>) -> Self {
         let o = obj.get_internal();
-        DerivedRef{
+        DerivedRef {
             id: o.get_id(),
-            obj: Some(obj.clone())
+            obj: Some(obj.clone()),
         }
     }
 
     /// Create a new DerivedRef with a dummy object.
     /// This is useful for initializing a DerivedRef with an object that is not yet parsed.
     /// Currently this is used exclusively in [super::GameState::get_vassal].
-    pub fn dummy() -> Self{
-        DerivedRef{
-            id: 0,
-            obj: None
-        }
+    pub fn dummy() -> Self {
+        DerivedRef { id: 0, obj: None }
     }
 
     /// Initialize the DerivedRef with a [Shared] object.
-    pub fn init(&mut self, obj:Shared<T>){
+    pub fn init(&mut self, obj: Shared<T>) {
         self.id = obj.get_internal().get_id();
         self.obj = Some(obj);
     }
 
-    pub fn get_ref(&self) -> Shared<T>{
+    pub fn get_ref(&self) -> Shared<T> {
         self.obj.as_ref().unwrap().clone()
     }
 }
 
 /// Converts an array of GameObjectDerived to an array of DerivedRef
-pub fn serialize_array<T>(array:&Vec<Shared<T>>) -> Vec<DerivedRef<T>> where T:Renderable{
+pub fn serialize_array<T>(array: &Vec<Shared<T>>) -> Vec<DerivedRef<T>>
+where
+    T: Renderable,
+{
     let mut res = Vec::new();
-    for s in array.iter(){
+    for s in array.iter() {
         res.push(DerivedRef::<T>::from_derived(s.clone()));
     }
     res
 }
 
-impl<T> Serialize for DerivedRef<T> where T:Renderable + Cullable{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+impl<T> Serialize for DerivedRef<T>
+where
+    T: Renderable + Cullable,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         let mut state = serializer.serialize_struct("DerivedRef", 4)?;
         state.serialize_field("id", &self.id)?;
         let o = self.obj.as_ref().unwrap().get_internal();
@@ -65,7 +81,10 @@ impl<T> Serialize for DerivedRef<T> where T:Renderable + Cullable{
     }
 }
 
-impl<T> GameObjectDerived for DerivedRef<T> where T:Renderable + Cullable{
+impl<T> GameObjectDerived for DerivedRef<T>
+where
+    T: Renderable + Cullable,
+{
     fn get_id(&self) -> GameId {
         self.id
     }
@@ -75,17 +94,27 @@ impl<T> GameObjectDerived for DerivedRef<T> where T:Renderable + Cullable{
     }
 }
 
-impl<T> Cullable for DerivedRef<T> where T:Renderable + Cullable{
+impl<T> Cullable for DerivedRef<T>
+where
+    T: Renderable + Cullable,
+{
     fn get_depth(&self) -> usize {
         self.obj.as_ref().unwrap().get_internal().get_depth()
     }
 
-    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        self.obj.as_ref().unwrap().get_internal_mut().set_depth(depth, localization);
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+        self.obj
+            .as_ref()
+            .unwrap()
+            .get_internal_mut()
+            .set_depth(depth, localization);
     }
 }
 
-impl<T> Renderable for DerivedRef<T> where T:Renderable + Cullable{
+impl<T> Renderable for DerivedRef<T>
+where
+    T: Renderable + Cullable,
+{
     fn get_context(&self) -> minijinja::Value {
         self.obj.as_ref().unwrap().get_internal().get_context()
     }
@@ -102,7 +131,11 @@ impl<T> Renderable for DerivedRef<T> where T:Renderable + Cullable{
         T::get_template()
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
-        self.obj.as_ref().unwrap().get_internal().render_all(stack, renderer);
+    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+        self.obj
+            .as_ref()
+            .unwrap()
+            .get_internal()
+            .render_all(stack, renderer);
     }
 }

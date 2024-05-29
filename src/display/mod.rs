@@ -4,7 +4,7 @@ pub use localizer::Localizer;
 
 /// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;
-pub use renderer::{Renderer, Renderable, Cullable};
+pub use renderer::{Cullable, Renderable, Renderer};
 
 /// Map handling submodule. Provides a [GameMap] struct that can be used to render maps.
 mod map;

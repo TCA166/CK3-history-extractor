@@ -1,7 +1,12 @@
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
+use super::super::{
+    display::{Cullable, Localizer, RenderableType},
+    game_object::{GameObject, GameString},
+    game_state::GameState,
+    types::WrapperMut,
+};
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
-use super::super::{display::{Localizer, Cullable, RenderableType}, game_object::{GameObject, GameString}, types::WrapperMut, game_state::GameState};
 
 /// A struct representing a memory in the game
 pub struct Memory {
@@ -10,35 +15,47 @@ pub struct Memory {
     r#type: Option<GameString>,
     participants: Vec<(String, Shared<Character>)>,
     depth: usize,
-    localized: bool
+    localized: bool,
 }
 
 /// Gets the participants of the memory and appends them to the participants vector
-fn get_participants(participants:&mut Vec<(String, Shared<Character>)>, base:&GameObject, game_state:&mut GameState){
+fn get_participants(
+    participants: &mut Vec<(String, Shared<Character>)>,
+    base: &GameObject,
+    game_state: &mut GameState,
+) {
     let participants_node = base.get("participants");
-    if participants_node.is_some(){
-        for part in participants_node.unwrap().as_object().unwrap().get_obj_iter(){
-            participants.push((part.0.clone(), game_state.get_character(&part.1.as_id()).clone()));
+    if participants_node.is_some() {
+        for part in participants_node
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .get_obj_iter()
+        {
+            participants.push((
+                part.0.clone(),
+                game_state.get_character(&part.1.as_id()).clone(),
+            ));
         }
     }
 }
 
 impl DummyInit for Memory {
-    fn dummy(id:GameId) -> Self {
-        Memory{
+    fn dummy(id: GameId) -> Self {
+        Memory {
             date: None,
             r#type: None,
             participants: Vec::new(),
             id: id,
             depth: 0,
-            localized:false
+            localized: false,
         }
     }
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
         self.date = Some(base.get("creation_date").unwrap().as_string());
         let tp = base.get("type");
-        if tp.is_some(){
+        if tp.is_some() {
             self.r#type = Some(tp.unwrap().as_string());
         }
         get_participants(&mut self.participants, &base, game_state);
@@ -65,7 +82,7 @@ impl Serialize for Memory {
         state.serialize_field("type", &self.r#type)?;
         // serialize the participants as an array of tuples
         let mut participants: Vec<(String, DerivedRef<Character>)> = Vec::new();
-        for part in self.participants.iter(){
+        for part in self.participants.iter() {
             participants.push((part.0.clone(), DerivedRef::from_derived(part.1.clone())));
         }
         state.serialize_field("participants", &participants)?;
@@ -74,36 +91,36 @@ impl Serialize for Memory {
 }
 
 impl Cullable for Memory {
-    fn set_depth(&mut self, depth:usize, localization:&Localizer){
-        if depth <= self.depth && depth != 0{
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+        if depth <= self.depth && depth != 0 {
             return;
         }
-        if !self.localized{
+        if !self.localized {
             self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
         }
-        if depth == 0{
+        if depth == 0 {
             return;
         }
         self.depth = depth;
-        for part in self.participants.iter_mut(){
-            if !self.localized{
+        for part in self.participants.iter_mut() {
+            if !self.localized {
                 part.0 = localization.localize(&part.0).to_string();
             }
             let o = part.1.try_get_internal_mut();
-            if o.is_ok(){
+            if o.is_ok() {
                 o.unwrap().set_depth(depth - 1, localization);
             }
         }
         self.localized = true;
     }
 
-    fn get_depth(&self) -> usize{
+    fn get_depth(&self) -> usize {
         self.depth
     }
 }
 
-impl Memory{
-    pub fn render_participants(&self, stack:&mut Vec<RenderableType>) {
+impl Memory {
+    pub fn render_participants(&self, stack: &mut Vec<RenderableType>) {
         for part in self.participants.iter() {
             stack.push(RenderableType::Character(part.1.clone()));
         }

@@ -1,9 +1,14 @@
 use minijinja::context;
 
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
+use super::super::{
+    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+    game_object::{GameObject, GameString},
+    game_state::GameState,
+    types::{Wrapper, WrapperMut},
+};
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
-use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_object::{GameObject, GameString}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 /// A struct representing a faith in the game
 pub struct Faith {
@@ -19,9 +24,9 @@ pub struct Faith {
 }
 
 /// Gets the head of the faith
-fn get_head(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Character>>{
+fn get_head(base: &GameObject, game_state: &mut GameState) -> Option<Shared<Character>> {
     let current = base.get("religious_head");
-    if current.is_some(){
+    if current.is_some() {
         let title = game_state.get_title(&current.unwrap().as_id());
         return title.get_internal().get_holder();
     }
@@ -29,18 +34,18 @@ fn get_head(base:&GameObject, game_state:&mut GameState) -> Option<Shared<Charac
 }
 
 /// Gets the tenets of the faith and appends them to the tenets vector
-fn get_tenets(tenets:&mut Vec<GameString>, array:&GameObject){
-    for t in array.get_array_iter(){
+fn get_tenets(tenets: &mut Vec<GameString>, array: &GameObject) {
+    for t in array.get_array_iter() {
         let s = t.as_string();
-        if s.contains("tenet"){
+        if s.contains("tenet") {
             tenets.push(s);
         }
     }
 }
 
 /// Gets the doctrines of the faith and appends them to the doctrines vector
-fn get_doctrines(doctrines:&mut Vec<GameString>, array:&GameObject){
-    for d in array.get_array_iter(){
+fn get_doctrines(doctrines: &mut Vec<GameString>, array: &GameObject) {
+    for d in array.get_array_iter() {
         let s = d.as_string();
         if !s.contains("tenet") {
             doctrines.push(s);
@@ -49,19 +54,18 @@ fn get_doctrines(doctrines:&mut Vec<GameString>, array:&GameObject){
 }
 
 /// Gets the name of the faith
-fn get_name(base:&GameObject) -> GameString{
+fn get_name(base: &GameObject) -> GameString {
     let node = base.get("name");
-    if node.is_some(){
+    if node.is_some() {
         return node.unwrap().as_string();
-    }
-    else{
+    } else {
         base.get("template").unwrap().as_string()
     }
 }
 
 impl DummyInit for Faith {
-    fn dummy(id:GameId) -> Self {
-        Faith{
+    fn dummy(id: GameId) -> Self {
+        Faith {
             name: None,
             tenets: Vec::new(),
             head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
@@ -70,7 +74,7 @@ impl DummyInit for Faith {
             id: id,
             depth: 0,
             localized: false,
-            name_localized: false
+            name_localized: false,
         }
     }
 
@@ -80,7 +84,12 @@ impl DummyInit for Faith {
         self.head.clone_from(&get_head(&base, game_state));
         get_doctrines(&mut self.doctrines, doctrines_array);
         self.name = Some(get_name(&base));
-        self.fervor = base.get("fervor").unwrap().as_string().parse::<f32>().unwrap();
+        self.fervor = base
+            .get("fervor")
+            .unwrap()
+            .as_string()
+            .parse::<f32>()
+            .unwrap();
     }
 }
 
@@ -103,7 +112,7 @@ impl Serialize for Faith {
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("tenets", &self.tenets)?;
-        if self.head.is_some(){
+        if self.head.is_some() {
             let head = DerivedRef::<Character>::from_derived(self.head.as_ref().unwrap().clone());
             state.serialize_field("head", &head)?;
         }
@@ -115,9 +124,9 @@ impl Serialize for Faith {
 
 impl Renderable for Faith {
     fn get_context(&self) -> minijinja::Value {
-        context!{faith=>self}
+        context! {faith=>self}
     }
-    
+
     fn get_template() -> &'static str {
         "faithTemplate.html"
     }
@@ -126,17 +135,19 @@ impl Renderable for Faith {
         "faiths"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self){
+    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+        if !renderer.render(self) {
             return;
         }
         let grapher = renderer.get_grapher();
-        if grapher.is_some(){
+        if grapher.is_some() {
             let path = format!("{}/faiths/{}.svg", renderer.get_path(), self.id);
             grapher.unwrap().create_faith_graph(self.id, &path);
         }
-        if self.head.is_some(){
-            stack.push(RenderableType::Character(self.head.as_ref().unwrap().clone()));
+        if self.head.is_some() {
+            stack.push(RenderableType::Character(
+                self.head.as_ref().unwrap().clone(),
+            ));
         }
     }
 }
@@ -146,31 +157,31 @@ impl Cullable for Faith {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize, localization:&Localizer) {
-        if depth <= self.depth && depth != 0{
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+        if depth <= self.depth && depth != 0 {
             return;
         }
-        if !self.name_localized{
+        if !self.name_localized {
             self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             self.name_localized = true;
         }
-        if depth == 0{
+        if depth == 0 {
             return;
         }
-        if !self.localized{
-            for tenet in self.tenets.iter_mut(){
+        if !self.localized {
+            for tenet in self.tenets.iter_mut() {
                 *tenet = localization.localize(tenet.as_str());
             }
-            for doctrine in self.doctrines.iter_mut(){
+            for doctrine in self.doctrines.iter_mut() {
                 *doctrine = localization.localize(doctrine.as_str());
             }
             self.localized = true;
         }
         self.depth = depth;
-        if self.head.is_some(){
+        if self.head.is_some() {
             let o = self.head.as_ref().unwrap().try_get_internal_mut();
-            if o.is_ok(){
-                o.unwrap().set_depth(depth-1, localization);
+            if o.is_ok() {
+                o.unwrap().set_depth(depth - 1, localization);
             }
         }
     }

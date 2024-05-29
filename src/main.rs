@@ -1,4 +1,8 @@
-use std::{env, fs, time::SystemTime, io::{stdout, stdin, prelude::*}};
+use std::{
+    env, fs,
+    io::{prelude::*, stdin, stdout},
+    time::SystemTime,
+};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -21,7 +25,7 @@ use game_state::GameState;
 /// A submodule that provides [GameObjectDerived] objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{Player, FromGameObject};
+use structures::{FromGameObject, Player};
 
 /// The submodule responsible for creating the minijinja [Environment] and loading of templates.
 mod jinja_env;
@@ -29,7 +33,9 @@ use jinja_env::create_env;
 
 // A module for handling the display of the parsed data.
 mod display;
-use display::{Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline};
+use display::{
+    Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
+};
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -42,9 +48,9 @@ fn create_dir_maybe(name: &str) {
 }
 
 /// Main function. This is the entry point of the program.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// 1. `filename` - The name of the save file to parse. If not provided as a command line argument, the program will prompt the user to enter it.
 /// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
 /// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
@@ -53,9 +59,9 @@ fn create_dir_maybe(name: &str) {
 /// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
 /// 7. `--no-vis` - A flag that tells the program not to render any images
 /// 8. `--output` - A flag that tells the program where to output the rendered files.
-/// 
+///
 /// # Process
-/// 
+///
 /// 1. Reads the save file name from user
 /// 2. Parses the save file.
 ///     1. Initializes a [save_file::SaveFile] object using the provided file name
@@ -88,14 +94,14 @@ fn main() {
     // if we don't want to render any images
     let mut no_vis = false;
     // The output path, if provided by the user
-    let mut output_path:Option<String> = None;
+    let mut output_path: Option<String> = None;
     // The game path, if provided by the user
-    let mut game_path = None; 
+    let mut game_path = None;
     // The language to use for localization
     let mut language = "english".to_string();
     // The depth to render the player's history
     let mut depth = 3;
-    if args.len() < 2{
+    if args.len() < 2 {
         print!("Enter the filename: ");
         stdout().flush().unwrap();
         //raw file contents
@@ -106,19 +112,17 @@ fn main() {
         let mut inp = String::new();
         stdin().read_line(&mut inp).unwrap();
         inp = inp.trim().to_string();
-        if inp.is_empty(){
+        if inp.is_empty() {
             game_path = None;
-        }
-        else{
+        } else {
             game_path = Some(inp);
             println!("Using game files from {}", game_path.as_ref().unwrap());
         }
-    }
-    else{
+    } else {
         filename = args[1].clone();
         // foreach argument above 1
         let mut iter = args.iter().skip(2);
-        while let Some(arg) = iter.next(){
+        while let Some(arg) = iter.next() {
             match arg.as_str() {
                 "--internal" => {
                     #[cfg(internal)]
@@ -131,70 +135,81 @@ fn main() {
                 }
                 "--depth" => {
                     let depth_str = iter.next().expect("Depth argument requires a value");
-                    depth = depth_str.parse::<usize>().expect("Depth argument must be a number");
+                    depth = depth_str
+                        .parse::<usize>()
+                        .expect("Depth argument must be a number");
                     println!("Setting depth to {}", depth)
                 }
                 "--game-path" => {
-                    game_path = Some(iter.next().expect("Game path argument requires a value").clone());
+                    game_path = Some(
+                        iter.next()
+                            .expect("Game path argument requires a value")
+                            .clone(),
+                    );
                     println!("Using game files from {}", game_path.as_ref().unwrap());
                 }
                 "--zip" => {
                     compressed = true;
                 }
                 "--language" => {
-                    language = iter.next().expect("Language argument requires a value").clone();
+                    language = iter
+                        .next()
+                        .expect("Language argument requires a value")
+                        .clone();
                     println!("Using language {}", language);
                 }
                 "--no-vis" => {
                     no_vis = true;
                 }
                 "--output" => {
-                    output_path = Some(iter.next().expect("Output path argument requires a value").clone());
+                    output_path = Some(
+                        iter.next()
+                            .expect("Output path argument requires a value")
+                            .clone(),
+                    );
                     println!("Outputting to {}", output_path.as_ref().unwrap());
                 }
                 _ => {
                     println!("Unknown argument: {}", arg);
                 }
-            
             }
         }
     }
     let localization_path;
     let map;
-    if game_path.is_some(){
+    if game_path.is_some() {
         localization_path = Some(game_path.clone().unwrap() + "/localization/" + language.as_str());
-        if !no_vis{
+        if !no_vis {
             map = Some(GameMap::new(&game_path.unwrap()));
-        }
-        else{
+        } else {
             map = None;
         }
-    }
-    else{
+    } else {
         localization_path = None;
         map = None;
     }
     let localizer = Localizer::new(localization_path);
     //initialize the save file
-    let save:SaveFile;
+    let save: SaveFile;
     if compressed {
         save = SaveFile::open_compressed(filename.as_str());
     } else {
         save = SaveFile::open(filename.as_str());
     }
     // this is sort of like the first round of filtering where we store the objects we care about
-    let mut game_state:GameState = GameState::new();
+    let mut game_state: GameState = GameState::new();
     let mut last_name = String::new();
-    let mut players:Vec<Player> = Vec::new();
+    let mut players: Vec<Player> = Vec::new();
     println!("Ready for save parsing...");
     //MAYBE add multiprocessing? mutlithreading? Not necessary, not much IO happening
-    for mut i in save.into_iter(){
-        if i.get_name() != last_name{
+    for mut i in save.into_iter() {
+        if i.get_name() != last_name {
             print!("{:?}\n", i.get_name());
             stdout().flush().unwrap();
             last_name = i.get_name().to_string().clone();
         }
-        match i.get_name(){ //the order is kept consistent with the order in the save file
+        match i.get_name() {
+            //the order is kept consistent with the order in the save file
             "traits_lookup" => {
                 let r = i.to_object();
                 game_state.add_lookup(r.get_array_iter().map(|x| x.as_string()).collect());
@@ -202,9 +217,9 @@ fn main() {
             "landed_titles" => {
                 let r = i.to_object();
                 let landed = r.get_object_ref("landed_titles");
-                for v in landed.get_obj_iter(){
+                for v in landed.get_obj_iter() {
                     let o = v.1.as_object();
-                    if o.is_none(){
+                    if o.is_none() {
                         // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
                         continue;
                     }
@@ -213,12 +228,12 @@ fn main() {
             }
             "dynasties" => {
                 let r = i.to_object();
-                for d in r.get_obj_iter(){
+                for d in r.get_obj_iter() {
                     let o = d.1.as_object().unwrap();
-                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties"{
-                        for h in o.get_obj_iter(){
+                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
+                        for h in o.get_obj_iter() {
                             let house = h.1.as_object();
-                            if house.is_none(){
+                            if house.is_none() {
                                 continue;
                             }
                             game_state.add_dynasty(house.unwrap());
@@ -228,29 +243,29 @@ fn main() {
             }
             "living" => {
                 let r = i.to_object();
-                for l in r.get_obj_iter(){
+                for l in r.get_obj_iter() {
                     let chr = l.1.as_object();
-                    if chr.is_some(){
+                    if chr.is_some() {
                         game_state.add_character(chr.unwrap());
                     }
                 }
             }
             "dead_unprunable" => {
                 let r = i.to_object();
-                for d in r.get_obj_iter(){
+                for d in r.get_obj_iter() {
                     let chr = d.1.as_object();
-                    if chr.is_some(){
-                        game_state.add_character(chr.unwrap());  
+                    if chr.is_some() {
+                        game_state.add_character(chr.unwrap());
                     }
                 }
             }
             "characters" => {
                 let r = i.to_object();
                 let dead_prunable = r.get("dead_prunable");
-                if dead_prunable.is_some(){
-                    for d in dead_prunable.unwrap().as_object().unwrap().get_obj_iter(){
+                if dead_prunable.is_some() {
+                    for d in dead_prunable.unwrap().as_object().unwrap().get_obj_iter() {
                         let chr = d.1.as_object();
-                        if chr.is_some(){
+                        if chr.is_some() {
                             game_state.add_character(chr.unwrap());
                         }
                     }
@@ -259,38 +274,41 @@ fn main() {
             "vassal_contracts" => {
                 let r = i.to_object();
                 let active = r.get_object_ref("active");
-                for contract in active.get_obj_iter(){
+                for contract in active.get_obj_iter() {
                     let val = contract.1.as_object();
-                    if val.is_some(){
-                        game_state.add_contract(&contract.0.parse::<GameId>().unwrap(), &val.unwrap().get("vassal").unwrap().as_id())
+                    if val.is_some() {
+                        game_state.add_contract(
+                            &contract.0.parse::<GameId>().unwrap(),
+                            &val.unwrap().get("vassal").unwrap().as_id(),
+                        )
                     }
                 }
             }
             "religion" => {
                 let r = i.to_object();
                 let faiths = r.get_object_ref("faiths");
-                for f in faiths.get_obj_iter(){
+                for f in faiths.get_obj_iter() {
                     game_state.add_faith(f.1.as_object().unwrap());
                 }
             }
             "culture_manager" => {
                 let r = i.to_object();
                 let cultures = r.get_object_ref("cultures");
-                for c in cultures.get_obj_iter(){
+                for c in cultures.get_obj_iter() {
                     game_state.add_culture(c.1.as_object().unwrap());
                 }
             }
             "character_memory_manager" => {
                 let r = i.to_object();
                 let database = r.get_object_ref("database");
-                for d in database.get_obj_iter(){
+                for d in database.get_obj_iter() {
                     let mem = d.1.as_object();
                     if mem.is_none() {
                         continue;
                     }
                     game_state.add_memory(mem.unwrap());
                 }
-            } 
+            }
             "played_character" => {
                 let r = i.to_object();
                 let p = Player::from_game_object(&r, &mut game_state);
@@ -303,25 +321,24 @@ fn main() {
     }
     println!("Savefile parsing complete");
     let grapher;
-    if !no_vis{
+    if !no_vis {
         grapher = Some(Grapher::new(&game_state));
-    }
-    else{
+    } else {
         grapher = None;
     }
     let env = create_env(use_internal, map.is_some(), no_vis);
     let timeline;
-    if !no_vis{
+    if !no_vis {
         let mut tm = Timeline::new(&game_state);
         tm.set_depth(depth, &localizer);
         timeline = Some(tm);
-    } else{
+    } else {
         timeline = None;
     }
-    for player in players.iter_mut(){
+    for player in players.iter_mut() {
         println!("Processing {:?}", player.name);
         let mut folder_name = player.name.to_string() + "'s history";
-        if output_path.is_some(){
+        if output_path.is_some() {
             folder_name = output_path.as_ref().unwrap().clone() + "/" + folder_name.as_str();
         }
         create_dir_maybe(&folder_name);
@@ -334,18 +351,24 @@ fn main() {
         println!("Tree traversed");
         let mut renderer = Renderer::new(&env, folder_name.clone(), map.as_ref(), grapher.as_ref());
         let mut queue = vec![RenderableType::Player(player)];
-        if !no_vis{
-            timeline.as_ref().unwrap().render_all(&mut queue, &mut renderer);
+        if !no_vis {
+            timeline
+                .as_ref()
+                .unwrap()
+                .render_all(&mut queue, &mut renderer);
         }
-        while let Some(obj) = queue.pop(){
+        while let Some(obj) = queue.pop() {
             obj.render_all(&mut queue, &mut renderer);
         }
     }
     //Get the ending time
     let end_time = SystemTime::now();
     //Print the time taken
-    println!("\nTime taken: {}s\n", end_time.duration_since(start_time).unwrap().as_secs());
-    if !atty::is(atty::Stream::Stdin){
+    println!(
+        "\nTime taken: {}s\n",
+        end_time.duration_since(start_time).unwrap().as_secs()
+    );
+    if !atty::is(atty::Stream::Stdin) {
         print!("Press enter to exit...");
         stdout().flush().unwrap();
         let mut inp = String::new();

@@ -1,10 +1,13 @@
 use serde::Serialize;
 
-use super::{Renderable, Renderer, Cullable};
-use super::super::{structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title}, types::{Shared, Wrapper, WrapperMut}};
+use super::super::{
+    structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title},
+    types::{Shared, Wrapper, WrapperMut},
+};
+use super::{Cullable, Renderable, Renderer};
 
 /// An enum representing the different types of [Renderable] objects
-pub enum RenderableType<'a>{
+pub enum RenderableType<'a> {
     Character(Shared<Character>),
     Culture(Shared<Culture>),
     Dynasty(Shared<Dynasty>),
@@ -15,7 +18,7 @@ pub enum RenderableType<'a>{
 
 impl<'a> Cullable for RenderableType<'a> {
     fn get_depth(&self) -> usize {
-        match self{
+        match self {
             RenderableType::Character(c) => c.get_internal().get_depth(),
             RenderableType::Culture(c) => c.get_internal().get_depth(),
             RenderableType::Dynasty(d) => d.get_internal().get_depth(),
@@ -26,7 +29,7 @@ impl<'a> Cullable for RenderableType<'a> {
     }
 
     fn is_ok(&self) -> bool {
-        match self{
+        match self {
             RenderableType::Character(c) => c.get_internal().is_ok(),
             RenderableType::Culture(c) => c.get_internal().is_ok(),
             RenderableType::Dynasty(d) => d.get_internal().is_ok(),
@@ -36,8 +39,8 @@ impl<'a> Cullable for RenderableType<'a> {
         }
     }
 
-    fn set_depth(&mut self, depth:usize, localization:&super::Localizer) {
-        match self{
+    fn set_depth(&mut self, depth: usize, localization: &super::Localizer) {
+        match self {
             RenderableType::Character(c) => c.get_internal_mut().set_depth(depth, localization),
             RenderableType::Culture(c) => c.get_internal_mut().set_depth(depth, localization),
             RenderableType::Dynasty(d) => d.get_internal_mut().set_depth(depth, localization),
@@ -45,7 +48,6 @@ impl<'a> Cullable for RenderableType<'a> {
             RenderableType::Title(t) => t.get_internal_mut().set_depth(depth, localization),
             RenderableType::Player(p) => p.set_depth(depth, localization),
         }
-    
     }
 }
 
@@ -54,7 +56,7 @@ impl<'a> Serialize for RenderableType<'a> {
     where
         S: serde::Serializer,
     {
-        match self{
+        match self {
             RenderableType::Character(c) => c.serialize(serializer),
             RenderableType::Culture(c) => c.serialize(serializer),
             RenderableType::Dynasty(d) => d.serialize(serializer),
@@ -63,12 +65,11 @@ impl<'a> Serialize for RenderableType<'a> {
             RenderableType::Player(p) => p.serialize(serializer),
         }
     }
-
 }
 
 impl<'a> GameObjectDerived for RenderableType<'a> {
     fn get_id(&self) -> crate::game_object::GameId {
-        match self{
+        match self {
             RenderableType::Character(c) => c.get_internal().get_id(),
             RenderableType::Culture(c) => c.get_internal().get_id(),
             RenderableType::Dynasty(d) => d.get_internal().get_id(),
@@ -79,7 +80,7 @@ impl<'a> GameObjectDerived for RenderableType<'a> {
     }
 
     fn get_name(&self) -> crate::game_object::GameString {
-        match self{
+        match self {
             RenderableType::Character(c) => c.get_internal().get_name(),
             RenderableType::Culture(c) => c.get_internal().get_name(),
             RenderableType::Dynasty(d) => d.get_internal().get_name(),
@@ -92,8 +93,8 @@ impl<'a> GameObjectDerived for RenderableType<'a> {
 
 // not a full implementation of Renderable because getting the static struct fields is not possible
 impl<'a> RenderableType<'a> {
-    pub fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
-        match self{
+    pub fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+        match self {
             RenderableType::Character(c) => c.get_internal().render_all(stack, renderer),
             RenderableType::Culture(c) => c.get_internal().render_all(stack, renderer),
             RenderableType::Dynasty(d) => d.get_internal().render_all(stack, renderer),

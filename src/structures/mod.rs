@@ -1,7 +1,10 @@
-
 use serde::Serialize;
 
-use super::{game_state::GameState, types::{Wrapper, Shared}, game_object::{GameString, GameObject, GameId}};
+use super::{
+    game_object::{GameId, GameObject, GameString},
+    game_state::GameState,
+    types::{Shared, Wrapper},
+};
 
 /// A submodule that provides the [Player] object.
 mod player;
@@ -37,12 +40,12 @@ pub use lineage::LineageNode;
 
 /// A submodule that provides an object that can be used on the frontend as a shallow reference to another [GameObjectDerived] object.
 mod derived_ref;
-pub use derived_ref::{DerivedRef, serialize_array};
+pub use derived_ref::{serialize_array, DerivedRef};
 
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
-pub trait GameObjectDerived : Serialize{
+pub trait GameObjectDerived: Serialize {
     /// Get the id of the object.
     /// All CK3 objects have an id that is a number.
     /// Within a given section that number is unique.
@@ -54,18 +57,18 @@ pub trait GameObjectDerived : Serialize{
 }
 
 /// A trait for [GameObjectDerived] objects that can be created as a dummy object, only later to be initialized.
-pub trait DummyInit : GameObjectDerived{
+pub trait DummyInit: GameObjectDerived {
     /// Create a dummy object that can be used as a placeholder
     /// Can be used to initialize an object from a section yet to be parsed.
-    fn dummy(id:GameId) -> Self;
+    fn dummy(id: GameId) -> Self;
 
     /// Initialize the object (ideally dummy) with auxiliary data from the game state.
     /// This can be called multiple times, but why would you do that?
-    fn init(&mut self, base:&GameObject, game_state:&mut GameState);
+    fn init(&mut self, base: &GameObject, game_state: &mut GameState);
 }
 
 /// A trait for [GameObjectDerived] objects that can be created from a [GameObject].
-pub trait FromGameObject : GameObjectDerived {
+pub trait FromGameObject: GameObjectDerived {
     /// Create a new object from a [GameObject].
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self;
+    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self;
 }

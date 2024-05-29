@@ -1,9 +1,14 @@
 use minijinja::context;
 
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
+use super::super::{
+    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+    game_object::{GameObject, GameString},
+    game_state::GameState,
+    types::{Wrapper, WrapperMut},
+};
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
-use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, game_object::{GameObject, GameString}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
 /// A struct representing a culture in the game
 pub struct Culture {
@@ -22,37 +27,42 @@ pub struct Culture {
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
-fn get_parents(parents:&mut Vec<Shared<Culture>>, base:&GameObject, game_state:&mut GameState){
+fn get_parents(parents: &mut Vec<Shared<Culture>>, base: &GameObject, game_state: &mut GameState) {
     let parents_obj = base.get("parents");
-    if parents_obj.is_some(){
-        for p in parents_obj.unwrap().as_object().unwrap().get_array_iter(){
+    if parents_obj.is_some() {
+        for p in parents_obj.unwrap().as_object().unwrap().get_array_iter() {
             parents.push(game_state.get_culture(&p.as_id()).clone());
         }
     }
 }
 
 /// Gets the traditions of the culture and appends them to the traditions vector
-fn get_traditions(traditions:&mut Vec<GameString>, base:&&GameObject){
+fn get_traditions(traditions: &mut Vec<GameString>, base: &&GameObject) {
     let traditions_obj = base.get("traditions");
-    if traditions_obj.is_some(){
-        for t in traditions_obj.unwrap().as_object().unwrap().get_array_iter(){
+    if traditions_obj.is_some() {
+        for t in traditions_obj
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .get_array_iter()
+        {
             traditions.push(t.as_string());
         }
     }
 }
 
 /// Gets the creation date of the culture
-fn get_date(base:&GameObject) -> Option<GameString>{
+fn get_date(base: &GameObject) -> Option<GameString> {
     let node = base.get("created");
-    if node.is_some(){
+    if node.is_some() {
         return Some(node.unwrap().as_string());
     }
     None
 }
 
 impl DummyInit for Culture {
-    fn dummy(id:GameId) -> Self {
-        Culture{
+    fn dummy(id: GameId) -> Self {
+        Culture {
             name: GameString::wrap("".to_owned().into()),
             ethos: GameString::wrap("".to_owned().into()),
             heritage: GameString::wrap("".to_owned().into()),
@@ -63,8 +73,8 @@ impl DummyInit for Culture {
             language: GameString::wrap("".to_owned().into()),
             id: id,
             depth: 0,
-            localized:false,
-            name_localized:false
+            localized: false,
+            name_localized: false,
         }
     }
 
@@ -73,7 +83,8 @@ impl DummyInit for Culture {
         get_traditions(&mut self.traditions, &base);
         self.name = base.get("name").unwrap().as_string();
         let eth = base.get("ethos");
-        if eth.is_some() { //this is possible, shoutout u/Kinc4id
+        if eth.is_some() {
+            //this is possible, shoutout u/Kinc4id
             self.ethos = eth.unwrap().as_string();
         }
         self.heritage = base.get("heritage").unwrap().as_string();
@@ -115,7 +126,7 @@ impl Serialize for Culture {
 
 impl Renderable for Culture {
     fn get_context(&self) -> minijinja::Value {
-        context!{culture=>self}
+        context! {culture=>self}
     }
 
     fn get_template() -> &'static str {
@@ -126,8 +137,8 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self){
+    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+        if !renderer.render(self) {
             return;
         }
         let grapher = renderer.get_grapher();
@@ -135,7 +146,7 @@ impl Renderable for Culture {
             let path = format!("{}/cultures/{}.svg", renderer.get_path(), self.id);
             grapher.unwrap().create_culture_graph(self.id, &path);
         }
-        for p in &self.parents{
+        for p in &self.parents {
             stack.push(RenderableType::Culture(p.clone()));
         }
     }
@@ -146,7 +157,7 @@ impl Cullable for Culture {
         self.depth
     }
 
-    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
         if depth <= self.depth && depth != 0 {
             return;
         }
@@ -154,7 +165,7 @@ impl Cullable for Culture {
             self.name = localization.localize(self.name.as_str());
             self.name_localized = true;
         }
-        if depth == 0{
+        if depth == 0 {
             return;
         }
         if !self.localized {
@@ -162,14 +173,14 @@ impl Cullable for Culture {
             self.heritage = localization.localize(self.heritage.as_str());
             self.martial = localization.localize(self.martial.as_str());
             self.language = localization.localize(self.language.as_str());
-            for t in &mut self.traditions{
+            for t in &mut self.traditions {
                 *t = localization.localize(t.as_str());
             }
             self.localized = true;
         }
         self.depth = depth;
-        for p in &self.parents{
-            p.get_internal_mut().set_depth(depth-1, localization);
+        for p in &self.parents {
+            p.get_internal_mut().set_depth(depth - 1, localization);
         }
     }
 }

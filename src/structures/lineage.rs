@@ -1,20 +1,25 @@
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{display::{Localizer, Cullable}, types::{Wrapper, WrapperMut}, game_state::GameState, game_object::{GameString, GameObject, SaveFileValue}};
+use super::super::{
+    display::{Cullable, Localizer},
+    game_object::{GameObject, GameString, SaveFileValue},
+    game_state::GameState,
+    types::{Wrapper, WrapperMut},
+};
 
 use super::{Character, FromGameObject, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
-pub struct LineageNode{
+pub struct LineageNode {
     character: Option<Shared<Character>>,
     date: Option<GameString>,
     score: i32,
     prestige: i32,
     piety: i32,
-    dread:f32,
+    dread: f32,
     lifestyle: Option<GameString>,
-    perks:Vec<GameString>, //in older version this was a list, guess it no longer is
-    id: GameId
+    perks: Vec<GameString>, //in older version this was a list, guess it no longer is
+    id: GameId,
 }
 
 impl LineageNode {
@@ -25,16 +30,16 @@ impl LineageNode {
 }
 
 ///Gets the perk of the lineage node
-fn get_perks(perks:&mut Vec<GameString>, base:&GameObject){
+fn get_perks(perks: &mut Vec<GameString>, base: &GameObject) {
     let perks_node = base.get("perk");
-    if perks_node.is_some(){
+    if perks_node.is_some() {
         let node = perks_node.unwrap();
         match node {
             SaveFileValue::Object(o) => {
-                for perk in o.get_array_iter(){
+                for perk in o.get_array_iter() {
                     perks.push(perk.as_string())
                 }
-            },
+            }
             SaveFileValue::String(o) => {
                 perks.push(o.clone());
             }
@@ -43,13 +48,12 @@ fn get_perks(perks:&mut Vec<GameString>, base:&GameObject){
 }
 
 ///Gets the dread of the lineage node
-fn get_dread(base:&GameObject) -> f32{
+fn get_dread(base: &GameObject) -> f32 {
     let dread;
     let dread_node = base.get("dread");
     if dread_node.is_some() {
         dread = dread_node.unwrap().as_string().parse::<f32>().unwrap();
-    }
-    else{
+    } else {
         dread = 0.0;
     }
     return dread;
@@ -85,15 +89,14 @@ fn get_piety(base: &GameObject) -> i32 {
     let piety_node = base.get("piety");
     if piety_node.is_some() {
         piety = piety_node.unwrap().as_string().parse::<i32>().unwrap();
-    }
-    else{
+    } else {
         piety = 0;
     }
     piety
 }
 
 ///Gets the lifestyle of the lineage node
-fn get_lifestyle(base: &GameObject) -> Option<GameString>{
+fn get_lifestyle(base: &GameObject) -> Option<GameString> {
     let lifestyle_node = base.get("lifestyle");
     if lifestyle_node.is_some() {
         Some(lifestyle_node.unwrap().as_string())
@@ -102,13 +105,13 @@ fn get_lifestyle(base: &GameObject) -> Option<GameString>{
     }
 }
 
-impl FromGameObject for LineageNode{
-    fn from_game_object(base:&GameObject, game_state:&mut GameState) -> Self {
+impl FromGameObject for LineageNode {
+    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
         let id = base.get("character").unwrap().as_id();
         let char = game_state.get_character(&id);
         let mut perks = Vec::new();
         get_perks(&mut perks, base);
-        LineageNode { 
+        LineageNode {
             character: Some(char),
             date: Some(base.get("date").unwrap().as_string()),
             score: get_score(&base),
@@ -117,7 +120,7 @@ impl FromGameObject for LineageNode{
             dread: get_dread(&base),
             lifestyle: get_lifestyle(&base),
             perks: perks,
-            id: id
+            id: id,
         }
     }
 }
@@ -132,7 +135,7 @@ impl GameObjectDerived for LineageNode {
     }
 }
 
-impl Serialize for LineageNode{
+impl Serialize for LineageNode {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -151,18 +154,22 @@ impl Serialize for LineageNode{
     }
 }
 
-impl Cullable for LineageNode{
+impl Cullable for LineageNode {
     fn get_depth(&self) -> usize {
         self.character.as_ref().unwrap().get_internal().get_depth()
     }
 
-    fn set_depth(&mut self, depth:usize, localization:&Localizer) {
-        if self.lifestyle.is_some(){
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+        if self.lifestyle.is_some() {
             self.lifestyle = Some(localization.localize(self.lifestyle.as_ref().unwrap().as_str()));
         }
-        for perk in self.perks.iter_mut(){
+        for perk in self.perks.iter_mut() {
             *perk = localization.localize(perk.as_str());
         }
-        self.character.as_ref().unwrap().get_internal_mut().set_depth(depth, localization);
+        self.character
+            .as_ref()
+            .unwrap()
+            .get_internal_mut()
+            .set_depth(depth, localization);
     }
 }

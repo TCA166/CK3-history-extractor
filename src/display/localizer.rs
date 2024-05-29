@@ -1,18 +1,33 @@
 use std::collections::HashMap;
-use std::{fs, mem};
 use std::path::{Path, PathBuf};
+use std::{fs, mem};
 
 use super::super::{game_object::GameString, types::Wrapper};
 
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.
-fn demangle_generic(input:&str) -> String{
-    let mut s = input.trim_start_matches("dynn_").trim_start_matches("nick_").trim_end_matches("_perk").trim_start_matches("death_")
-    .trim_start_matches("tenet_").trim_start_matches("doctrine_")
-    .trim_start_matches("ethos_").trim_start_matches("heritage_").trim_start_matches("language_").trim_start_matches("martial_custom_").trim_start_matches("tradition_")
-    .trim_start_matches("e_").trim_start_matches("k_").trim_start_matches("d_").trim_start_matches("c_").trim_start_matches("b_").trim_start_matches("x_x_")
-    .trim_end_matches("_name").replace("_", " ");
-    if s.is_empty(){
+fn demangle_generic(input: &str) -> String {
+    let mut s = input
+        .trim_start_matches("dynn_")
+        .trim_start_matches("nick_")
+        .trim_end_matches("_perk")
+        .trim_start_matches("death_")
+        .trim_start_matches("tenet_")
+        .trim_start_matches("doctrine_")
+        .trim_start_matches("ethos_")
+        .trim_start_matches("heritage_")
+        .trim_start_matches("language_")
+        .trim_start_matches("martial_custom_")
+        .trim_start_matches("tradition_")
+        .trim_start_matches("e_")
+        .trim_start_matches("k_")
+        .trim_start_matches("d_")
+        .trim_start_matches("c_")
+        .trim_start_matches("b_")
+        .trim_start_matches("x_x_")
+        .trim_end_matches("_name")
+        .replace("_", " ");
+    if s.is_empty() {
         return s;
     }
     let bytes = unsafe { s.as_bytes_mut() };
@@ -22,12 +37,17 @@ fn demangle_generic(input:&str) -> String{
 
 /// A function that handles the stack of function calls.
 /// It will replace characters from start to end in result according to the functions and arguments in the stack.
-fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, result:&mut String){
+fn handle_stack(
+    stack: Vec<(String, Vec<String>)>,
+    start: usize,
+    end: &mut usize,
+    result: &mut String,
+) {
     //TODO add more handling, will improve the accuracy of localization, especially for memories
     //println!("{:?}", stack);
     match stack.len() {
         2 => {
-            if stack[0].0 == "GetTrait" && stack[1].0 == "GetName"{
+            if stack[0].0 == "GetTrait" && stack[1].0 == "GetName" {
                 let l = stack[0].1[0].len();
                 let replace = demangle_generic(stack[0].1[0].as_str().trim_matches('\''));
                 result.replace_range(start..*end, &replace);
@@ -36,11 +56,10 @@ fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, r
             }
         }
         _ => {
-            let replace:String;
-            if stack.len() > 0 && stack[0].1.len() > 0{
+            let replace: String;
+            if stack.len() > 0 && stack[0].1.len() > 0 {
                 replace = stack[0].1[0].clone();
-            }
-            else{
+            } else {
                 replace = "".to_owned();
             }
             result.replace_range(start..*end, &replace);
@@ -52,13 +71,13 @@ fn handle_stack(stack:Vec<(String, Vec<String>)>, start:usize, end:&mut usize, r
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
-pub struct Localizer{
-    data: Option<HashMap<String, GameString>>
+pub struct Localizer {
+    data: Option<HashMap<String, GameString>>,
 }
 
-impl Localizer{
-    pub fn new(localization_src_path:Option<String>) -> Self{
-        let mut hmap:Option<HashMap<String, GameString>> = None;
+impl Localizer {
+    pub fn new(localization_src_path: Option<String>) -> Self {
+        let mut hmap: Option<HashMap<String, GameString>> = None;
         if localization_src_path.is_some() {
             let path = localization_src_path.unwrap();
             // get every file in the directory and subdirectories
@@ -78,7 +97,8 @@ impl Localizer{
                                 if let Ok(file_type) = entry.file_type() {
                                     if file_type.is_dir() {
                                         stack.push(entry.path());
-                                    } else if entry.file_name().to_str().unwrap().ends_with(".yml"){
+                                    } else if entry.file_name().to_str().unwrap().ends_with(".yml")
+                                    {
                                         all_files.push(entry.path());
                                     }
                                 }
@@ -98,22 +118,27 @@ impl Localizer{
                     let mut value = String::new();
                     let mut past = false;
                     let mut quotes = false;
-                    for char in contents.chars(){
-                        match char{
+                    for char in contents.chars() {
+                        match char {
                             ' ' | '\t' => {
                                 if quotes {
                                     value.push(char);
                                 }
-                            },
+                            }
                             '\n' => {
-                                if past && !quotes && !value.is_empty(){
+                                if past && !quotes && !value.is_empty() {
                                     //Removing trait_? good idea because the localisation isnt consistent enough with trait names
                                     //Removing _name though... controversial. Possibly a bad idea
                                     //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
-                                    key = key.trim_start_matches("trait_").trim_end_matches("_name").to_string();
-                                    data.insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
-                                }
-                                else{
+                                    key = key
+                                        .trim_start_matches("trait_")
+                                        .trim_end_matches("_name")
+                                        .to_string();
+                                    data.insert(
+                                        mem::take(&mut key),
+                                        GameString::wrap(mem::take(&mut value)),
+                                    );
+                                } else {
                                     key.clear()
                                 }
                                 past = false;
@@ -137,21 +162,22 @@ impl Localizer{
                         }
                     }
                 }
-                /* 
+                /*
                 From what I can gather there are two types of special localisation invocations:
                 - $key$ - use that key instead of the key that was used to look up the string
                 - [function(arg).function(arg)...] handling this one is going to be a nightmare
                 */
                 let iterable_clone = data.clone();
-                for (key, value) in iterable_clone.iter(){ // resolve the borrowed keys
+                for (key, value) in iterable_clone.iter() {
+                    // resolve the borrowed keys
                     let mut new_value = String::new();
                     let mut foreign_key = String::new();
                     let mut in_key = false;
-                    for c in value.chars(){
+                    for c in value.chars() {
                         if c == '$' {
                             if in_key {
                                 let localized = data.get(&mem::take(&mut foreign_key));
-                                if localized.is_some(){
+                                if localized.is_some() {
                                     new_value.push_str(localized.unwrap().as_str());
                                 }
                             }
@@ -170,55 +196,55 @@ impl Localizer{
             }
         }
         //println!("{:?}", hmap);
-        Localizer{
-            data: hmap
-        }
+        Localizer { data: hmap }
     }
 
     /// Localizes a string.
-    pub fn localize(&self, key: &str) -> GameString{
-        if self.data.is_none(){
-            return GameString::wrap(demangle_generic(key))
+    pub fn localize(&self, key: &str) -> GameString {
+        if self.data.is_none() {
+            return GameString::wrap(demangle_generic(key));
         }
         let data = self.data.as_ref().unwrap();
         let d = data.get(key);
-        if d.is_some(){
+        if d.is_some() {
             let d = d.unwrap().clone();
             //if the string contains []
-            if d.contains('[') && d.contains(']'){ //handle the special function syntax
+            if d.contains('[') && d.contains(']') {
+                //handle the special function syntax
                 let mut value = d.to_string();
                 let mut start = 0;
-                let mut stack:Vec<(String, Vec<String>)> = Vec::new();
-                { //create a call stack
+                let mut stack: Vec<(String, Vec<String>)> = Vec::new();
+                {
+                    //create a call stack
                     let mut call = String::new();
-                    let mut args:Vec<String> = Vec::new();
+                    let mut args: Vec<String> = Vec::new();
                     let mut arg = String::new();
                     let mut collect = false;
                     let mut collect_args = false;
-                    let mut ind:usize = 1;
-                    for c in d.chars(){
+                    let mut ind: usize = 1;
+                    for c in d.chars() {
                         match c {
                             '[' => {
                                 collect = true;
                                 start = ind - 1;
-                            },
+                            }
                             ']' => {
                                 collect = false;
                                 handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
-                            },
+                            }
                             '(' => {
                                 collect_args = true;
-                            },
+                            }
                             ')' => {
                                 collect_args = false;
                                 args.push(mem::take(&mut arg));
-                            },
+                            }
                             ',' => {
                                 args.push(mem::take(&mut arg));
-                            },
+                            }
                             '.' => {
                                 stack.push((mem::take(&mut call), mem::take(&mut args)));
-                            },
+                            }
                             _ => {
                                 if collect_args {
                                     arg.push(c);
@@ -234,7 +260,7 @@ impl Localizer{
             }
             return d;
         } else {
-            return GameString::wrap(demangle_generic(key))
+            return GameString::wrap(demangle_generic(key));
         }
     }
 }

@@ -1,4 +1,8 @@
-use std::{cell::{BorrowMutError, Ref, RefCell, RefMut}, ops::Deref, rc::Rc};
+use std::{
+    cell::{BorrowMutError, Ref, RefCell, RefMut},
+    ops::Deref,
+    rc::Rc,
+};
 
 /// A reference or a raw value. I have no clue why this isn't a standard library type.
 /// A [Ref] and a raw reference are both dereferencable to the same type.
@@ -23,7 +27,7 @@ impl<'a, T> Deref for RefOrRaw<'a, T> {
 /// For example [crate::game_object::GameString] is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
 pub trait Wrapper<T> {
     /// Wrap a value in the object
-    fn wrap(t:T) -> Self;
+    fn wrap(t: T) -> Self;
 
     /// Get the internal value as a reference or a raw value
     fn get_internal(&self) -> RefOrRaw<T>;
@@ -41,18 +45,18 @@ pub trait WrapperMut<T> {
 
 /// A type alias for shared objects.
 /// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
-/// 
+///
 /// # Example
-/// 
+///
 /// ```
 /// let obj:Shared<String> = Shared::wrap("Hello");
-/// 
+///
 /// let value:Ref<String> = obj.get_internal();
 /// ```
 pub type Shared<T> = Rc<RefCell<T>>;
 
 impl<T> Wrapper<T> for Shared<T> {
-    fn wrap(t:T) -> Self {
+    fn wrap(t: T) -> Self {
         Rc::new(RefCell::new(t))
     }
 
