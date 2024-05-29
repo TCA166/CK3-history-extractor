@@ -234,6 +234,7 @@ impl GameState{
         }
     }
     
+    /// Gets data year->number of deaths for each culture
     pub fn get_culture_graph_data(&self) -> HashMap<GameId, Vec<(u32, u32)>>{
         let mut cultures = HashMap::new();
         for (_, character) in &self.characters {
@@ -313,6 +314,7 @@ impl GameState{
         return res;
     }
 
+    /// Returns a hashmap year->number of deaths for a given dynasty
     pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
         self.titles.iter()
     }

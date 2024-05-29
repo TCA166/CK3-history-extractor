@@ -25,7 +25,7 @@ fn handle_node<T:GameObjectDerived>(node:Shared<T>, tree:&mut TidyTree, stack:&m
     let node_width = (sz.0 * name.len() as u32) as f64 * TREE_SCALE;
     let node_height = sz.1 as f64 * TREE_SCALE;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
-    let txt_point = (-(node_width as i32 - sz.0 as i32), -(node_height as i32 - sz.1 as i32));
+    let txt_point = (-(node_width as i32 - (sz.0 * name.len() as u32) as i32), -(node_height as i32 - sz.1 as i32));
     //add node to tree
     tree.add_node(id, node_width, node_height, parent);
     stack.push((id, node.clone()));
@@ -131,7 +131,7 @@ impl Grapher{
                 let (parent_x, parent_y) = positions.get(&node_data.0).unwrap();
                 //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
-                    vec![(*x, *y), (*parent_x, *parent_y + (node_data.2.1 / 2.0))],
+                    vec![(*x, *y - (node_data.2.1 / 2.0)), (*parent_x, *parent_y + (node_data.2.1 / 2.0))],
                     Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
                 )).unwrap();
             }
@@ -289,15 +289,34 @@ impl Grapher{
             }
             root.draw(&Text::new(title.get_internal().get_name().to_string(), (txt_x, -lifespan_y * (i + 1) as i32), fnt.clone())).unwrap();
         }
+        let mut lane:Vec<u32> = Vec::new();
         //draw the events
-        for (i, (date, char, title, group_desc, difference)) in events.iter().enumerate(){
+        for (date, char, title, group_desc, difference) in events.iter(){
             let title_name = title.get_internal().get_name();
             let char_name = char.get_internal().get_name();
             let txt = format!("{} conquered {} for the {} {}", char_name, title_name, difference.get_name(), group_desc);
-            let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
-            //TODO redo the non overlapping algorithm
-            root.draw(&Text::new(txt, (date - txt_x + (MARGIN * 6) as u32, MARGIN * 2 + ((lifespan_y) * i as i32)), fnt.clone())).unwrap();
-            root.draw(&PathElement::new([(*date, lifespan_y * (i + 1) as i32), (*date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
+            let txt_x = date - fnt.box_size(&txt).unwrap().0 as u32;
+            let mut y = 0;
+            let mut found = false;
+            //find the lane that has space for us
+            for (j, lane) in lane.iter_mut().enumerate(){
+                if *lane < txt_x{
+                    y = j as u32;
+                    found = true;
+                    *lane = *date + txt_x;
+                    break;
+                }
+            }
+            //if we havent found one then we create a new lane
+            if !found {
+                y = lane.len() as u32;
+                if y as i32 * lifespan_y > height{ //if the lane is out of bounds we skip the event
+                    continue;
+                }
+                lane.push(*date + txt_x);
+            }
+            root.draw(&Text::new(txt, (txt_x, lifespan_y * (y + 1) as i32), fnt.clone())).unwrap();
+            root.draw(&PathElement::new([(*date, lifespan_y * (y + 1) as i32), (*date, 0)], Into::<ShapeStyle>::into(&BLACK).filled())).unwrap();
             root.draw(&Circle::new((*date, 0), 2, Into::<ShapeStyle>::into(&RED).filled())).unwrap();
         }
         root.present().unwrap();

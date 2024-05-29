@@ -2,6 +2,8 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
+use crate::game_object::GameId;
+
 use super::super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, Faith, GameObjectDerived, Title}, types::{Wrapper, Shared, WrapperMut}};
 use super::{graph::Grapher, localizer::Localizer, renderer::{Cullable, Renderable, Renderer}, RenderableType};
 
@@ -33,7 +35,7 @@ impl Serialize for RealmDifference{
 }
 
 impl GameObjectDerived for RealmDifference{
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         0
     }
 
@@ -194,7 +196,7 @@ impl Serialize for Timeline{
 }
 
 impl GameObjectDerived for Timeline{
-    fn get_id(&self) -> u32 {
+    fn get_id(&self) -> GameId {
         0
     }
 

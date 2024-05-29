@@ -181,63 +181,60 @@ impl Localizer{
             return GameString::wrap(demangle_generic(key))
         }
         let data = self.data.as_ref().unwrap();
-        if data.contains_key(key){
-            let d = data.get(key).unwrap().clone();
-            if d.starts_with("$") && d.ends_with("$"){ //if we are provided with a different key to use instead then just do it
-                return self.localize(&d[1..d.len()-1]);
-            } else {
-                //if the string contains []
-                if d.contains('[') && d.contains(']'){ //handle the special function syntax
-                    let mut value = d.to_string();
-                    let mut start = 0;
-                    let mut stack:Vec<(String, Vec<String>)> = Vec::new();
-                    { //create a call stack
-                        let mut call = String::new();
-                        let mut args:Vec<String> = Vec::new();
-                        let mut arg = String::new();
-                        let mut collect = false;
-                        let mut collect_args = false;
-                        let mut ind:usize = 1;
-                        for c in d.chars(){
-                            match c {
-                                '[' => {
-                                    collect = true;
-                                    start = ind - 1;
-                                },
-                                ']' => {
-                                    collect = false;
-                                    handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
-                                },
-                                '(' => {
-                                    collect_args = true;
-                                },
-                                ')' => {
-                                    collect_args = false;
-                                    args.push(mem::take(&mut arg));
-                                },
-                                ',' => {
-                                    args.push(mem::take(&mut arg));
-                                },
-                                '.' => {
-                                    stack.push((mem::take(&mut call), mem::take(&mut args)));
-                                },
-                                _ => {
-                                    if collect_args {
-                                        arg.push(c);
-                                    } else if collect {
-                                        call.push(c);
-                                    }
+        let d = data.get(key);
+        if d.is_some(){
+            let d = d.unwrap().clone();
+            //if the string contains []
+            if d.contains('[') && d.contains(']'){ //handle the special function syntax
+                let mut value = d.to_string();
+                let mut start = 0;
+                let mut stack:Vec<(String, Vec<String>)> = Vec::new();
+                { //create a call stack
+                    let mut call = String::new();
+                    let mut args:Vec<String> = Vec::new();
+                    let mut arg = String::new();
+                    let mut collect = false;
+                    let mut collect_args = false;
+                    let mut ind:usize = 1;
+                    for c in d.chars(){
+                        match c {
+                            '[' => {
+                                collect = true;
+                                start = ind - 1;
+                            },
+                            ']' => {
+                                collect = false;
+                                handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
+                            },
+                            '(' => {
+                                collect_args = true;
+                            },
+                            ')' => {
+                                collect_args = false;
+                                args.push(mem::take(&mut arg));
+                            },
+                            ',' => {
+                                args.push(mem::take(&mut arg));
+                            },
+                            '.' => {
+                                stack.push((mem::take(&mut call), mem::take(&mut args)));
+                            },
+                            _ => {
+                                if collect_args {
+                                    arg.push(c);
+                                } else if collect {
+                                    call.push(c);
                                 }
                             }
-                            ind += 1;
                         }
+                        ind += 1;
                     }
-                    return GameString::wrap(value);
                 }
-                return d;
+                return GameString::wrap(value);
             }
+            return d;
+        } else {
+            return GameString::wrap(demangle_generic(key))
         }
-        //println!("Key not found: {}", key);
-        GameString::wrap(demangle_generic(key))
     }
 }

@@ -22,7 +22,6 @@ static INT_TIMELINE_TEMPLATE:&str = include_str!("../templates/timelineTemplate.
 /// If the templates folder does not exist, it will attempt use the internal templates regardless of the setting.
 /// The environment will have the following filters:
 /// - [render_ref] - renders a reference to another object
-/// - [demangle_generic] - demangles a generic name
 pub fn create_env(internal:bool, map_present:bool, no_vis:bool) -> Environment<'static>{
     let mut env = Environment::new();
     env.add_filter("render_ref", render_ref);

@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::thread;
 
 use minijinja::Environment;
 
@@ -40,7 +41,7 @@ impl<'a> Renderer<'a>{
         return rendered.unwrap().contains(&id);
     }
 
-    /// Renders the object and returns true if it was rendered.
+    /// Renders the object and returns true if it was actually rendered.
     pub fn render<T: Renderable + Cullable>(&mut self, obj: &T) -> bool{
         //if it is rendered then return
         if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok(){
@@ -49,7 +50,9 @@ impl<'a> Renderer<'a>{
         let ctx = obj.get_context();
         let contents = self.env.get_template(T::get_template()).unwrap().render(&ctx).unwrap();
         let path = obj.get_path(&self.path);
-        std::fs::write(path, contents).unwrap();
+        thread::spawn(move || { //IO heavy, so spawn a thread
+            std::fs::write(path, contents).unwrap();
+        });
         let rendered = self.rendered.entry(T::get_subdir()).or_insert(HashSet::new());
         rendered.insert(obj.get_id());
         return true;
@@ -90,6 +93,9 @@ pub trait Renderable: Serialize + GameObjectDerived{
     }
 
     /// Renders the object and all the references of the object if they are not already rendered.
+    /// This is used to render the object and add the references to the stack for rendering.
+    /// The implementation should call [Renderer::render] to render the object, render whatever else it needs and add the references to the stack.
+    /// It is the responsibility of the implementation to ensure that all the references are rendered.
     fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer);
 }
 
@@ -100,6 +106,8 @@ pub trait Cullable : GameObjectDerived{
     /// Set the depth of the object and performs localization.
     /// Ideally this should be called on the root object once and the depth should be propagated to all children.
     /// Also ideally should do nothing if the depth is less than or equal to the current depth.
+    /// Localization of the objects should also be done here, hence the [Localizer] object.
+    /// It is the responsibility of the implementation to ensure that the depth is propagated to all children.
     fn set_depth(&mut self, depth:usize, localization:&Localizer);
 
     /// Get the depth of the object.

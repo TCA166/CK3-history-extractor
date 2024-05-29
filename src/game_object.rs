@@ -62,6 +62,11 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as a mutable GameObject reference
+    /// 
+    /// # Returns
+    /// 
+    /// A mutable reference to the GameObject
     fn as_object_mut(&mut self) -> Option<&mut GameObject>{
         match self {
             SaveFileValue::Object(o) => Some(o),
