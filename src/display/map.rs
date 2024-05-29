@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, thread};
 
 use csv::ReaderBuilder;
 
-use image::{io::Reader as ImageReader, save_buffer};
+use image::{io::Reader as ImageReader, save_buffer, ImageBuffer, Rgba};
 
 use super::super::{game_object::{GameId, GameString}, save_file::SaveFile};
 
@@ -171,7 +171,8 @@ impl GameMap{
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    pub fn create_map(&self, key_list:Vec<GameString>, target_color:&[u8; 3], output_path:&str) {
+    /// Returns a vector of RGB bytes representing the new map
+    fn create_map(&self, key_list:Vec<GameString>, target_color:&[u8; 3]) -> Vec<u8> {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let colors: HashSet<_> = key_list.iter().map(|id| self.title_color_map[id.as_str()]).collect();
         let mut x = 0;
@@ -196,6 +197,27 @@ impl GameMap{
                 z = x + 3;
             }
         }
+        return new_map;
+    }
+
+    /// Creates a province map with the colors of the provinces in id_list changed to target_color
+    /// Returns a [ImageBuffer] of RGBA bytes representing the new map
+    pub fn create_map_buffer(&self, key_list:Vec<GameString>, target_color:&[u8; 3]) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        //we need to convert the vec of bytes to a vec of rgba bytes
+        let new_map = self.create_map(key_list, target_color);
+        let mut rgba = Vec::with_capacity(new_map.len() * 4 / 3);
+        for i in 0..new_map.len(){
+            rgba.push(new_map[i]);
+            if (i + 1) % 3 == 0{
+                rgba.push(255);
+            }
+        }
+        ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
+    }
+
+    /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
+    pub fn create_map_file(&self, key_list:Vec<GameString>, target_color:&[u8; 3], output_path:&str) {
+        let new_map = self.create_map(key_list, target_color);
         let width = self.width;
         let height = self.height;
         let output_path = output_path.to_owned();

@@ -409,6 +409,31 @@ impl Character {
         self.liege = Some(DerivedRef::from_derived(liege));
     }
     */
+
+    /// Gets all of the held barony keys of the character and their vassals
+    pub fn get_barony_keys(&self) -> Vec<GameString>{
+        let mut provinces = Vec::new();
+        for t in self.titles.iter(){
+            let key = t.get_internal().get_key();
+            if key.is_some(){
+                let key = key.as_ref().unwrap();
+                if key.starts_with("b_") {
+                    provinces.push(key.clone());
+                }
+            }
+        }
+        for v in self.vassals.iter() {
+            match v {
+                Vassal::Character(c) => {
+                    provinces.append(&mut c.get_internal().get_barony_keys());
+                },
+                Vassal::Reference(c) => {
+                    provinces.append(&mut c.get_internal().get_ref().get_internal().get_barony_keys());
+                }
+            }
+        }
+        return provinces;
+    }
 }
 
 impl DummyInit for Character{

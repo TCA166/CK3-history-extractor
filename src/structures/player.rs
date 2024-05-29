@@ -1,3 +1,4 @@
+use image::{codecs::gif::{GifEncoder, Repeat}, Delay, Frame};
 use minijinja::context;
 
 use serde::{Serialize, ser::SerializeStruct};
@@ -5,6 +6,7 @@ use serde::{Serialize, ser::SerializeStruct};
 use super::super::{display::{Localizer, Renderer, Cullable, Renderable, RenderableType}, types::Wrapper, game_state::GameState, game_object::{GameObject, GameString}};
 
 use super::{Character, GameId, GameObjectDerived, LineageNode, Shared, FromGameObject};
+use std::fs::File;
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -80,6 +82,23 @@ impl Renderable for Player{
 
     fn render_all(&self, stack:&mut Vec<RenderableType>, renderer: &mut Renderer){
         renderer.render(self);
+        let map = renderer.get_map();
+        if map.is_some(){ //timelapse rendering
+            let map = map.unwrap();
+            let path = renderer.get_path().to_owned() + "/timelapse.gif";
+            let mut file = File::create(&path).unwrap();
+            let mut gif_encoder = GifEncoder::new(&mut file);
+            for char in self.lineage.iter(){
+                let char = char.get_character();
+                let char = char.get_internal();
+                let fbytes = map.create_map_buffer(char.get_barony_keys(),  &[70, 255, 70]);
+                let width = fbytes.width();
+                let height = fbytes.height();
+                let frame = Frame::from_parts(fbytes, width, height, Delay::from_numer_denom_ms(3000, 1));
+                gif_encoder.encode_frame(frame).unwrap();
+            }
+            gif_encoder.set_repeat(Repeat::Infinite).unwrap();
+        }
         for char in self.lineage.iter(){
             char.get_character().get_internal().render_all(stack, renderer);
         }

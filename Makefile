@@ -31,3 +31,7 @@ windows: src/*.rs src/structures/*.rs
 clean:
 	@echo "Cleaning up..."
 	cargo clean
+
+fmt:
+	@echo "Formatting code..."
+	cargo fmt

@@ -2,7 +2,7 @@ use minijinja::context;
 use serde::Serialize;
 use serde::ser::SerializeStruct;
 
-use crate::game_object::GameId;
+use crate::{game_object::GameId, structures::DerivedRef};
 
 use super::super::{game_object::GameString, game_state::GameState, structures::{Character, Culture, Faith, GameObjectDerived, Title}, types::{Wrapper, Shared, WrapperMut}};
 use super::{graph::Grapher, localizer::Localizer, renderer::{Cullable, Renderable, Renderer}, RenderableType};
@@ -182,15 +182,48 @@ impl Timeline{
     }
 }
 
+enum RealmDifferenceRef{
+    Faith(DerivedRef<Faith>),
+    Culture(DerivedRef<Culture>)
+}
+
+impl Serialize for RealmDifferenceRef{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self{
+            RealmDifferenceRef::Faith(f) => {
+                f.serialize(serializer)
+            },
+            RealmDifferenceRef::Culture(c) => {
+                c.serialize(serializer)
+            }
+        }
+    }
+}
+
 impl Serialize for Timeline{
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Timeline", 3)?;
-        state.serialize_field("lifespans", &self.lifespans)?;
+        let ref_lifespans:Vec<(DerivedRef<Title>, Vec<(u32, u32)>)> = self.lifespans.iter().map(|(t, v)| (DerivedRef::from_derived(t.clone()), v.clone())).collect();
+        state.serialize_field("lifespans", &ref_lifespans)?;
         state.serialize_field("latest_event", &self.latest_event)?;
-        state.serialize_field("events", &self.events)?;
+        let mut ref_events = Vec::new();
+        for events in &self.events{
+            let (year, char, title, event_type, difference) = events;
+            let ref_char = DerivedRef::from_derived(char.clone());
+            let ref_title = DerivedRef::from_derived(title.clone());
+            let ref_diff = match difference{
+                RealmDifference::Faith(f) => RealmDifferenceRef::Faith(DerivedRef::from_derived(f.clone())),
+                RealmDifference::Culture(c) => RealmDifferenceRef::Culture(DerivedRef::from_derived(c.clone()))
+            };
+            ref_events.push((year.clone(), ref_char, ref_title, event_type.clone(), ref_diff));
+        }
+        state.serialize_field("events", &ref_events)?;
         state.end()
     }
 }
