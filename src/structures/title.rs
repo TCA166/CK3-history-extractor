@@ -189,27 +189,6 @@ impl Title {
     pub fn get_capital(&self) -> Option<Shared<Title>> {
         self.capital.clone()
     }
-
-    /// Returns true if the character is the current ruler of the title at the given date
-    pub fn ruled(&self, char:&Character, point:GameString) -> bool{
-        let ruler:Option<Shared<Character>> = self.get_holder_at(point);
-        if ruler.is_some() {
-            return ruler.unwrap().get_internal().get_id() == char.get_id();
-        }
-        false
-    }
-
-    /// Gets the holder of the title at a specific point in time
-    pub fn get_holder_at(&self, point:GameString) -> Option<Shared<Character>>{
-        let mut ruler:Option<Shared<Character>> = None;
-        for (date, character, _) in self.history.iter() {
-            if date_string_cmp(&point, date).is_gt(){
-                break;
-            }
-            ruler = character.clone();
-        }
-        ruler
-    }
 }
 
 impl DummyInit for Title {

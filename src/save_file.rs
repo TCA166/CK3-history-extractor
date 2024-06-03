@@ -177,7 +177,6 @@ impl Section {
                             .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                     }
                 }
-                //TODO sometimes a text will precede an array like this color=rgb {} we should handle this
                 ' ' | '\t' => {
                     //syntax sugar we ignore, most of the time, unless...
                     if comment {
@@ -187,12 +186,17 @@ impl Section {
                         // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() {
-                            // in case {something=else something=else}
-                            stack.last_mut().unwrap().insert(
-                                mem::take(&mut key),
-                                SaveFileValue::String(Rc::new(mem::take(&mut val))),
-                            );
-                            past_eq = false;
+                            if val == "rgb"{
+                                //we are here color=rgb {} 
+                                val.clear();
+                            } else {
+                                // in case {something=else something=else}
+                                stack.last_mut().unwrap().insert(
+                                    mem::take(&mut key),
+                                    SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                                );
+                                past_eq = false;
+                            }
                         } else if !key.is_empty() && !past_eq {
                             // in case { something something something } OR key =value we want to preserve the spaces
                             maybe_array = true;

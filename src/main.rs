@@ -1,3 +1,4 @@
+use core::panic;
 use std::{
     env, fs,
     io::{prelude::*, stdin, stdout},
@@ -107,6 +108,9 @@ fn main() {
         //raw file contents
         stdin().read_line(&mut filename).unwrap();
         filename = filename.trim().to_string();
+        if filename.is_empty() {
+            panic!("No filename provided");
+        }
         print!("Enter the game path(You can just leave this empty): ");
         stdout().flush().unwrap();
         let mut inp = String::new();

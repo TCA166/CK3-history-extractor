@@ -37,11 +37,12 @@ fn handle_node<T: GameObjectDerived>(
     let id = ch.get_id() as usize;
     let name = ch.get_name().clone();
     //we use sz, which is the rough size of a character, to calculate the size of the node
-    let node_width = (sz.0 * name.len() as u32) as f64 * TREE_SCALE;
+    let txt_width = sz.0 * name.len() as u32;
+    let node_width = txt_width as f64 * TREE_SCALE;
     let node_height = sz.1 as f64 * TREE_SCALE;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
     let txt_point = (
-        -(node_width as i32 - (sz.0 * name.len() as u32) as i32),
+        -(node_width as i32 - txt_width as i32),
         -(node_height as i32 - sz.1 as i32),
     );
     //add node to tree
@@ -72,7 +73,7 @@ impl Grapher {
         let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
-        let fnt = ("sans-serif", 10.0).into_font();
+        let fnt = ("sans-serif", 6.66 * TREE_SCALE).into_font();
         let sz = fnt.box_size("X").unwrap(); // from this we determine a rough size of a character
                                              //BFS stack
         let mut stack = Vec::new();

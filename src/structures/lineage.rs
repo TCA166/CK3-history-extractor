@@ -18,7 +18,7 @@ pub struct LineageNode {
     piety: i32,
     dread: f32,
     lifestyle: Option<GameString>,
-    perks: Vec<GameString>, //in older version this was a list, guess it no longer is
+    perks: Vec<GameString>, //in older CK3 version this was a list, guess it no longer is
     id: GameId,
 }
 
