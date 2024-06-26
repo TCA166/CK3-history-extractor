@@ -61,7 +61,7 @@ It's worth noting that compressed save files taken straight out of the save fold
 
 You can run the program from the command line or just by double clicking it.
 If you ran it with no arguments it will ask you for the path to the file and for the path to the game.
-**It is very important that game path provided points to the ```/game``` subdirectory in your ```Crusader Kings III folder```.
+**It is very important that game path provided points to the ```/game``` subdirectory in your ```Crusader Kings III folder```**.
 Otherwise you will receive errors when providing the path.
 For users familiar with console environments here are details on that interface:
 
@@ -78,6 +78,15 @@ And here are the arguments that the utility accepts as of right now:
 5. ```--no-vis``` disables all forms of visualization within the output
 6. ```--language``` toggles which localization files shall be used if the game path is provided
 7. ```--output %s``` changes where the output folder will be located
+8. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from
+9. ```--dump``` makes the tool dump all the extracted data into a json file
+
+## Mod support
+
+This program should work just fine on modded save files.
+Some specific aspects may be represented inaccurately to the in game state, but that can be alleviated with providing the tool with the paths to the mods using the ```include``` argument.
+Now naturally very invasive mods allowing for individual country de jure drift, or using weird non standard title naming schemes might break the tool.
+If that occurs please do let me know and I shall see what I can do.
 
 ## Output example
 

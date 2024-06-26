@@ -9,3 +9,4 @@ target*
 !examples/*
 *.data
 *.old
+*.json

@@ -278,9 +278,8 @@ impl Serialize for Title {
         let mut state = serializer.serialize_struct("Title", 10)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        if self.de_jure.is_some() {
-            let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
-            state.serialize_field("de_jure", &de_jure)?;
+        if self.key.is_none(){
+            return state.end();
         }
         //match the first character of key
         let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
@@ -303,6 +302,10 @@ impl Serialize for Title {
             _ => {
                 state.serialize_field("tier", "")?;
             }
+        }
+        if self.de_jure.is_some() {
+            let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
+            state.serialize_field("de_jure", &de_jure)?;
         }
         if self.de_facto.is_some() {
             let de_facto = DerivedRef::from_derived(self.de_facto.as_ref().unwrap().clone());

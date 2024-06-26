@@ -6,6 +6,8 @@ use super::structures::{
 };
 use super::types::{Shared, Wrapper, WrapperMut};
 
+use serde::{Serialize, ser::SerializeStruct};
+
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
@@ -308,5 +310,20 @@ impl GameState {
     /// Returns a hashmap year->number of deaths for a given dynasty
     pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
         self.titles.iter()
+    }
+}
+
+impl Serialize for GameState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+        let mut state = serializer.serialize_struct("GameState", 6)?;
+        state.serialize_field("characters", &self.characters)?;
+        state.serialize_field("titles", &self.titles)?;
+        state.serialize_field("faiths", &self.faiths)?;
+        state.serialize_field("cultures", &self.cultures)?;
+        state.serialize_field("dynasties", &self.dynasties)?;
+        state.serialize_field("memories", &self.memories)?;
+        state.end()
     }
 }

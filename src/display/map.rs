@@ -69,7 +69,8 @@ const IMG_HEIGHT: u32 = 4096;
 const SCALE: u32 = 4;
 
 impl GameMap {
-    /// Creates a new GameMap from a province map and a definition.csv file located inside the provided path
+    /// Creates a new GameMap from a province map and a definition.csv file located inside the provided path.
+    /// The function expects the path to be a valid CK3 game directory.
     pub fn new(game_path: &str) -> Self {
         let map_path = game_path.to_owned() + "/map_data";
         let mut provinces_bytes = read_png_bytes(map_path.to_owned() + "/provinces.png");

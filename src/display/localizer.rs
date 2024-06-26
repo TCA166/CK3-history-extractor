@@ -72,140 +72,144 @@ fn handle_stack(
 /// It reads localization data from a directory and provides localized strings.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
 pub struct Localizer {
-    data: Option<HashMap<String, GameString>>,
+    data: HashMap<String, GameString>,
 }
 
 impl Localizer {
-    pub fn new(localization_src_path: Option<String>) -> Self {
-        let mut hmap: Option<HashMap<String, GameString>> = None;
-        if localization_src_path.is_some() {
-            let path = localization_src_path.unwrap();
-            // get every file in the directory and subdirectories
-            let mut data: HashMap<String, GameString> = HashMap::new();
-            let path = Path::new(&path);
-            if path.is_dir() {
-                // a stack to keep track of the directories
-                let mut stack: Vec<PathBuf> = Vec::new();
-                stack.push(PathBuf::from(path));
-                // a vector to keep track of all the files
-                let mut all_files: Vec<PathBuf> = Vec::new();
-                while !stack.is_empty() {
-                    let entry = stack.pop().unwrap();
-                    if let Ok(entries) = fs::read_dir(entry) {
-                        for entry in entries {
-                            if let Ok(entry) = entry {
-                                if let Ok(file_type) = entry.file_type() {
-                                    if file_type.is_dir() {
-                                        stack.push(entry.path());
-                                    } else if entry.file_name().to_str().unwrap().ends_with(".yml")
-                                    {
-                                        all_files.push(entry.path());
-                                    }
+    /// Creates a new [Localizer] object.
+    /// The object is empty and needs to be filled with localization data.
+    /// After the data is added, the [Localizer::resolve] function should be called to resolve the special localisation invocations.
+    pub fn new() -> Self {
+        Localizer { data: HashMap::new() }
+    }
+
+    /// Adds localization data from a directory.
+    /// The function expects a path to a directory that contains localization files.
+    pub fn add_from_path(&mut self, localization_src_path: String) {
+        // get every file in the directory and subdirectories
+        let path = Path::new(&localization_src_path);
+        if path.is_dir() {
+            // a stack to keep track of the directories
+            let mut stack: Vec<PathBuf> = Vec::new();
+            stack.push(PathBuf::from(path));
+            // a vector to keep track of all the files
+            let mut all_files: Vec<PathBuf> = Vec::new();
+            while !stack.is_empty() {
+                let entry = stack.pop().unwrap();
+                if let Ok(entries) = fs::read_dir(entry) {
+                    for entry in entries {
+                        if let Ok(entry) = entry {
+                            if let Ok(file_type) = entry.file_type() {
+                                if file_type.is_dir() {
+                                    stack.push(entry.path());
+                                } else if entry.file_name().to_str().unwrap().ends_with(".yml")
+                                {
+                                    all_files.push(entry.path());
                                 }
                             }
                         }
                     }
                 }
-                // having gone through all the directories, we can now read the files
-                for entry in all_files {
-                    // read the file to string
-                    let contents = fs::read_to_string(entry).unwrap();
-                    //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
-                    //so we doing the thing ourselves :)
+            }
+            // having gone through all the directories, we can now read the files
+            for entry in all_files {
+                // read the file to string
+                let contents = fs::read_to_string(entry).unwrap();
+                //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
+                //so we doing the thing ourselves :)
 
-                    //parse the 'yaml' file
-                    let mut key = String::new();
-                    let mut value = String::new();
-                    let mut past = false;
-                    let mut quotes = false;
-                    for char in contents.chars() {
-                        match char {
-                            ' ' | '\t' => {
+                //parse the 'yaml' file
+                let mut key = String::new();
+                let mut value = String::new();
+                let mut past = false;
+                let mut quotes = false;
+                for char in contents.chars() {
+                    match char {
+                        ' ' | '\t' => {
+                            if quotes {
+                                value.push(char);
+                            }
+                        }
+                        '\n' => {
+                            if past && !quotes && !value.is_empty() {
+                                //Removing trait_? good idea because the localisation isnt consistent enough with trait names
+                                //Removing _name though... controversial. Possibly a bad idea
+                                //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
+                                key = key
+                                    .trim_start_matches("trait_")
+                                    .trim_end_matches("_name")
+                                    .to_string();
+                                self.data.insert(
+                                    mem::take(&mut key),
+                                    GameString::wrap(mem::take(&mut value)),
+                                );
+                            } else {
+                                key.clear()
+                            }
+                            past = false;
+                            quotes = false;
+                        }
+                        ':' => {
+                            past = true;
+                        }
+                        '"' => {
+                            quotes = !quotes;
+                        }
+                        _ => {
+                            if past {
                                 if quotes {
                                     value.push(char);
                                 }
-                            }
-                            '\n' => {
-                                if past && !quotes && !value.is_empty() {
-                                    //Removing trait_? good idea because the localisation isnt consistent enough with trait names
-                                    //Removing _name though... controversial. Possibly a bad idea
-                                    //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
-                                    key = key
-                                        .trim_start_matches("trait_")
-                                        .trim_end_matches("_name")
-                                        .to_string();
-                                    data.insert(
-                                        mem::take(&mut key),
-                                        GameString::wrap(mem::take(&mut value)),
-                                    );
-                                } else {
-                                    key.clear()
-                                }
-                                past = false;
-                                quotes = false;
-                            }
-                            ':' => {
-                                past = true;
-                            }
-                            '"' => {
-                                quotes = !quotes;
-                            }
-                            _ => {
-                                if past {
-                                    if quotes {
-                                        value.push(char);
-                                    }
-                                } else {
-                                    key.push(char);
-                                }
-                            }
-                        }
-                    }
-                }
-                /*
-                From what I can gather there are two types of special localisation invocations:
-                - $key$ - use that key instead of the key that was used to look up the string
-                - [function(arg).function(arg)...] handling this one is going to be a nightmare
-                */
-                let iterable_clone = data.clone();
-                for (key, value) in iterable_clone.iter() {
-                    // resolve the borrowed keys
-                    let mut new_value = String::new();
-                    let mut foreign_key = String::new();
-                    let mut in_key = false;
-                    for c in value.chars() {
-                        if c == '$' {
-                            if in_key {
-                                let localized = data.get(&mem::take(&mut foreign_key));
-                                if localized.is_some() {
-                                    new_value.push_str(localized.unwrap().as_str());
-                                }
-                            }
-                            in_key = !in_key;
-                        } else {
-                            if in_key {
-                                foreign_key.push(c);
                             } else {
-                                new_value.push(c);
+                                key.push(char);
                             }
                         }
                     }
-                    data.insert(key.clone(), GameString::wrap(new_value));
                 }
-                hmap = Some(data);
             }
         }
-        //println!("{:?}", hmap);
-        Localizer { data: hmap }
+    }
+
+    /// Resolves the special localisation invocations.
+    pub fn resolve(&mut self) {
+        /*
+        From what I can gather there are two types of special localisation invocations:
+        - $key$ - use that key instead of the key that was used to look up the string
+        - [function(arg).function(arg)...] handling this one is going to be a nightmare
+        */
+        let iterable_clone = self.data.clone();
+        for (key, value) in iterable_clone.iter() {
+            // resolve the borrowed keys
+            let mut new_value = String::new();
+            let mut foreign_key = String::new();
+            let mut in_key = false;
+            for c in value.chars() {
+                if c == '$' {
+                    if in_key {
+                        let localized = self.data.get(&mem::take(&mut foreign_key));
+                        if localized.is_some() {
+                            new_value.push_str(localized.unwrap().as_str());
+                        }
+                    }
+                    in_key = !in_key;
+                } else {
+                    if in_key {
+                        foreign_key.push(c);
+                    } else {
+                        new_value.push(c);
+                    }
+                }
+            }
+            self.data.insert(key.clone(), GameString::wrap(new_value));
+        }
     }
 
     /// Localizes a string.
     pub fn localize(&self, key: &str) -> GameString {
-        if self.data.is_none() {
+        if self.data.is_empty() {
             return GameString::wrap(demangle_generic(key));
         }
-        let data = self.data.as_ref().unwrap();
-        let d = data.get(key);
+        let d = self.data.get(key);
         if d.is_some() {
             let d = d.unwrap().clone();
             //if the string contains []

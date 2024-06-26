@@ -16,7 +16,7 @@ If you see a way to improve the templates go ahead, create a fork and then do a 
 Alternatively if you want to create an entirely new set of templates with a different theme then also feel free to do so!
 I am entirely open to creating a toggleable output theme switch within the program itself that would allow the user to choose between different themes.
 
-### Rust sourcecode
+### Rust source code
 
 This is the main area where help is most needed I would say.
 Overall within the Rust source code you can help by: squashing bugs, optimising what I have written, writing documentation, improving accuracy with the in game state and adding new features.

@@ -1,9 +1,8 @@
 use core::panic;
 use std::{
-    env, fs,
-    io::{prelude::*, stdin, stdout},
-    time::SystemTime,
+    env, fs, io::{prelude::*, stdin, stdout}, path::Path, time::SystemTime
 };
+use serde_json;
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -32,7 +31,7 @@ use structures::{FromGameObject, Player};
 mod jinja_env;
 use jinja_env::create_env;
 
-// A module for handling the display of the parsed data.
+/// A module for handling the display of the parsed data.
 mod display;
 use display::{
     Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
@@ -60,6 +59,7 @@ fn create_dir_maybe(name: &str) {
 /// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
 /// 7. `--no-vis` - A flag that tells the program not to render any images
 /// 8. `--output` - A flag that tells the program where to output the rendered files.
+/// 9. `--include` - A flag that tells the program where to find additional files to include in the rendering.
 ///
 /// # Process
 ///
@@ -96,12 +96,14 @@ fn main() {
     let mut no_vis = false;
     // The output path, if provided by the user
     let mut output_path: Option<String> = None;
-    // The game path, if provided by the user
-    let mut game_path = None;
+    // The game path and mod paths, if provided by the user
+    let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
     // The language to use for localization
     let mut language = "english".to_string();
     // The depth to render the player's history
     let mut depth = 3;
+    // whether the game state should be dumped to json
+    let mut dump = false;
     if args.len() < 2 {
         print!("Enter the filename: ");
         stdout().flush().unwrap();
@@ -111,16 +113,34 @@ fn main() {
         if filename.is_empty() {
             panic!("No filename provided");
         }
+        loop {
+            print!("Is the file compressed? (y/n): ");
+            stdout().flush().unwrap();
+            let mut compressed_str = String::new();
+            stdin().read_line(&mut compressed_str).unwrap();
+            compressed_str = compressed_str.trim().to_string();
+            match compressed_str.as_str() {
+                "y" => {
+                    compressed = true;
+                    break;
+                }
+                "n" => {
+                    compressed = false;
+                    break;
+                }
+                _ => {
+                    println!("Invalid input");
+                }
+            }
+        }
         print!("Enter the game path(You can just leave this empty): ");
         stdout().flush().unwrap();
         let mut inp = String::new();
         stdin().read_line(&mut inp).unwrap();
         inp = inp.trim().to_string();
-        if inp.is_empty() {
-            game_path = None;
-        } else {
-            game_path = Some(inp);
-            println!("Using game files from {}", game_path.as_ref().unwrap());
+        if !inp.is_empty() {
+            println!("Using game files from {}", inp);
+            include_paths.push(inp);
         }
     } else {
         filename = args[1].clone();
@@ -145,12 +165,14 @@ fn main() {
                     println!("Setting depth to {}", depth)
                 }
                 "--game-path" => {
-                    game_path = Some(
+                    let game_path = Some(
                         iter.next()
                             .expect("Game path argument requires a value")
                             .clone(),
                     );
                     println!("Using game files from {}", game_path.as_ref().unwrap());
+                    //whatever happens we want the game path to be the at the front
+                    include_paths.insert(0, game_path.unwrap());
                 }
                 "--zip" => {
                     compressed = true;
@@ -173,26 +195,45 @@ fn main() {
                     );
                     println!("Outputting to {}", output_path.as_ref().unwrap());
                 }
+                "--include" => {
+                    let mut path = iter.next();
+                    if path.is_none() {
+                        panic!("Include argument requires a value");
+                    }
+                    while path.is_some() {
+                        include_paths.push(path.unwrap().clone());
+                        let next = iter.next();
+                        if next.is_none() {
+                            break;
+                        }
+                        path = next;
+                    }
+                }
+                "--dump" => {
+                    dump = true;
+                }
                 _ => {
                     println!("Unknown argument: {}", arg);
                 }
             }
         }
     }
-    let localization_path;
-    let map;
-    if game_path.is_some() {
-        localization_path = Some(game_path.clone().unwrap() + "/localization/" + language.as_str());
-        if !no_vis {
-            map = Some(GameMap::new(&game_path.unwrap()));
-        } else {
-            map = None;
+    let mut localizer = Localizer::new();
+    let mut map = None;
+    if !include_paths.is_empty() {
+        for path in include_paths.iter().rev(){
+            let loc_path = path.clone() + "/localization/" + language.as_str();
+            localizer.add_from_path(loc_path);
+            if !no_vis && map.is_none() {
+                let map_data = path.clone() + "/map_data";
+                let p = Path::new(&map_data);
+                if p.exists() && p.is_dir() {
+                    map = Some(GameMap::new(path));
+                }
+            }
         }
-    } else {
-        localization_path = None;
-        map = None;
     }
-    let localizer = Localizer::new(localization_path);
+    localizer.resolve();
     //initialize the save file
     let save: SaveFile;
     if compressed {
@@ -364,6 +405,10 @@ fn main() {
         while let Some(obj) = queue.pop() {
             obj.render_all(&mut queue, &mut renderer);
         }
+    }
+    if dump {
+        let json = serde_json::to_string_pretty(&game_state).unwrap();
+        fs::write("game_state.json", json).unwrap();
     }
     //Get the ending time
     let end_time = SystemTime::now();

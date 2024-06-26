@@ -415,7 +415,12 @@ impl Character {
         let mut provinces = Vec::new();
         for title in self.titles.iter(){
             let title = title.get_internal();
-            provinces.append(&mut title.get_de_jure_barony_keys());
+            let key = title.get_key().unwrap();
+            if key.starts_with("e_") || key.starts_with("k_"){ //for kingdoms and empires we don't want to add the de jure baronies
+                continue
+            } else {
+                provinces.append(&mut title.get_de_jure_barony_keys());
+            }
         }
         for vassal in self.vassals.iter() {
             match vassal {
