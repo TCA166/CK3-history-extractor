@@ -1,11 +1,14 @@
 # CK3-history-extractor
 
-[![GitHub Pages Documentation](https://img.shields.io/badge/GitHub_Pages-Documentation-blue)](https://tca166.github.io/CK3-history-extractor/ck3_history_extractor)
-[![GitHub Pages Documentation](https://img.shields.io/badge/GitHub_Pages-Example-fuchsia)](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html)
-[![Rust](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml/badge.svg)](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml)
+[![Download](https://img.shields.io/badge/Download-green)](https://github.com/TCA166/CK3-history-extractor/releases/latest)
+[![Rust Documentation](https://img.shields.io/badge/GitHub_Pages-Documentation-blue)](https://tca166.github.io/CK3-history-extractor/ck3_history_extractor)
+[![Example](https://img.shields.io/badge/GitHub_Pages-Example-fuchsia)](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html)
+[![GitHub Release](https://img.shields.io/github/v/release/TCA166/CK3-history-extractor)](https://github.com/TCA166/CK3-history-extractor/releases/latest)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/TCA166/CK3-history-extractor/total)
+[![Tests](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml/badge.svg)](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml)
 
-A program designed for creating an encyclopedia containing your ck3 history  
-It goes through the lineage of every player in the save file (meaning multiplayer save files also work) and extracts data about every character it encounters and their associates.
+A program for generating a wikipedia of your CK3 playthrough.
+It goes through the lineage of every player in the save file and extracts data about every character, title, religion, culture, etc. it encounters.
 It even renders cool graphs that depict your history.
 You can preview how you can expect the result to look like in your browser [here](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html)
 
@@ -16,7 +19,7 @@ There are three potential versions of the program:
 
 - **Release** - Every now and then I release a new GitHub release that has compiled binaries attached.
     You can simply download those binaries and use them.
-    For those unfamiliar with GitHub [go here](https://github.com/TCA166/CK3-history-extractor/releases) and this is the version you should honestly use.
+    For those unfamiliar with GitHub **[go here](https://github.com/TCA166/CK3-history-extractor/releases/latest)** and this is the version you should honestly use.
 - **Dev** - You can also just compile the program from source on your machine of choice. If you have no clue how the rust compilation system works just try running:
 
     ```sh
@@ -78,7 +81,7 @@ And here are the arguments that the utility accepts as of right now:
 5. ```--no-vis``` disables all forms of visualization within the output
 6. ```--language``` toggles which localization files shall be used if the game path is provided
 7. ```--output %s``` changes where the output folder will be located
-8. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from
+8. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
 9. ```--dump``` makes the tool dump all the extracted data into a json file
 
 ## Mod support
@@ -87,6 +90,13 @@ This program should work just fine on modded save files.
 Some specific aspects may be represented inaccurately to the in game state, but that can be alleviated with providing the tool with the paths to the mods using the ```include``` argument.
 Now naturally very invasive mods allowing for individual country de jure drift, or using weird non standard title naming schemes might break the tool.
 If that occurs please do let me know and I shall see what I can do.
+
+### Load order
+
+Internally all provides paths (those added via include and game-path) are handled in the same way.
+Iteratively these paths are searched for localization and a valid map definition, with the first path provided being searched almost last.
+Once a valid map definition is found this definition is used and is expected to be entirely valid.
+The game path is loaded last.
 
 ## Output example
 
@@ -117,7 +127,7 @@ This also applies to feature suggestions and general feedback.
 
 The tool has been rewritten using Rust.
 Currently I'm working on new features and bugfixes.
-Be sure to start this repository or watch it to get regular updates regarding the process.
+Be sure to star this repository or watch it to get regular updates regarding the process.
 If you want to contribute feel free to do so!
 Plenty of things to be done, just read [this](./CONTRIBUTING.md).
 
