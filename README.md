@@ -3,8 +3,6 @@
 [![Download](https://img.shields.io/badge/Download-green)](https://github.com/TCA166/CK3-history-extractor/releases/latest)
 [![Rust Documentation](https://img.shields.io/badge/GitHub_Pages-Documentation-blue)](https://tca166.github.io/CK3-history-extractor/ck3_history_extractor)
 [![Example](https://img.shields.io/badge/GitHub_Pages-Example-fuchsia)](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html)
-[![GitHub Release](https://img.shields.io/github/v/release/TCA166/CK3-history-extractor)](https://github.com/TCA166/CK3-history-extractor/releases/latest)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/TCA166/CK3-history-extractor/total)
 [![Tests](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml/badge.svg)](https://github.com/TCA166/CK3-history-extractor/actions/workflows/rust.yml)
 
 A program for generating a wikipedia of your CK3 playthrough.

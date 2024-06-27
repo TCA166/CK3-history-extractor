@@ -3,6 +3,7 @@ use std::{
     env, fs, io::{prelude::*, stdin, stdout}, path::Path
 };
 use serde_json;
+use dialoguer::{Input, Confirm, Select};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -97,6 +98,7 @@ fn main() {
     // The game path and mod paths, if provided by the user
     let mut game_path: Option<String> = None;
     let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
+    let languages = vec!["english", "french", "german", "korean", "russian", "simp_chinese", "spanish"];
     // The language to use for localization
     let mut language = "english".to_string();
     // The depth to render the player's history
@@ -104,45 +106,97 @@ fn main() {
     // whether the game state should be dumped to json
     let mut dump = false;
     if args.len() < 2 {
-        if atty::is(atty::Stream::Stdin) {
-            print!("Enter the filename: ");
-            stdout().flush().unwrap();
-        }
-        //raw file contents
-        stdin().read_line(&mut filename).unwrap();
-        filename = filename.trim().to_string();
-        if filename.is_empty() {
-            panic!("No filename provided");
-        }
-        if atty::is(atty::Stream::Stdin) { //console interface only if we are in a terminal
-            loop {
-                print!("Is the file compressed? (y/n): ");
-                stdout().flush().unwrap();
-                let mut compressed_str = String::new();
-                stdin().read_line(&mut compressed_str).unwrap();
-                compressed_str = compressed_str.trim().to_string();
-                match compressed_str.as_str() {
-                    "y" => {
-                        compressed = true;
-                        break;
-                    }
-                    "n" => {
-                        compressed = false;
-                        break;
-                    }
-                    _ => {
-                        println!("Invalid input");
-                    }
-                }
+        if atty::isnt(atty::Stream::Stdin) {
+            //raw file contents
+            stdin().read_line(&mut filename).unwrap();
+            filename = filename.trim().to_string();
+            if filename.is_empty() {
+                panic!("No filename provided");
             }
-            print!("Enter the game path(You can just leave this empty): ");
-            stdout().flush().unwrap();
-            let mut inp = String::new();
-            stdin().read_line(&mut inp).unwrap();
-            inp = inp.trim().to_string();
-            if !inp.is_empty() {
-                game_path = Some(inp.clone());
+        } else { //console interface only if we are in a terminal
+            filename = Input::<String>::new()
+                .with_prompt("Enter the save file path")
+                .validate_with( |input: &String| -> Result<(), &str> {
+                    let p = Path::new(input);
+                    if p.exists() && p.is_file() {
+                        Ok(())
+                    } else {
+                        Err("File does not exist")
+                    }
+                })
+                .interact()
+                .unwrap();
+            compressed = Confirm::new()
+                .with_prompt("Is the file compressed?")
+                .default(false)
+                .interact()
+                .unwrap();
+            game_path = Input::<String>::new()
+                .with_prompt("Enter the game path [empty for None]")
+                .allow_empty(true)
+                .validate_with( |input: &String| -> Result<(), &str> {
+                    if input.is_empty() {
+                        return Ok(());
+                    }
+                    let p = Path::new(input);
+                    if p.exists() && p.is_dir() {
+                        Ok(())
+                    } else {
+                        Err("Path does not exist")
+                    }
+                })
+                //.with_initial_text("/common/Crusader Kings III/game") //TODO this doesn't work for some reason, library issues?
+                .interact().map_or(None, |x| if x.is_empty() { None } else { Some(x) });
+            depth = Input::<usize>::new()
+                .with_prompt("Enter the rendering depth")
+                .default(3)
+                .interact()
+                .unwrap();
+            let language_selection = Select::new()
+                .with_prompt("Choose the localization language")
+                .items(&languages)
+                .default(0)
+                .interact()
+                .unwrap();
+            if language_selection != 0 {
+                language = languages[language_selection].to_string();
             }
+            let include_input = Input::<String>::new()
+                .with_prompt("Enter the include paths separated by a coma [empty for None]")
+                .allow_empty(true)
+                .validate_with( |input: &String| -> Result<(), &str> {
+                    if input.is_empty() {
+                        return Ok(());
+                    }
+                    let paths: Vec<&str> = input.split(',').collect();
+                    for p in paths.iter() {
+                        let path = Path::new(p.trim());
+                        if !path.exists() || !path.is_dir() {
+                            return Err("Path does not exist");
+                        }
+                    }
+                    Ok(())
+                })
+                .interact()
+                .unwrap();
+            if !include_input.is_empty() {
+                include_paths = include_input.split(',').map(|x| x.trim().to_string()).collect();
+            }
+            output_path = Input::<String>::new()
+                .with_prompt("Enter the output path [empty for cwd]")
+                .allow_empty(true)
+                .validate_with( |input: &String| -> Result<(), &str> {
+                    if input.is_empty() {
+                        return Ok(());
+                    }
+                    let p = Path::new(input);
+                    if p.exists() && p.is_dir() {
+                        Ok(())
+                    } else {
+                        Err("Path does not exist")
+                    }
+                })
+                .interact().map_or(None, |x| if x.is_empty() { None } else { Some(x) });
         }
     } else { //console interface
         filename = args[1].clone();
@@ -177,6 +231,7 @@ fn main() {
                     compressed = true;
                 }
                 "--language" => {
+                    //we don't validate the language here, args are trusted, if someone uses them to mess with the behaviour we let them
                     language = iter
                         .next()
                         .expect("Language argument requires a value")
@@ -368,7 +423,7 @@ fn main() {
             }
         }
     }
-    println!("Savefile parsing complete");
+    println!("Save file parsing complete");
     //prepare things for rendering
     let grapher;
     if !no_vis {
