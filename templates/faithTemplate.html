@@ -19,9 +19,9 @@
                         <table class="table table-bordered card-body mb-0">
                             <thead>
                                 <tr>
-                                    <th scope="col">{{faith.tenets[0]}}</th>
-                                    <th scope="col">{{faith.tenets[1]}}</th>
-                                    <th scope="col">{{faith.tenets[2]}}</th>
+                                    {%for tenet in faith.tenets%}
+                                    <th scope="col">{{tenet}}</th>
+                                    {%endfor%}
                                 </tr>
                             </thead>
                         </table>

@@ -10,8 +10,8 @@
             <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
         </header>
         <main class="m-2">
-            <div class="container-fluid" style="text-align: center">
-                <div class="row" style="text-align: left">
+            <div class="container-fluid text-center">
+                <div class="row text-start">
                     <div class="col">
                         Date of birth: {{character.birth}}<br />
                         {%if character.dead%}
@@ -30,7 +30,7 @@
                         {%endif%}
                     </div>
                 </div>
-                <div class="row" style="margin-bottom:10px">
+                <div class="row mb-2">
                     <div class="col" class="w-50">
                         <div class="card">
                             <div class="card-header">
@@ -65,28 +65,23 @@
                             <div class="card-header">
                                 Traits
                             </div>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item">
-                                    {%for trait in character.traits%}
-                                    {{trait}} |
-                                    {%endfor%}
-                                    <!-- ignored for now
-                                    {%for trait in character.recessive%}
-                                    {{trait}} |
-                                    {%endfor%}
-                                    -->
-                                </li>
-                            </ul>
+                            <div class="card-body row-cols-*">
+                                {%for trait in character.traits%}
+                                <div class="card col p-2 d-inline-block">
+                                    {{trait}}
+                                </div>
+                                {%endfor%}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="row" style="margin-bottom:10px">
+                <div class="row mb-2">
                     <div class="col" class="w-50">
                         <div class="card">
                             <div class="card-header">
                                 Family
                             </div>
-                            <ul class="list-group list-group-flush" style="text-align:left">
+                            <ul class="list-group list-group-flush text-start">
                                 <li class="list-group-item">Parents: {%for parent in character.parents%} {{parent|render_ref}} {%endfor%}</li>
                                 {%if not character.dead%}
                                 <li class="list-group-item">Spouses: {%for spouse in character.spouses%} {{spouse|render_ref}} {%endfor%}</li>
@@ -108,21 +103,22 @@
                         </div>
                         {%endif%}
                         {%if character.artifacts|length != 0%}
-                        <!--TODO finish the interface, no clue how it should look like yet-->
                         <div class="card">
                             <div class="card-header" data-bs-toggle="collapse" href="#collapseArtifacts" role="button" aria-expanded="false" aria-controls="collapseArtifacts">
                                 Inventory
                             </div>
-                            <ul class="collapse list-group list-group-flush" id="collapseArtifacts">
+                            <div class="collapse row-cols-*" id="collapseArtifacts">
                                 {%for artifact in character.artifacts%}
-                                    <li class="list-group-item" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" data-bs-title="
-                                    <ul class='list-group list-group-flush'>
-                                        <li class='list-group-item'>Type: {{artifact.type}}</li>
-                                        <li class='list-group-item'>Rarity: {{artifact.rarity}}</li> 
-                                    </ul>
-                                    ">{{artifact.name}}</li>
+                                <div class="card col m-2 p-2 d-inline-block" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" data-bs-title="
+                                <ul class='list-group list-group-flush'>
+                                    <li class='list-group-item'>{{artifact.type}}</li>
+                                    <li class='list-group-item'>{{artifact.rarity}}</li>
+                                    <li class='list-group-item'>{{artifact.description|escape}}</li>
+                                </ul>">
+                                {{artifact.name}}
+                                </div>
                                 {%endfor%}
-                            </ul>
+                            </div>
                         </div>
                         {%endif%}
                         {%if character.memories|length != 0%}
@@ -151,7 +147,7 @@
                             <div class="card-header">
                                 Domain
                             </div>
-                            <ul class="list-group list-group-flush" style="text-align:left">
+                            <ul class="list-group list-group-flush text-start">
                                 {%if character.titles|length > 0%}
                                 <li class="list-group-item">Titles: 
                                     {%for title in character.titles%} 

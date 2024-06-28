@@ -49,9 +49,9 @@
                         <div class="card-header">
                             Traditions:
                         </div>
-                        <div class="card-body card-deck d-flex">
+                        <div class="card-body row-cols-*">
                             {%for tradition in culture.traditions%}
-                            <div class="card card-body" style="display: inline-block;">{{tradition}}</div>
+                            <div class="card d-inline-block p-2">{{tradition}}</div>
                             {%endfor%}
                         </div>
                     </div>
