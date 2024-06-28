@@ -107,12 +107,30 @@
                             </div>
                         </div>
                         {%endif%}
+                        {%if character.artifacts|length != 0%}
+                        <!--TODO finish the interface, no clue how it should look like yet-->
+                        <div class="card">
+                            <div class="card-header" data-bs-toggle="collapse" href="#collapseArtifacts" role="button" aria-expanded="false" aria-controls="collapseArtifacts">
+                                Inventory
+                            </div>
+                            <ul class="collapse list-group list-group-flush" id="collapseArtifacts">
+                                {%for artifact in character.artifacts%}
+                                    <li class="list-group-item" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" data-bs-title="
+                                    <ul class='list-group list-group-flush'>
+                                        <li class='list-group-item'>Type: {{artifact.type}}</li>
+                                        <li class='list-group-item'>Rarity: {{artifact.rarity}}</li> 
+                                    </ul>
+                                    ">{{artifact.name}}</li>
+                                {%endfor%}
+                            </ul>
+                        </div>
+                        {%endif%}
                         {%if character.memories|length != 0%}
                         <div class="card">
                             <div class="card-header" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
                                 Character Memories
                             </div>
-                            <ul class="collapse list-group" id="collapseExample">
+                            <ul class="collapse list-group list-group-flush" id="collapseExample">
                                 {%for memory in character.memories%}
                                 <li class="list-group-item">
                                     {{memory.date}}:{%if memory.type is defined%}{{memory.type}}{%endif%}<br>
@@ -158,4 +176,8 @@
             </div>
         </main>
     </body>
+    <script>
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    </script>
 </html>

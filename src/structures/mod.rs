@@ -42,6 +42,10 @@ pub use lineage::LineageNode;
 mod derived_ref;
 pub use derived_ref::{serialize_array, DerivedRef};
 
+/// A submodule that provides the [Artifact] object.
+mod artifact;
+pub use artifact::Artifact;
+
 /// A trait for objects that can be created from a [GameObject].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.

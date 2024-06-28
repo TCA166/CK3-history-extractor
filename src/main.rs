@@ -418,6 +418,17 @@ fn main() {
                 let p = Player::from_game_object(&r, &mut game_state);
                 players.push(p);
             }
+            "artifacts" => {
+                let artifacts = i.to_object();
+                let arr = artifacts.get_object_ref("artifacts");
+                for a in arr.get_obj_iter() {
+                    let a = a.1.as_object();
+                    if a.is_none() {
+                        continue;
+                    }
+                    game_state.add_artifact(a.unwrap());
+                }
+            }
             _ => {
                 i.skip();
             }
@@ -470,7 +481,7 @@ fn main() {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write("game_state.json", json).unwrap();
     }
-    if atty::is(atty::Stream::Stdin) {
+    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
         print!("Press enter to exit...");
         stdout().flush().unwrap();
         let mut inp = String::new();

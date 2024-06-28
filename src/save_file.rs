@@ -65,17 +65,28 @@ impl Section {
         self.invalidate();
         let mut quotes = false;
         // storage
-        let mut key = String::new();
-        let mut val = String::new();
+        let mut key = String::new(); // the key of the key value pair
+        let mut val = String::new(); // the value of the key value pair
         let mut past_eq = false; // we use this flag to determine if we are parsing a key or a value
-        let mut comment = false;
-        let mut maybe_array = false;
-        let mut depth = 0; // how deep we are in the object tree
+        let mut comment = false; 
+        let mut maybe_array = false; // if this is true, that means we encountered key =value
+        let mut escape = false; // escape character toggle
+        let mut depth:u32 = 0; // how deep we are in the object tree
         let mut object: GameObject = GameObject::new();
         //initialize the object stack
         let mut stack: Vec<GameObject> = Vec::new();
         stack.push(object);
         let mut off = self.offset.get_internal_mut();
+
+        /// Add a character to the key or value
+        fn add_normal(c: char, key: &mut String, val: &mut String, past_eq: &mut bool) {
+            if *past_eq {
+                val.push(c);
+            } else {
+                key.push(c);
+            }
+        }
+
         //initialize the key stack
         for (ind, c) in self.contents[*off..].char_indices() {
             match c {
@@ -86,67 +97,61 @@ impl Section {
                     if comment {
                         continue;
                     }
-                    if quotes {
-                        if past_eq {
-                            val.push(c);
-                        } else {
-                            key.push(c);
-                        }
-                        continue;
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
+                    } else {
+                        maybe_array = false;
+                        depth += 1;
+                        stack.push(GameObject::from_name(mem::take(&mut key)));
+                        past_eq = false;
                     }
-                    maybe_array = false;
-                    depth += 1;
-                    stack.push(GameObject::from_name(mem::take(&mut key)));
-                    past_eq = false;
                 }
                 '}' => {
                     // we have reached the end of an object
                     if comment {
                         continue;
                     }
-                    if quotes {
-                        if past_eq {
-                            val.push(c);
-                        } else {
-                            key.push(c);
-                        }
-                        continue;
-                    }
-                    maybe_array = false;
-                    // if there was an assignment, we insert the key value pair
-                    if past_eq && !val.is_empty() {
-                        stack.last_mut().unwrap().insert(
-                            mem::take(&mut key),
-                            SaveFileValue::String(Rc::new(mem::take(&mut val))),
-                        );
-                        past_eq = false;
-                    }
-                    // if there wasn't an assignment but we still gathered some data
-                    else if !key.is_empty() {
-                        stack
-                            .last_mut()
-                            .unwrap()
-                            .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
-                    }
-                    depth -= 1;
-                    if depth > 0 {
-                        // if we are still in an object, we pop the object and insert it into the parent object
-                        let inner = stack.pop().unwrap();
-                        let name = inner.get_name().to_string();
-                        let val = SaveFileValue::Object(inner);
-                        if name.is_empty() {
-                            //check if unnamed node, implies we are dealing with an array of unnamed objects
-                            stack.last_mut().unwrap().push(val);
-                        } else {
-                            stack.last_mut().unwrap().insert(name, val);
-                        }
-                    } else if depth == 0 {
-                        // we have reached the end of the object we are parsing, we return the object
-                        *off += ind + 1;
-                        break;
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
                     } else {
-                        // sanity check
-                        panic!("Depth is negative at {}", *off);
+                        maybe_array = false;
+                        // if there was an assignment, we insert the key value pair
+                        if past_eq && !val.is_empty() {
+                            stack.last_mut().unwrap().insert(
+                                mem::take(&mut key),
+                                SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                            );
+                            past_eq = false;
+                        }
+                        // if there wasn't an assignment but we still gathered some data
+                        else if !key.is_empty() {
+                            stack
+                                .last_mut()
+                                .unwrap()
+                                .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        }
+                        depth -= 1;
+                        if depth > 0 {
+                            // if we are still in an object, we pop the object and insert it into the parent object
+                            let inner = stack.pop().unwrap();
+                            let name = inner.get_name().to_string();
+                            let val = SaveFileValue::Object(inner);
+                            if name.is_empty() {
+                                //check if unnamed node, implies we are dealing with an array of unnamed objects
+                                stack.last_mut().unwrap().push(val);
+                            } else {
+                                stack.last_mut().unwrap().insert(name, val);
+                            }
+                        } else if depth == 0 {
+                            // we have reached the end of the object we are parsing, we return the object
+                            *off += ind + 1;
+                            break;
+                        } else {
+                            // sanity check
+                            panic!("Depth is negative at {}", *off);
+                        }
                     }
                 }
                 '"' => {
@@ -154,27 +159,38 @@ impl Section {
                     if comment {
                         continue;
                     }
-                    quotes = !quotes;
+                    if escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
+                    } else {
+                        quotes = !quotes;
+                    }
                 }
                 '\n' => {
                     // we have reached the end of a line, we check if we have a key value pair
                     if comment {
                         comment = false;
+                        continue;
                     }
-                    maybe_array = false;
-                    if past_eq {
-                        // we have a key value pair
-                        stack.last_mut().unwrap().insert(
-                            mem::take(&mut key),
-                            SaveFileValue::String(Rc::new(mem::take(&mut val))),
-                        );
-                        past_eq = false; // we reset the past_eq flag
-                    } else if !key.is_empty() {
-                        // we have just a key { \n key \n }
-                        stack
-                            .last_mut()
-                            .unwrap()
-                            .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
+                    } else {
+                        maybe_array = false;
+                        if past_eq {
+                            // we have a key value pair
+                            stack.last_mut().unwrap().insert(
+                                mem::take(&mut key),
+                                SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                            );
+                            past_eq = false; // we reset the past_eq flag
+                        } else if !key.is_empty() {
+                            // we have just a key { \n key \n }
+                            stack
+                                .last_mut()
+                                .unwrap()
+                                .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                        }
                     }
                 }
                 ' ' | '\t' => {
@@ -182,7 +198,10 @@ impl Section {
                     if comment {
                         continue;
                     }
-                    if !quotes {
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
+                    } else {
                         // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() {
@@ -201,12 +220,6 @@ impl Section {
                             // in case { something something something } OR key =value we want to preserve the spaces
                             maybe_array = true;
                         }
-                    } else {
-                        if past_eq {
-                            val.push(c);
-                        } else {
-                            key.push(c);
-                        }
                     }
                 }
                 '=' => {
@@ -215,25 +228,27 @@ impl Section {
                     }
                     maybe_array = false;
                     // if we have an assignment, we toggle adding from key to value
-                    if quotes {
-                        if past_eq {
-                            val.push(c);
-                        } else {
-                            key.push(c);
-                        }
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
                     } else {
                         past_eq = true;
                     }
                 }
                 '#' => {
-                    if quotes {
-                        if past_eq {
-                            val.push(c);
-                        } else {
-                            key.push(c);
-                        }
+                    if quotes || escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
                     } else {
                         comment = true;
+                    }
+                }
+                '\\' => {
+                    if escape {
+                        add_normal(c, &mut key, &mut val, &mut past_eq);
+                        escape = false;
+                    } else {
+                        escape = true;
                     }
                 }
                 _ => {
@@ -249,11 +264,8 @@ impl Section {
                             .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
                         maybe_array = false;
                     }
-                    if past_eq {
-                        val.push(c);
-                    } else {
-                        key.push(c);
-                    }
+                    //we simply append the character to the key or value
+                    add_normal(c, &mut key, &mut val, &mut past_eq);
                 }
             }
         }

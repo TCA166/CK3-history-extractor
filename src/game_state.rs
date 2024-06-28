@@ -2,7 +2,7 @@ use std::collections::{hash_map::Iter, HashMap};
 
 use super::game_object::{GameId, GameObject, GameString};
 use super::structures::{
-    Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived, Memory, Title,
+    Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived, Memory, Title, Artifact
 };
 use super::types::{Shared, Wrapper, WrapperMut};
 
@@ -25,6 +25,8 @@ pub struct GameState {
     dynasties: HashMap<GameId, Shared<Dynasty>>,
     /// A memory id->Memory transform
     memories: HashMap<GameId, Shared<Memory>>,
+    /// A artifact id->Artifact transform
+    artifacts: HashMap<GameId, Shared<Artifact>>,
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
@@ -41,6 +43,7 @@ impl GameState {
             cultures: HashMap::new(),
             dynasties: HashMap::new(),
             memories: HashMap::new(),
+            artifacts: HashMap::new(),
             traits_lookup: Vec::new(),
             contract_transform: HashMap::new(),
         }
@@ -142,6 +145,29 @@ impl GameState {
             let v = Shared::wrap(Memory::dummy(*key));
             self.memories.insert(*key, v.clone());
             v
+        }
+    }
+
+    /// Get an artifact by key
+    pub fn get_artifact(&mut self, key: &GameId) -> Shared<Artifact> {
+        if self.artifacts.contains_key(key) {
+            self.artifacts.get(key).unwrap().clone()
+        } else {
+            let v = Shared::wrap(Artifact::dummy(*key));
+            self.artifacts.insert(*key, v.clone());
+            v
+        }
+    }
+
+    pub fn add_artifact(&mut self, value: &GameObject) {
+        let key = value.get_name().parse::<GameId>().unwrap();
+        if self.artifacts.contains_key(&key) {
+            let a = self.artifacts.get(&key).unwrap().clone();
+            a.get_internal_mut().init(value, self);
+        } else {
+            let a = Shared::wrap(Artifact::dummy(key));
+            self.artifacts.insert(key, a.clone());
+            a.get_internal_mut().init(value, self);
         }
     }
 
@@ -317,13 +343,14 @@ impl Serialize for GameState {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
-        let mut state = serializer.serialize_struct("GameState", 6)?;
+        let mut state = serializer.serialize_struct("GameState", 7)?;
         state.serialize_field("characters", &self.characters)?;
         state.serialize_field("titles", &self.titles)?;
         state.serialize_field("faiths", &self.faiths)?;
         state.serialize_field("cultures", &self.cultures)?;
         state.serialize_field("dynasties", &self.dynasties)?;
         state.serialize_field("memories", &self.memories)?;
+        state.serialize_field("artifacts", &self.artifacts)?;
         state.end()
     }
 }

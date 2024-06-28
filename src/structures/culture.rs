@@ -6,21 +6,21 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
     game_object::{GameObject, GameString},
     game_state::GameState,
-    types::{Wrapper, WrapperMut},
+    types::WrapperMut,
 };
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a culture in the game
 pub struct Culture {
     id: GameId,
-    name: GameString,
-    ethos: GameString,
-    heritage: GameString,
-    martial: GameString,
+    name: Option<GameString>,
+    ethos: Option<GameString>,
+    heritage: Option<GameString>,
+    martial: Option<GameString>,
     date: Option<GameString>,
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
-    language: GameString,
+    language: Option<GameString>,
     depth: usize,
     localized: bool,
     name_localized: bool,
@@ -63,14 +63,14 @@ fn get_date(base: &GameObject) -> Option<GameString> {
 impl DummyInit for Culture {
     fn dummy(id: GameId) -> Self {
         Culture {
-            name: GameString::wrap("".to_owned().into()),
-            ethos: GameString::wrap("".to_owned().into()),
-            heritage: GameString::wrap("".to_owned().into()),
-            martial: GameString::wrap("".to_owned().into()),
+            name: None,
+            ethos: None,
+            heritage: None,
+            martial: None,
             date: None,
             parents: Vec::new(),
             traditions: Vec::new(),
-            language: GameString::wrap("".to_owned().into()),
+            language: None,
             id: id,
             depth: 0,
             localized: false,
@@ -81,16 +81,16 @@ impl DummyInit for Culture {
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
         get_parents(&mut self.parents, &base, game_state);
         get_traditions(&mut self.traditions, &base);
-        self.name = base.get("name").unwrap().as_string();
+        self.name = Some(base.get("name").unwrap().as_string());
         let eth = base.get("ethos");
         if eth.is_some() {
             //this is possible, shoutout u/Kinc4id
-            self.ethos = eth.unwrap().as_string();
+            self.ethos = Some(eth.unwrap().as_string());
         }
-        self.heritage = base.get("heritage").unwrap().as_string();
-        self.martial = base.get("martial_custom").unwrap().as_string();
+        self.heritage = Some(base.get("heritage").unwrap().as_string());
+        self.martial = Some(base.get("martial_custom").unwrap().as_string());
         self.date = get_date(&base);
-        self.language = base.get("language").unwrap().as_string();
+        self.language = Some(base.get("language").unwrap().as_string());
     }
 }
 
@@ -100,7 +100,7 @@ impl GameObjectDerived for Culture {
     }
 
     fn get_name(&self) -> GameString {
-        self.name.clone()
+        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -162,17 +162,17 @@ impl Cullable for Culture {
             return;
         }
         if !self.name_localized {
-            self.name = localization.localize(self.name.as_str());
+            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
             self.name_localized = true;
         }
         if depth == 0 {
             return;
         }
         if !self.localized {
-            self.ethos = localization.localize(self.ethos.as_str());
-            self.heritage = localization.localize(self.heritage.as_str());
-            self.martial = localization.localize(self.martial.as_str());
-            self.language = localization.localize(self.language.as_str());
+            self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
+            self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));
+            self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str()));
+            self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str()));
             for t in &mut self.traditions {
                 *t = localization.localize(t.as_str());
             }

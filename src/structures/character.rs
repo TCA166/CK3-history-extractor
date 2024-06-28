@@ -6,7 +6,7 @@ use serde::{Serialize, ser::SerializeStruct};
 
 use crate::{display::{RenderableType, Localizer, Renderer, Cullable, Renderable}, game_object::{GameObject, GameString, SaveFileValue}, game_state::GameState, types::{Wrapper, WrapperMut}};
 
-use super::{serialize_array, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
+use super::{serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory, Shared, Title};
 
 /// An enum that holds either a character or a reference to a character.
 /// Effectively either a vassal([Character]) or a vassal([DerivedRef]) contract.
@@ -131,7 +131,8 @@ pub struct Character {
     female:bool,
     depth: usize,
     localized: bool,
-    name_localized: bool
+    name_localized: bool,
+    artifacts: Vec<Shared<Artifact>>
 }
 
 // So both faith and culture can be stored for a character in the latest leader of their house. 
@@ -272,7 +273,7 @@ fn get_traits(traits:&mut Vec<GameString>, base:&GameObject, game_state:&mut Gam
 }
 
 /// Parses the alive_data field of the character
-fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&mut f32, kills:&mut Vec<Shared<Character>>, languages:&mut Vec<GameString>, traits:&mut Vec<GameString>, memories:&mut Vec<Shared<Memory>>, game_state:&mut GameState){
+fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&mut f32, kills:&mut Vec<Shared<Character>>, languages:&mut Vec<GameString>, traits:&mut Vec<GameString>, memories:&mut Vec<Shared<Memory>>, artifacts:&mut Vec<Shared<Artifact>>, game_state:&mut GameState){
     let alive_node = base.get("alive_data");
     if alive_node.is_some(){
         let alive_data = base.get("alive_data").unwrap().as_object().unwrap();
@@ -301,6 +302,15 @@ fn parse_alive_data(base:&GameObject, piety:&mut f32, prestige:&mut f32, gold:&m
         if memory_node.is_some(){
             for m in memory_node.unwrap().as_object().unwrap().get_array_iter(){
                 memories.push(game_state.get_memory(&m.as_id()).clone());
+            }
+        }
+        let inventory_node = alive_data.get("inventory");
+        if inventory_node.is_some() {
+            let artifacts_node = inventory_node.unwrap().as_object().unwrap().get("artifacts");
+            if artifacts_node.is_some() {
+                for a in artifacts_node.unwrap().as_object().unwrap().get_array_iter(){
+                    artifacts.push(game_state.get_artifact(&a.as_id()).clone());
+                }
             }
         }
     }
@@ -471,7 +481,8 @@ impl DummyInit for Character{
             id: id,
             depth: 0,
             localized:false,
-            name_localized:false
+            name_localized:false,
+            artifacts: Vec::new()
         }
     }
 
@@ -495,7 +506,7 @@ impl DummyInit for Character{
         get_traits(&mut self.traits, &base, game_state);
         //find alive data
         if !self.dead {
-            parse_alive_data(&base, &mut self.piety, &mut self.prestige, &mut self.gold, &mut self.kills, &mut self.languages, &mut self.traits, &mut self.memories, game_state);
+            parse_alive_data(&base, &mut self.piety, &mut self.prestige, &mut self.gold, &mut self.kills, &mut self.languages, &mut self.traits, &mut self.memories, &mut self.artifacts, game_state);
         }
         //find landed data
         get_landed_data(&mut self.dread, &mut self.strength, &mut self.titles, &mut self.vassals, &base, game_state);
@@ -529,7 +540,7 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Character", 29)?;
+        let mut state = serializer.serialize_struct("Character", 30)?;
         state.serialize_field("name", &self.get_name())?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
@@ -600,6 +611,7 @@ impl Serialize for Character {
                 }
             }
         }
+        state.serialize_field("artifacts", &self.artifacts)?;
         state.serialize_field("vassals", &vassals)?;
         state.serialize_field("id", &self.id)?;
         if self.liege.is_some(){
@@ -664,6 +676,9 @@ impl Renderable for Character {
         }
         for m in self.memories.iter() {
             m.get_internal().render_participants(stack);
+        }
+        for a in self.artifacts.iter(){
+            a.get_internal().render_history(stack);
         }
     }
 }
@@ -767,6 +782,15 @@ impl Cullable for Character {
         }
         for s in self.memories.iter(){
             s.get_internal_mut().set_depth(depth - 1, localization);
+        }
+        //sort so that most worthy artifacts are shown first
+        self.artifacts.sort();
+        self.artifacts.reverse();
+        for s in self.artifacts.iter(){
+            let o = s.try_get_internal_mut();
+            if o.is_ok(){
+                o.unwrap().set_depth(depth - 1, localization);
+            }
         }
         if self.house.is_some(){
             let o = self.house.as_ref().unwrap().try_get_internal_mut();
