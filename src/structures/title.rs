@@ -278,30 +278,31 @@ impl Serialize for Title {
         let mut state = serializer.serialize_struct("Title", 10)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        if self.key.is_none() {
-            return state.end();
-        }
-        //match the first character of key
-        let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
-        match first_char {
-            'e' => {
-                state.serialize_field("tier", "Empire of")?;
+        if self.key.is_some() {
+            //match the first character of key
+            let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
+            match first_char {
+                'e' => {
+                    state.serialize_field("tier", "Empire of")?;
+                }
+                'k' => {
+                    state.serialize_field("tier", "Kingdom of")?;
+                }
+                'd' => {
+                    state.serialize_field("tier", "Duchy of")?;
+                }
+                'c' => {
+                    state.serialize_field("tier", "County of")?;
+                }
+                'b' => {
+                    state.serialize_field("tier", "Barony of")?;
+                }
+                _ => {
+                    state.serialize_field("tier", "")?;
+                }
             }
-            'k' => {
-                state.serialize_field("tier", "Kingdom of")?;
-            }
-            'd' => {
-                state.serialize_field("tier", "Duchy of")?;
-            }
-            'c' => {
-                state.serialize_field("tier", "County of")?;
-            }
-            'b' => {
-                state.serialize_field("tier", "Barony of")?;
-            }
-            _ => {
-                state.serialize_field("tier", "")?;
-            }
+        } else {
+            state.serialize_field("tier", "")?;
         }
         if self.de_jure.is_some() {
             let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());

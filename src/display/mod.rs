@@ -12,7 +12,7 @@ pub use map::GameMap;
 
 /// The graphing submodule that handles the creation of graphs from the game state.
 mod graph;
-pub use graph::Grapher;
+pub use graph::{Grapher, TreeNode};
 
 /// A submodule handling the rendering of the timeline page
 mod timeline;

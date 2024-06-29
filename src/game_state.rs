@@ -1,9 +1,10 @@
 use std::collections::{hash_map::Iter, HashMap};
 
+use crate::types::RefOrRaw;
+
 use super::game_object::{GameId, GameObject, GameString};
 use super::structures::{
-    Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived, Memory,
-    Title,
+    Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
 };
 use super::types::{Shared, Wrapper, WrapperMut};
 
@@ -250,30 +251,33 @@ impl GameState {
         }
     }
 
-    /// Gets data year->number of deaths for each culture
-    pub fn get_culture_graph_data(&self) -> HashMap<GameId, Vec<(u32, u32)>> {
-        let mut cultures = HashMap::new();
+    /// Returns a hashmap of classes of characters and their associated yearly death graphs
+    /// So for example if you provide a function that returns the dynasty of a character
+    /// you will get a hashmap of dynasties and their yearly death counts
+    pub fn get_yearly_deaths<F>(&self, associate: F) -> HashMap<GameId, Vec<(u32, u32)>>
+    where
+        F: Fn(RefOrRaw<Character>) -> Option<GameId>,
+    {
+        let mut result = HashMap::new();
         for (_, character) in &self.characters {
             let char = character.get_internal();
-            let c = char.get_culture();
-            if c.is_none() {
-                continue;
-            }
-            let culture = c.unwrap();
             let death_date = char.get_death_date();
             if death_date.is_none() {
                 continue;
             }
+            let key = associate(char);
+            if key.is_none() {
+                continue;
+            }
             let death_date = death_date.unwrap();
             let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            let culture_id = culture.get_internal().get_id();
-            let entry = cultures.entry(culture_id).or_insert(HashMap::new());
+            let entry = result.entry(key.unwrap()).or_insert(HashMap::new());
             let count = entry.entry(death_year).or_insert(0);
             *count += 1;
         }
         // convert the internal hashmaps to vectors
         let mut res = HashMap::new();
-        for (culture_id, data) in cultures {
+        for (culture_id, data) in result {
             let mut v = Vec::new();
             for (year, count) in &data {
                 v.push((*year, *count));
@@ -288,48 +292,6 @@ impl GameState {
             }
             v.sort_by(|a, b| a.0.cmp(&b.0));
             res.insert(culture_id, v);
-        }
-        return res;
-    }
-
-    /// Returns a hashmap year->number of deaths for a given faith
-    pub fn get_faiths_graph_data(&self) -> HashMap<GameId, Vec<(u32, u32)>> {
-        let mut faiths = HashMap::new();
-        for (_, character) in &self.characters {
-            let char = character.get_internal();
-            let f = char.get_faith();
-            if f.is_none() {
-                continue;
-            }
-            let faith = f.unwrap();
-            let death_date = char.get_death_date();
-            if death_date.is_none() {
-                continue;
-            }
-            let death_date = death_date.unwrap();
-            let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            let faith_id = faith.get_internal().get_id();
-            let entry = faiths.entry(faith_id).or_insert(HashMap::new());
-            let count = entry.entry(death_year).or_insert(0);
-            *count += 1;
-        }
-        // convert the internal hashmaps to vectors
-        let mut res = HashMap::new();
-        for (faith_id, data) in faiths {
-            let mut v = Vec::new();
-            for (year, count) in &data {
-                v.push((*year, *count));
-            }
-            let max_yr = data.keys().max().unwrap();
-            for yr in 0..=*max_yr {
-                if !data.contains_key(&yr)
-                    && ((yr != 0 && data.contains_key(&(yr - 1))) || data.contains_key(&(yr + 1)))
-                {
-                    v.push((yr, 0));
-                }
-            }
-            v.sort_by(|a, b| a.0.cmp(&b.0));
-            res.insert(faith_id, v);
         }
         return res;
     }

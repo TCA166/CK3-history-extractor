@@ -5,7 +5,7 @@ use minijinja::context;
 use serde::{ser::SerializeStruct, Serialize};
 
 use crate::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+    display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
     game_object::{GameObject, GameString, SaveFileValue},
     game_state::GameState,
     types::{Wrapper, WrapperMut},
@@ -75,11 +75,13 @@ impl Cullable for Vassal {
                     o.unwrap().set_depth(depth, localization);
                 }
             }
-            Vassal::Reference(r) => r
-                .get_internal()
-                .get_ref()
-                .get_internal_mut()
-                .set_depth(depth, localization),
+            Vassal::Reference(r) => {
+                let o = r.get_internal().get_ref();
+                let o = o.try_get_internal_mut();
+                if o.is_ok() {
+                    o.unwrap().set_depth(depth, localization);
+                }
+            }
         }
     }
 }
@@ -494,11 +496,6 @@ impl Character {
         self.date.clone()
     }
 
-    /// Gets the iterator of the children of the character
-    pub fn get_children_iter(&self) -> Iter<Shared<Character>> {
-        self.children.iter()
-    }
-
     /// Adds a character as a vassal of this character
     pub fn add_vassal(&mut self, vassal: Shared<Character>) {
         self.vassals.push(Vassal::Character(vassal));
@@ -662,6 +659,16 @@ impl GameObjectDerived for Character {
             return GameString::wrap("Unknown".to_string());
         }
         self.name.as_ref().unwrap().clone()
+    }
+}
+
+impl TreeNode for Character {
+    fn get_children_iter(&self) -> Iter<Shared<Character>> {
+        self.children.iter()
+    }
+
+    fn get_parent_iter(&self) -> Iter<Shared<Character>> {
+        self.parents.iter()
     }
 }
 

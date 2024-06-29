@@ -123,6 +123,11 @@ impl Renderable for Player {
             char.get_character()
                 .get_internal()
                 .render_all(stack, renderer);
+        let grapher = renderer.get_grapher();
+        if grapher.is_some() {
+            let last = self.lineage.last().unwrap().get_character();
+            grapher.unwrap().create_tree_graph::<Character>(last, true, &format!("{}/line.svg", renderer.get_path()));
+        }
         }
     }
 }

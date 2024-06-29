@@ -3,12 +3,14 @@ use minijinja::context;
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::super::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+    display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
     game_object::{GameObject, GameString},
     game_state::GameState,
-    types::WrapperMut,
 };
+
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
+
+use std::slice::Iter;
 
 /// A struct representing a culture in the game
 pub struct Culture {
@@ -18,6 +20,7 @@ pub struct Culture {
     heritage: Option<GameString>,
     martial: Option<GameString>,
     date: Option<GameString>,
+    children: Vec<Shared<Culture>>,
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
     language: Option<GameString>,
@@ -27,11 +30,21 @@ pub struct Culture {
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
-fn get_parents(parents: &mut Vec<Shared<Culture>>, base: &GameObject, game_state: &mut GameState) {
+fn get_parents(
+    parents: &mut Vec<Shared<Culture>>,
+    base: &GameObject,
+    id: GameId,
+    game_state: &mut GameState,
+) {
     let parents_obj = base.get("parents");
     if parents_obj.is_some() {
         for p in parents_obj.unwrap().as_object().unwrap().get_array_iter() {
-            parents.push(game_state.get_culture(&p.as_id()).clone());
+            let parent = game_state.get_culture(&p.as_id()).clone();
+            let r = parent.try_borrow_mut();
+            if r.is_ok() {
+                r.unwrap().register_child(game_state.get_culture(&id));
+            }
+            parents.push(parent.clone());
         }
     }
 }
@@ -69,6 +82,7 @@ impl DummyInit for Culture {
             martial: None,
             date: None,
             parents: Vec::new(),
+            children: Vec::new(),
             traditions: Vec::new(),
             language: None,
             id: id,
@@ -79,7 +93,7 @@ impl DummyInit for Culture {
     }
 
     fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        get_parents(&mut self.parents, &base, game_state);
+        get_parents(&mut self.parents, &base, self.id, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = Some(base.get("name").unwrap().as_string());
         let eth = base.get("ethos");
@@ -104,12 +118,28 @@ impl GameObjectDerived for Culture {
     }
 }
 
+impl TreeNode for Culture {
+    fn get_children_iter(&self) -> Iter<Shared<Self>> {
+        self.children.iter()
+    }
+
+    fn get_parent_iter(&self) -> Iter<Shared<Self>> {
+        self.parents.iter()
+    }
+}
+
+impl Culture {
+    pub fn register_child(&mut self, child: Shared<Culture>) {
+        self.children.push(child);
+    }
+}
+
 impl Serialize for Culture {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Culture", 9)?;
+        let mut state = serializer.serialize_struct("Culture", 10)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("ethos", &self.ethos)?;
@@ -118,6 +148,8 @@ impl Serialize for Culture {
         state.serialize_field("date", &self.date)?;
         let parents = serialize_array(&self.parents);
         state.serialize_field("parents", &parents)?;
+        let children = serialize_array(&self.children);
+        state.serialize_field("children", &children)?;
         state.serialize_field("traditions", &self.traditions)?;
         state.serialize_field("language", &self.language)?;
         state.end()
@@ -148,6 +180,9 @@ impl Renderable for Culture {
         }
         for p in &self.parents {
             stack.push(RenderableType::Culture(p.clone()));
+        }
+        for c in &self.children {
+            stack.push(RenderableType::Culture(c.clone()));
         }
     }
 }
@@ -180,7 +215,16 @@ impl Cullable for Culture {
         }
         self.depth = depth;
         for p in &self.parents {
-            p.get_internal_mut().set_depth(depth - 1, localization);
+            let r = p.try_borrow_mut();
+            if r.is_ok() {
+                r.unwrap().set_depth(depth - 1, localization);
+            }
+        }
+        for c in &self.children {
+            let r = c.try_borrow_mut();
+            if r.is_ok() {
+                r.unwrap().set_depth(depth - 1, localization);
+            }
         }
     }
 }

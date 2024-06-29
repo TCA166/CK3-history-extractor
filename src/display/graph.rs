@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, slice::Iter};
 
 use plotters::{
     coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32},
@@ -53,6 +53,52 @@ fn handle_node<T: GameObjectDerived>(
     return id;
 }
 
+/// A trait for objects that can be used in a tree structure
+pub trait TreeNode: GameObjectDerived {
+    /// Returns an iterator over the children of the node
+    fn get_children_iter(&self) -> Iter<Shared<Self>>;
+
+    /// Returns an iterator over the parent of the node
+    fn get_parent_iter(&self) -> Iter<Shared<Self>>;
+}
+
+fn create_graph(data: &Vec<(u32, u32)>, output_path: &str) {
+    let mut min_x: u32 = 0;
+    let mut max_x: u32 = 0;
+    let mut min_y: u32 = 0;
+    let mut max_y: u32 = 0;
+    for (x, y) in data {
+        if *x < min_x || min_x == 0 {
+            min_x = *x;
+        }
+        if *x > max_x {
+            max_x = *x;
+        }
+        if *y < min_y {
+            min_y = *y;
+        }
+        if *y > max_y {
+            max_y = *y;
+        }
+    }
+
+    let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
+    root.fill(&WHITE).unwrap();
+    let mut chart = ChartBuilder::on(&root)
+        //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
+        .margin(5)
+        .x_label_area_size(30)
+        .y_label_area_size(30)
+        .build_cartesian_2d(min_x..max_x, min_y..(max_y + 10))
+        .unwrap();
+
+    chart.configure_mesh().draw().unwrap();
+
+    chart
+        .draw_series(LineSeries::new(data.iter().map(|(x, y)| (*x, *y)), &RED))
+        .unwrap();
+}
+
 /// An object that can create graphs from the game state
 pub struct Grapher {
     /// Stored graph data for all faiths, certainly less memory efficient but the speed is worth it
@@ -63,27 +109,46 @@ pub struct Grapher {
 impl Grapher {
     pub fn new(game_state: &GameState) -> Self {
         Grapher {
-            faith_graph_complete: game_state.get_faiths_graph_data(),
-            culture_graph_complete: game_state.get_culture_graph_data(),
+            faith_graph_complete: game_state.get_yearly_deaths(|c| {
+                let faith = c.get_faith();
+                if faith.is_some() {
+                    return Some(faith.unwrap().get_internal().get_id());
+                }
+                None
+            }),
+            culture_graph_complete: game_state.get_yearly_deaths(|c| {
+                let culture = c.get_culture();
+                if culture.is_some() {
+                    return Some(culture.unwrap().get_internal().get_id());
+                }
+                None
+            }),
         }
     }
 
-    /// Creates a dynasty graph, meaning the family tree graph
-    pub fn create_dynasty_graph(&self, dynasty: &Dynasty, output_path: &str) {
+    /// Creates a tree graph from a given node
+    /// The reverse parameter determines if the tree is drawn from the parent to the children or the other way around
+    pub fn create_tree_graph<T: TreeNode>(
+        &self,
+        start: Shared<T>,
+        reverse: bool,
+        output_path: &str,
+    ) {
         let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 6.66 * TREE_SCALE).into_font();
         let sz = fnt.box_size("X").unwrap(); // from this we determine a rough size of a character
-                                             //BFS stack
-        let mut stack = Vec::new();
-        //we get the founder and use it as root
-        let founder = dynasty.get_founder();
-        handle_node(founder, &mut tree, &mut stack, &mut storage, NO_PARENT, &sz);
+        let mut stack = Vec::new(); //BFS stack
+        handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &sz);
         while let Some(current) = stack.pop() {
             let char = current.1.get_internal();
-            let children_iter = char.get_children_iter();
-            for child in children_iter {
+            let iter = if reverse {
+                char.get_parent_iter()
+            } else {
+                char.get_children_iter()
+            };
+            for child in iter {
                 handle_node(
                     child.clone(),
                     &mut tree,
@@ -196,92 +261,29 @@ impl Grapher {
         root.present().unwrap();
     }
 
+    /// Creates a dynasty graph, meaning the family tree graph
+    pub fn create_dynasty_graph(&self, dynasty: &Dynasty, output_path: &str) {
+        //we get the founder and use it as root
+        let founder = dynasty.get_founder();
+        self.create_tree_graph::<Character>(founder, false, output_path)
+    }
+
     /// Creates a death graph for a culture
     pub fn create_culture_graph(&self, culture_id: GameId, output_path: &str) {
         let data = self.culture_graph_complete.get(&culture_id);
         if data.is_none() {
             return;
         }
-        let data = data.unwrap();
-        let mut min_x: u32 = 0;
-        let mut max_x: u32 = 0;
-        let mut min_y: u32 = 0;
-        let mut max_y: u32 = 0;
-        for (x, y) in data {
-            if *x < min_x || min_x == 0 {
-                min_x = *x;
-            }
-            if *x > max_x {
-                max_x = *x;
-            }
-            if *y < min_y {
-                min_y = *y;
-            }
-            if *y > max_y {
-                max_y = *y;
-            }
-        }
-
-        let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
-        root.fill(&WHITE).unwrap();
-        let mut chart = ChartBuilder::on(&root)
-            //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
-            .margin(5)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .build_cartesian_2d(min_x..max_x, min_y..(max_y + 10))
-            .unwrap();
-
-        chart.configure_mesh().draw().unwrap();
-
-        chart
-            .draw_series(LineSeries::new(data.iter().map(|(x, y)| (*x, *y)), &RED))
-            .unwrap();
+        create_graph(data.unwrap(), output_path)
     }
 
     /// Creates a death graph for a faith
     pub fn create_faith_graph(&self, faith_id: GameId, output_path: &str) {
-        let data = self.faith_graph_complete.get(&faith_id).unwrap();
-
-        let mut min_x: i32 = 0;
-        let mut max_x: i32 = 0;
-        let mut min_y = 0;
-        let mut max_y = 0;
-        for (x, y) in data {
-            if (*x as i32) < min_x || min_x == 0 {
-                min_x = *x as i32;
-            }
-            if (*x as i32) > max_x {
-                max_x = *x as i32;
-            }
-            if *y < min_y {
-                min_y = *y;
-            }
-            if *y > max_y {
-                max_y = *y;
-            }
+        let data = self.faith_graph_complete.get(&faith_id);
+        if data.is_none() {
+            return;
         }
-
-        let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
-        root.fill(&WHITE).unwrap();
-        let mut chart = ChartBuilder::on(&root)
-            //.caption("Deaths of adherents through time", ("sans-serif", 50).into_font())
-            .margin(5)
-            .x_label_area_size(30)
-            .y_label_area_size(30)
-            .build_cartesian_2d(min_x..max_x, min_y..max_y)
-            .unwrap();
-
-        chart.configure_mesh().draw().unwrap();
-
-        chart
-            .draw_series(LineSeries::new(
-                data.iter().map(|(x, y)| (*x as i32, *y)),
-                &RED,
-            ))
-            .unwrap();
-
-        root.present().unwrap();
+        create_graph(data.unwrap(), output_path)
     }
 
     pub fn create_timeline_graph(

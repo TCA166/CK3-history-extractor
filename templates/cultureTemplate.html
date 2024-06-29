@@ -10,7 +10,7 @@
             <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
         </header>
         <main class="m-2">
-            <div class="row">
+            <div class="row w-100">
                 <div class="col w-50">
                     {%if culture.ethos is defined%}
                     Nature: {{culture.ethos}}
@@ -33,12 +33,18 @@
                     {%endfor%}
                     <br />
                     {%endif%}
+                    {%if culture.children|length > 0%}
+                    Derived cultures:
+                    {%for child in culture.children%}
+                    {{child|render_ref}}
+                    {%endfor%}
+                    {%endif%}
                     {%if not no_vis%}
                     <div class="card mt-2">
                         <div class="card-header">
                             Deaths of culture members through time
                         </div>
-                        <div class="card-body">
+                        <div class="card-body p-0">
                             <a href="./{{culture.id}}.svg" target="_blank"><img src="./{{culture.id}}.svg" class="img-fluid" alt="Graph of culture members through time"></a>
                         </div>
                     </div>
