@@ -68,10 +68,10 @@ impl Section {
         let mut key = String::new(); // the key of the key value pair
         let mut val = String::new(); // the value of the key value pair
         let mut past_eq = false; // we use this flag to determine if we are parsing a key or a value
-        let mut comment = false; 
+        let mut comment = false;
         let mut maybe_array = false; // if this is true, that means we encountered key =value
         let mut escape = false; // escape character toggle
-        let mut depth:u32 = 0; // how deep we are in the object tree
+        let mut depth: u32 = 0; // how deep we are in the object tree
         let mut object: GameObject = GameObject::new();
         //initialize the object stack
         let mut stack: Vec<GameObject> = Vec::new();
@@ -205,8 +205,8 @@ impl Section {
                         // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() {
-                            if val == "rgb"{
-                                //we are here color=rgb {} 
+                            if val == "rgb" {
+                                //we are here color=rgb {}
                                 val.clear();
                             } else {
                                 // in case {something=else something=else}

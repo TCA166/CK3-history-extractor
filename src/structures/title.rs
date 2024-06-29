@@ -278,7 +278,7 @@ impl Serialize for Title {
         let mut state = serializer.serialize_struct("Title", 10)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        if self.key.is_none(){
+        if self.key.is_none() {
             return state.end();
         }
         //match the first character of key

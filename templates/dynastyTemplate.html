@@ -10,7 +10,7 @@
             <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
         </header>
         <main class="m-2">
-            <div class="row" style="text-align: left">
+            <div class="row text-start">
                 <div class="col w-50">
                     {%if dynasty.found_date != "" and dynasty.found_date != none%}
                     Creation Date: {{dynasty.found_date}}
@@ -30,7 +30,7 @@
                     Current renown: {{dynasty.prestige}}<br>
                     {%if dynasty.perks is defined%}
                     Dynasty Legacies:
-                    <table style="width:auto" class="table table-bordered">
+                    <table class="table table-bordered w-auto">
                     {%for key, value in dynasty.perks%}
                     <tr>
                         <td>{{key}}</td>
@@ -49,7 +49,7 @@
                         <div class="card-header">
                         Family tree:
                         </div>
-                        <div class="card-body" style="overflow-x: auto;">
+                        <div class="card-body overflow-auto p-0">
                             <a href="./{{dynasty.id}}.svg" target="_blank"><img src="./{{dynasty.id}}.svg" alt="Family tree"></a>
                         </div>
                     </div>
@@ -72,4 +72,7 @@
             </div>
         </main>
     </body>
+    <script>
+        document.querySelector("html").setAttribute("data-bs-theme", window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+    </script>
 </html>

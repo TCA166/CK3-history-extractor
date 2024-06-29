@@ -80,7 +80,9 @@ impl Localizer {
     /// The object is empty and needs to be filled with localization data.
     /// After the data is added, the [Localizer::resolve] function should be called to resolve the special localisation invocations.
     pub fn new() -> Self {
-        Localizer { data: HashMap::new() }
+        Localizer {
+            data: HashMap::new(),
+        }
     }
 
     /// Adds localization data from a directory.
@@ -102,8 +104,7 @@ impl Localizer {
                             if let Ok(file_type) = entry.file_type() {
                                 if file_type.is_dir() {
                                     stack.push(entry.path());
-                                } else if entry.file_name().to_str().unwrap().ends_with(".yml")
-                                {
+                                } else if entry.file_name().to_str().unwrap().ends_with(".yml") {
                                     all_files.push(entry.path());
                                 }
                             }

@@ -11,7 +11,7 @@
         </header>
         <main class="m-2">
             <div class="container-fluid text-center">
-                <div class="row text-start">
+                <div class="row text-start mb-2">
                     <div class="col">
                         Date of birth: {{character.birth}}<br />
                         {%if character.dead%}
@@ -67,7 +67,7 @@
                             </div>
                             <div class="card-body row-cols-*">
                                 {%for trait in character.traits%}
-                                <div class="card col p-2 d-inline-block">
+                                <div class="card col p-2 m-1 d-inline-block">
                                     {{trait}}
                                 </div>
                                 {%endfor%}
@@ -113,9 +113,9 @@
                                 <ul class='list-group list-group-flush'>
                                     <li class='list-group-item'>{{artifact.type}}</li>
                                     <li class='list-group-item'>{{artifact.rarity}}</li>
-                                    <li class='list-group-item'>{{artifact.description|escape}}</li>
+                                    <li class='list-group-item'>{{artifact.description|handle_tooltips|escape}}</li>
                                 </ul>">
-                                {{artifact.name}}
+                                {{artifact.name|handle_tooltips}}
                                 </div>
                                 {%endfor%}
                             </div>
@@ -173,6 +173,7 @@
         </main>
     </body>
     <script>
+        document.querySelector("html").setAttribute("data-bs-theme", window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
         const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
     </script>

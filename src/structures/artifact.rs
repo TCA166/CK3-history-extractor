@@ -1,10 +1,15 @@
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::{display::{Cullable, RenderableType}, game_object::{GameId, GameObject, GameString}, game_state::GameState, types::Shared};
+use crate::{
+    display::{Cullable, RenderableType},
+    game_object::{GameId, GameObject, GameString},
+    game_state::GameState,
+    types::Shared,
+};
 
 use super::{Character, DerivedRef, DummyInit, GameObjectDerived};
 
-pub struct Artifact{
+pub struct Artifact {
     id: GameId,
     name: Option<GameString>,
     description: Option<GameString>,
@@ -13,7 +18,12 @@ pub struct Artifact{
     quality: u32,
     wealth: u32,
     owner: Option<Shared<Character>>,
-    history: Vec<(GameString, GameString, Option<Shared<Character>>, Option<Shared<Character>>)>,
+    history: Vec<(
+        GameString,
+        GameString,
+        Option<Shared<Character>>,
+        Option<Shared<Character>>,
+    )>,
     depth: usize,
 }
 
@@ -34,13 +44,13 @@ impl DummyInit for Artifact {
         self.r#type = Some(base.get_string_ref("type"));
         self.rarity = Some(base.get_string_ref("rarity"));
         let quality_node = base.get("quality");
-        if quality_node.is_some(){
+        if quality_node.is_some() {
             self.quality = quality_node.unwrap().as_string().parse::<u32>().unwrap();
         } else {
             self.quality = 0;
         }
         let wealth_node = base.get("wealth");
-        if wealth_node.is_some(){
+        if wealth_node.is_some() {
             self.wealth = wealth_node.unwrap().as_string().parse::<u32>().unwrap();
         } else {
             self.wealth = 0;
@@ -72,7 +82,7 @@ impl DummyInit for Artifact {
             }
         }
     }
-    
+
     fn dummy(id: GameId) -> Self {
         Artifact {
             id,
@@ -119,7 +129,6 @@ impl Cullable for Artifact {
                 }
             }
         }
-        //TODO fix the description string and name string
         if self.rarity.is_some() {
             self.rarity = Some(localization.localize(self.rarity.as_ref().unwrap()));
         }
@@ -131,7 +140,7 @@ impl Cullable for Artifact {
 
 impl Artifact {
     /// Render the characters in the history of the artifact
-    pub fn render_history(&self, stack: &mut Vec<RenderableType>){
+    pub fn render_history(&self, stack: &mut Vec<RenderableType>) {
         for h in self.history.iter() {
             if h.2.is_some() {
                 stack.push(RenderableType::Character(h.2.as_ref().unwrap().clone()));
@@ -145,8 +154,9 @@ impl Artifact {
 
 impl Serialize for Artifact {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer {
+    where
+        S: serde::Serializer,
+    {
         let mut state = serializer.serialize_struct("Artifact", 7)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
@@ -155,7 +165,12 @@ impl Serialize for Artifact {
         state.serialize_field("rarity", &self.rarity)?;
         state.serialize_field("quality", &self.quality)?;
         state.serialize_field("wealth", &self.wealth)?;
-        let mut serialized_history:Vec<(GameString, GameString, Option<DerivedRef<Character>>, Option<DerivedRef<Character>>)> = Vec::new();
+        let mut serialized_history: Vec<(
+            GameString,
+            GameString,
+            Option<DerivedRef<Character>>,
+            Option<DerivedRef<Character>>,
+        )> = Vec::new();
         for h in self.history.iter() {
             let actor = if h.2.is_some() {
                 Some(DerivedRef::from_derived(h.2.as_ref().unwrap().clone()))

@@ -129,11 +129,11 @@ impl Grapher {
                 }
             }
 
-            min_x *= 1.05;
-            max_x *= 1.05;
+            min_x *= 1.02;
+            max_x *= 1.02;
 
-            let x_size = ((max_x - min_x) * 1.02) as u32;
-            let y_size = ((max_y - min_y) * 1.04) as u32;
+            let x_size = (max_x - min_x + 10.0) as u32;
+            let y_size = (max_y - min_y + 10.0) as u32;
 
             /* Note on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.

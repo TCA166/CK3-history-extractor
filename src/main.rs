@@ -1,9 +1,11 @@
 use core::panic;
-use std::{
-    env, fs, io::{prelude::*, stdin, stdout}, path::Path
-};
+use dialoguer::{Confirm, Input, Select};
 use serde_json;
-use dialoguer::{Input, Confirm, Select};
+use std::{
+    env, fs,
+    io::{prelude::*, stdin, stdout},
+    path::Path,
+};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -98,7 +100,15 @@ fn main() {
     // The game path and mod paths, if provided by the user
     let mut game_path: Option<String> = None;
     let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
-    let languages = vec!["english", "french", "german", "korean", "russian", "simp_chinese", "spanish"];
+    let languages = vec![
+        "english",
+        "french",
+        "german",
+        "korean",
+        "russian",
+        "simp_chinese",
+        "spanish",
+    ];
     // The language to use for localization
     let mut language = "english".to_string();
     // The depth to render the player's history
@@ -113,10 +123,11 @@ fn main() {
             if filename.is_empty() {
                 panic!("No filename provided");
             }
-        } else { //console interface only if we are in a terminal
+        } else {
+            //console interface only if we are in a terminal
             filename = Input::<String>::new()
                 .with_prompt("Enter the save file path")
-                .validate_with( |input: &String| -> Result<(), &str> {
+                .validate_with(|input: &String| -> Result<(), &str> {
                     let p = Path::new(input);
                     if p.exists() && p.is_file() {
                         Ok(())
@@ -134,7 +145,7 @@ fn main() {
             game_path = Input::<String>::new()
                 .with_prompt("Enter the game path [empty for None]")
                 .allow_empty(true)
-                .validate_with( |input: &String| -> Result<(), &str> {
+                .validate_with(|input: &String| -> Result<(), &str> {
                     if input.is_empty() {
                         return Ok(());
                     }
@@ -146,7 +157,8 @@ fn main() {
                     }
                 })
                 //.with_initial_text("/common/Crusader Kings III/game") //TODO this doesn't work for some reason, library issues?
-                .interact().map_or(None, |x| if x.is_empty() { None } else { Some(x) });
+                .interact()
+                .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
             depth = Input::<usize>::new()
                 .with_prompt("Enter the rendering depth")
                 .default(3)
@@ -164,7 +176,7 @@ fn main() {
             let include_input = Input::<String>::new()
                 .with_prompt("Enter the include paths separated by a coma [empty for None]")
                 .allow_empty(true)
-                .validate_with( |input: &String| -> Result<(), &str> {
+                .validate_with(|input: &String| -> Result<(), &str> {
                     if input.is_empty() {
                         return Ok(());
                     }
@@ -180,12 +192,15 @@ fn main() {
                 .interact()
                 .unwrap();
             if !include_input.is_empty() {
-                include_paths = include_input.split(',').map(|x| x.trim().to_string()).collect();
+                include_paths = include_input
+                    .split(',')
+                    .map(|x| x.trim().to_string())
+                    .collect();
             }
             output_path = Input::<String>::new()
                 .with_prompt("Enter the output path [empty for cwd]")
                 .allow_empty(true)
-                .validate_with( |input: &String| -> Result<(), &str> {
+                .validate_with(|input: &String| -> Result<(), &str> {
                     if input.is_empty() {
                         return Ok(());
                     }
@@ -196,9 +211,11 @@ fn main() {
                         Err("Path does not exist")
                     }
                 })
-                .interact().map_or(None, |x| if x.is_empty() { None } else { Some(x) });
+                .interact()
+                .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
         }
-    } else { //console interface
+    } else {
+        //console interface
         filename = args[1].clone();
         // foreach argument above 1
         let mut iter = args.iter().skip(2);
@@ -280,7 +297,7 @@ fn main() {
     let mut map = None;
     if !include_paths.is_empty() {
         println!("Using game files from: {:#?}", include_paths);
-        for path in include_paths.iter().rev(){
+        for path in include_paths.iter().rev() {
             let loc_path = path.clone() + "/localization/" + language.as_str();
             localizer.add_from_path(loc_path);
             if !no_vis && map.is_none() {
@@ -451,7 +468,8 @@ fn main() {
     } else {
         timeline = None;
     }
-    for player in players.iter_mut() { //render each player
+    for player in players.iter_mut() {
+        //render each player
         println!("Processing {:?}", player.name);
         let mut folder_name = player.name.to_string() + "'s history";
         if output_path.is_some() {

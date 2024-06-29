@@ -2,11 +2,12 @@ use std::collections::{hash_map::Iter, HashMap};
 
 use super::game_object::{GameId, GameObject, GameString};
 use super::structures::{
-    Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived, Memory, Title, Artifact
+    Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived, Memory,
+    Title,
 };
 use super::types::{Shared, Wrapper, WrapperMut};
 
-use serde::{Serialize, ser::SerializeStruct};
+use serde::{ser::SerializeStruct, Serialize};
 
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
@@ -341,8 +342,9 @@ impl GameState {
 
 impl Serialize for GameState {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer {
+    where
+        S: serde::Serializer,
+    {
         let mut state = serializer.serialize_struct("GameState", 7)?;
         state.serialize_field("characters", &self.characters)?;
         state.serialize_field("titles", &self.titles)?;
