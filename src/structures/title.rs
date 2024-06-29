@@ -215,7 +215,7 @@ impl DummyInit for Title {
         if base.get_array_iter().len() > 3 {
             let color = base
                 .get_array_iter()
-                .map(|x| x.as_string().parse().unwrap())
+                .map(|x| x.as_string().parse::<u8>().unwrap())
                 .collect::<Vec<u8>>();
             self.color = [color[0], color[1], color[2]];
         }
