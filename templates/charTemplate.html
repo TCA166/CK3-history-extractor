@@ -107,17 +107,19 @@
                             <div class="card-header" data-bs-toggle="collapse" href="#collapseArtifacts" role="button" aria-expanded="false" aria-controls="collapseArtifacts">
                                 Inventory
                             </div>
-                            <div class="collapse row-cols-*" id="collapseArtifacts">
-                                {%for artifact in character.artifacts%}
-                                <div class="card col m-2 p-2 d-inline-block" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" data-bs-title="
-                                <ul class='list-group list-group-flush'>
-                                    <li class='list-group-item'>{{artifact.type}}</li>
-                                    <li class='list-group-item'>{{artifact.rarity}}</li>
-                                    <li class='list-group-item'>{{artifact.description|handle_tooltips|escape}}</li>
-                                </ul>">
-                                {{artifact.name|handle_tooltips}}
+                            <div class="collapse" id="collapseArtifacts">
+                                <div class="row-cols-*">
+                                    {%for artifact in character.artifacts%}
+                                    <div class="card col m-2 p-2 d-inline-block artifact" data-bs-toggle="tooltip" data-bs-trigger="hover focus click" data-bs-placement="right" data-bs-html="true" data-bs-title="
+                                    <ul class='list-group list-group-flush'>
+                                        <li class='list-group-item'>{{artifact.type}}</li>
+                                        <li class='list-group-item'>{{artifact.rarity}}</li>
+                                        <li class='list-group-item'>{{artifact.description|handle_tooltips|escape}}</li>
+                                    </ul>">
+                                    {{artifact.name|handle_tooltips}}
+                                    </div>
+                                    {%endfor%}
                                 </div>
-                                {%endfor%}
                             </div>
                         </div>
                         {%endif%}
