@@ -63,6 +63,7 @@ fn create_dir_maybe(name: &str) {
 /// 7. `--no-vis` - A flag that tells the program not to render any images
 /// 8. `--output` - A flag that tells the program where to output the rendered files.
 /// 9. `--include` - A flag that tells the program where to find additional files to include in the rendering.
+/// 10. `--no-interaction` - A flag that tells the program not to interact with the user.
 ///
 /// # Process
 ///
@@ -95,6 +96,7 @@ fn main() {
     let use_internal = false;
     // if we don't want to render any images
     let mut no_vis = false;
+    let mut no_interaction = false;
     // The output path, if provided by the user
     let mut output_path: Option<String> = None;
     // The game path and mod paths, if provided by the user
@@ -282,6 +284,9 @@ fn main() {
                 }
                 "--dump" => {
                     dump = true;
+                }
+                "--no-interaction" => {
+                    no_interaction = true;
                 }
                 _ => {
                     println!("Unknown argument: {}", arg);
@@ -494,12 +499,15 @@ fn main() {
         while let Some(obj) = queue.pop() {
             obj.render_all(&mut queue, &mut renderer);
         }
+        if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
+            open::that(format!("{}/index.html", folder_name)).unwrap();
+        }
     }
     if dump {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write("game_state.json", json).unwrap();
     }
-    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) {
+    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
         print!("Press enter to exit...");
         stdout().flush().unwrap();
         let mut inp = String::new();
