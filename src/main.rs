@@ -1,9 +1,10 @@
 use core::panic;
 use dialoguer::{Confirm, Input, Select};
+use indicatif::{ProgressBar, ProgressStyle};
 use serde_json;
 use std::{
     env, fs,
-    io::{prelude::*, stdin, stdout},
+    io::stdin,
     path::Path,
 };
 
@@ -294,6 +295,7 @@ fn main() {
             }
         }
     }
+    let bar_style = ProgressStyle::default_bar().template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}").progress_chars("#>-");
     //even though we don't need these for parsing, we load them here to error out early
     if game_path.is_some() {
         include_paths.insert(0, game_path.unwrap());
@@ -301,8 +303,11 @@ fn main() {
     let mut localizer = Localizer::new();
     let mut map = None;
     if !include_paths.is_empty() {
-        println!("Using game files from: {:#?}", include_paths);
-        for path in include_paths.iter().rev() {
+        println!("Using game files from: {:?}", include_paths);
+        let progress_bar = ProgressBar::new(include_paths.len() as u64);
+        progress_bar.set_style(bar_style.clone());
+        progress_bar.set_message(include_paths.last().unwrap().to_owned());
+        for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
             let loc_path = path.clone() + "/localization/" + language.as_str();
             localizer.add_from_path(loc_path);
             if !no_vis && map.is_none() {
@@ -313,9 +318,11 @@ fn main() {
                 }
             }
         }
+        progress_bar.finish_with_message("Game files loaded");
     }
     localizer.resolve();
     //initialize the save file
+    println!("Ready for save parsing...");
     let save: SaveFile;
     if compressed {
         save = SaveFile::open_compressed(filename.as_str());
@@ -324,16 +331,11 @@ fn main() {
     }
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
-    let mut last_name = String::new();
     let mut players: Vec<Player> = Vec::new();
-    println!("Ready for save parsing...");
-    //MAYBE add multiprocessing? mutlithreading? Not necessary, not much IO happening
-    for mut i in save.into_iter() {
-        if i.get_name() != last_name {
-            print!("{:?}\n", i.get_name());
-            stdout().flush().unwrap();
-            last_name = i.get_name().to_string().clone();
-        }
+    let progress_bar = ProgressBar::new(save.len() as u64);
+    progress_bar.set_style(bar_style);
+    for mut i in progress_bar.wrap_iter(save.into_iter()){
+        progress_bar.set_message(i.get_name().to_owned());
         match i.get_name() {
             //the order is kept consistent with the order in the save file
             "traits_lookup" => {
@@ -456,7 +458,7 @@ fn main() {
             }
         }
     }
-    println!("Save file parsing complete");
+    progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
     let grapher;
     if !no_vis {
@@ -508,9 +510,10 @@ fn main() {
         fs::write("game_state.json", json).unwrap();
     }
     if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
-        print!("Press enter to exit...");
-        stdout().flush().unwrap();
-        let mut inp = String::new();
-        stdin().read_line(&mut inp).unwrap();
+        Input::<String>::new()
+            .with_prompt("Press enter to exit")
+            .allow_empty(true)
+            .interact()
+            .unwrap();
     }
 }

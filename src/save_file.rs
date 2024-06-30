@@ -374,6 +374,29 @@ impl SaveFile {
     }
 }
 
+impl SaveFile {
+    /// Get the number of sections in the save file.
+    pub fn len(&self) -> usize {
+        let mut num = 0;
+        let mut depth:u32 = 0;
+        for c in self.contents.chars() {
+            match c {
+                '}' => {
+                    depth -= 1;
+                }
+                '{' => {
+                    if depth == 0 {
+                        num += 1;
+                    }
+                    depth += 1;
+                }
+                _ => {}
+            }
+        }
+        return num;
+    }
+}
+
 impl Iterator for SaveFile {
     type Item = Section;
 

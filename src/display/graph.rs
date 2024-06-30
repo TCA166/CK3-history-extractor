@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rand::{thread_rng, Rng};
+
 use plotters::{
     coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32},
     prelude::*,
@@ -186,7 +188,7 @@ impl Grapher {
 
         let root;
 
-        let mut groups: HashMap<&str, ((f64, f64), (f64, f64))> = HashMap::new(); //class groups
+        let mut groups: HashMap<&str, RGBColor> = HashMap::new(); //class groups
         let mut positions = HashMap::new();
         {
             //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
@@ -203,25 +205,29 @@ impl Grapher {
                 let y = layout[i * 3 + 2];
                 let node_data = storage.get(&id).unwrap();
                 let class = &node_data.4;
-                if class.is_some() { // group resolving
+                if class.is_some() {
+                    // group resolving
                     let class = class.as_ref().unwrap();
-                    let group = groups.get_mut(class.as_str());
-                    if group.is_none() {
-                        groups.insert(class, ((x, y), (x, y)));
-                    } else {
-                        let group = group.unwrap();
-                        if x < group.0 .0 {
-                            group.0 .0 = x;
+                    if !groups.contains_key(class.as_str()) {
+                        let mut rng = thread_rng();
+                        let base:u8 = 85;
+                        let mut color = RGBColor(base, base, base);
+                        //pick a random color and make it dominant
+                        let index = rng.gen_range(0..3);
+                        let add = rng.gen_range(160-base..255-base);
+                        match index {
+                            0 => {
+                                color.0 += add;
+                            }
+                            1 => {
+                                color.1 += add;
+                            }
+                            2 => {
+                                color.2 += add;
+                            }
+                            _ => unreachable!(),
                         }
-                        if x > group.1 .0 {
-                            group.1 .0 = x;
-                        }
-                        if y < group.0 .1 {
-                            group.0 .1 = y;
-                        }
-                        if y > group.1 .1 {
-                            group.1 .1 = y;
-                        }
+                        groups.insert(class.as_str(), color);
                     }
                 }
                 // canvas size resolving
@@ -265,20 +271,6 @@ impl Grapher {
                 ),
             ));
         }
-        //before anything we draw the groups
-        if groups.len() > 2 {
-            let colors = vec![RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, BLACK];
-            let mut i = 0;
-            for (_, ((min_x, min_y), (max_x, max_y))) in groups {
-                let color = colors[i % colors.len()];
-                i += 1;
-                root.draw(&Rectangle::new(
-                    [(min_x, min_y), (max_x, max_y)],
-                    Into::<ShapeStyle>::into(&color.mix(0.5)).filled(),
-                ))
-                .unwrap();
-            }
-        }
         //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions {
             let node_data = storage.get(&id).unwrap();
@@ -299,6 +291,12 @@ impl Grapher {
         //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions {
             let node_data = storage.get(&id).unwrap();
+            let class = &node_data.4;
+            let color = if class.is_some() {
+                groups.get(class.as_ref().unwrap().as_str()).unwrap()
+            } else {
+                &GREEN
+            };
             //draw the element after the line so that the line is behind the element
             root.draw(
                 &(EmptyElement::at((*x, *y))
@@ -308,7 +306,7 @@ impl Grapher {
                         (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2),
                         (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
                     ],
-                    Into::<ShapeStyle>::into(&GREEN).filled(),
+                    Into::<ShapeStyle>::into(color.mix(0.9)).filled(),
                 //we add the text to the node, the text is drawn at the point we calculated earlier
                 ) + Text::new(
                     format!("{}", node_data.1),
