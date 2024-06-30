@@ -1,5 +1,3 @@
-use std::slice::Iter;
-
 use minijinja::context;
 
 use serde::{ser::SerializeStruct, Serialize};
@@ -663,12 +661,27 @@ impl GameObjectDerived for Character {
 }
 
 impl TreeNode for Character {
-    fn get_children_iter(&self) -> Iter<Shared<Character>> {
-        self.children.iter()
+    fn get_children(&self) -> &Vec<Shared<Character>> {
+        &self.children
     }
 
-    fn get_parent_iter(&self) -> Iter<Shared<Character>> {
-        self.parents.iter()
+    fn get_parent(&self) -> &Vec<Shared<Character>> {
+        &self.parents
+    }
+
+    fn get_class(&self) -> Option<GameString> {
+        if self.house.is_some() {
+            return Some(
+                self.house
+                    .as_ref()
+                    .unwrap()
+                    .get_internal()
+                    .get_name()
+                    .clone(),
+            );
+        } else {
+            None
+        }
     }
 }
 

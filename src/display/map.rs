@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    thread,
-};
+use std::{collections::HashMap, thread};
 
 use csv::ReaderBuilder;
 
@@ -185,14 +182,17 @@ impl GameMap {
         }
     }
 
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
+    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
     /// Returns a vector of RGB bytes representing the new map
-    fn create_map(&self, key_list: Vec<GameString>, target_color: &[u8; 3]) -> Vec<u8> {
+    fn create_map<F>(&self, key_list: Vec<GameString>, assoc: F) -> Vec<u8>
+    where
+        F: Fn(&str) -> [u8; 3],
+    {
         let mut new_map = Vec::with_capacity(self.province_map.len());
-        let colors: HashSet<_> = key_list
-            .iter()
-            .map(|id| self.title_color_map[id.as_str()])
-            .collect();
+        let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::new();
+        for k in key_list.iter() {
+            colors.insert(&self.title_color_map[k.as_str()], assoc(k));
+        }
         let mut x = 0;
         while x < self.byte_sz {
             let mut z = x + 3; // overkill, but saves us an arithmetic operation
@@ -201,12 +201,13 @@ impl GameMap {
             if pixel == NULL_COLOR {
                 //if we find a NULL pixel = water
                 clr = &WATER_COLOR;
-            } else if colors.contains(pixel) {
-                //if we find a color in the list of colors we want to change
-                clr = &target_color;
             } else {
-                //if we find something else we set it to white
-                clr = &LAND_COLOR;
+                let color = colors.get(pixel);
+                if color.is_some() {
+                    clr = color.unwrap();
+                } else {
+                    clr = &LAND_COLOR;
+                }
             }
             new_map.extend_from_slice(clr);
             x = z;
@@ -229,7 +230,7 @@ impl GameMap {
         target_color: &[u8; 3],
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         //we need to convert the vec of bytes to a vec of rgba bytes
-        let new_map = self.create_map(key_list, target_color);
+        let new_map = self.create_map(key_list, |_: &str| *target_color);
         let mut rgba = Vec::with_capacity(new_map.len() * 4 / 3);
         for i in 0..new_map.len() {
             rgba.push(new_map[i]);
@@ -247,7 +248,7 @@ impl GameMap {
         target_color: &[u8; 3],
         output_path: &str,
     ) {
-        let new_map = self.create_map(key_list, target_color);
+        let new_map = self.create_map(key_list, |_: &str| *target_color);
         let width = self.width;
         let height = self.height;
         let output_path = output_path.to_owned();

@@ -10,8 +10,6 @@ use super::super::{
 
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
 
-use std::slice::Iter;
-
 /// A struct representing a culture in the game
 pub struct Culture {
     id: GameId,
@@ -119,12 +117,20 @@ impl GameObjectDerived for Culture {
 }
 
 impl TreeNode for Culture {
-    fn get_children_iter(&self) -> Iter<Shared<Self>> {
-        self.children.iter()
+    fn get_children(&self) -> &Vec<Shared<Self>> {
+        &self.children
     }
 
-    fn get_parent_iter(&self) -> Iter<Shared<Self>> {
-        self.parents.iter()
+    fn get_parent(&self) -> &Vec<Shared<Self>> {
+        &self.parents
+    }
+
+    fn get_class(&self) -> Option<GameString> {
+        if self.heritage.is_some() {
+            return Some(self.heritage.as_ref().unwrap().clone());
+        } else {
+            return None;
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, slice::Iter};
+use std::collections::HashMap;
 
 use plotters::{
     coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32},
@@ -25,11 +25,20 @@ const NO_PARENT: usize = usize::MAX;
 
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
-fn handle_node<T: GameObjectDerived>(
+fn handle_node<T: TreeNode>(
     node: Shared<T>,
     tree: &mut TidyTree,
     stack: &mut Vec<(usize, Shared<T>)>,
-    storage: &mut HashMap<usize, (usize, GameString, (f64, f64), (i32, i32))>,
+    storage: &mut HashMap<
+        usize,
+        (
+            usize,
+            GameString,
+            (f64, f64),
+            (i32, i32),
+            Option<GameString>,
+        ),
+    >,
     parent: usize,
     sz: &(u32, u32),
 ) -> usize {
@@ -49,17 +58,29 @@ fn handle_node<T: GameObjectDerived>(
     tree.add_node(id, node_width, node_height, parent);
     stack.push((id, node.clone()));
     //add aux data to storage because the nodes only store the id and no additional data
-    storage.insert(id, (parent, name, (node_width, node_height), txt_point));
+    storage.insert(
+        id,
+        (
+            parent,
+            name,
+            (node_width, node_height),
+            txt_point,
+            ch.get_class(),
+        ),
+    );
     return id;
 }
 
 /// A trait for objects that can be used in a tree structure
 pub trait TreeNode: GameObjectDerived {
     /// Returns an iterator over the children of the node
-    fn get_children_iter(&self) -> Iter<Shared<Self>>;
+    fn get_children(&self) -> &Vec<Shared<Self>>;
 
     /// Returns an iterator over the parent of the node
-    fn get_parent_iter(&self) -> Iter<Shared<Self>>;
+    fn get_parent(&self) -> &Vec<Shared<Self>>;
+
+    /// Returns the class of the node
+    fn get_class(&self) -> Option<GameString>;
 }
 
 fn create_graph(data: &Vec<(u32, u32)>, output_path: &str) {
@@ -108,6 +129,7 @@ pub struct Grapher {
 
 impl Grapher {
     pub fn new(game_state: &GameState) -> Self {
+        //the idea is to get all the data we may need in one go, chances are all of it is gonna be needed anywho
         Grapher {
             faith_graph_complete: game_state.get_yearly_deaths(|c| {
                 let faith = c.get_faith();
@@ -130,7 +152,7 @@ impl Grapher {
     /// The reverse parameter determines if the tree is drawn from the parent to the children or the other way around
     pub fn create_tree_graph<T: TreeNode>(
         &self,
-        start: Shared<T>,
+        start: Shared<T>, // the root node that is a TreeNode
         reverse: bool,
         output_path: &str,
     ) {
@@ -144,9 +166,9 @@ impl Grapher {
         while let Some(current) = stack.pop() {
             let char = current.1.get_internal();
             let iter = if reverse {
-                char.get_parent_iter()
+                char.get_parent()
             } else {
-                char.get_children_iter()
+                char.get_children()
             };
             for child in iter {
                 handle_node(
@@ -164,6 +186,7 @@ impl Grapher {
 
         let root;
 
+        let mut groups: HashMap<&str, ((f64, f64), (f64, f64))> = HashMap::new(); //class groups
         let mut positions = HashMap::new();
         {
             //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
@@ -179,6 +202,29 @@ impl Grapher {
                 let x = layout[i * 3 + 1];
                 let y = layout[i * 3 + 2];
                 let node_data = storage.get(&id).unwrap();
+                let class = &node_data.4;
+                if class.is_some() { // group resolving
+                    let class = class.as_ref().unwrap();
+                    let group = groups.get_mut(class.as_str());
+                    if group.is_none() {
+                        groups.insert(class, ((x, y), (x, y)));
+                    } else {
+                        let group = group.unwrap();
+                        if x < group.0 .0 {
+                            group.0 .0 = x;
+                        }
+                        if x > group.1 .0 {
+                            group.1 .0 = x;
+                        }
+                        if y < group.0 .1 {
+                            group.0 .1 = y;
+                        }
+                        if y > group.1 .1 {
+                            group.1 .1 = y;
+                        }
+                    }
+                }
+                // canvas size resolving
                 positions.insert(id, (x, y));
                 if x < min_x || min_x == 0.0 {
                     min_x = x - node_data.3 .0 as f64;
@@ -218,6 +264,20 @@ impl Grapher {
                     (y_size / 25) as i32..(y_size / 25 * 24) as i32,
                 ),
             ));
+        }
+        //before anything we draw the groups
+        if groups.len() > 2 {
+            let colors = vec![RED, GREEN, BLUE, YELLOW, CYAN, MAGENTA, BLACK];
+            let mut i = 0;
+            for (_, ((min_x, min_y), (max_x, max_y))) in groups {
+                let color = colors[i % colors.len()];
+                i += 1;
+                root.draw(&Rectangle::new(
+                    [(min_x, min_y), (max_x, max_y)],
+                    Into::<ShapeStyle>::into(&color.mix(0.5)).filled(),
+                ))
+                .unwrap();
+            }
         }
         //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions {
