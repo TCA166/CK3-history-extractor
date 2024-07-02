@@ -295,7 +295,7 @@ fn main() {
             }
         }
     }
-    let bar_style = ProgressStyle::default_bar().template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}").progress_chars("#>-");
+    let bar_style = ProgressStyle::default_bar().template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}").unwrap().progress_chars("#>-");
     //even though we don't need these for parsing, we load them here to error out early
     if game_path.is_some() {
         include_paths.insert(0, game_path.unwrap());
