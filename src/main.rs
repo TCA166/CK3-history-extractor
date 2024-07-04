@@ -337,6 +337,10 @@ fn main() {
     for mut i in progress_bar.wrap_iter(save.into_iter()){
         progress_bar.set_message(i.get_name().to_owned());
         match i.get_name() {
+            "meta_data" => {
+                let r = i.to_object();
+                game_state.set_current_date(r.get("meta_date").unwrap().as_string());
+            }
             //the order is kept consistent with the order in the save file
             "traits_lookup" => {
                 let r = i.to_object();

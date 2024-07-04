@@ -354,9 +354,11 @@ impl Renderable for Title {
         }
         let game_map = renderer.get_map();
         if game_map.is_some() && self.de_facto_vassals.len() > 0 {
+            let game_state = renderer.get_state();
             let map = game_map.unwrap();
             let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
-            map.create_map_file(self.get_barony_keys(), &self.color, &path);
+            let label = format!("{} at {}", self.name.as_ref().unwrap(), game_state.get_current_date().unwrap());
+            map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
         }
         if self.de_jure.is_some() {
             stack.push(RenderableType::Title(

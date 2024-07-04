@@ -92,6 +92,7 @@ impl Renderable for Player {
         renderer.render(self);
         let map = renderer.get_map();
         if map.is_some() {
+            let game_state = renderer.get_state();
             //timelapse rendering
             let map = map.unwrap();
             let path = renderer.get_path().to_owned() + "/timelapse.gif";
@@ -109,7 +110,13 @@ impl Renderable for Player {
                 let char = char.get_internal();
                 //we get the provinces held by the character and the vassals who died under their reign.
                 //This is the closes approximation we can get of changes in the map that are 100% accurate
-                let fbytes = map.create_map_buffer(char.get_de_jure_barony_keys(), &[70, 255, 70]);
+                let death_date = char.get_death_date();
+                let date = if death_date.is_some() {
+                    death_date.as_ref().unwrap().as_str()
+                } else {
+                    game_state.get_current_date().unwrap()
+                };
+                let fbytes = map.create_map_buffer(char.get_de_jure_barony_keys(), &[70, 255, 70], date);
                 //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();
@@ -120,7 +127,7 @@ impl Renderable for Player {
             gif_encoder.set_repeat(Repeat::Infinite).unwrap();
             // genetic similarity gradient rendering
             let last = self.lineage.last().unwrap().get_character();
-            let title_iter = renderer.get_state().get_title_iter();
+            let title_iter = game_state.get_title_iter();
             let mut sim = HashMap::new();
             for (_, title) in title_iter {
                 let title = title.get_internal();

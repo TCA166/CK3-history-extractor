@@ -33,6 +33,7 @@ pub struct GameState {
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
+    current_date: Option<GameString>
 }
 
 impl GameState {
@@ -48,6 +49,7 @@ impl GameState {
             artifacts: HashMap::new(),
             traits_lookup: Vec::new(),
             contract_transform: HashMap::new(),
+            current_date: None
         }
     }
 
@@ -59,6 +61,20 @@ impl GameState {
     /// Get a trait by id
     pub fn get_trait(&self, id: u16) -> GameString {
         self.traits_lookup[id as usize].clone()
+    }
+
+    /// Set the current date
+    pub fn set_current_date(&mut self, date: GameString) {
+        self.current_date = Some(date);
+    }
+
+    /// Get the current date
+    pub fn get_current_date(&self) -> Option<&str> {
+        if self.current_date.is_none() {
+            return None;
+        } else {
+            return Some(self.current_date.as_ref().unwrap().as_str());
+        }
     }
 
     /// Get a character by key
@@ -307,7 +323,7 @@ impl Serialize for GameState {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("GameState", 7)?;
+        let mut state = serializer.serialize_struct("GameState", 8)?;
         state.serialize_field("characters", &self.characters)?;
         state.serialize_field("titles", &self.titles)?;
         state.serialize_field("faiths", &self.faiths)?;
@@ -315,6 +331,7 @@ impl Serialize for GameState {
         state.serialize_field("dynasties", &self.dynasties)?;
         state.serialize_field("memories", &self.memories)?;
         state.serialize_field("artifacts", &self.artifacts)?;
+        state.serialize_field("current_date", &self.current_date)?;
         state.end()
     }
 }

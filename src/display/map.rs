@@ -3,6 +3,7 @@ use std::{collections::HashMap, thread};
 use csv::ReaderBuilder;
 
 use image::{io::Reader as ImageReader, save_buffer, ImageBuffer, Rgba};
+use plotters::{backend::BitMapBackend, drawing::IntoDrawingArea, element::Text, style::{IntoFont, RGBAColor}};
 
 use super::super::{
     game_object::{GameId, GameString},
@@ -45,6 +46,22 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
         }
     }
     return map;
+}
+
+/// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
+fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str,) {
+    //TODO is this the best way to draw text?
+    let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
+    let text_height = height as f32 * 0.05;
+    let style = ("sans-serif", text_height).into_font().color(&RGBAColor(0, 0, 0, 0.5));
+    back.draw(
+        &Text::new(
+            text,
+            (10, height as i32 - text_height as i32),
+            style
+        )
+    ).unwrap();
+    back.present().unwrap();
 }
 
 /// A struct representing a game map, from which we can create [crate::structures::Title] maps
@@ -228,9 +245,13 @@ impl GameMap {
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
+        label: &str
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         //we need to convert the vec of bytes to a vec of rgba bytes
-        let new_map = self.create_map(key_list, |_: &str| *target_color);
+        let mut new_map = self.create_map(key_list, |_: &str| *target_color);
+        if !label.is_empty() {
+            draw_text(&mut new_map, self.width, self.height, label);
+        }
         let mut rgba = Vec::with_capacity(new_map.len() * 4 / 3);
         for i in 0..new_map.len() {
             rgba.push(new_map[i]);
@@ -247,13 +268,18 @@ impl GameMap {
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
         output_path: &str,
+        label: &str
     ) {
-        let new_map = self.create_map(key_list, |_: &str| *target_color);
+        let mut new_map = self.create_map(key_list, |_: &str| *target_color);
         let width = self.width;
         let height = self.height;
         let output_path = output_path.to_owned();
+        let label = label.to_owned();
         //we move the writing process out into a thread because it's an IO heavy operation
         thread::spawn(move || {
+            if !label.is_empty() {
+                draw_text(&mut new_map, width, height, &label);
+            }
             save_buffer(
                 output_path,
                 &new_map,

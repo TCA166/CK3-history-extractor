@@ -309,7 +309,7 @@ impl Grapher {
                     Into::<ShapeStyle>::into(color.mix(0.9)).filled(),
                 //we add the text to the node, the text is drawn at the point we calculated earlier
                 ) + Text::new(
-                    format!("{}", node_data.1),
+                    node_data.1.as_str().to_owned(),
                     node_data.3,
                     fnt.clone(),
             )),
