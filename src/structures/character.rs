@@ -536,6 +536,25 @@ impl Character {
         }
         return provinces;
     }
+
+    /// Gets the DNA similarity of the character with another character
+    pub fn dna_similarity(&self, other: Shared<Character>) -> f32{
+        if self.dna.is_none(){
+            return 0.0;
+        }
+        //TODO improve this algorithm, it's not very granular, similarity tends to jump in 0.3 increments
+        let dna = self.dna.as_ref().unwrap().as_str();
+        let mut similarity = 0;
+        let mut dna_chars = dna.chars();
+        let other = other.get_internal();
+        let mut other_chars = other.dna.as_ref().unwrap().chars();
+        while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()){
+            if d == o{
+                similarity += 1;
+            }
+        }
+        return similarity as f32 / dna.len() as f32;
+    }
 }
 
 impl DummyInit for Character {

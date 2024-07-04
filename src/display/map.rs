@@ -264,4 +264,27 @@ impl GameMap {
             .unwrap();
         });
     }
+
+    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
+    pub fn create_map_graph<F>(
+        &self,
+        assoc:F,
+        output_path: &str
+    ) where F: Fn(&str) -> [u8; 3] {
+        let new_map = self.create_map(self.title_color_map.keys().map(|x| GameString::new(x.to_owned())).collect(), assoc);
+        let width = self.width;
+        let height = self.height;
+        let output_path = output_path.to_owned();
+        //we move the writing process out into a thread because it's an IO heavy operation
+        thread::spawn(move || {
+            save_buffer(
+                output_path,
+                &new_map,
+                width,
+                height,
+                image::ExtendedColorType::Rgb8,
+            )
+            .unwrap();
+        });
+    }
 }

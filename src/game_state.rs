@@ -296,7 +296,7 @@ impl GameState {
         return res;
     }
 
-    /// Returns a hashmap year->number of deaths for a given dynasty
+    /// Returns a iterator over the titles
     pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
         self.titles.iter()
     }

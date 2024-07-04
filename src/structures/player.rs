@@ -14,7 +14,7 @@ use super::super::{
 };
 
 use super::{Character, FromGameObject, GameId, GameObjectDerived, LineageNode, Shared};
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -118,20 +118,50 @@ impl Renderable for Player {
                 gif_encoder.encode_frame(frame).unwrap();
             }
             gif_encoder.set_repeat(Repeat::Infinite).unwrap();
+            // genetic similarity gradient rendering
+            let last = self.lineage.last().unwrap().get_character();
+            let title_iter = renderer.get_state().get_title_iter();
+            let mut sim = HashMap::new();
+            for (_, title) in title_iter {
+                let title = title.get_internal();
+                let key = title.get_key();
+                if key.is_none() {
+                    continue;
+                }
+                let key = key.unwrap();
+                if !(key.starts_with("c_") || key.starts_with("b_")) {
+                    continue;
+                }
+                let similarity;
+                let ruler = title.get_holder();
+                if ruler.is_none() {
+                    similarity = 0.0;
+                } else {
+                    let ruler = ruler.as_ref().unwrap().get_internal();
+                    similarity = ruler.dna_similarity(last.clone());
+                }
+                for barony in title.get_de_jure_barony_keys() {
+                    if sim.contains_key(barony.as_ref()) && similarity < *sim.get(barony.as_ref()).unwrap(){
+                        continue;
+                    }
+                    sim.insert(barony.as_ref().clone(), similarity);
+                }
+            }
+            map.create_map_graph(|key:&str| [255, 255, (255.0 * (1.0 - sim.get(&key.to_owned()).unwrap())) as u8], &format!("{}/sim.png", renderer.get_path()))
         }
         for char in self.lineage.iter() {
             char.get_character()
                 .get_internal()
                 .render_all(stack, renderer);
-            let grapher = renderer.get_grapher();
-            if grapher.is_some() {
-                let last = self.lineage.last().unwrap().get_character();
-                grapher.unwrap().create_tree_graph::<Character>(
-                    last,
-                    true,
-                    &format!("{}/line.svg", renderer.get_path()),
-                );
-            }
+        }
+        let grapher = renderer.get_grapher();
+        if grapher.is_some() {
+            let last = self.lineage.last().unwrap().get_character();
+            grapher.unwrap().create_tree_graph::<Character>(
+                last,
+                true,
+                &format!("{}/line.svg", renderer.get_path()),
+            );
         }
     }
 }

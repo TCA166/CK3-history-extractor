@@ -490,7 +490,7 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         println!("Tree traversed");
-        let mut renderer = Renderer::new(&env, folder_name.clone(), map.as_ref(), grapher.as_ref());
+        let mut renderer = Renderer::new(&env, folder_name.clone(), &game_state, map.as_ref(), grapher.as_ref());
         let mut queue = vec![RenderableType::Player(player)];
         if !no_vis {
             timeline

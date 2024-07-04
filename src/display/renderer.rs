@@ -5,7 +5,7 @@ use minijinja::Environment;
 
 use serde::Serialize;
 
-use super::super::{game_object::GameId, structures::GameObjectDerived};
+use super::super::{game_object::GameId, structures::GameObjectDerived, game_state::GameState};
 use super::{graph::Grapher, localizer::Localizer, map::GameMap, RenderableType};
 
 /// A struct that renders objects into html pages.
@@ -13,11 +13,21 @@ use super::{graph::Grapher, localizer::Localizer, map::GameMap, RenderableType};
 /// Additionally holds references to the [GameMap] and [Grapher] objects, should they exist of course.
 /// It is meant to be used in the [Renderable] trait to render objects and generally act as a helper for rendering objects.
 pub struct Renderer<'a> {
+    /// The [minijinja] environment object that is used to render the templates.
     env: &'a Environment<'a>,
+    /// A hashmap that tracks which objects have been rendered.
     rendered: HashMap<&'static str, HashSet<GameId>>,
+    /// The path where the objects will be rendered to.
     path: String,
+    /// The game map object, if it exists.
+    /// It may be utilized during the rendering process to render the map.
     game_map: Option<&'a GameMap>,
+    /// The grapher object, if it exists.
+    /// It may be utilized during the rendering process to render a variety of graphs.
     grapher: Option<&'a Grapher>,
+    /// The game state object.
+    /// It is used to access the game state during rendering, especially for gathering of data for rendering of optional graphs.
+    state: &'a GameState,
 }
 
 impl<'a> Renderer<'a> {
@@ -25,6 +35,7 @@ impl<'a> Renderer<'a> {
     pub fn new(
         env: &'a Environment<'a>,
         path: String,
+        state: &'a GameState,
         game_map: Option<&'a GameMap>,
         grapher: Option<&'a Grapher>,
     ) -> Self {
@@ -34,6 +45,7 @@ impl<'a> Renderer<'a> {
             path,
             game_map,
             grapher,
+            state,
         }
     }
 
@@ -85,6 +97,11 @@ impl<'a> Renderer<'a> {
     /// Returns the [GameMap] object if it exists.
     pub fn get_map(&self) -> Option<&GameMap> {
         self.game_map
+    }
+
+    /// Returns the [GameState] object.
+    pub fn get_state(&self) -> &GameState {
+        self.state
     }
 }
 
