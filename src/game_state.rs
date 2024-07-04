@@ -33,7 +33,7 @@ pub struct GameState {
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
-    current_date: Option<GameString>
+    current_date: Option<GameString>,
 }
 
 impl GameState {
@@ -49,7 +49,7 @@ impl GameState {
             artifacts: HashMap::new(),
             traits_lookup: Vec::new(),
             contract_transform: HashMap::new(),
-            current_date: None
+            current_date: None,
         }
     }
 

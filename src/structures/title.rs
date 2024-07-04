@@ -357,7 +357,11 @@ impl Renderable for Title {
             let game_state = renderer.get_state();
             let map = game_map.unwrap();
             let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
-            let label = format!("{} at {}", self.name.as_ref().unwrap(), game_state.get_current_date().unwrap());
+            let label = format!(
+                "{} at {}",
+                self.name.as_ref().unwrap(),
+                game_state.get_current_date().unwrap()
+            );
             map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
         }
         if self.de_jure.is_some() {

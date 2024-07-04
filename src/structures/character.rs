@@ -508,7 +508,7 @@ impl Character {
     */
 
     /// Gets all of the held de jure barony keys of the character and their vassals
-    pub fn get_de_jure_barony_keys(&self) -> Vec<GameString> {
+    pub fn get_barony_keys(&self, de_jure: bool) -> Vec<GameString> {
         let mut provinces = Vec::new();
         for title in self.titles.iter() {
             let title = title.get_internal();
@@ -517,20 +517,24 @@ impl Character {
                 //for kingdoms and empires we don't want to add the de jure baronies
                 continue;
             } else {
-                provinces.append(&mut title.get_de_jure_barony_keys());
+                if de_jure {
+                    provinces.append(&mut title.get_de_jure_barony_keys());
+                } else {
+                    provinces.append(&mut title.get_barony_keys());
+                }
             }
         }
         for vassal in self.vassals.iter() {
             match vassal {
                 Vassal::Character(c) => {
-                    provinces.append(&mut c.get_internal().get_de_jure_barony_keys())
+                    provinces.append(&mut c.get_internal().get_barony_keys(de_jure))
                 }
                 Vassal::Reference(c) => provinces.append(
                     &mut c
                         .get_internal()
                         .get_ref()
                         .get_internal()
-                        .get_de_jure_barony_keys(),
+                        .get_barony_keys(de_jure),
                 ),
             }
         }
@@ -538,22 +542,50 @@ impl Character {
     }
 
     /// Gets the DNA similarity of the character with another character
-    pub fn dna_similarity(&self, other: Shared<Character>) -> f32{
-        if self.dna.is_none(){
+    pub fn dna_similarity(&self, other: Shared<Character>) -> f32 {
+        if self.dna.is_none() {
             return 0.0;
         }
-        //TODO improve this algorithm, it's not very granular, similarity tends to jump in 0.3 increments
+        //MAYBE improve this measure, tends to jump by 0.3
         let dna = self.dna.as_ref().unwrap().as_str();
         let mut similarity = 0;
         let mut dna_chars = dna.chars();
         let other = other.get_internal();
         let mut other_chars = other.dna.as_ref().unwrap().chars();
-        while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()){
-            if d == o{
+        while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()) {
+            if d == o {
                 similarity += 1;
             }
         }
         return similarity as f32 / dna.len() as f32;
+    }
+
+    /// Gets the descendants of the character
+    pub fn get_descendants(&self) -> Vec<Shared<Character>> {
+        let mut res = Vec::new();
+        let mut stack: Vec<Shared<Character>> = Vec::new();
+        for child in self.children.iter() {
+            stack.push(child.clone());
+            res.push(child.clone());
+        }
+        while !stack.is_empty() {
+            let c = stack.pop().unwrap();
+            let c = c.get_internal();
+            for child in c.children.iter() {
+                stack.push(child.clone());
+                res.push(child.clone());
+            }
+        }
+        return res;
+    }
+
+    /// Gets the dynasty of the character
+    pub fn get_dynasty(&self) -> Option<Shared<Dynasty>> {
+        if self.house.is_some() {
+            return Some(self.house.as_ref().unwrap().clone());
+        } else {
+            return None;
+        }
     }
 }
 

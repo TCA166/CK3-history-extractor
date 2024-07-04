@@ -210,11 +210,11 @@ impl Grapher {
                     let class = class.as_ref().unwrap();
                     if !groups.contains_key(class.as_str()) {
                         let mut rng = thread_rng();
-                        let base:u8 = 85;
+                        let base: u8 = 85;
                         let mut color = RGBColor(base, base, base);
                         //pick a random color and make it dominant
                         let index = rng.gen_range(0..3);
-                        let add = rng.gen_range(160-base..255-base);
+                        let add = rng.gen_range(160 - base..255 - base);
                         match index {
                             0 => {
                                 color.0 += add;

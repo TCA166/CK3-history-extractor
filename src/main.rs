@@ -2,11 +2,7 @@ use core::panic;
 use dialoguer::{Confirm, Input, Select};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde_json;
-use std::{
-    env, fs,
-    io::stdin,
-    path::Path,
-};
+use std::{env, fs, io::stdin, path::Path};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -295,7 +291,10 @@ fn main() {
             }
         }
     }
-    let bar_style = ProgressStyle::default_bar().template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}").unwrap().progress_chars("#>-");
+    let bar_style = ProgressStyle::default_bar()
+        .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+        .unwrap()
+        .progress_chars("#>-");
     //even though we don't need these for parsing, we load them here to error out early
     if game_path.is_some() {
         include_paths.insert(0, game_path.unwrap());
@@ -334,7 +333,7 @@ fn main() {
     let mut players: Vec<Player> = Vec::new();
     let progress_bar = ProgressBar::new(save.len() as u64);
     progress_bar.set_style(bar_style);
-    for mut i in progress_bar.wrap_iter(save.into_iter()){
+    for mut i in progress_bar.wrap_iter(save.into_iter()) {
         progress_bar.set_message(i.get_name().to_owned());
         match i.get_name() {
             "meta_data" => {
@@ -494,7 +493,13 @@ fn main() {
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
         player.set_depth(depth, &localizer);
         println!("Tree traversed");
-        let mut renderer = Renderer::new(&env, folder_name.clone(), &game_state, map.as_ref(), grapher.as_ref());
+        let mut renderer = Renderer::new(
+            &env,
+            folder_name.clone(),
+            &game_state,
+            map.as_ref(),
+            grapher.as_ref(),
+        );
         let mut queue = vec![RenderableType::Player(player)];
         if !no_vis {
             timeline

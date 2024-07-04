@@ -5,7 +5,7 @@ use minijinja::Environment;
 
 use serde::Serialize;
 
-use super::super::{game_object::GameId, structures::GameObjectDerived, game_state::GameState};
+use super::super::{game_object::GameId, game_state::GameState, structures::GameObjectDerived};
 use super::{graph::Grapher, localizer::Localizer, map::GameMap, RenderableType};
 
 /// A struct that renders objects into html pages.

@@ -3,7 +3,12 @@ use std::{collections::HashMap, thread};
 use csv::ReaderBuilder;
 
 use image::{io::Reader as ImageReader, save_buffer, ImageBuffer, Rgba};
-use plotters::{backend::BitMapBackend, drawing::IntoDrawingArea, element::Text, style::{IntoFont, RGBAColor}};
+use plotters::{
+    backend::BitMapBackend,
+    drawing::IntoDrawingArea,
+    element::Text,
+    style::{IntoFont, RGBAColor},
+};
 
 use super::super::{
     game_object::{GameId, GameString},
@@ -49,18 +54,19 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
 }
 
 /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
-fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str,) {
+fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
     //TODO is this the best way to draw text?
     let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
     let text_height = height as f32 * 0.05;
-    let style = ("sans-serif", text_height).into_font().color(&RGBAColor(0, 0, 0, 0.5));
-    back.draw(
-        &Text::new(
-            text,
-            (10, height as i32 - text_height as i32),
-            style
-        )
-    ).unwrap();
+    let style = ("sans-serif", text_height)
+        .into_font()
+        .color(&RGBAColor(0, 0, 0, 0.5));
+    back.draw(&Text::new(
+        text,
+        (10, height as i32 - text_height as i32),
+        style,
+    ))
+    .unwrap();
     back.present().unwrap();
 }
 
@@ -245,7 +251,7 @@ impl GameMap {
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
-        label: &str
+        label: &str,
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         //we need to convert the vec of bytes to a vec of rgba bytes
         let mut new_map = self.create_map(key_list, |_: &str| *target_color);
@@ -268,7 +274,7 @@ impl GameMap {
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
         output_path: &str,
-        label: &str
+        label: &str,
     ) {
         let mut new_map = self.create_map(key_list, |_: &str| *target_color);
         let width = self.width;
@@ -292,12 +298,17 @@ impl GameMap {
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    pub fn create_map_graph<F>(
-        &self,
-        assoc:F,
-        output_path: &str
-    ) where F: Fn(&str) -> [u8; 3] {
-        let new_map = self.create_map(self.title_color_map.keys().map(|x| GameString::new(x.to_owned())).collect(), assoc);
+    pub fn create_map_graph<F>(&self, assoc: F, output_path: &str)
+    where
+        F: Fn(&str) -> [u8; 3],
+    {
+        let new_map = self.create_map(
+            self.title_color_map
+                .keys()
+                .map(|x| GameString::new(x.to_owned()))
+                .collect(),
+            assoc,
+        );
         let width = self.width;
         let height = self.height;
         let output_path = output_path.to_owned();

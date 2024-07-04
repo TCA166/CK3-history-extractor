@@ -378,7 +378,7 @@ impl SaveFile {
     /// Get the number of sections in the save file.
     pub fn len(&self) -> usize {
         let mut num = 0;
-        let mut depth:u32 = 0;
+        let mut depth: u32 = 0;
         for c in self.contents.chars() {
             match c {
                 '}' => {

@@ -95,6 +95,7 @@ impl Renderable for Player {
             let game_state = renderer.get_state();
             //timelapse rendering
             let map = map.unwrap();
+            let target_color = [70, 255, 70];
             let path = renderer.get_path().to_owned() + "/timelapse.gif";
             let mut file = File::create(&path).unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
@@ -116,7 +117,7 @@ impl Renderable for Player {
                 } else {
                     game_state.get_current_date().unwrap()
                 };
-                let fbytes = map.create_map_buffer(char.get_de_jure_barony_keys(), &[70, 255, 70], date);
+                let fbytes = map.create_map_buffer(char.get_barony_keys(true), &target_color, date);
                 //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();
@@ -148,13 +149,40 @@ impl Renderable for Player {
                     similarity = ruler.dna_similarity(last.clone());
                 }
                 for barony in title.get_de_jure_barony_keys() {
-                    if sim.contains_key(barony.as_ref()) && similarity < *sim.get(barony.as_ref()).unwrap(){
+                    if sim.contains_key(barony.as_ref())
+                        && similarity < *sim.get(barony.as_ref()).unwrap()
+                    {
                         continue;
                     }
                     sim.insert(barony.as_ref().clone(), similarity);
                 }
             }
-            map.create_map_graph(|key:&str| [255, 255, (255.0 * (1.0 - sim.get(&key.to_owned()).unwrap())) as u8], &format!("{}/sim.png", renderer.get_path()))
+            map.create_map_graph(
+                |key: &str| {
+                    [
+                        255,
+                        255,
+                        (255.0 * (1.0 - sim.get(&key.to_owned()).unwrap())) as u8,
+                    ]
+                },
+                &format!("{}/sim.png", renderer.get_path()),
+            );
+            let mut titles = Vec::new();
+            let first = self.lineage.first().unwrap().get_character();
+            let first = first.get_internal();
+            let dynasty = first.get_dynasty();
+            let dynasty = dynasty.as_ref().unwrap().get_internal();
+            let descendants = dynasty.get_founder().get_internal().get_descendants();
+            for desc in descendants {
+                let desc = desc.get_internal();
+                titles.append(&mut desc.get_barony_keys(false));
+            }
+            map.create_map_file(
+                titles,
+                &target_color,
+                &format!("{}/dynastyMap.png", renderer.get_path()),
+                &format!("Lands of the {} dynasty", dynasty.get_name()),
+            );
         }
         for char in self.lineage.iter() {
             char.get_character()
