@@ -480,9 +480,11 @@ fn main() {
     } else {
         timeline = None;
     }
+    // a big progress bar to show the progress of rendering that contains multiple progress bars
     let rendering_progress_bar = MultiProgress::new();
     let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));
     player_progress.set_style(bar_style);
+    player_progress.enable_steady_tick(Duration::from_secs(1));
     let spinner_style = ProgressStyle::default_spinner()
         .template("[{elapsed_precise}] {spinner} {msg}")
         .unwrap();

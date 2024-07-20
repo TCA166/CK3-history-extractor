@@ -295,7 +295,7 @@ impl Grapher {
             let color = if class.is_some() {
                 groups.get(class.as_ref().unwrap().as_str()).unwrap()
             } else {
-                &GREEN
+                &WHITE
             };
             //draw the element after the line so that the line is behind the element
             root.draw(
