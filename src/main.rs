@@ -1,8 +1,8 @@
 use core::panic;
 use dialoguer::{Confirm, Input, Select};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
 use serde_json;
-use std::{env, fs, io::stdin, path::Path};
+use std::{env, fs, io::stdin, path::Path, time::Duration};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -305,6 +305,8 @@ fn main() {
         println!("Using game files from: {:?}", include_paths);
         let progress_bar = ProgressBar::new(include_paths.len() as u64);
         progress_bar.set_style(bar_style.clone());
+        // "items" in this case are huge, 8s on my ssd, so we enable the steady tick
+        progress_bar.enable_steady_tick(Duration::from_secs(1));
         progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
             let loc_path = path.clone() + "/localization/" + language.as_str();
@@ -332,7 +334,7 @@ fn main() {
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
     let progress_bar = ProgressBar::new(save.len() as u64);
-    progress_bar.set_style(bar_style);
+    progress_bar.set_style(bar_style.clone());
     for mut i in progress_bar.wrap_iter(save.into_iter()) {
         progress_bar.set_message(i.get_name().to_owned());
         match i.get_name() {
@@ -478,10 +480,15 @@ fn main() {
     } else {
         timeline = None;
     }
-    for player in players.iter_mut() {
+    let rendering_progress_bar = MultiProgress::new();
+    let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));
+    player_progress.set_style(bar_style);
+    let spinner_style = ProgressStyle::default_spinner()
+        .template("[{elapsed_precise}] {spinner} {msg}").unwrap();
+    for player in player_progress.wrap_iter(players.iter_mut()) {
         //render each player
-        println!("Processing {:?}", player.name);
         let mut folder_name = player.name.to_string() + "'s history";
+        player_progress.set_message(format!("Rendering {}", folder_name));
         if output_path.is_some() {
             folder_name = output_path.as_ref().unwrap().clone() + "/" + folder_name.as_str();
         }
@@ -491,8 +498,10 @@ fn main() {
         create_dir_maybe(format!("{}/titles", &folder_name).as_str());
         create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
         create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
+        let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
+        cull_spinner.set_style(spinner_style.clone());
         player.set_depth(depth, &localizer);
-        println!("Tree traversed");
+        cull_spinner.finish_with_message("Tree traversed");
         let mut renderer = Renderer::new(
             &env,
             folder_name.clone(),
@@ -500,20 +509,28 @@ fn main() {
             map.as_ref(),
             grapher.as_ref(),
         );
+        let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
+        render_spinner.set_style(spinner_style.clone());
         let mut queue = vec![RenderableType::Player(player)];
         if !no_vis {
             timeline
                 .as_ref()
                 .unwrap()
                 .render_all(&mut queue, &mut renderer);
+            render_spinner.inc(1);
         }
         while let Some(obj) = queue.pop() {
             obj.render_all(&mut queue, &mut renderer);
+            render_spinner.inc(1);
         }
+        render_spinner.finish_with_message("Rendering complete");
         if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
             open::that(format!("{}/index.html", folder_name)).unwrap();
         }
+        rendering_progress_bar.remove(&cull_spinner);
+        rendering_progress_bar.remove(&render_spinner);
     }
+    player_progress.finish_with_message("Players rendered");
     if dump {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write("game_state.json", json).unwrap();
