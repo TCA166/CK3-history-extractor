@@ -86,7 +86,7 @@ impl Localizer {
     }
 
     /// Adds localization data from a directory.
-    /// The function expects a path to a directory that contains localization files.
+    /// The path may be invalid, in which case the function will simply do nothing
     pub fn add_from_path(&mut self, localization_src_path: String) {
         // get every file in the directory and subdirectories
         let path = Path::new(&localization_src_path);

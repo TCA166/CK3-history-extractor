@@ -1,3 +1,5 @@
+use crate::game_object::GameString;
+
 use super::{
     game_object::{GameObject, SaveFileValue},
     types::{Shared, Wrapper, WrapperMut},
@@ -121,7 +123,7 @@ impl Section {
                         if past_eq && !val.is_empty() {
                             stack.last_mut().unwrap().insert(
                                 mem::take(&mut key),
-                                SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                                SaveFileValue::String(GameString::wrap(mem::take(&mut val))),
                             );
                             past_eq = false;
                         }
@@ -130,7 +132,7 @@ impl Section {
                             stack
                                 .last_mut()
                                 .unwrap()
-                                .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                                .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         }
                         depth -= 1;
                         if depth > 0 {
@@ -181,7 +183,7 @@ impl Section {
                             // we have a key value pair
                             stack.last_mut().unwrap().insert(
                                 mem::take(&mut key),
-                                SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                                SaveFileValue::String(GameString::wrap(mem::take(&mut val))),
                             );
                             past_eq = false; // we reset the past_eq flag
                         } else if !key.is_empty() {
@@ -189,7 +191,7 @@ impl Section {
                             stack
                                 .last_mut()
                                 .unwrap()
-                                .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                                .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         }
                     }
                 }
@@ -212,7 +214,7 @@ impl Section {
                                 // in case {something=else something=else}
                                 stack.last_mut().unwrap().insert(
                                     mem::take(&mut key),
-                                    SaveFileValue::String(Rc::new(mem::take(&mut val))),
+                                    SaveFileValue::String(GameString::wrap(mem::take(&mut val))),
                                 );
                                 past_eq = false;
                             }
@@ -261,7 +263,7 @@ impl Section {
                         stack
                             .last_mut()
                             .unwrap()
-                            .push(SaveFileValue::String(Rc::new(mem::take(&mut key))));
+                            .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         maybe_array = false;
                     }
                     //we simply append the character to the key or value

@@ -45,7 +45,7 @@ const TEMPLATE_NAMES: [&str; 7] = [
 /// ## Env specifics
 ///
 /// The environment will have no html escaping.
-/// 
+///
 /// ### Filters
 ///
 /// The environment will have the following filters:

@@ -1,6 +1,6 @@
 use core::panic;
 use dialoguer::{Confirm, Input, Select};
-use indicatif::{ProgressBar, ProgressStyle, MultiProgress};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
 use std::{env, fs, io::stdin, path::Path, time::Duration};
 
@@ -484,7 +484,8 @@ fn main() {
     let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));
     player_progress.set_style(bar_style);
     let spinner_style = ProgressStyle::default_spinner()
-        .template("[{elapsed_precise}] {spinner} {msg}").unwrap();
+        .template("[{elapsed_precise}] {spinner} {msg}")
+        .unwrap();
     for player in player_progress.wrap_iter(players.iter_mut()) {
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
