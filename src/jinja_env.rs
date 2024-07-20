@@ -17,11 +17,46 @@ static INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html"
 #[cfg(internal)]
 static INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
 
+pub const H_TEMPLATE_NAME: &str = "homeTemplate";
+pub const C_TEMPLATE_NAME: &str = "charTemplate";
+pub const CUL_TEMPLATE_NAME: &str = "cultureTemplate";
+pub const DYN_TEMPLATE_NAME: &str = "dynastyTemplate";
+pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
+pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
+pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
+const TEMPLATE_NAMES: [&str; 7] = [
+    H_TEMPLATE_NAME,
+    C_TEMPLATE_NAME,
+    CUL_TEMPLATE_NAME,
+    DYN_TEMPLATE_NAME,
+    FAITH_TEMPLATE_NAME,
+    TITLE_TEMPLATE_NAME,
+    TIMELINE_TEMPLATE_NAME,
+];
+
+/// # Environment creation
+///
 /// Create a new [Environment] with the filters and templates needed for the project.
 /// If the internal flag is set to true, it will use the internal templates, otherwise it will use the templates in the templates folder.
 /// If the templates folder does not exist, it will attempt use the internal templates regardless of the setting.
+///
+/// **This function leaks memory.**
+///
+/// ## Env specifics
+///
+/// The environment will have no html escaping.
+/// 
+/// ### Filters
+///
 /// The environment will have the following filters:
 /// - [render_ref] - renders a reference to another object
+/// - [handle_tooltips] - removes tooltips from the text
+///
+/// ### Globals
+///
+/// The environment will have the following globals:
+/// - map_present - whether the map is present
+/// - no_vis - whether the visualizations are disabled
 pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environment<'static> {
     let mut env = Environment::new();
     env.add_filter("render_ref", render_ref);
@@ -32,19 +67,17 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
     if internal || !Path::new("./templates").exists() {
         #[cfg(internal)]
         {
-            env.add_template("homeTemplate.html", INT_H_TEMPLATE)
+            env.add_template(H_TEMPLATE_NAME, INT_H_TEMPLATE).unwrap();
+            env.add_template(C_TEMPLATE_NAME, INT_C_TEMPLATE).unwrap();
+            env.add_template(CUL_TEMPLATE_NAME, INT_CUL_TEMPLATE)
                 .unwrap();
-            env.add_template("charTemplate.html", INT_C_TEMPLATE)
+            env.add_template(DYN_TEMPLATE_NAME, INT_DYN_TEMPLATE)
                 .unwrap();
-            env.add_template("cultureTemplate.html", INT_CUL_TEMPLATE)
+            env.add_template(FAITH_TEMPLATE_NAME, INT_FAITH_TEMPLATE)
                 .unwrap();
-            env.add_template("dynastyTemplate.html", INT_DYN_TEMPLATE)
+            env.add_template(TITLE_TEMPLATE_NAME, INT_TITLE_TEMPLATE)
                 .unwrap();
-            env.add_template("faithTemplate.html", INT_FAITH_TEMPLATE)
-                .unwrap();
-            env.add_template("titleTemplate.html", INT_TITLE_TEMPLATE)
-                .unwrap();
-            env.add_template("timelineTemplate.html", INT_TIMELINE_TEMPLATE)
+            env.add_template(TIMELINE_TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
                 .unwrap();
         }
         #[cfg(not(internal))]
@@ -52,29 +85,22 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             panic!("Internal templates requested but not compiled in");
         }
     } else {
-        // LEAKS MEMORY
-        let h_template = Box::new(fs::read_to_string("templates/homeTemplate.html").unwrap());
-        env.add_template("homeTemplate.html", h_template.leak())
-            .unwrap();
-        let c_template = Box::new(fs::read_to_string("templates/charTemplate.html").unwrap());
-        env.add_template("charTemplate.html", c_template.leak())
-            .unwrap();
-        let cul_template = Box::new(fs::read_to_string("templates/cultureTemplate.html").unwrap());
-        env.add_template("cultureTemplate.html", cul_template.leak())
-            .unwrap();
-        let dyn_template = Box::new(fs::read_to_string("templates/dynastyTemplate.html").unwrap());
-        env.add_template("dynastyTemplate.html", dyn_template.leak())
-            .unwrap();
-        let faith_template = Box::new(fs::read_to_string("templates/faithTemplate.html").unwrap());
-        env.add_template("faithTemplate.html", faith_template.leak())
-            .unwrap();
-        let title_template = Box::new(fs::read_to_string("templates/titleTemplate.html").unwrap());
-        env.add_template("titleTemplate.html", title_template.leak())
-            .unwrap();
-        let timeline_template =
-            Box::new(fs::read_to_string("templates/timelineTemplate.html").unwrap());
-        env.add_template("timelineTemplate.html", timeline_template.leak())
-            .unwrap();
+        let template_dir = fs::read_dir("templates").unwrap();
+        for entry in template_dir {
+            let entry = entry.unwrap();
+            let file_name = entry.file_name();
+            //get the name of the file without the extension
+            let name = file_name.to_str().unwrap().splitn(2, '.').next().unwrap();
+            //it needs to be a template file
+            let i = TEMPLATE_NAMES.iter().position(|&x| x == name);
+            if i.is_none() {
+                continue;
+            }
+            // WARNING! LEAKS MEMORY
+            let template = Box::new(fs::read_to_string(entry.path()).unwrap());
+            env.add_template(TEMPLATE_NAMES[i.unwrap()], template.leak())
+                .unwrap();
+        }
     }
     env
 }

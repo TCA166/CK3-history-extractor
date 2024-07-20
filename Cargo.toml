@@ -1,13 +1,17 @@
 [package]
 name = "ck3_history_extractor"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
+authors = ["TCA"]
+description = "A tool for generating a encyclopedia from your CK3 save file"
+documentation = "https://tca166.github.io/CK3-history-extractor/ck3_history_extractor/"
+readme = "./README.md"
+homepage = "https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html"
+repository = "https://github.com/TCA166/CK3-history-extractor"
+license = "MIT"
+keywords = ["Crusader Kings 3"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[target.x86_64-pc-windows-gnu]
-linker = "/usr/bin/x86_64-w64-mingw32-gcc"
-ar = "/usr/bin/x86_64-w64-mingw32-gcc-ar"
 
 [dependencies]
 minijinja = "2.0.1"

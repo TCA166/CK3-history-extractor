@@ -7,6 +7,7 @@ use crate::{game_object::GameId, structures::DerivedRef};
 use super::super::{
     game_object::GameString,
     game_state::GameState,
+    jinja_env::TIMELINE_TEMPLATE_NAME,
     structures::{Character, Culture, Faith, GameObjectDerived, Title},
     types::{Shared, Wrapper, WrapperMut},
 };
@@ -319,7 +320,7 @@ impl Renderable for Timeline {
     }
 
     fn get_template() -> &'static str {
-        "timelineTemplate.html"
+        TIMELINE_TEMPLATE_NAME
     }
 
     fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {

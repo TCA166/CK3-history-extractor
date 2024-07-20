@@ -6,6 +6,7 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
     game_object::{GameObject, GameString},
     game_state::GameState,
+    jinja_env::CUL_TEMPLATE_NAME,
 };
 
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
@@ -168,7 +169,7 @@ impl Renderable for Culture {
     }
 
     fn get_template() -> &'static str {
-        "cultureTemplate.html"
+        CUL_TEMPLATE_NAME
     }
 
     fn get_subdir() -> &'static str {

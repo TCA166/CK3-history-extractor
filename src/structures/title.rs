@@ -9,6 +9,7 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
     game_object::{GameObject, GameString, SaveFileValue},
     game_state::GameState,
+    jinja_env::TITLE_TEMPLATE_NAME,
     types::{Wrapper, WrapperMut},
 };
 use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
@@ -341,7 +342,7 @@ impl Renderable for Title {
     }
 
     fn get_template() -> &'static str {
-        "titleTemplate.html"
+        TITLE_TEMPLATE_NAME
     }
 
     fn get_subdir() -> &'static str {

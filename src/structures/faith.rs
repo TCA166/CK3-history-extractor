@@ -6,6 +6,7 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
     game_object::{GameObject, GameString},
     game_state::GameState,
+    jinja_env::FAITH_TEMPLATE_NAME,
     types::{Wrapper, WrapperMut},
 };
 use super::{Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
@@ -128,7 +129,7 @@ impl Renderable for Faith {
     }
 
     fn get_template() -> &'static str {
-        "faithTemplate.html"
+        FAITH_TEMPLATE_NAME
     }
 
     fn get_subdir() -> &'static str {

@@ -10,6 +10,7 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
     game_object::{GameObject, GameString},
     game_state::GameState,
+    jinja_env::H_TEMPLATE_NAME,
     types::Wrapper,
 };
 
@@ -85,7 +86,7 @@ impl Renderable for Player {
     }
 
     fn get_template() -> &'static str {
-        "homeTemplate.html"
+        H_TEMPLATE_NAME
     }
 
     fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {

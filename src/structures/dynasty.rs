@@ -6,6 +6,7 @@ use super::super::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
     game_object::{GameObject, GameString, SaveFileValue},
     game_state::GameState,
+    jinja_env::DYN_TEMPLATE_NAME,
     types::{Wrapper, WrapperMut},
 };
 use super::{
@@ -304,7 +305,7 @@ impl Renderable for Dynasty {
     }
 
     fn get_template() -> &'static str {
-        "dynastyTemplate.html"
+        DYN_TEMPLATE_NAME
     }
 
     fn get_subdir() -> &'static str {

@@ -6,6 +6,7 @@ use crate::{
     display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
     game_object::{GameObject, GameString, SaveFileValue},
     game_state::GameState,
+    jinja_env::C_TEMPLATE_NAME,
     types::{Wrapper, WrapperMut},
 };
 
@@ -829,7 +830,7 @@ impl Renderable for Character {
     }
 
     fn get_template() -> &'static str {
-        "charTemplate.html"
+        C_TEMPLATE_NAME
     }
 
     fn get_subdir() -> &'static str {
