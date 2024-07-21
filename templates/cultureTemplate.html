@@ -51,7 +51,7 @@
                     {%endif%}
                 </div>
                 <div class="col w-50">
-                    <div class="card">
+                    <div class="card mb-2">
                         <div class="card-header">
                             Traditions:
                         </div>
@@ -61,6 +61,16 @@
                             {%endfor%}
                         </div>
                     </div>
+                    {%if map_present%}
+                    <div class="card">
+                        <div class="card-header">
+                            Counties of the culture
+                        </div>
+                        <div class="card-body p-0">
+                            <a href="./{{id}}.png" target="_blank"><img src="./{{id}}.png" class="img-fluid" alt="Map of the counties that have this culture"></a>
+                        </div>
+                    </div>
+                    {%endif%}
                 </div>
             </div>
         </main>

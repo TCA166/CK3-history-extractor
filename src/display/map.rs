@@ -214,7 +214,12 @@ impl GameMap {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::new();
         for k in key_list.iter() {
-            colors.insert(&self.title_color_map[k.as_str()], assoc(k));
+            let color = self.title_color_map.get(k.as_str());
+            if color.is_some() {
+                colors.insert(color.unwrap(), assoc(k));
+            } else {
+                // huh? this is weird
+            }
         }
         let mut x = 0;
         while x < self.byte_sz {

@@ -136,8 +136,46 @@ impl Renderable for Faith {
         }
         let grapher = renderer.get_grapher();
         if grapher.is_some() {
-            let path = format!("{}/faiths/{}.svg", renderer.get_path(), self.id);
+            let path = format!(
+                "{}/{}/{}.svg",
+                renderer.get_path(),
+                Self::get_subdir(),
+                self.id
+            );
             grapher.unwrap().create_faith_graph(self.id, &path);
+        }
+        let map = renderer.get_map();
+        if map.is_some() {
+            let game_state = renderer.get_state();
+            let mut keys = Vec::new();
+            for entry in game_state.get_title_iter() {
+                let title = entry.1.get_internal();
+                let key = title.get_key();
+                if key.is_none() {
+                    continue;
+                }
+                if !key.as_ref().unwrap().starts_with("c_") {
+                    continue;
+                }
+                let c_faith = title.get_faith().unwrap();
+                if c_faith.get_internal().id == self.id {
+                    keys.append(&mut title.get_barony_keys());
+                }
+            }
+            if !keys.is_empty() {
+                let path = format!(
+                    "{}/{}/{}.png",
+                    renderer.get_path(),
+                    Self::get_subdir(),
+                    self.id
+                );
+                map.unwrap().create_map_file(
+                    keys,
+                    &[70, 255, 70],
+                    &path,
+                    &format!("Map of the {} faith", &self.name.as_ref().unwrap()),
+                );
+            }
         }
         if self.head.is_some() {
             stack.push(RenderableType::Character(

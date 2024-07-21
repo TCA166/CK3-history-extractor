@@ -58,7 +58,7 @@
                     {%endif%}
                 </div>
                 <div class="col">
-                    <div class="card">
+                    <div class="card mb-2">
                         <div class="card-header">
                             Doctrines:
                         </div>
@@ -133,6 +133,16 @@
                             </tr>
                         </table>
                     </div>
+                    {%if map_present%}
+                    <div class="card">
+                        <div class="card-header">
+                            Counties of the faith
+                        </div>
+                        <div class="card-body p-0">
+                            <a href="./{{id}}.png" target="_blank"><img src="./{{id}}.png" class="img-fluid" alt="Map of the counties that follow this faith"></a>
+                        </div>
+                    </div>
+                    {%endif%}
                 </div>
             </div>
         </main>

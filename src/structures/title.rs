@@ -3,12 +3,15 @@ use std::slice::Iter;
 
 use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-    game_object::{GameObject, GameString, SaveFileValue},
-    game_state::GameState,
-    jinja_env::TITLE_TEMPLATE_NAME,
-    types::{Wrapper, WrapperMut},
+use super::{
+    super::{
+        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        game_object::{GameObject, GameString, SaveFileValue},
+        game_state::GameState,
+        jinja_env::TITLE_TEMPLATE_NAME,
+        types::{Wrapper, WrapperMut},
+    },
+    Culture, Faith,
 };
 use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 
@@ -27,6 +30,10 @@ pub struct Title {
     localized: bool,
     name_localized: bool,
     capital: Option<Shared<Title>>,
+    /// Only used for counties
+    culture: Option<Shared<Culture>>,
+    /// Only used for counties
+    faith: Option<Shared<Faith>>,
     color: [u8; 3],
 }
 
@@ -188,6 +195,33 @@ impl Title {
     pub fn get_capital(&self) -> Option<Shared<Title>> {
         self.capital.clone()
     }
+
+    /// Adds the culture and faith data to the title
+    pub fn add_county_data(&mut self, culture: Shared<Culture>, faith: Shared<Faith>) {
+        if !self.key.as_ref().unwrap().starts_with("c_") {
+            panic!("Can only add county data to a county title");
+        }
+        self.culture = Some(culture);
+        self.faith = Some(faith);
+    }
+
+    /// Returns the culture of the title
+    pub fn get_culture(&self) -> Option<Shared<Culture>> {
+        if self.culture.as_ref().is_some() {
+            return Some(self.culture.as_ref().unwrap().clone());
+        } else {
+            return None;
+        }
+    }
+
+    /// Returns the faith of the title
+    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+        if self.faith.as_ref().is_some() {
+            return Some(self.faith.as_ref().unwrap().clone());
+        } else {
+            return None;
+        }
+    }
 }
 
 impl DummyInit for Title {
@@ -207,6 +241,8 @@ impl DummyInit for Title {
             name_localized: false,
             color: [70, 255, 70],
             capital: None,
+            culture: None,
+            faith: None,
         }
     }
 
@@ -274,7 +310,7 @@ impl Serialize for Title {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Title", 10)?;
+        let mut state = serializer.serialize_struct("Title", 12)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         if self.key.is_some() {
@@ -302,6 +338,14 @@ impl Serialize for Title {
             }
         } else {
             state.serialize_field("tier", "")?;
+        }
+        if self.faith.is_some() {
+            let faith = DerivedRef::from_derived(self.faith.as_ref().unwrap().clone());
+            state.serialize_field("faith", &faith)?;
+        }
+        if self.culture.is_some() {
+            let culture = DerivedRef::from_derived(self.culture.as_ref().unwrap().clone());
+            state.serialize_field("culture", &culture)?;
         }
         if self.de_jure.is_some() {
             let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
@@ -351,7 +395,12 @@ impl Renderable for Title {
         if game_map.is_some() && self.de_facto_vassals.len() > 0 {
             let game_state = renderer.get_state();
             let map = game_map.unwrap();
-            let path = format!("{}/titles/{}.png", renderer.get_path(), self.id);
+            let path = format!(
+                "{}/{}/{}.png",
+                renderer.get_path(),
+                Self::get_subdir(),
+                self.id
+            );
             let label = format!(
                 "{} at {}",
                 self.name.as_ref().unwrap(),
@@ -443,6 +492,18 @@ impl Cullable for Title {
                 if c.id != self.id {
                     c.set_depth(depth - 1, localization);
                 }
+            }
+        }
+        if self.faith.is_some() {
+            let c = self.faith.as_ref().unwrap().try_get_internal_mut();
+            if c.is_ok() {
+                c.unwrap().set_depth(depth - 1, localization);
+            }
+        }
+        if self.culture.is_some() {
+            let c = self.culture.as_ref().unwrap().try_get_internal_mut();
+            if c.is_ok() {
+                c.unwrap().set_depth(depth - 1, localization);
             }
         }
         self.localized = true;

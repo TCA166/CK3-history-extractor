@@ -313,7 +313,12 @@ impl Renderable for Dynasty {
         let grapher = renderer.get_grapher();
         if grapher.is_some() {
             let g = grapher.unwrap();
-            let path = format!("{}/dynasties/{}.svg", renderer.get_path(), self.id);
+            let path = format!(
+                "{}/{}/{}.svg",
+                renderer.get_path(),
+                Self::get_subdir(),
+                self.id
+            );
             g.create_dynasty_graph(self, &path);
         }
         for leader in self.leaders.iter() {

@@ -2,7 +2,8 @@ use core::panic;
 use dialoguer::{Confirm, Input, Select};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
-use std::{env, fs, io::stdin, path::Path, time::Duration};
+use std::{collections::HashMap, env, fs, io::stdin, path::Path, time::Duration};
+use types::{Wrapper, WrapperMut};
 
 /// A submodule that provides opaque types commonly used in the project
 mod types;
@@ -25,7 +26,7 @@ use game_state::GameState;
 /// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::{FromGameObject, Player};
+use structures::{Character, Culture, Dynasty, Faith, FromGameObject, Player, Title};
 
 /// The submodule responsible for creating the [minijinja::Environment] and loading of templates.
 mod jinja_env;
@@ -359,6 +360,33 @@ fn main() {
                     game_state.add_title(o.unwrap());
                 }
             }
+            "county_manager" => {
+                let r = i.to_object();
+                let counties = r.get_object_ref("counties");
+                // we create an association between the county key and the faith and culture of the county
+                // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
+                let mut key_assoc = HashMap::new();
+                for (key, p) in counties.get_obj_iter() {
+                    let p = p.as_object().unwrap();
+                    let faith = game_state.get_faith(&p.get("faith").unwrap().as_id());
+                    let culture = game_state.get_culture(&p.get("culture").unwrap().as_id());
+                    key_assoc.insert(key.as_str(), (faith, culture));
+                }
+                for (_, title) in game_state.get_title_iter() {
+                    let key = title.get_internal().get_key();
+                    if key.is_none() {
+                        continue;
+                    }
+                    let assoc = key_assoc.get(key.unwrap().as_str());
+                    if assoc.is_none() {
+                        continue;
+                    }
+                    let (faith, culture) = assoc.unwrap();
+                    title
+                        .get_internal_mut()
+                        .add_county_data(culture.clone(), faith.clone())
+                }
+            }
             "dynasties" => {
                 let r = i.to_object();
                 for d in r.get_obj_iter() {
@@ -496,11 +524,11 @@ fn main() {
             folder_name = output_path.as_ref().unwrap().clone() + "/" + folder_name.as_str();
         }
         create_dir_maybe(&folder_name);
-        create_dir_maybe(format!("{}/characters", &folder_name).as_str());
-        create_dir_maybe(format!("{}/dynasties", &folder_name).as_str());
-        create_dir_maybe(format!("{}/titles", &folder_name).as_str());
-        create_dir_maybe(format!("{}/faiths", &folder_name).as_str());
-        create_dir_maybe(format!("{}/cultures", &folder_name).as_str());
+        create_dir_maybe(format!("{folder_name}/{}", Character::get_subdir()).as_str());
+        create_dir_maybe(format!("{folder_name}/{}", Dynasty::get_subdir()).as_str());
+        create_dir_maybe(format!("{folder_name}/{}", Title::get_subdir()).as_str());
+        create_dir_maybe(format!("{folder_name}/{}", Faith::get_subdir()).as_str());
+        create_dir_maybe(format!("{folder_name}/{}", Culture::get_subdir()).as_str());
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
         player.set_depth(depth, &localizer);
@@ -528,7 +556,7 @@ fn main() {
         }
         render_spinner.finish_with_message("Rendering complete");
         if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
-            open::that(format!("{}/index.html", folder_name)).unwrap();
+            open::that(player.get_path(&folder_name)).unwrap();
         }
         rendering_progress_bar.remove(&cull_spinner);
         rendering_progress_bar.remove(&render_spinner);

@@ -155,11 +155,12 @@ impl Renderable for Player {
             }
             map.create_map_graph(
                 |key: &str| {
-                    [
-                        255,
-                        255,
-                        (255.0 * (1.0 - sim.get(&key.to_owned()).unwrap())) as u8,
-                    ]
+                    let mult = sim.get(&key.to_owned());
+                    if mult.is_none() {
+                        return [0, 0, 0];
+                    } else {
+                        return [255, 255, (255.0 * (1.0 - mult.unwrap())) as u8];
+                    }
                 },
                 &format!("{}/sim.png", renderer.get_path()),
             );

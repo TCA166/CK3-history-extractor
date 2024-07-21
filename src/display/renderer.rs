@@ -1,5 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use std::thread;
+use std::{
+    collections::{HashMap, HashSet},
+    fs, thread,
+};
 
 use minijinja::{Environment, Value};
 
@@ -70,7 +72,7 @@ impl<'a> Renderer<'a> {
         let contents = template.render(ctx).unwrap();
         thread::spawn(move || {
             //IO heavy, so spawn a thread
-            std::fs::write(path, contents).unwrap();
+            fs::write(path, contents).unwrap();
         });
         let rendered = self
             .rendered

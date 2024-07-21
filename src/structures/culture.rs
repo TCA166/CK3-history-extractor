@@ -5,6 +5,7 @@ use super::super::{
     game_object::{GameObject, GameString},
     game_state::GameState,
     jinja_env::CUL_TEMPLATE_NAME,
+    types::Wrapper,
 };
 
 use super::{serialize_array, DummyInit, GameId, GameObjectDerived, Shared};
@@ -176,8 +177,46 @@ impl Renderable for Culture {
         }
         let grapher = renderer.get_grapher();
         if grapher.is_some() {
-            let path = format!("{}/cultures/{}.svg", renderer.get_path(), self.id);
+            let path = format!(
+                "{}/{}/{}.svg",
+                renderer.get_path(),
+                Self::get_subdir(),
+                self.id
+            );
             grapher.unwrap().create_culture_graph(self.id, &path);
+        }
+        let map = renderer.get_map();
+        if map.is_some() {
+            let game_state = renderer.get_state();
+            let mut keys = Vec::new();
+            for entry in game_state.get_title_iter() {
+                let title = entry.1.get_internal();
+                let key = title.get_key();
+                if key.is_none() {
+                    continue;
+                }
+                if !key.as_ref().unwrap().starts_with("c_") {
+                    continue;
+                }
+                let c_culture = title.get_culture().unwrap();
+                if c_culture.get_internal().id == self.id {
+                    keys.append(&mut title.get_barony_keys());
+                }
+            }
+            if !keys.is_empty() {
+                let path = format!(
+                    "{}/{}/{}.png",
+                    renderer.get_path(),
+                    Self::get_subdir(),
+                    self.id
+                );
+                map.unwrap().create_map_file(
+                    keys,
+                    &[70, 255, 70],
+                    &path,
+                    &format!("Map of the {} culture", &self.name.as_ref().unwrap()),
+                );
+            }
         }
         for p in &self.parents {
             stack.push(RenderableType::Culture(p.clone()));

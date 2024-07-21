@@ -33,6 +33,7 @@ pub struct GameState {
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
+    /// The current date from the meta section
     current_date: Option<GameString>,
 }
 

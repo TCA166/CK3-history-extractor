@@ -50,6 +50,14 @@
                         {%endfor%}
                     </ul>
                     {%endif%}
+                    {%if faith is defined %}
+                    Faith: {{faith|render_ref}}
+                    <br>
+                    {%endif%}
+                    {%if culture is defined %}
+                    Culture: {{culture|render_ref}}
+                    <br>
+                    {%endif%}
                     {%if map_present and de_facto_vassals|length != 0%}
                     <div class="card">
                         <div class="card-header">
