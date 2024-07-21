@@ -24,6 +24,7 @@ pub struct Dynasty {
     perks: Vec<(GameString, u8)>,
     leaders: Vec<Shared<Character>>,
     found_date: Option<GameString>,
+    motto: Option<(GameString, Vec<GameString>)>,
     depth: usize,
     localized: bool,
     name_localized: bool,
@@ -234,6 +235,7 @@ impl DummyInit for Dynasty {
             id: id,
             depth: 0,
             localized: false,
+            motto: None,
             name_localized: false,
             member_list: Vec::new(),
         }
@@ -254,6 +256,25 @@ impl DummyInit for Dynasty {
             self.name = name;
         }
         self.found_date = get_date(&base);
+        let motto_node = base.get("motto");
+        if motto_node.is_some() {
+            match motto_node.unwrap() {
+                SaveFileValue::String(ref s) => {
+                    self.motto = Some((s.clone(), Vec::new()));
+                }
+                SaveFileValue::Object(ref o) => {
+                    let key = o.get_string_ref("key");
+                    let variables = o.get("variables");
+                    let mut vars = Vec::new();
+                    for v in variables.unwrap().as_object().unwrap().get_array_iter() {
+                        let v = v.as_object().unwrap();
+                        let value = v.get_string_ref("value");
+                        vars.push(value.clone());
+                    }
+                    self.motto = Some((key.clone(), vars));
+                }
+            }
+        }
     }
 }
 
@@ -278,7 +299,7 @@ impl Serialize for Dynasty {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Dynasty", 10)?;
+        let mut state = serializer.serialize_struct("Dynasty", 11)?;
         state.serialize_field("id", &self.id)?;
         if self.parent.as_ref().is_some() {
             let parent = DerivedRef::<Dynasty>::from_derived(self.parent.as_ref().unwrap().clone());
@@ -293,6 +314,30 @@ impl Serialize for Dynasty {
         let leaders = serialize_array(&self.leaders);
         state.serialize_field("leaders", &leaders)?;
         state.serialize_field("found_date", &self.found_date)?;
+        if self.motto.is_some() {
+            let motto_raw = self.motto.as_ref().unwrap();
+            let motto = motto_raw.0.split(' ').collect::<Vec<&str>>();
+            let var_len = motto_raw.1.len();
+            let rebuilt = if var_len == 0 {
+                motto_raw.0.clone()
+            } else {
+                let mut rebuilt = Vec::new();
+                let mut j = 0;
+                for part in motto {
+                    if part.is_empty() || part == "," {
+                        rebuilt.push(motto_raw.1[j].as_str());
+                        j += 1;
+                        if j >= var_len {
+                            j = 0; //TODO why can this happen? `(" Through ", ["Safety"])`
+                        }
+                    } else {
+                        rebuilt.push(part);
+                    }
+                }
+                GameString::wrap(rebuilt.join(" "))
+            };
+            state.serialize_field("motto", &rebuilt)?;
+        }
         state.end()
     }
 }
@@ -353,6 +398,13 @@ impl Cullable for Dynasty {
                 perk.0 = localization.localize(perk.0.as_str());
             }
             self.localized = true;
+        }
+        if self.motto.is_some() {
+            let m = self.motto.as_mut().unwrap();
+            m.0 = localization.localize(m.0.as_str());
+            for v in m.1.iter_mut() {
+                *v = localization.localize(v.as_str());
+            }
         }
         self.depth = depth;
         for leader in self.leaders.iter() {

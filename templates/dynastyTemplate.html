@@ -16,6 +16,10 @@
                     Creation Date: {{found_date}}
                     <br />
                     {%endif%}
+                    {%if motto is defined%}
+                    Motto: "{{motto}}"
+                    <br />
+                    {%endif%}
                     {%if parent is defined and parent.id != id%}
                     Parent Dynasty: {{parent|render_ref}}
                     <br />
