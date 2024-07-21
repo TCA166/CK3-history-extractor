@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::thread;
 
-use minijinja::Environment;
+use minijinja::{Environment, Value};
 
 use serde::Serialize;
 
@@ -64,14 +64,10 @@ impl<'a> Renderer<'a> {
         if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok() {
             return false;
         }
-        let ctx = obj.get_context();
-        let contents = self
-            .env
-            .get_template(T::get_template())
-            .unwrap()
-            .render(&ctx)
-            .unwrap();
         let path = obj.get_path(&self.path);
+        let ctx = Value::from_serialize(obj);
+        let template = self.env.get_template(T::get_template()).unwrap();
+        let contents = template.render(ctx).unwrap();
         thread::spawn(move || {
             //IO heavy, so spawn a thread
             std::fs::write(path, contents).unwrap();
@@ -111,9 +107,6 @@ impl<'a> Renderer<'a> {
 pub trait Renderable: Serialize + GameObjectDerived {
     /// Returns the template file name.
     fn get_template() -> &'static str;
-
-    /// Returns the context that will be used to render the object.
-    fn get_context(&self) -> minijinja::Value;
 
     /// Returns the subdirectory name where the object should be written to.
     fn get_subdir() -> &'static str;

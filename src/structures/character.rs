@@ -1,5 +1,3 @@
-use minijinja::context;
-
 use serde::{ser::SerializeStruct, Serialize};
 
 use crate::{
@@ -86,13 +84,6 @@ impl Cullable for Vassal {
 }
 
 impl Renderable for Vassal {
-    fn get_context(&self) -> minijinja::Value {
-        match self {
-            Vassal::Character(c) => c.get_internal().get_context(),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_context(),
-        }
-    }
-
     fn get_template() -> &'static str {
         Character::get_template()
     }
@@ -737,7 +728,6 @@ impl TreeNode for Character {
     }
 }
 
-//TODO this is serialized multiple times: inefficient
 impl Serialize for Character {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -825,10 +815,6 @@ impl Serialize for Character {
 }
 
 impl Renderable for Character {
-    fn get_context(&self) -> minijinja::Value {
-        return context! {character=>self};
-    }
-
     fn get_template() -> &'static str {
         C_TEMPLATE_NAME
     }

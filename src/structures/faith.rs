@@ -1,5 +1,3 @@
-use minijinja::context;
-
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::super::{
@@ -124,10 +122,6 @@ impl Serialize for Faith {
 }
 
 impl Renderable for Faith {
-    fn get_context(&self) -> minijinja::Value {
-        context! {faith=>self}
-    }
-
     fn get_template() -> &'static str {
         FAITH_TEMPLATE_NAME
     }

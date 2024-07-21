@@ -115,10 +115,6 @@ impl<T> Renderable for DerivedRef<T>
 where
     T: Renderable + Cullable,
 {
-    fn get_context(&self) -> minijinja::Value {
-        self.obj.as_ref().unwrap().get_internal().get_context()
-    }
-
     fn get_path(&self, path: &str) -> String {
         self.obj.as_ref().unwrap().get_internal().get_path(path)
     }

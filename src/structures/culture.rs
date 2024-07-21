@@ -1,5 +1,3 @@
-use minijinja::context;
-
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::super::{
@@ -164,10 +162,6 @@ impl Serialize for Culture {
 }
 
 impl Renderable for Culture {
-    fn get_context(&self) -> minijinja::Value {
-        context! {culture=>self}
-    }
-
     fn get_template() -> &'static str {
         CUL_TEMPLATE_NAME
     }

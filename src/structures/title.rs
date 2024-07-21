@@ -1,8 +1,6 @@
 use std::cmp::Ordering;
 use std::slice::Iter;
 
-use minijinja::context;
-
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::super::{
@@ -337,10 +335,6 @@ impl Serialize for Title {
 }
 
 impl Renderable for Title {
-    fn get_context(&self) -> minijinja::Value {
-        return context! {title=>self};
-    }
-
     fn get_template() -> &'static str {
         TITLE_TEMPLATE_NAME
     }

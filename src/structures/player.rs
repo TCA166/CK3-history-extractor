@@ -2,7 +2,6 @@ use image::{
     codecs::gif::{GifEncoder, Repeat},
     Delay, Frame,
 };
-use minijinja::context;
 
 use serde::{ser::SerializeStruct, Serialize};
 
@@ -73,10 +72,6 @@ impl Serialize for Player {
 }
 
 impl Renderable for Player {
-    fn get_context(&self) -> minijinja::Value {
-        context! {player=>self}
-    }
-
     fn get_subdir() -> &'static str {
         "."
     }

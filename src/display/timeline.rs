@@ -1,4 +1,3 @@
-use minijinja::context;
 use serde::ser::SerializeStruct;
 use serde::Serialize;
 
@@ -307,10 +306,6 @@ impl Cullable for Timeline {
 }
 
 impl Renderable for Timeline {
-    fn get_context(&self) -> minijinja::Value {
-        context! {timeline=>self}
-    }
-
     fn get_subdir() -> &'static str {
         "."
     }

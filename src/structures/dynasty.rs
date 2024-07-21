@@ -1,5 +1,3 @@
-use minijinja::context;
-
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::super::{
@@ -300,10 +298,6 @@ impl Serialize for Dynasty {
 }
 
 impl Renderable for Dynasty {
-    fn get_context(&self) -> minijinja::Value {
-        return context! {dynasty=>self};
-    }
-
     fn get_template() -> &'static str {
         DYN_TEMPLATE_NAME
     }

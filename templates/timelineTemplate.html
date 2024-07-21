@@ -26,7 +26,7 @@
                             Notable events
                         </div>
                         <ul class="list-group list-group-flush">
-                            {%for event in timeline.events%}
+                            {%for event in events%}
                             <li class="list-group-item">{{event[0]}}:{{event[1]|render_ref(true)}} conquered {{event[2]|render_ref(true)}} for the {{event[4]|render_ref(true)}} {{event[3]}}</li>
                             {%endfor%}
                         </ul>
@@ -38,7 +38,7 @@
                             Great Empires of history
                         </div>
                         <ul class="list-group list-group-flush">
-                            {%for span in timeline.lifespans%}
+                            {%for span in lifespans%}
                             <li class="list-group-item">{{span[0]|render_ref(true)}}</li>
                             {%endfor%}
                         </ul>
