@@ -3,11 +3,10 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, RenderableType},
-        game_object::{GameObject, GameString},
-        game_state::GameState,
+        parser::{GameId, GameObject, GameState, GameString},
         types::WrapperMut,
     },
-    Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,
+    Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
 
 /// A struct representing a memory in the game

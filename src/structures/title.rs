@@ -6,13 +6,11 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-        game_object::{GameObject, GameString, SaveFileValue},
-        game_state::GameState,
         jinja_env::TITLE_TEMPLATE_NAME,
+        parser::{GameId, GameObject, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
-    serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
-    Shared,
+    serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
 };
 
 /// A struct representing a title in the game

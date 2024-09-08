@@ -13,8 +13,7 @@ use tidy_tree::TidyTree;
 
 use super::{
     super::{
-        game_object::{GameId, GameString},
-        game_state::GameState,
+        parser::{GameId, GameState, GameString},
         structures::{Character, Dynasty, GameObjectDerived, Title},
         types::{Shared, Wrapper},
     },

@@ -3,12 +3,11 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
-        game_object::{GameObject, GameString},
-        game_state::GameState,
         jinja_env::CUL_TEMPLATE_NAME,
+        parser::{GameId, GameObject, GameState, GameString},
         types::Wrapper,
     },
-    serialize_array, DummyInit, GameId, GameObjectDerived, Shared,
+    serialize_array, DummyInit, GameObjectDerived, Shared,
 };
 
 /// A struct representing a culture in the game

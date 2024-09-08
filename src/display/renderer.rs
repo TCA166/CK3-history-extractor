@@ -8,12 +8,25 @@ use minijinja::{Environment, Value};
 use serde::Serialize;
 
 use super::{
-    super::{game_object::GameId, game_state::GameState, structures::GameObjectDerived},
+    super::{
+        parser::{GameId, GameState},
+        structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
+    },
     graph::Grapher,
     localizer::Localizer,
     map::GameMap,
     RenderableType,
 };
+
+/// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
+/// Also prints an error message if the directory creation fails.
+fn create_dir_maybe(name: &str) {
+    if let Err(err) = fs::create_dir_all(name) {
+        if err.kind() != std::io::ErrorKind::AlreadyExists {
+            println!("Failed to create folder: {}", err);
+        }
+    }
+}
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
@@ -46,6 +59,12 @@ impl<'a> Renderer<'a> {
         game_map: Option<&'a GameMap>,
         grapher: Option<&'a Grapher>,
     ) -> Self {
+        create_dir_maybe(&path);
+        create_dir_maybe(format!("{path}/{}", Character::get_subdir()).as_str());
+        create_dir_maybe(format!("{path}/{}", Dynasty::get_subdir()).as_str());
+        create_dir_maybe(format!("{path}/{}", Title::get_subdir()).as_str());
+        create_dir_maybe(format!("{path}/{}", Faith::get_subdir()).as_str());
+        create_dir_maybe(format!("{path}/{}", Culture::get_subdir()).as_str());
         Renderer {
             env,
             rendered: HashMap::new(),

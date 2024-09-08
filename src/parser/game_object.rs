@@ -5,7 +5,7 @@ use std::{
     slice,
 };
 
-use super::types::{RefOrRaw, Wrapper};
+use super::super::types::{RefOrRaw, Wrapper};
 
 /// A type alias for a game object id.
 pub type GameId = u32;

@@ -1,8 +1,7 @@
 use serde::Serialize;
 
 use super::{
-    game_object::{GameId, GameObject, GameString},
-    game_state::GameState,
+    parser::{GameId, GameObject, GameState, GameString},
     types::{Shared, Wrapper},
 };
 

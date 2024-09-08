@@ -3,9 +3,8 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
-        game_object::{GameObject, GameString, SaveFileValue},
-        game_state::GameState,
         jinja_env::C_TEMPLATE_NAME,
+        parser::{GameObject, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId,

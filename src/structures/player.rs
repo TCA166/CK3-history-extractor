@@ -8,12 +8,11 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-        game_object::{GameObject, GameString},
-        game_state::GameState,
         jinja_env::H_TEMPLATE_NAME,
+        parser::{GameId, GameObject, GameState, GameString},
         types::Wrapper,
     },
-    Character, FromGameObject, GameId, GameObjectDerived, LineageNode, Shared,
+    Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
 };
 
 use std::{collections::HashMap, fs::File};

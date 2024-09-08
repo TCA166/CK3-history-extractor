@@ -3,12 +3,11 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-        game_object::{GameObject, GameString},
-        game_state::GameState,
         jinja_env::FAITH_TEMPLATE_NAME,
+        parser::{GameId, GameObject, GameState, GameString},
         types::{Wrapper, WrapperMut},
     },
-    Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,
+    Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
 
 /// A struct representing a faith in the game

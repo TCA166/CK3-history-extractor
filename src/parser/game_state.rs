@@ -1,11 +1,13 @@
 use std::collections::{hash_map::Iter, HashMap};
 
 use super::{
-    game_object::{GameId, GameObject, GameString},
-    structures::{
-        Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
+    super::{
+        structures::{
+            Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
+        },
+        types::{RefOrRaw, Shared, Wrapper, WrapperMut},
     },
-    types::{RefOrRaw, Shared, Wrapper, WrapperMut},
+    game_object::{GameId, GameObject, GameString},
 };
 
 use serde::{ser::SerializeStruct, Serialize};

@@ -2,9 +2,8 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        game_object::{GameId, GameString},
-        game_state::GameState,
         jinja_env::TIMELINE_TEMPLATE_NAME,
+        parser::{GameId, GameState, GameString},
         structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
         types::{Shared, Wrapper, WrapperMut},
     },

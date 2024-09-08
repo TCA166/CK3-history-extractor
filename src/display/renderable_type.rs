@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use super::{
     super::{
-        game_object::{GameId, GameString},
+        parser::{GameId, GameString},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title},
         types::{Shared, Wrapper, WrapperMut},
     },

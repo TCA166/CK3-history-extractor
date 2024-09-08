@@ -3,8 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, RenderableType},
-        game_object::{GameId, GameObject, GameString},
-        game_state::GameState,
+        parser::{GameId, GameObject, GameState, GameString},
         types::Shared,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived,

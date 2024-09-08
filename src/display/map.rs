@@ -11,10 +11,7 @@ use plotters::{
     style::{IntoFont, RGBAColor},
 };
 
-use super::super::{
-    game_object::{GameId, GameString},
-    save_file::SaveFile,
-};
+use super::super::parser::{GameId, GameString, SaveFile};
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path: String) -> Vec<u8> {

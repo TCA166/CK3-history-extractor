@@ -1,6 +1,6 @@
 use super::{
+    super::types::{Shared, Wrapper, WrapperMut},
     game_object::{GameObject, GameString, SaveFileValue},
-    types::{Shared, Wrapper, WrapperMut},
 };
 use std::{io::Read, mem, rc::Rc};
 use zip::read::ZipArchive;
