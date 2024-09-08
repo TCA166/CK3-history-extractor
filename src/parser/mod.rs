@@ -3,7 +3,7 @@
 mod game_object;
 pub use game_object::{GameId, GameObject, GameString, SaveFileValue};
 
-/// A submodule that provides the macro save file parsing.
+/// A submodule that provides the raw save file parsing.
 /// It provides objects for handling entire [save files](SaveFile) and [sections](Section) of save files.
 mod save_file;
 pub use save_file::SaveFile;
@@ -20,11 +20,15 @@ use super::{
 };
 use std::collections::HashMap;
 
+/// A function that processes a section of the save file.
+/// Based on the given section, it will update the [GameState] object and the [Player] vector.
+/// The [GameState] object is used to store all the data from the save file, while the [Player] vector is used to store the player data.
 pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mut Vec<Player>) {
     match i.get_name() {
         "meta_data" => {
             let r = i.to_object();
             game_state.set_current_date(r.get("meta_date").unwrap().as_string());
+            game_state.set_offset_date(r.get("meta_real_date").unwrap().as_string());
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {

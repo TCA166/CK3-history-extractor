@@ -1,4 +1,3 @@
-use core::panic;
 use dialoguer::{Confirm, Input, Select};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
@@ -31,7 +30,7 @@ use display::{
     Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
 };
 
-static LANGUAGES: [&'static str; 7] = [
+const LANGUAGES: [&'static str; 7] = [
     "english",
     "french",
     "german",
@@ -40,6 +39,8 @@ static LANGUAGES: [&'static str; 7] = [
     "simp_chinese",
     "spanish",
 ];
+
+const DUMP_FILE: &str = "game_state.json";
 
 /// Main function. This is the entry point of the program.
 ///
@@ -55,6 +56,7 @@ static LANGUAGES: [&'static str; 7] = [
 /// 8. `--output` - A flag that tells the program where to output the rendered files.
 /// 9. `--include` - A flag that tells the program where to find additional files to include in the rendering.
 /// 10. `--no-interaction` - A flag that tells the program not to interact with the user.
+/// 11. `--no-cutoff` - A flag that tells the program not to cut off the date at the player's start date.
 ///
 /// # Process
 ///
@@ -93,11 +95,9 @@ fn main() {
     // The game path and mod paths, if provided by the user
     let mut game_path: Option<String> = None;
     let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
-                                                     // The language to use for localization
-    let mut language = LANGUAGES[0];
-    // The depth to render the player's history
-    let mut depth = 3;
-    // whether the game state should be dumped to json
+    let mut language = LANGUAGES[0]; // The language to use for localization
+    let mut depth = 3; // The depth to render the player's history
+                       // whether the game state should be dumped to json
     let mut dump = false;
     if args.len() < 2 {
         if !stdin().is_terminal() {
@@ -273,7 +273,7 @@ fn main() {
                     no_interaction = true;
                 }
                 _ => {
-                    println!("Unknown argument: {}", arg);
+                    eprintln!("Unknown argument: {}", arg);
                 }
             }
         }
@@ -397,7 +397,7 @@ fn main() {
     player_progress.finish_with_message("Players rendered");
     if dump {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
-        fs::write("game_state.json", json).unwrap();
+        fs::write(DUMP_FILE, json).unwrap();
     }
     if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
         Input::<String>::new()

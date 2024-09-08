@@ -318,7 +318,7 @@ impl Renderable for Timeline {
         let grapher = renderer.get_grapher();
         if grapher.is_some() {
             let path = format!("{}/timeline.svg", renderer.get_path());
-            Grapher::create_timeline_graph(&self.lifespans, &self.events, self.latest_event, &path)
+            Grapher::create_timeline_graph(&self.lifespans, self.latest_event, &path)
         }
         renderer.render(self);
         for (title, _) in &self.lifespans {

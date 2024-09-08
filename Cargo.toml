@@ -9,7 +9,8 @@ readme = "./README.md"
 homepage = "https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html"
 repository = "https://github.com/TCA166/CK3-history-extractor"
 license = "MIT"
-keywords = ["Crusader Kings 3"]
+keywords = ["Crusader Kings 3", "CK3", "Paradox", "History", "Save", "Extractor", "Encyclopedia"]
+publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,7 +18,7 @@ keywords = ["Crusader Kings 3"]
 internal = []
 
 [dependencies]
-minijinja = "2.2.0"
+minijinja = {version="2.2.0", features=["loader"]}
 serde = {version="1.0.210" , features=["rc"] }
 tempfile = "3.12.0"
 syn = "2.0.77"
@@ -26,9 +27,9 @@ proc-macro2 = "1.0"
 zip = "2.2.0"
 image = "0.25.2"
 csv = "1.3.0"
-plotters = "0.3.6"
+plotters = "0.3.7"
 tidy-tree = "0.1.0"
-serde_json = "1.0.118"
+serde_json = "1.0.128"
 dialoguer = "0.11.0"
 open = "5.1.4"
 rand = "0.8.5"

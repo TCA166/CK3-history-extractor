@@ -37,6 +37,10 @@ pub struct GameState {
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
     /// The current date from the meta section
     current_date: Option<GameString>,
+    /// The isolated year from the meta section
+    current_year: Option<u32>,
+    /// The date from which data should be considered
+    offset_date: Option<u32>,
 }
 
 impl GameState {
@@ -53,6 +57,8 @@ impl GameState {
             traits_lookup: Vec::new(),
             contract_transform: HashMap::new(),
             current_date: None,
+            current_year: None,
+            offset_date: None,
         }
     }
 
@@ -68,7 +74,13 @@ impl GameState {
 
     /// Set the current date
     pub fn set_current_date(&mut self, date: GameString) {
-        self.current_date = Some(date);
+        self.current_date = Some(date.clone());
+        self.current_year = Some(date.as_str().split_once('.').unwrap().0.parse().unwrap());
+    }
+
+    /// Set the number of years that has passed since game start
+    pub fn set_offset_date(&mut self, date: GameString) {
+        self.offset_date = Some(date.split_once('.').unwrap().0.parse().unwrap());
     }
 
     /// Get the current date
@@ -270,10 +282,36 @@ impl GameState {
         }
     }
 
+    /// Creates a hashmap death year->number of deaths
+    pub fn get_total_yearly_deaths(&self) -> HashMap<u32, u32> {
+        let mut result = HashMap::new();
+        for (_, character) in &self.characters {
+            let char = character.get_internal();
+            let death_date = char.get_death_date();
+            if death_date.is_none() {
+                continue;
+            }
+            let death_date = death_date.unwrap();
+            let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
+            if self.offset_date.is_some() {
+                if death_year < self.current_year.unwrap() - *self.offset_date.as_ref().unwrap() {
+                    continue;
+                }
+            }
+            let count = result.entry(death_year).or_insert(0);
+            *count += 1;
+        }
+        return result;
+    }
+
     /// Returns a hashmap of classes of characters and their associated yearly death graphs
     /// So for example if you provide a function that returns the dynasty of a character
     /// you will get a hashmap of dynasties and their yearly death counts
-    pub fn get_yearly_deaths<F>(&self, associate: F) -> HashMap<GameId, Vec<(u32, u32)>>
+    pub fn get_yearly_deaths<F>(
+        &self,
+        associate: F,
+        total: &HashMap<u32, u32>,
+    ) -> HashMap<GameId, Vec<(u32, f64)>>
     where
         F: Fn(RefOrRaw<Character>) -> Option<GameId>,
     {
@@ -290,27 +328,32 @@ impl GameState {
             }
             let death_date = death_date.unwrap();
             let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
+            if self.offset_date.is_some() {
+                if death_year < self.current_year.unwrap() - *self.offset_date.as_ref().unwrap() {
+                    continue;
+                }
+            }
             let entry = result.entry(key.unwrap()).or_insert(HashMap::new());
             let count = entry.entry(death_year).or_insert(0);
             *count += 1;
         }
         // convert the internal hashmaps to vectors
         let mut res = HashMap::new();
-        for (culture_id, data) in result {
+        for (id, data) in result {
             let mut v = Vec::new();
             for (year, count) in &data {
-                v.push((*year, *count));
+                v.push((*year, *count as f64 / *total.get(year).unwrap() as f64));
             }
             let max_yr = data.keys().max().unwrap();
             for yr in 0..=*max_yr {
                 if !data.contains_key(&yr)
                     && ((yr != 0 && data.contains_key(&(yr - 1))) || data.contains_key(&(yr + 1)))
                 {
-                    v.push((yr, 0));
+                    v.push((yr, 0.0));
                 }
             }
             v.sort_by(|a, b| a.0.cmp(&b.0));
-            res.insert(culture_id, v);
+            res.insert(id, v);
         }
         return res;
     }

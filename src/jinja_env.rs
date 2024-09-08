@@ -24,6 +24,7 @@ pub const DYN_TEMPLATE_NAME: &str = "dynastyTemplate";
 pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
 pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
 pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
+
 const TEMPLATE_NAMES: [&str; 7] = [
     H_TEMPLATE_NAME,
     C_TEMPLATE_NAME,
@@ -97,7 +98,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
                 continue;
             }
             let template = fs::read_to_string(entry.path()).unwrap();
-            env.template_from_named_str(TEMPLATE_NAMES[i.unwrap()], &template)
+            env.add_template_owned(TEMPLATE_NAMES[i.unwrap()], template)
                 .unwrap();
         }
     }

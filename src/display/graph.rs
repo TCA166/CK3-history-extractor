@@ -11,13 +11,10 @@ use plotters::{
 //https://github.com/zxch3n/tidy/tree/master it is sort of tiny so here github link in case it goes down
 use tidy_tree::TidyTree;
 
-use super::{
-    super::{
-        parser::{GameId, GameState, GameString},
-        structures::{Character, Dynasty, GameObjectDerived, Title},
-        types::{Shared, Wrapper},
-    },
-    timeline::RealmDifference,
+use super::super::{
+    parser::{GameId, GameState, GameString},
+    structures::{Character, Dynasty, GameObjectDerived, Title},
+    types::{Shared, Wrapper},
 };
 
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
@@ -43,19 +40,19 @@ fn handle_node<T: TreeNode>(
         ),
     >,
     parent: usize,
-    sz: &(u32, u32),
+    fnt: &FontDesc,
 ) -> usize {
     let ch = node.get_internal();
     let id = ch.get_id() as usize;
     let name = ch.get_name().clone();
     //we use sz, which is the rough size of a character, to calculate the size of the node
-    let txt_width = sz.0 * name.len() as u32;
-    let node_width = txt_width as f64 * TREE_SCALE;
-    let node_height = sz.1 as f64 * TREE_SCALE;
+    let txt_size = fnt.box_size(name.as_str()).unwrap();
+    let node_width = txt_size.0 as f64 * TREE_SCALE;
+    let node_height = txt_size.1 as f64 * TREE_SCALE;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
     let txt_point = (
-        -(node_width as i32 - txt_width as i32),
-        -(node_height as i32 - sz.1 as i32),
+        -(node_width as i32 - txt_size.0 as i32),
+        -(node_height as i32 - txt_size.1 as i32),
     );
     //add node to tree
     tree.add_node(id, node_width, node_height, parent);
@@ -86,11 +83,11 @@ pub trait TreeNode: GameObjectDerived {
     fn get_class(&self) -> Option<GameString>;
 }
 
-fn create_graph(data: &Vec<(u32, u32)>, output_path: &str) {
+fn create_graph(data: &Vec<(u32, f64)>, output_path: &str) {
+    const MULT: f64 = 100.0;
     let mut min_x: u32 = 0;
     let mut max_x: u32 = 0;
-    let mut min_y: u32 = 0;
-    let mut max_y: u32 = 0;
+    let mut min_y = 0.0;
     for (x, y) in data {
         if *x < min_x || min_x == 0 {
             min_x = *x;
@@ -101,9 +98,6 @@ fn create_graph(data: &Vec<(u32, u32)>, output_path: &str) {
         if *y < min_y {
             min_y = *y;
         }
-        if *y > max_y {
-            max_y = *y;
-        }
     }
 
     let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
@@ -113,41 +107,51 @@ fn create_graph(data: &Vec<(u32, u32)>, output_path: &str) {
         .margin(5)
         .x_label_area_size(30)
         .y_label_area_size(30)
-        .build_cartesian_2d(min_x..max_x, min_y..(max_y + 10))
+        .build_cartesian_2d(min_x..max_x, min_y..(MULT))
         .unwrap();
 
     chart.configure_mesh().draw().unwrap();
 
     chart
-        .draw_series(LineSeries::new(data.iter().map(|(x, y)| (*x, *y)), &RED))
+        .draw_series(LineSeries::new(
+            data.iter().map(|(x, y)| (*x, *y * MULT)),
+            &RED,
+        ))
         .unwrap();
 }
 
 /// An object that can create graphs from the game state
 pub struct Grapher {
     /// Stored graph data for all faiths, certainly less memory efficient but the speed is worth it
-    faith_graph_complete: HashMap<GameId, Vec<(u32, u32)>>,
-    culture_graph_complete: HashMap<GameId, Vec<(u32, u32)>>,
+    faith_graph_complete: HashMap<GameId, Vec<(u32, f64)>>,
+    culture_graph_complete: HashMap<GameId, Vec<(u32, f64)>>,
 }
 
 impl Grapher {
     pub fn new(game_state: &GameState) -> Self {
         //the idea is to get all the data we may need in one go, chances are all of it is gonna be needed anywho
+        let total = game_state.get_total_yearly_deaths();
         Grapher {
-            faith_graph_complete: game_state.get_yearly_deaths(|c| {
-                let faith = c.get_faith();
-                if faith.is_some() {
-                    return Some(faith.unwrap().get_internal().get_id());
-                }
-                None
-            }),
-            culture_graph_complete: game_state.get_yearly_deaths(|c| {
-                let culture = c.get_culture();
-                if culture.is_some() {
-                    return Some(culture.unwrap().get_internal().get_id());
-                }
-                None
-            }),
+            faith_graph_complete: game_state.get_yearly_deaths(
+                |c| {
+                    let faith = c.get_faith();
+                    if faith.is_some() {
+                        return Some(faith.unwrap().get_internal().get_id());
+                    }
+                    None
+                },
+                &total,
+            ),
+            culture_graph_complete: game_state.get_yearly_deaths(
+                |c| {
+                    let culture = c.get_culture();
+                    if culture.is_some() {
+                        return Some(culture.unwrap().get_internal().get_id());
+                    }
+                    None
+                },
+                &total,
+            ),
         }
     }
 
@@ -163,9 +167,8 @@ impl Grapher {
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::new();
         let fnt = ("sans-serif", 6.66 * TREE_SCALE).into_font();
-        let sz = fnt.box_size("X").unwrap(); // from this we determine a rough size of a character
         let mut stack = Vec::new(); //BFS stack
-        handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &sz);
+        handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
         while let Some(current) = stack.pop() {
             let char = current.1.get_internal();
             let iter = if reverse {
@@ -180,7 +183,7 @@ impl Grapher {
                     &mut stack,
                     &mut storage,
                     current.0,
-                    &sz,
+                    &fnt,
                 );
             }
         }
@@ -347,13 +350,6 @@ impl Grapher {
 
     pub fn create_timeline_graph(
         timespans: &Vec<(Shared<Title>, Vec<(u32, u32)>)>,
-        events: &Vec<(
-            u32,
-            Shared<Character>,
-            Shared<Title>,
-            GameString,
-            RealmDifference,
-        )>,
         max_date: u32,
         output_path: &str,
     ) {
@@ -369,7 +365,7 @@ impl Grapher {
 
         let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
             0..max_date,
-            -height..height,
+            -height..MARGIN * 3,
             (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
         ));
 
@@ -427,57 +423,6 @@ impl Grapher {
                 title.get_internal().get_name().to_string(),
                 (txt_x, -lifespan_y * (i + 1) as i32),
                 fnt.clone(),
-            ))
-            .unwrap();
-        }
-        let mut lane: Vec<u32> = Vec::new();
-        //draw the events
-        for (date, char, title, group_desc, difference) in events.iter() {
-            let title_name = title.get_internal().get_name();
-            let char_name = char.get_internal().get_name();
-            let txt = format!(
-                "{} conquered {} for the {} {}",
-                char_name,
-                title_name,
-                difference.get_name(),
-                group_desc
-            );
-            let txt_x = date - fnt.box_size(&txt).unwrap().0 as u32;
-            let mut y = 0;
-            let mut found = false;
-            //find the lane that has space for us
-            for (j, lane) in lane.iter_mut().enumerate() {
-                if *lane < txt_x {
-                    y = j as u32;
-                    found = true;
-                    *lane = *date + txt_x;
-                    break;
-                }
-            }
-            //if we havent found one then we create a new lane
-            if !found {
-                y = lane.len() as u32;
-                if y as i32 * lifespan_y > height {
-                    //if the lane is out of bounds we skip the event
-                    continue;
-                }
-                lane.push(*date + txt_x);
-            }
-            root.draw(&Text::new(
-                txt,
-                (txt_x, lifespan_y * (y + 1) as i32),
-                fnt.clone(),
-            ))
-            .unwrap();
-            root.draw(&PathElement::new(
-                [(*date, lifespan_y * (y + 1) as i32), (*date, 0)],
-                Into::<ShapeStyle>::into(&BLACK).filled(),
-            ))
-            .unwrap();
-            root.draw(&Circle::new(
-                (*date, 0),
-                2,
-                Into::<ShapeStyle>::into(&RED).filled(),
             ))
             .unwrap();
         }
