@@ -1,14 +1,13 @@
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
-    game_object::{GameObject, GameString, SaveFileValue},
-    game_state::GameState,
-    jinja_env::C_TEMPLATE_NAME,
-    types::{Wrapper, WrapperMut},
-};
-
 use super::{
+    super::{
+        display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
+        game_object::{GameObject, GameString, SaveFileValue},
+        game_state::GameState,
+        jinja_env::C_TEMPLATE_NAME,
+        types::{Wrapper, WrapperMut},
+    },
     serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId,
     GameObjectDerived, Memory, Shared, Title,
 };

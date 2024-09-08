@@ -11,13 +11,15 @@ use plotters::{
 //https://github.com/zxch3n/tidy/tree/master it is sort of tiny so here github link in case it goes down
 use tidy_tree::TidyTree;
 
-use super::super::{
-    game_object::{GameId, GameString},
-    game_state::GameState,
-    structures::{Character, Dynasty, GameObjectDerived, Title},
-    types::{Shared, Wrapper},
+use super::{
+    super::{
+        game_object::{GameId, GameString},
+        game_state::GameState,
+        structures::{Character, Dynasty, GameObjectDerived, Title},
+        types::{Shared, Wrapper},
+    },
+    timeline::RealmDifference,
 };
-use super::timeline::RealmDifference;
 
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
 

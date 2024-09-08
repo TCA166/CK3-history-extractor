@@ -1,13 +1,14 @@
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::{
-    display::{Cullable, RenderableType},
-    game_object::{GameId, GameObject, GameString},
-    game_state::GameState,
-    types::Shared,
+use super::{
+    super::{
+        display::{Cullable, Localizer, RenderableType},
+        game_object::{GameId, GameObject, GameString},
+        game_state::GameState,
+        types::Shared,
+    },
+    Character, DerivedRef, DummyInit, GameObjectDerived,
 };
-
-use super::{Character, DerivedRef, DummyInit, GameObjectDerived};
 
 pub struct Artifact {
     id: GameId,
@@ -104,7 +105,7 @@ impl Cullable for Artifact {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &crate::display::Localizer) {
+    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
         if depth <= self.depth {
             return;
         }

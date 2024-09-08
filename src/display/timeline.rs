@@ -1,16 +1,13 @@
-use serde::ser::SerializeStruct;
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize};
 
-use crate::{game_object::GameId, structures::DerivedRef};
-
-use super::super::{
-    game_object::GameString,
-    game_state::GameState,
-    jinja_env::TIMELINE_TEMPLATE_NAME,
-    structures::{Character, Culture, Faith, GameObjectDerived, Title},
-    types::{Shared, Wrapper, WrapperMut},
-};
 use super::{
+    super::{
+        game_object::{GameId, GameString},
+        game_state::GameState,
+        jinja_env::TIMELINE_TEMPLATE_NAME,
+        structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
+        types::{Shared, Wrapper, WrapperMut},
+    },
     graph::Grapher,
     localizer::Localizer,
     renderer::{Cullable, Renderable, Renderer},

@@ -1,7 +1,5 @@
-use crate::game_object::GameString;
-
 use super::{
-    game_object::{GameObject, SaveFileValue},
+    game_object::{GameObject, GameString, SaveFileValue},
     types::{Shared, Wrapper, WrapperMut},
 };
 use std::{io::Read, mem, rc::Rc};
@@ -437,18 +435,14 @@ impl Iterator for SaveFile {
     }
 }
 
+#[cfg(test)]
 mod tests {
 
-    #[allow(unused_imports)]
     use std::io::Write;
 
-    #[allow(unused_imports)]
     use tempfile::NamedTempFile;
 
-    #[allow(unused_imports)]
-    use crate::game_object::GameObject;
-    #[allow(unused_imports)]
-    use crate::types::{Shared, Wrapper};
+    use super::*;
 
     #[test]
     fn test_save_file() {
@@ -463,7 +457,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -487,7 +481,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -536,7 +530,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -555,7 +549,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -592,7 +586,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         let variables = object.get_object_ref("variables");
         let data = variables.get_object_ref("data");
@@ -636,7 +630,7 @@ mod tests {
             }
             artifact_claims={ 83888519 }
         }").unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(*(object.get_string_ref("name")), "dynn_Sao".to_string());
@@ -678,7 +672,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.get_object_ref("test2");
@@ -741,7 +735,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut save_file = super::SaveFile::open(file.path().to_str().unwrap());
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().to_object();
         assert_eq!(object.get_name(), "c_derby".to_string());
         let b_derby = object.get_object_ref("b_derby");

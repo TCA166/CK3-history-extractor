@@ -1,11 +1,13 @@
 use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-    game_object::GameString,
-    types::WrapperMut,
+use super::{
+    super::{
+        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        game_object::GameString,
+        types::WrapperMut,
+    },
+    GameId, GameObjectDerived, Shared, Wrapper,
 };
-use super::{GameId, GameObjectDerived, Shared, Wrapper};
 
 /// A shallow serializable reference to a derived game object.
 /// The idea is to provide the id and name of the object, without serializing the whole object.

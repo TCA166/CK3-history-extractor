@@ -5,15 +5,17 @@ use image::{
 
 use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{
-    display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
-    game_object::{GameObject, GameString},
-    game_state::GameState,
-    jinja_env::H_TEMPLATE_NAME,
-    types::Wrapper,
+use super::{
+    super::{
+        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        game_object::{GameObject, GameString},
+        game_state::GameState,
+        jinja_env::H_TEMPLATE_NAME,
+        types::Wrapper,
+    },
+    Character, FromGameObject, GameId, GameObjectDerived, LineageNode, Shared,
 };
 
-use super::{Character, FromGameObject, GameId, GameObjectDerived, LineageNode, Shared};
 use std::{collections::HashMap, fs::File};
 
 /// A struct representing a player in the game

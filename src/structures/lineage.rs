@@ -1,13 +1,14 @@
 use serde::{ser::SerializeStruct, Serialize};
 
-use super::super::{
-    display::{Cullable, Localizer},
-    game_object::{GameObject, GameString, SaveFileValue},
-    game_state::GameState,
-    types::{Wrapper, WrapperMut},
+use super::{
+    super::{
+        display::{Cullable, Localizer},
+        game_object::{GameObject, GameString, SaveFileValue},
+        game_state::GameState,
+        types::{Wrapper, WrapperMut},
+    },
+    Character, FromGameObject, GameId, GameObjectDerived, Shared,
 };
-
-use super::{Character, FromGameObject, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a lineage node in the game
 pub struct LineageNode {

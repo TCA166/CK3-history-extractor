@@ -1,10 +1,13 @@
 use serde::Serialize;
 
-use super::super::{
-    structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title},
-    types::{Shared, Wrapper, WrapperMut},
+use super::{
+    super::{
+        game_object::{GameId, GameString},
+        structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Player, Title},
+        types::{Shared, Wrapper, WrapperMut},
+    },
+    Cullable, Renderable, Renderer,
 };
-use super::{Cullable, Renderable, Renderer};
 
 /// An enum representing the different types of [Renderable] objects
 pub enum RenderableType<'a> {
@@ -68,7 +71,7 @@ impl<'a> Serialize for RenderableType<'a> {
 }
 
 impl<'a> GameObjectDerived for RenderableType<'a> {
-    fn get_id(&self) -> crate::game_object::GameId {
+    fn get_id(&self) -> GameId {
         match self {
             RenderableType::Character(c) => c.get_internal().get_id(),
             RenderableType::Culture(c) => c.get_internal().get_id(),
@@ -79,7 +82,7 @@ impl<'a> GameObjectDerived for RenderableType<'a> {
         }
     }
 
-    fn get_name(&self) -> crate::game_object::GameString {
+    fn get_name(&self) -> GameString {
         match self {
             RenderableType::Character(c) => c.get_internal().get_name(),
             RenderableType::Culture(c) => c.get_internal().get_name(),

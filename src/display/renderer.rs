@@ -7,8 +7,13 @@ use minijinja::{Environment, Value};
 
 use serde::Serialize;
 
-use super::super::{game_object::GameId, game_state::GameState, structures::GameObjectDerived};
-use super::{graph::Grapher, localizer::Localizer, map::GameMap, RenderableType};
+use super::{
+    super::{game_object::GameId, game_state::GameState, structures::GameObjectDerived},
+    graph::Grapher,
+    localizer::Localizer,
+    map::GameMap,
+    RenderableType,
+};
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.

@@ -1,12 +1,12 @@
 use std::collections::{hash_map::Iter, HashMap};
 
-use crate::types::RefOrRaw;
-
-use super::game_object::{GameId, GameObject, GameString};
-use super::structures::{
-    Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
+use super::{
+    game_object::{GameId, GameObject, GameString},
+    structures::{
+        Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
+    },
+    types::{RefOrRaw, Shared, Wrapper, WrapperMut},
 };
-use super::types::{Shared, Wrapper, WrapperMut};
 
 use serde::{ser::SerializeStruct, Serialize};
 

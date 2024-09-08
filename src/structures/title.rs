@@ -11,9 +11,9 @@ use super::{
         jinja_env::TITLE_TEMPLATE_NAME,
         types::{Wrapper, WrapperMut},
     },
-    Culture, Faith,
+    serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
+    Shared,
 };
-use super::{serialize_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared};
 
 /// A struct representing a title in the game
 pub struct Title {
