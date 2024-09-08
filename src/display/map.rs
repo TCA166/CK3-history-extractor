@@ -2,7 +2,7 @@ use std::{collections::HashMap, thread};
 
 use csv::ReaderBuilder;
 
-use image::{io::Reader as ImageReader, save_buffer, ImageBuffer, Rgba};
+use image::{save_buffer, ImageBuffer, ImageReader, Rgba};
 use plotters::{
     backend::BitMapBackend,
     drawing::IntoDrawingArea,

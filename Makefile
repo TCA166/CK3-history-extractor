@@ -1,7 +1,7 @@
 
 cargo: src/*.rs src/structures/*.rs
 	@echo "Building with cargo and including templates in executable..."
-	RUSTFLAGS="--cfg internal" cargo build --release
+	RUSTFLAGS="" cargo build --release --features internal
 
 debug: src/*.rs src/structures/*.rs
 	@echo "Building with cargo in debug mode..."
@@ -17,7 +17,7 @@ doc: src/*.rs src/structures/*.rs
 
 dependencies:
 	@echo "Installing dependencies..."
-	sudo dnf install rustup rust-src cmake
+	sudo dnf install rustup rust-src cmake fontconfig-devel
 
 crosscompile:
 	@echo "Setting up cross-compilation..."

@@ -2,19 +2,19 @@ use std::{fs, path::Path};
 
 use minijinja::{AutoEscape, Environment, Value};
 
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_H_TEMPLATE: &str = include_str!("../templates/homeTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_C_TEMPLATE: &str = include_str!("../templates/charTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_CUL_TEMPLATE: &str = include_str!("../templates/cultureTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_DYN_TEMPLATE: &str = include_str!("../templates/dynastyTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_FAITH_TEMPLATE: &str = include_str!("../templates/faithTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
-#[cfg(internal)]
+#[cfg(feature = "internal")]
 static INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
 
 pub const H_TEMPLATE_NAME: &str = "homeTemplate";
@@ -65,7 +65,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
     env.add_global("no_vis", no_vis);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
     if internal || !Path::new("./templates").exists() {
-        #[cfg(internal)]
+        #[cfg(feature = "internal")]
         {
             env.add_template(H_TEMPLATE_NAME, INT_H_TEMPLATE).unwrap();
             env.add_template(C_TEMPLATE_NAME, INT_C_TEMPLATE).unwrap();
@@ -80,7 +80,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             env.add_template(TIMELINE_TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
                 .unwrap();
         }
-        #[cfg(not(internal))]
+        #[cfg(not(feature = "internal"))]
         {
             panic!("Internal templates requested but not compiled in");
         }
@@ -96,9 +96,8 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             if i.is_none() {
                 continue;
             }
-            // WARNING! LEAKS MEMORY
-            let template = Box::new(fs::read_to_string(entry.path()).unwrap());
-            env.add_template(TEMPLATE_NAMES[i.unwrap()], template.leak())
+            let template = fs::read_to_string(entry.path()).unwrap();
+            env.template_from_named_str(TEMPLATE_NAMES[i.unwrap()], &template)
                 .unwrap();
         }
     }

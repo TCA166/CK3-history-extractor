@@ -2,7 +2,13 @@ use core::panic;
 use dialoguer::{Confirm, Input, Select};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
-use std::{collections::HashMap, env, fs, io::stdin, path::Path, time::Duration};
+use std::{
+    collections::HashMap,
+    env, fs,
+    io::{stdin, stdout, IsTerminal},
+    path::Path,
+    time::Duration,
+};
 use types::{Wrapper, WrapperMut};
 
 /// A submodule that provides opaque types commonly used in the project
@@ -37,6 +43,16 @@ mod display;
 use display::{
     Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
 };
+
+static LANGUAGES: [&'static str; 7] = [
+    "english",
+    "french",
+    "german",
+    "korean",
+    "russian",
+    "simp_chinese",
+    "spanish",
+];
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -88,9 +104,9 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     // if we need to decompress the savefile
     let mut compressed = false;
-    #[cfg(internal)]
+    #[cfg(feature = "internal")]
     let mut use_internal = false;
-    #[cfg(not(internal))]
+    #[cfg(not(feature = "internal"))]
     let use_internal = false;
     // if we don't want to render any images
     let mut no_vis = false;
@@ -100,25 +116,21 @@ fn main() {
     // The game path and mod paths, if provided by the user
     let mut game_path: Option<String> = None;
     let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
-    let languages = vec![
-        "english",
-        "french",
-        "german",
-        "korean",
-        "russian",
-        "simp_chinese",
-        "spanish",
-    ];
-    // The language to use for localization
-    let mut language = "english".to_string();
+                                                     // The language to use for localization
+    let mut language = LANGUAGES[0];
     // The depth to render the player's history
     let mut depth = 3;
     // whether the game state should be dumped to json
     let mut dump = false;
     if args.len() < 2 {
-        if atty::isnt(atty::Stream::Stdin) {
+        if !stdin().is_terminal() {
             //raw file contents
             stdin().read_line(&mut filename).unwrap();
+            filename = filename.trim().to_string();
+            filename = filename.trim().to_string();
+            if filename.is_empty() {
+                panic!("No filename provided");
+            }
             filename = filename.trim().to_string();
             if filename.is_empty() {
                 panic!("No filename provided");
@@ -166,12 +178,12 @@ fn main() {
                 .unwrap();
             let language_selection = Select::new()
                 .with_prompt("Choose the localization language")
-                .items(&languages)
+                .items(&LANGUAGES)
                 .default(0)
                 .interact()
                 .unwrap();
             if language_selection != 0 {
-                language = languages[language_selection].to_string();
+                language = LANGUAGES[language_selection];
             }
             let include_input = Input::<String>::new()
                 .with_prompt("Enter the include paths separated by a coma [empty for None]")
@@ -222,12 +234,12 @@ fn main() {
         while let Some(arg) = iter.next() {
             match arg.as_str() {
                 "--internal" => {
-                    #[cfg(internal)]
+                    #[cfg(feature = "internal")]
                     {
                         println!("Using internal templates");
                         use_internal = true;
                     }
-                    #[cfg(not(internal))]
+                    #[cfg(not(feature = "internal"))]
                     panic!("Internal templates requested but not compiled in")
                 }
                 "--depth" => {
@@ -249,10 +261,7 @@ fn main() {
                 }
                 "--language" => {
                     //we don't validate the language here, args are trusted, if someone uses them to mess with the behaviour we let them
-                    language = iter
-                        .next()
-                        .expect("Language argument requires a value")
-                        .clone();
+                    language = iter.next().expect("Language argument requires a value");
                     println!("Using language {}", language);
                 }
                 "--no-vis" => {
@@ -292,6 +301,10 @@ fn main() {
             }
         }
     }
+    let p = Path::new(&filename);
+    if !p.exists() || !p.is_file() {
+        panic!("File does not exist");
+    }
     let bar_style = ProgressStyle::default_bar()
         .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
         .unwrap()
@@ -310,7 +323,7 @@ fn main() {
         progress_bar.enable_steady_tick(Duration::from_secs(1));
         progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
-            let loc_path = path.clone() + "/localization/" + language.as_str();
+            let loc_path = path.clone() + "/localization/" + language;
             localizer.add_from_path(loc_path);
             if !no_vis && map.is_none() {
                 let map_data = path.clone() + "/map_data";
@@ -555,7 +568,7 @@ fn main() {
             render_spinner.inc(1);
         }
         render_spinner.finish_with_message("Rendering complete");
-        if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
+        if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
             open::that(player.get_path(&folder_name)).unwrap();
         }
         rendering_progress_bar.remove(&cull_spinner);
@@ -566,7 +579,7 @@ fn main() {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write("game_state.json", json).unwrap();
     }
-    if atty::is(atty::Stream::Stdin) && atty::is(atty::Stream::Stdout) && !no_interaction {
+    if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
         Input::<String>::new()
             .with_prompt("Press enter to exit")
             .allow_empty(true)
