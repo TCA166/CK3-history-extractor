@@ -23,6 +23,8 @@ const TREE_SCALE: f64 = 1.5;
 
 const NO_PARENT: usize = usize::MAX;
 
+const TREE_GRAPH_MARGIN: i32 = 5;
+
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
 fn handle_node<T: TreeNode>(
@@ -237,24 +239,22 @@ impl Grapher {
                 // canvas size resolving
                 positions.insert(id, (x, y));
                 if x < min_x || min_x == 0.0 {
-                    min_x = x - node_data.3 .0 as f64;
+                    min_x = x - node_data.2 .0;
                 }
                 if x > max_x {
-                    max_x = x + node_data.3 .0 as f64;
+                    max_x = x + node_data.2 .0;
                 }
                 if y < min_y {
-                    min_y = y - node_data.3 .1 as f64;
+                    min_y = y - node_data.2 .1;
                 }
                 if y > max_y {
-                    max_y = y + node_data.3 .1 as f64;
+                    max_y = y + node_data.2 .1;
                 }
             }
 
-            min_x *= 1.02;
-            max_x *= 1.02;
 
-            let x_size = (max_x - min_x + 10.0) as u32;
-            let y_size = (max_y - min_y + 10.0) as u32;
+            let x_size = (max_x - min_x + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
+            let y_size = (max_y - min_y + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
 
             /* Note on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
@@ -270,7 +270,7 @@ impl Grapher {
                 min_x..max_x,
                 min_y..max_y,
                 (
-                    (x_size / 100) as i32..((x_size / 100) * 99) as i32,
+                    TREE_GRAPH_MARGIN..x_size as i32 - TREE_GRAPH_MARGIN,
                     (y_size / 25) as i32..(y_size / 25 * 24) as i32,
                 ),
             ));

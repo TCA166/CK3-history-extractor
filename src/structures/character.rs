@@ -316,6 +316,21 @@ fn get_traits(traits: &mut Vec<GameString>, base: &GameObject, game_state: &mut 
     }
 }
 
+/// Processes a currency node of the character
+fn process_currency(currency_node: Option<&SaveFileValue>) -> f32 {
+    match currency_node {
+        Some(o) => {
+            let currency = o.as_object().unwrap().get("accumulated");
+            if currency.is_some() {
+                currency.unwrap().as_string().parse::<f32>().unwrap()
+            } else {
+                0.0
+            }
+        }
+        None => 0.0,
+    }
+}
+
 /// Parses the alive_data field of the character
 fn parse_alive_data(
     base: &GameObject,
@@ -332,16 +347,8 @@ fn parse_alive_data(
     let alive_node = base.get("alive_data");
     if alive_node.is_some() {
         let alive_data = base.get("alive_data").unwrap().as_object().unwrap();
-        *piety = alive_data
-            .get_object_ref("piety")
-            .get_string_ref("accumulated")
-            .parse::<f32>()
-            .unwrap();
-        *prestige = alive_data
-            .get_object_ref("prestige")
-            .get_string_ref("accumulated")
-            .parse::<f32>()
-            .unwrap();
+        *piety = process_currency(alive_data.get("piety"));
+        *prestige = process_currency(alive_data.get("prestige"));
         let kills_node = alive_data.get("kills");
         if kills_node.is_some() {
             for k in kills_node.unwrap().as_object().unwrap().get_array_iter() {

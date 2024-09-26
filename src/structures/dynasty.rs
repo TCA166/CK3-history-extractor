@@ -152,13 +152,16 @@ fn get_prestige(base: &GameObject) -> (f32, f32) {
     let mut prestige = 0.0;
     if currency.is_some() {
         let o = currency.unwrap().as_object().unwrap();
-        match o.get("accumulated").unwrap() {
-            SaveFileValue::Object(ref o) => {
-                prestige_tot = o.get_string_ref("value").parse::<f32>().unwrap();
-            }
-            SaveFileValue::String(ref o) => {
-                prestige_tot = o.parse::<f32>().unwrap();
-            }
+        match o.get("accumulated") {
+            Some(v) => match v {
+                SaveFileValue::Object(ref o) => {
+                    prestige_tot = o.get_string_ref("value").parse::<f32>().unwrap();
+                }
+                SaveFileValue::String(ref o) => {
+                    prestige_tot = o.parse::<f32>().unwrap();
+                }
+            },
+            None => {}
         }
         match o.get("currency") {
             Some(v) => match v {
