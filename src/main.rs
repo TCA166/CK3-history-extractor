@@ -30,6 +30,7 @@ use display::{
     Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
 };
 
+/// The languages supported by the game.
 const LANGUAGES: [&'static str; 7] = [
     "english",
     "french",
@@ -40,6 +41,7 @@ const LANGUAGES: [&'static str; 7] = [
     "spanish",
 ];
 
+/// The name of the file to dump the game state to.
 const DUMP_FILE: &str = "game_state.json";
 
 /// Main function. This is the entry point of the program.

@@ -252,11 +252,10 @@ impl Grapher {
                 }
             }
 
-
             let x_size = (max_x - min_x + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
             let y_size = (max_y - min_y + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
 
-            /* Note on scaling
+            /* NOTE on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
             Their size is in i32, which means when we try to render a tree 10k units wide the rectangle size of 0.0001 is 0.
             This is a limitation of the library, and I can't do anything about it.

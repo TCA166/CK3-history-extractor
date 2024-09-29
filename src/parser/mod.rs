@@ -122,7 +122,12 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         "vassal_contracts" => {
             let r = i.to_object();
             // if version <= 1.12 then the key is active, otherwise it is database, why paradox?
-            let active = r.get("database").or(r.get("active")).unwrap().as_object().unwrap();
+            let active = r
+                .get("database")
+                .or(r.get("active"))
+                .unwrap()
+                .as_object()
+                .unwrap();
             for contract in active.get_obj_iter() {
                 let val = contract.1.as_object();
                 if val.is_some() {

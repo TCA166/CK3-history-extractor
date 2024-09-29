@@ -446,6 +446,20 @@ fn get_dynasty(
     None
 }
 
+/// Gets the nickname of the character
+fn get_nick(base: &GameObject) -> Option<GameString> {
+    // this feature is new i think with roads to power, but very handy
+    let text = base.get("nickname_text");
+    if text.is_some() {
+        return Some(text.unwrap().as_string());
+    }
+    let nick = base.get("nickname");
+    if nick.is_some() {
+        return Some(nick.unwrap().as_string());
+    }
+    None
+}
+
 impl Character {
     /// Gets the faith of the character
     pub fn get_faith(&self) -> Option<Shared<Faith>> {
@@ -686,7 +700,7 @@ impl DummyInit for Character {
         );
         //find house
         self.name = Some(base.get("first_name").unwrap().as_string());
-        self.nick = base.get("nickname").map(|v| v.as_string());
+        self.nick = get_nick(&base);
         self.birth = Some(base.get("birth").unwrap().as_string());
         self.house = get_dynasty(&base, game_state, &self.id);
         self.faith = get_faith(&base, game_state);

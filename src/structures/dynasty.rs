@@ -70,11 +70,26 @@ impl Dynasty {
         }
     }
 
+    /// Gets the founder of the dynasty
     pub fn get_founder(&self) -> Shared<Character> {
         if self.leaders.is_empty() {
             return self.member_list.first().unwrap().clone();
         }
         self.leaders.first().unwrap().clone()
+    }
+
+    /// Checks if the dynasty is the same as another dynasty
+    pub fn is_same_dynasty(&self, other: &Dynasty) -> bool {
+        let id = if self.parent.is_none() {
+            self.id
+        } else {
+            self.parent.as_ref().unwrap().get_internal().id
+        };
+        if other.parent.is_none() {
+            return id == other.id;
+        } else {
+            return id == other.parent.as_ref().unwrap().get_internal().id;
+        }
     }
 }
 

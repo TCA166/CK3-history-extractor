@@ -15,7 +15,13 @@ use super::{
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
 };
 
-use std::{collections::HashMap, fs::File};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+};
+
+const TARGET_COLOR: [u8; 3] = [70, 255, 70];
+const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -92,7 +98,6 @@ impl Renderable for Player {
             let game_state = renderer.get_state();
             //timelapse rendering
             let map = map.unwrap();
-            let target_color = [70, 255, 70];
             let path = renderer.get_path().to_owned() + "/timelapse.gif";
             let mut file = File::create(&path).unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
@@ -114,7 +119,7 @@ impl Renderable for Player {
                 } else {
                     game_state.get_current_date().unwrap()
                 };
-                let fbytes = map.create_map_buffer(char.get_barony_keys(true), &target_color, date);
+                let fbytes = map.create_map_buffer(char.get_barony_keys(true), &TARGET_COLOR, date);
                 //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();
@@ -165,7 +170,8 @@ impl Renderable for Player {
                 },
                 &format!("{}/sim.png", renderer.get_path()),
             );
-            let mut titles = Vec::new();
+            let mut direct_titles = HashSet::new();
+            let mut descendant_title = HashSet::new();
             let first = self.lineage.first().unwrap().get_character();
             let first = first.get_internal();
             let dynasty = first.get_dynasty();
@@ -173,13 +179,33 @@ impl Renderable for Player {
             let descendants = dynasty.get_founder().get_internal().get_descendants();
             for desc in descendants {
                 let desc = desc.get_internal();
-                titles.append(&mut desc.get_barony_keys(false));
+                if desc.get_death_date().is_some() {
+                    continue;
+                }
+                let target = if desc
+                    .get_dynasty()
+                    .map_or(false, |d| d.get_internal().is_same_dynasty(&dynasty))
+                {
+                    &mut direct_titles
+                } else {
+                    &mut descendant_title
+                };
+                for title in desc.get_barony_keys(false) {
+                    target.insert(title.clone());
+                }
             }
-            map.create_map_file(
-                titles,
-                &target_color,
+            //TODO add some sort of title to the map
+            map.create_map_graph(
+                |key: &str| {
+                    if direct_titles.contains(&key.to_owned()) {
+                        return TARGET_COLOR;
+                    } else if descendant_title.contains(&key.to_owned()) {
+                        return SECONDARY_COLOR;
+                    } else {
+                        return [255, 255, 255];
+                    }
+                },
                 &format!("{}/dynastyMap.png", renderer.get_path()),
-                &format!("Lands of the {} dynasty", dynasty.get_name()),
             );
         }
         for char in self.lineage.iter() {

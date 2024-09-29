@@ -8,23 +8,23 @@
         <header class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-body border-bottom shadow-sm">
             <p class="h1 my-0 me-md-auto fw-normal">{{name}}'s CK3 History</p>
             <div>
-                {%if map_present%}
-                <a class="btn btn-outline-primary btn-sm" href="timelapse.gif" target="_blank">
-                    Approximate Playthrough Timelapse
-                </a>
-                <a class="btn btn-outline-primary btn-sm" href="sim.png" target="_blank">
-                    Genetic similarity heatmap
-                </a>
-                <a class="btn btn-outline-primary btn-sm" href="dynastyMap.png" target="_blank">
-                    Lands of the dynasty
-                </a>
-                {%endif%}
                 {%if not no_vis%}
                 <a class="btn btn-outline-primary btn-sm" href="timeline.html" target="_blank">
                     Timeline
                 </a>
                 <a class="btn btn-outline-primary btn-sm" href="line.svg" target="_blank">
                     Royal Lineage Graph
+                </a>
+                {%endif%}
+                {%if map_present%}
+                <a class="btn btn-outline-primary btn-sm" href="dynastyMap.png" target="_blank">
+                    Lands of the dynasty
+                </a>
+                <a class="btn btn-outline-primary btn-sm" href="timelapse.gif" target="_blank">
+                    Approximate Playthrough Timelapse
+                </a>
+                <a class="btn btn-outline-primary btn-sm" href="sim.png" target="_blank">
+                    Genetic similarity heatmap
                 </a>
                 {%endif%}
                 <a class="btn btn-outline-secondary" href="https://github.com/TCA166/CK3-history-extractor" target="_blank">
@@ -40,7 +40,7 @@
             </h3>
             <div class="card-deck">
                 {% for node in lineage %}
-                <div class="card m-1 d-inline-block" style="width: 28rem;">
+                <div class="card m-1 d-inline-block align-top" style="width: 28rem;">
                     <div class="card-body">
                         <h5 class="card-title">{{node.character.name}} {{node.character.nick if node.character.nick != none}}</h5>
                         <p class="card-text">Of house {{node.character.house.name}}</p>
@@ -50,7 +50,7 @@
                         {% if node.lifestyle != none %}
                         <li class="list-group-item">Reached a score of: {{node.score}}</li>
                         <li class="list-group-item">Had a keen interest in {{node.lifestyle}}</li>
-                        <li class="list-group-item">{% if node.perks|length != 0%}Was a: {%for perk in node.perks%}{{perk}}  {%endfor%}{%else%}Didn't master a specific field{%endif%}</li>
+                        <li class="list-group-item">{% if node.perks|length != 0%}Was: {%for perk in node.perks%}  {{perk}}  {%endfor%}{%else%}Didn't master a specific field{%endif%}</li>
                         {% else %}
                         <li class="list-group-item">This character has yet to prove himself.</li>
                         {% endif %}
