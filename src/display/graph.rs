@@ -108,11 +108,11 @@ fn create_graph(data: &Vec<(u32, f64)>, output_path: &str) {
         //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
         .margin(5)
         .x_label_area_size(30)
-        .y_label_area_size(30)
+        .y_label_area_size(50)
         .build_cartesian_2d(min_x..max_x, min_y..(MULT))
         .unwrap();
 
-    chart.configure_mesh().draw().unwrap();
+    chart.configure_mesh().y_desc("Percentage of global deaths").draw().unwrap();
 
     chart
         .draw_series(LineSeries::new(

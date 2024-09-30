@@ -8,7 +8,8 @@ use plotters::{
     backend::BitMapBackend,
     drawing::IntoDrawingArea,
     element::Text,
-    style::{IntoFont, RGBAColor},
+    prelude::{EmptyElement, Rectangle},
+    style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
 use super::super::parser::{GameId, GameString, SaveFile};
@@ -55,7 +56,7 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
 fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
     //TODO is this the best way to draw text?
     let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
-    let text_height = height as f32 * 0.05;
+    let text_height = height / 20;
     let style = ("sans-serif", text_height)
         .into_font()
         .color(&RGBAColor(0, 0, 0, 0.5));
@@ -65,6 +66,45 @@ fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
         style,
     ))
     .unwrap();
+    back.present().unwrap();
+}
+
+/// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
+fn draw_legend(img: &mut [u8], width: u32, height: u32, legend: Vec<(String, [u8; 3])>) {
+    let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
+    let text_height = (height / 30) as i32;
+    let style = ("sans-serif", text_height).into_font();
+    let mut x = (width / 50) as i32;
+    for (label, color) in legend {
+        let text_size = style.box_size(&label).unwrap();
+        let margin = text_height / 3;
+        back.draw(
+            &(EmptyElement::at((x, height as i32 - (text_height * 2)))
+                + Rectangle::new(
+                    [(0, 0), (text_height, text_height)],
+                    ShapeStyle {
+                        color: RGBAColor(color[0], color[1], color[2], 1.0),
+                        filled: true,
+                        stroke_width: 1,
+                    },
+                )
+                + Rectangle::new(
+                    [(0, 0), (text_height, text_height)],
+                    ShapeStyle {
+                        color: BLACK.to_rgba(),
+                        filled: false,
+                        stroke_width: 1,
+                    },
+                )
+                + Text::new(
+                    label,
+                    (text_height + margin, (text_height - text_size.1 as i32)),
+                    style.clone(),
+                )),
+        )
+        .unwrap();
+        x += text_height + text_size.0 as i32 + (margin * 2);
+    }
     back.present().unwrap();
 }
 
@@ -207,7 +247,7 @@ impl GameMap {
     /// Returns a vector of RGB bytes representing the new map
     fn create_map<F>(&self, key_list: Vec<GameString>, assoc: F) -> Vec<u8>
     where
-        F: Fn(&str) -> [u8; 3],
+        F: Fn(&String) -> [u8; 3],
     {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::new();
@@ -257,7 +297,7 @@ impl GameMap {
         label: &str,
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         //we need to convert the vec of bytes to a vec of rgba bytes
-        let mut new_map = self.create_map(key_list, |_: &str| *target_color);
+        let mut new_map = self.create_map(key_list, |_: &String| *target_color);
         if !label.is_empty() {
             draw_text(&mut new_map, self.width, self.height, label);
         }
@@ -279,7 +319,7 @@ impl GameMap {
         output_path: &str,
         label: &str,
     ) {
-        let mut new_map = self.create_map(key_list, |_: &str| *target_color);
+        let mut new_map = self.create_map(key_list, |_: &String| *target_color);
         let width = self.width;
         let height = self.height;
         let output_path = output_path.to_owned();
@@ -301,11 +341,11 @@ impl GameMap {
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    pub fn create_map_graph<F>(&self, assoc: F, output_path: &str)
+    pub fn create_map_graph<F>(&self, assoc: F, output_path: &str, legend: Vec<(String, [u8; 3])>)
     where
-        F: Fn(&str) -> [u8; 3],
+        F: Fn(&String) -> [u8; 3],
     {
-        let new_map = self.create_map(
+        let mut new_map = self.create_map(
             self.title_color_map
                 .keys()
                 .map(|x| GameString::new(x.to_owned()))
@@ -317,6 +357,7 @@ impl GameMap {
         let output_path = output_path.to_owned();
         //we move the writing process out into a thread because it's an IO heavy operation
         thread::spawn(move || {
+            draw_legend(&mut new_map, width, height, legend);
             save_buffer(
                 output_path,
                 &new_map,

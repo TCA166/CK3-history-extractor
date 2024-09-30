@@ -22,6 +22,7 @@ use std::{
 
 const TARGET_COLOR: [u8; 3] = [70, 255, 70];
 const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
+const BASE_COLOR: [u8; 3] = [255, 255, 255];
 
 /// A struct representing a player in the game
 pub struct Player {
@@ -160,15 +161,23 @@ impl Renderable for Player {
                 }
             }
             map.create_map_graph(
-                |key: &str| {
-                    let mult = sim.get(&key.to_owned());
+                |key: &String| {
+                    let mult = sim.get(key);
                     if mult.is_none() {
-                        return [0, 0, 0];
+                        return BASE_COLOR;
                     } else {
-                        return [255, 255, (255.0 * (1.0 - mult.unwrap())) as u8];
+                        return [
+                            BASE_COLOR[0],
+                            BASE_COLOR[1],
+                            (BASE_COLOR[2] as f32 * (1.0 - mult.unwrap())) as u8,
+                        ];
                     }
                 },
                 &format!("{}/sim.png", renderer.get_path()),
+                vec![
+                    ("0%".to_string(), BASE_COLOR),
+                    ("100%".to_string(), [BASE_COLOR[0], BASE_COLOR[1], 0]),
+                ],
             );
             let mut direct_titles = HashSet::new();
             let mut descendant_title = HashSet::new();
@@ -194,18 +203,21 @@ impl Renderable for Player {
                     target.insert(title.clone());
                 }
             }
-            //TODO add some sort of title to the map
             map.create_map_graph(
-                |key: &str| {
-                    if direct_titles.contains(&key.to_owned()) {
+                |key: &String| {
+                    if direct_titles.contains(key) {
                         return TARGET_COLOR;
-                    } else if descendant_title.contains(&key.to_owned()) {
+                    } else if descendant_title.contains(key) {
                         return SECONDARY_COLOR;
                     } else {
-                        return [255, 255, 255];
+                        return BASE_COLOR;
                     }
                 },
                 &format!("{}/dynastyMap.png", renderer.get_path()),
+                vec![
+                    ("Dynastic titles".to_string(), TARGET_COLOR),
+                    ("Descendant titles".to_string(), SECONDARY_COLOR),
+                ],
             );
         }
         for char in self.lineage.iter() {

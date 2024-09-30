@@ -10,7 +10,6 @@ fn demangle_generic(input: &str) -> String {
     let mut s = input
         .trim_start_matches("dynn_")
         .trim_start_matches("nick_")
-        .trim_end_matches("_perk")
         .trim_start_matches("death_")
         .trim_start_matches("tenet_")
         .trim_start_matches("doctrine_")
@@ -26,7 +25,12 @@ fn demangle_generic(input: &str) -> String {
         .trim_start_matches("b_")
         .trim_start_matches("x_x_")
         .trim_end_matches("_name")
-        .replace("_", " ");
+        .trim_end_matches("_perk");
+    let mut input_chars = s.chars();
+    if input_chars.nth(1) == Some('p') && input_chars.nth(3) == Some('_') {
+        s = s.split_at(4).1;
+    }
+    let mut s = s.replace("_", " ");
     if s.is_empty() {
         return s;
     }

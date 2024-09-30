@@ -60,6 +60,8 @@ const TEMPLATE_NAMES: [&str; 7] = [
 /// - no_vis - whether the visualizations are disabled
 pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environment<'static> {
     let mut env = Environment::new();
+    env.set_lstrip_blocks(true);
+    env.set_trim_blocks(true);
     env.add_filter("render_ref", render_ref);
     env.add_filter("handle_tooltips", handle_tooltips);
     env.add_global("map_present", map_present);
