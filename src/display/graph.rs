@@ -17,13 +17,23 @@ use super::super::{
     types::{Shared, Wrapper},
 };
 
+/// Common graph size in pixels
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
 
+/// A multiplier for the tree graph size
 const TREE_SCALE: f64 = 1.5;
 
+/// A value indicating that the node has no parent
 const NO_PARENT: usize = usize::MAX;
 
-const TREE_GRAPH_MARGIN: i32 = 5;
+/// A common margin in pixels
+const MARGIN: i32 = 5;
+
+/// The y label for the death graphs
+const Y_LABEL: &str = "Percentage of global deaths";
+
+/// The maximum y value for the death graphs
+const MAX_Y: f64 = 100.0;
 
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
@@ -85,8 +95,14 @@ pub trait TreeNode: GameObjectDerived {
     fn get_class(&self) -> Option<GameString>;
 }
 
-fn create_graph(data: &Vec<(u32, f64)>, output_path: &str) {
-    const MULT: f64 = 100.0;
+/// Creates a graph from a given data set
+/// Assumes that the data is sorted by the x value, and that the y value is a percentage
+fn create_graph(
+    data: &Vec<(u32, f64)>,
+    output_path: &str,
+    ylabel: Option<&str>,
+    xlabel: Option<&str>,
+) {
     let mut min_x: u32 = 0;
     let mut max_x: u32 = 0;
     let mut min_y = 0.0;
@@ -106,17 +122,27 @@ fn create_graph(data: &Vec<(u32, f64)>, output_path: &str) {
     root.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&root)
         //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
-        .margin(5)
-        .x_label_area_size(30)
-        .y_label_area_size(50)
-        .build_cartesian_2d(min_x..max_x, min_y..(MULT))
+        .margin(MARGIN)
+        .x_label_area_size(MARGIN * 10)
+        .y_label_area_size(MARGIN * 10)
+        .build_cartesian_2d(min_x..max_x, min_y..MAX_Y)
         .unwrap();
 
-    chart.configure_mesh().y_desc("Percentage of global deaths").draw().unwrap();
+    let mut mesh = chart.configure_mesh();
+
+    if xlabel.is_some() {
+        mesh.x_desc(xlabel.unwrap());
+    }
+
+    if ylabel.is_some() {
+        mesh.y_desc(ylabel.unwrap());
+    }
+
+    mesh.draw().unwrap();
 
     chart
         .draw_series(LineSeries::new(
-            data.iter().map(|(x, y)| (*x, *y * MULT)),
+            data.iter().map(|(x, y)| (*x, *y * MAX_Y)),
             &RED,
         ))
         .unwrap();
@@ -252,8 +278,8 @@ impl Grapher {
                 }
             }
 
-            let x_size = (max_x - min_x + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
-            let y_size = (max_y - min_y + (TREE_GRAPH_MARGIN as f64 * 2.0)) as u32;
+            let x_size = (max_x - min_x + (MARGIN as f64 * 2.0)) as u32;
+            let y_size = (max_y - min_y + (MARGIN as f64 * 2.0)) as u32;
 
             /* NOTE on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
@@ -269,7 +295,7 @@ impl Grapher {
                 min_x..max_x,
                 min_y..max_y,
                 (
-                    TREE_GRAPH_MARGIN..x_size as i32 - TREE_GRAPH_MARGIN,
+                    MARGIN..x_size as i32 - MARGIN,
                     (y_size / 25) as i32..(y_size / 25 * 24) as i32,
                 ),
             ));
@@ -335,7 +361,7 @@ impl Grapher {
         if data.is_none() {
             return;
         }
-        create_graph(data.unwrap(), output_path)
+        create_graph(data.unwrap(), output_path, Some(Y_LABEL), None)
     }
 
     /// Creates a death graph for a faith
@@ -344,7 +370,7 @@ impl Grapher {
         if data.is_none() {
             return;
         }
-        create_graph(data.unwrap(), output_path)
+        create_graph(data.unwrap(), output_path, Some(Y_LABEL), None)
     }
 
     pub fn create_timeline_graph(

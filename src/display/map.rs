@@ -14,6 +14,33 @@ use plotters::{
 
 use super::super::parser::{GameId, GameString, SaveFile};
 
+// color stuff
+
+/// The color of the text drawn on the map
+const TEXT_COLOR: RGBAColor = RGBAColor(0, 0, 0, 0.5);
+/// The color of the water on the map
+const WATER_COLOR: [u8; 3] = [20, 150, 255];
+/// The color of the land on the map
+const LAND_COLOR: [u8; 3] = [255, 255, 255];
+/// The color of the null pixels on the map
+const NULL_COLOR: [u8; 3] = [0, 0, 0];
+
+// map image stuff
+
+/// The width of the input map image
+const IMG_WIDTH: u32 = 8192;
+/// The height of the input map image
+const IMG_HEIGHT: u32 = 4096;
+/// The scale factor for the input map image
+const SCALE: u32 = 4;
+
+// File system stuff
+
+const MAP_PATH_SUFFIX: &str = "/map_data";
+const PROVINCES_SUFFIX: &str = "/provinces.png";
+const RIVERS_SUFFIX: &str = "/rivers.png";
+const DEFINITION_SUFFIX: &str = "/definition.csv";
+
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path: String) -> Vec<u8> {
     let img = ImageReader::open(&path);
@@ -57,9 +84,7 @@ fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
     //TODO is this the best way to draw text?
     let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
     let text_height = height / 20;
-    let style = ("sans-serif", text_height)
-        .into_font()
-        .color(&RGBAColor(0, 0, 0, 0.5));
+    let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);
     back.draw(&Text::new(
         text,
         (10, height as i32 - text_height as i32),
@@ -117,22 +142,13 @@ pub struct GameMap {
     title_color_map: HashMap<String, [u8; 3]>,
 }
 
-const WATER_COLOR: [u8; 3] = [20, 150, 255];
-const LAND_COLOR: [u8; 3] = [255, 255, 255];
-const NULL_COLOR: [u8; 3] = [0, 0, 0];
-
-const IMG_WIDTH: u32 = 8192;
-const IMG_HEIGHT: u32 = 4096;
-
-const SCALE: u32 = 4;
-
 impl GameMap {
     /// Creates a new GameMap from a province map and a definition.csv file located inside the provided path.
     /// The function expects the path to be a valid CK3 game directory.
     pub fn new(game_path: &str) -> Self {
-        let map_path = game_path.to_owned() + "/map_data";
-        let mut provinces_bytes = read_png_bytes(map_path.to_owned() + "/provinces.png");
-        let river_bytes = read_png_bytes(map_path.to_owned() + "/rivers.png");
+        let map_path = game_path.to_owned() + MAP_PATH_SUFFIX;
+        let mut provinces_bytes = read_png_bytes(map_path.to_owned() + PROVINCES_SUFFIX);
+        let river_bytes = read_png_bytes(map_path.to_owned() + RIVERS_SUFFIX);
         //apply river bytes as a mask to the provinces bytes so that non white pixels in rivers are black
         let len = provinces_bytes.len();
         let mut x = 0;
@@ -213,7 +229,7 @@ impl GameMap {
             .comment(Some(b'#'))
             .flexible(true)
             .delimiter(b';')
-            .from_path(map_path.to_owned() + "/definition.csv")
+            .from_path(map_path.to_owned() + DEFINITION_SUFFIX)
             .unwrap();
         for record in rdr.records() {
             if record.is_err() {
