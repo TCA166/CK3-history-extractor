@@ -3,6 +3,8 @@ use std::slice::Iter;
 
 use serde::{ser::SerializeStruct, Serialize};
 
+use crate::display::TreeNode;
+
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
@@ -220,6 +222,14 @@ impl Title {
             return None;
         }
     }
+
+    pub fn get_holder(&self) -> Option<Shared<Character>> {
+        let entry = self.history.last();
+        if entry.is_none() {
+            return None;
+        }
+        entry.unwrap().1.clone()
+    }
 }
 
 impl DummyInit for Title {
@@ -303,6 +313,44 @@ impl GameObjectDerived for Title {
     }
 }
 
+impl TreeNode for Title {
+    fn get_children(&self) -> &Vec<Shared<Self>> {
+        &self.de_jure_vassals
+    }
+
+    fn get_class(&self) -> Option<GameString> {
+        if self.key.is_none() {
+            return None;
+        }
+        let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
+        match first_char {
+            'e' => {
+                return Some(GameString::wrap("Empire".to_owned()));
+            }
+            'k' => {
+                return Some(GameString::wrap("Kingdom".to_owned()));
+            }
+            'd' => {
+                return Some(GameString::wrap("Duchy".to_owned()));
+            }
+            'c' => {
+                return Some(GameString::wrap("County".to_owned()));
+            }
+            'b' => {
+                return Some(GameString::wrap("Barony".to_owned()));
+            }
+            _ => {
+                return None;
+            }
+        }
+    }
+
+    fn get_parent(&self) -> &Vec<Shared<Self>> {
+        // TODO: Implement this
+        &self.de_jure_vassals
+    }
+}
+
 impl Serialize for Title {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -311,29 +359,9 @@ impl Serialize for Title {
         let mut state = serializer.serialize_struct("Title", 12)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        if self.key.is_some() {
-            //match the first character of key
-            let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
-            match first_char {
-                'e' => {
-                    state.serialize_field("tier", "Empire of")?;
-                }
-                'k' => {
-                    state.serialize_field("tier", "Kingdom of")?;
-                }
-                'd' => {
-                    state.serialize_field("tier", "Duchy of")?;
-                }
-                'c' => {
-                    state.serialize_field("tier", "County of")?;
-                }
-                'b' => {
-                    state.serialize_field("tier", "Barony of")?;
-                }
-                _ => {
-                    state.serialize_field("tier", "")?;
-                }
-            }
+        let tier = self.get_class();
+        if tier.is_some() {
+            state.serialize_field("tier", &tier)?;
         } else {
             state.serialize_field("tier", "")?;
         }
@@ -509,15 +537,5 @@ impl Cullable for Title {
 
     fn get_depth(&self) -> usize {
         self.depth
-    }
-}
-
-impl Title {
-    pub fn get_holder(&self) -> Option<Shared<Character>> {
-        let entry = self.history.last();
-        if entry.is_none() {
-            return None;
-        }
-        entry.unwrap().1.clone()
     }
 }
