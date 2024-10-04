@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
         jinja_env::CUL_TEMPLATE_NAME,
-        parser::{GameId, GameObject, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
     },
     serialize_array, DummyInit, GameObjectDerived, Shared,
@@ -30,13 +30,13 @@ pub struct Culture {
 /// Gets the parents of the culture and appends them to the parents vector
 fn get_parents(
     parents: &mut Vec<Shared<Culture>>,
-    base: &GameObject,
+    base: &GameObjectMap,
     id: GameId,
     game_state: &mut GameState,
 ) {
     let parents_obj = base.get("parents");
     if parents_obj.is_some() {
-        for p in parents_obj.unwrap().as_object().unwrap().get_array_iter() {
+        for p in parents_obj.unwrap().as_object().as_array() {
             let parent = game_state.get_culture(&p.as_id()).clone();
             let r = parent.try_borrow_mut();
             if r.is_ok() {
@@ -48,22 +48,17 @@ fn get_parents(
 }
 
 /// Gets the traditions of the culture and appends them to the traditions vector
-fn get_traditions(traditions: &mut Vec<GameString>, base: &&GameObject) {
+fn get_traditions(traditions: &mut Vec<GameString>, base: &GameObjectMap) {
     let traditions_obj = base.get("traditions");
     if traditions_obj.is_some() {
-        for t in traditions_obj
-            .unwrap()
-            .as_object()
-            .unwrap()
-            .get_array_iter()
-        {
+        for t in traditions_obj.unwrap().as_object().as_array() {
             traditions.push(t.as_string());
         }
     }
 }
 
 /// Gets the creation date of the culture
-fn get_date(base: &GameObject) -> Option<GameString> {
+fn get_date(base: &GameObjectMap) -> Option<GameString> {
     let node = base.get("created");
     if node.is_some() {
         return Some(node.unwrap().as_string());
@@ -90,7 +85,7 @@ impl DummyInit for Culture {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
         get_parents(&mut self.parents, &base, self.id, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = Some(base.get("name").unwrap().as_string());

@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::DYN_TEMPLATE_NAME,
-        parser::{GameObject, GameState, GameString, SaveFileValue},
+        parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
@@ -94,10 +94,10 @@ impl Dynasty {
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
-fn get_perks(perks: &mut Vec<(GameString, u8)>, base: &GameObject) {
+fn get_perks(perks: &mut Vec<(GameString, u8)>, base: &GameObjectMap) {
     let perks_obj = base.get("perk");
     if perks_obj.is_some() {
-        for p in perks_obj.unwrap().as_object().unwrap().get_array_iter() {
+        for p in perks_obj.unwrap().as_object().as_array() {
             let perk = p.as_string();
             //get the split perk by the second underscore
             let mut i: u8 = 0;
@@ -136,7 +136,7 @@ fn get_perks(perks: &mut Vec<(GameString, u8)>, base: &GameObject) {
 ///Gets the leaders of the dynasty and appends them to the leaders vector
 fn get_leaders(
     leaders: &mut Vec<Shared<Character>>,
-    base: &GameObject,
+    base: &GameObjectMap,
     game_state: &mut GameState,
 ) {
     let leaders_obj = base.get("historical");
@@ -144,7 +144,7 @@ fn get_leaders(
         if !leaders.is_empty() {
             leaders.clear();
         }
-        for l in leaders_obj.unwrap().as_object().unwrap().get_array_iter() {
+        for l in leaders_obj.unwrap().as_object().as_array() {
             leaders.push(game_state.get_character(&l.as_id()).clone());
         }
     } else if leaders.is_empty() {
@@ -161,16 +161,16 @@ fn get_leaders(
 }
 
 ///Gets the prestige of the dynasty and returns a tuple with the total prestige and the current prestige
-fn get_prestige(base: &GameObject) -> (f32, f32) {
+fn get_prestige(base: &GameObjectMap) -> (f32, f32) {
     let currency = base.get("prestige");
     let mut prestige_tot = 0.0;
     let mut prestige = 0.0;
     if currency.is_some() {
-        let o = currency.unwrap().as_object().unwrap();
+        let o = currency.unwrap().as_object().as_map();
         match o.get("accumulated") {
             Some(v) => match v {
                 SaveFileValue::Object(ref o) => {
-                    prestige_tot = o.get_string_ref("value").parse::<f32>().unwrap();
+                    prestige_tot = o.as_map().get_string_ref("value").parse::<f32>().unwrap();
                 }
                 SaveFileValue::String(ref o) => {
                     prestige_tot = o.parse::<f32>().unwrap();
@@ -181,7 +181,7 @@ fn get_prestige(base: &GameObject) -> (f32, f32) {
         match o.get("currency") {
             Some(v) => match v {
                 SaveFileValue::Object(ref o) => {
-                    prestige = o.get_string_ref("value").parse::<f32>().unwrap();
+                    prestige = o.as_map().get_string_ref("value").parse::<f32>().unwrap();
                 }
                 SaveFileValue::String(ref o) => {
                     prestige = o.parse::<f32>().unwrap();
@@ -194,7 +194,7 @@ fn get_prestige(base: &GameObject) -> (f32, f32) {
 }
 
 ///Gets the parent dynasty of the dynasty
-fn get_parent(base: &GameObject, game_state: &mut GameState) -> Option<Shared<Dynasty>> {
+fn get_parent(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Dynasty>> {
     let parent_id = base.get("dynasty");
     match parent_id {
         None => None,
@@ -210,7 +210,7 @@ fn get_parent(base: &GameObject, game_state: &mut GameState) -> Option<Shared<Dy
     }
 }
 
-fn get_name(base: &GameObject, parent: Option<Shared<Dynasty>>) -> Option<GameString> {
+fn get_name(base: &GameObjectMap, parent: Option<Shared<Dynasty>>) -> Option<GameString> {
     let mut n = base.get("name");
     if n.is_none() {
         n = base.get("localized_name");
@@ -229,7 +229,7 @@ fn get_name(base: &GameObject, parent: Option<Shared<Dynasty>>) -> Option<GameSt
     Some(n.unwrap().as_string())
 }
 
-fn get_date(base: &GameObject) -> Option<GameString> {
+fn get_date(base: &GameObjectMap) -> Option<GameString> {
     let date = base.get("found_date");
     if date.is_none() {
         return None;
@@ -258,7 +258,7 @@ impl DummyInit for Dynasty {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
         //NOTE: dynasties can have their main house have the same id
         get_perks(&mut self.perks, &base);
         get_leaders(&mut self.leaders, &base, game_state);
@@ -280,12 +280,12 @@ impl DummyInit for Dynasty {
                     self.motto = Some((s.clone(), Vec::new()));
                 }
                 SaveFileValue::Object(ref o) => {
+                    let o = o.as_map();
                     let key = o.get_string_ref("key");
                     let variables = o.get("variables");
                     let mut vars = Vec::new();
-                    for v in variables.unwrap().as_object().unwrap().get_array_iter() {
-                        let v = v.as_object().unwrap();
-                        let value = v.get_string_ref("value");
+                    for v in variables.unwrap().as_object().as_array() {
+                        let value = v.as_object().as_map().get_string_ref("value");
                         vars.push(value.clone());
                     }
                     self.motto = Some((key.clone(), vars));

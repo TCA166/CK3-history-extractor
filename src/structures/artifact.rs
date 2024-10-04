@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, RenderableType},
-        parser::{GameId, GameObject, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString},
         types::Shared,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived,
@@ -38,7 +38,7 @@ impl GameObjectDerived for Artifact {
 }
 
 impl DummyInit for Artifact {
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
         self.name = Some(base.get_string_ref("name"));
         self.description = Some(base.get_string_ref("description"));
         self.r#type = Some(base.get_string_ref("type"));
@@ -58,11 +58,11 @@ impl DummyInit for Artifact {
         self.owner = Some(game_state.get_character(&base.get("owner").unwrap().as_id()));
         let history_node = base.get("history");
         if history_node.is_some() {
-            let history_node = history_node.unwrap().as_object().unwrap();
+            let history_node = history_node.unwrap().as_object().as_map();
             let entries_node = history_node.get("entries");
             if entries_node.is_some() {
-                for h in entries_node.unwrap().as_object().unwrap().get_array_iter() {
-                    let h = h.as_object().unwrap();
+                for h in entries_node.unwrap().as_object().as_array() {
+                    let h = h.as_object().as_map();
                     let r#type = h.get_string_ref("type");
                     let date = h.get_string_ref("date");
                     let actor_node = h.get("actor");

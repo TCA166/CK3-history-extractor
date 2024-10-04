@@ -9,7 +9,7 @@ use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::H_TEMPLATE_NAME,
-        parser::{GameId, GameObject, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
     },
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
@@ -33,16 +33,16 @@ pub struct Player {
 }
 
 /// Gets the lineage of the player and appends it to the lineage vector
-fn get_lineage(lineage: &mut Vec<LineageNode>, base: &GameObject, game_state: &mut GameState) {
+fn get_lineage(lineage: &mut Vec<LineageNode>, base: &GameObjectMap, game_state: &mut GameState) {
     let lineage_node = base.get_object_ref("legacy");
-    for leg in lineage_node.get_array_iter() {
-        let o = leg.as_object().unwrap();
+    for leg in lineage_node.as_array() {
+        let o = leg.as_object().as_map();
         lineage.push(LineageNode::from_game_object(o, game_state))
     }
 }
 
 impl FromGameObject for Player {
-    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
+    fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self {
         let mut lineage: Vec<LineageNode> = Vec::new();
         get_lineage(&mut lineage, &base, game_state);
         let key = base.get("character").unwrap().as_id();

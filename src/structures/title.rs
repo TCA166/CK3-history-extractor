@@ -3,13 +3,13 @@ use std::slice::Iter;
 
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::display::TreeNode;
+use crate::{display::TreeNode, parser::SaveFileObject};
 
 use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::TITLE_TEMPLATE_NAME,
-        parser::{GameId, GameObject, GameState, GameString, SaveFileValue},
+        parser::{GameId, GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
@@ -67,76 +67,77 @@ fn date_string_cmp(a: &str, b: &str) -> Ordering {
 
 ///Gets the history of the title and returns a hashmap with the history entries
 fn get_history(
-    base: &GameObject,
+    base: &GameObjectMap,
     game_state: &mut GameState,
 ) -> Vec<(GameString, Option<Shared<Character>>, GameString)> {
     let mut history: Vec<(GameString, Option<Shared<Character>>, GameString)> = Vec::new();
     let hist = base.get("history");
     if hist.is_some() {
-        let hist_obj = hist.unwrap().as_object().unwrap();
-        for h in hist_obj.get_keys() {
-            let val = hist_obj.get(&h);
+        let hist_obj = hist.unwrap().as_object().as_map();
+        for (h, val) in hist_obj {
             let character;
             let action: GameString;
             match val {
-                Some(&SaveFileValue::Object(ref o)) => {
-                    if o.is_array() {
-                        for entry in o.get_array_iter() {
-                            let loc_action;
-                            let loc_character;
-                            match entry {
-                                SaveFileValue::Object(ref o) => {
-                                    loc_action = o.get("type").unwrap().as_string();
-                                    let holder = o.get("holder");
-                                    match holder {
-                                        Some(h) => {
-                                            loc_character =
-                                                Some(game_state.get_character(&h.as_id()).clone());
-                                        }
-                                        None => {
-                                            loc_character = None;
+                SaveFileValue::Object(ref o) => {
+                    match o {
+                        SaveFileObject::Array(arr) => {
+                            for entry in arr {
+                                let loc_action;
+                                let loc_character;
+                                match entry {
+                                    SaveFileValue::Object(ref o) => {
+                                        let o = o.as_map();
+                                        loc_action = o.get("type").unwrap().as_string();
+                                        let holder = o.get("holder");
+                                        match holder {
+                                            Some(h) => {
+                                                loc_character = Some(
+                                                    game_state.get_character(&h.as_id()).clone(),
+                                                );
+                                            }
+                                            None => {
+                                                loc_character = None;
+                                            }
                                         }
                                     }
+                                    SaveFileValue::String(ref o) => {
+                                        loc_action = GameString::wrap("Inherited".to_owned());
+                                        loc_character = Some(
+                                            game_state
+                                                .get_character(&o.parse::<GameId>().unwrap())
+                                                .clone(),
+                                        );
+                                    }
                                 }
-                                SaveFileValue::String(ref o) => {
-                                    loc_action = GameString::wrap("Inherited".to_owned());
-                                    loc_character = Some(
-                                        game_state
-                                            .get_character(&o.parse::<GameId>().unwrap())
-                                            .clone(),
-                                    );
-                                }
+                                history.push((
+                                    GameString::wrap(h.to_string()),
+                                    loc_character,
+                                    loc_action,
+                                ))
                             }
-                            history.push((
-                                GameString::wrap(h.to_string()),
-                                loc_character,
-                                loc_action,
-                            ))
+                            continue; //if it's an array we handled all the adding already in the loop above
                         }
-                        continue; //if it's an array we handled all the adding already in the loop above
-                    } else {
-                        action = o.get("type").unwrap().as_string();
-                        let holder = o.get("holder");
-                        match holder {
-                            Some(h) => {
-                                character = Some(game_state.get_character(&h.as_id()).clone());
-                            }
-                            None => {
-                                character = None;
+                        SaveFileObject::Map(o) => {
+                            action = o.get("type").unwrap().as_string();
+                            let holder = o.get("holder");
+                            match holder {
+                                Some(h) => {
+                                    character = Some(game_state.get_character(&h.as_id()).clone());
+                                }
+                                None => {
+                                    character = None;
+                                }
                             }
                         }
                     }
                 }
-                Some(&SaveFileValue::String(ref o)) => {
+                SaveFileValue::String(ref o) => {
                     action = GameString::wrap("Inherited".to_owned());
                     character = Some(
                         game_state
                             .get_character(&o.parse::<GameId>().unwrap())
                             .clone(),
                     );
-                }
-                _ => {
-                    panic!("Invalid history entry")
                 }
             }
             history.push((GameString::wrap(h.to_string()), character, action));
@@ -254,14 +255,15 @@ impl DummyInit for Title {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
+        /*
         if base.get_array_iter().len() > 3 {
             let color = base
                 .get_array_iter()
                 .map(|x| x.as_string().parse::<u8>().unwrap())
                 .collect::<Vec<u8>>();
             self.color = [color[0], color[1], color[2]];
-        }
+        }*/
         self.key = Some(base.get_string_ref("key"));
         let de_jure_id = base.get("de_jure_liege");
         if de_jure_id.is_some() {
@@ -280,14 +282,20 @@ impl DummyInit for Title {
         let claim_node = base.get("claim");
         if claim_node.is_some() {
             let c = claim_node.unwrap();
-            if let Some(claim) = c.as_object() {
-                for claim in claim.get_array_iter() {
-                    self.claims
-                        .push(game_state.get_character(&claim.as_id()).clone());
+            match c {
+                SaveFileValue::Object(claim) => {
+                    for claim in claim.as_array() {
+                        self.claims
+                            .push(game_state.get_character(&claim.as_id()).clone());
+                    }
                 }
-            } else {
-                self.claims
-                    .push(game_state.get_character(&c.as_id()).clone());
+                SaveFileValue::String(claim) => {
+                    self.claims.push(
+                        game_state
+                            .get_character(&claim.parse::<GameId>().unwrap())
+                            .clone(),
+                    );
+                }
             }
         }
         let capital = base.get("capital");

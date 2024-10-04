@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer},
-        parser::{GameObject, GameState, GameString, SaveFileValue},
+        parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     Character, FromGameObject, GameId, GameObjectDerived, Shared,
@@ -30,13 +30,13 @@ impl LineageNode {
 }
 
 ///Gets the perk of the lineage node
-fn get_perks(perks: &mut Vec<GameString>, base: &GameObject) {
+fn get_perks(perks: &mut Vec<GameString>, base: &GameObjectMap) {
     let perks_node = base.get("perk");
     if perks_node.is_some() {
         let node = perks_node.unwrap();
         match node {
             SaveFileValue::Object(o) => {
-                for perk in o.get_array_iter() {
+                for perk in o.as_array() {
                     perks.push(perk.as_string())
                 }
             }
@@ -48,7 +48,7 @@ fn get_perks(perks: &mut Vec<GameString>, base: &GameObject) {
 }
 
 ///Gets the dread of the lineage node
-fn get_dread(base: &GameObject) -> f32 {
+fn get_dread(base: &GameObjectMap) -> f32 {
     let dread;
     let dread_node = base.get("dread");
     if dread_node.is_some() {
@@ -60,7 +60,7 @@ fn get_dread(base: &GameObject) -> f32 {
 }
 
 ///Gets the score of the lineage node
-fn get_score(base: &GameObject) -> i32 {
+fn get_score(base: &GameObjectMap) -> i32 {
     let score;
     let score_node = base.get("score");
     if score_node.is_some() {
@@ -72,7 +72,7 @@ fn get_score(base: &GameObject) -> i32 {
 }
 
 ///Gets the prestige of the lineage node
-fn get_prestige(base: &GameObject) -> i32 {
+fn get_prestige(base: &GameObjectMap) -> i32 {
     let prestige;
     let prestige_node = base.get("prestige");
     if prestige_node.is_some() {
@@ -84,7 +84,7 @@ fn get_prestige(base: &GameObject) -> i32 {
 }
 
 ///Gets the piety of the lineage node
-fn get_piety(base: &GameObject) -> i32 {
+fn get_piety(base: &GameObjectMap) -> i32 {
     let piety;
     let piety_node = base.get("piety");
     if piety_node.is_some() {
@@ -96,7 +96,7 @@ fn get_piety(base: &GameObject) -> i32 {
 }
 
 ///Gets the lifestyle of the lineage node
-fn get_lifestyle(base: &GameObject) -> Option<GameString> {
+fn get_lifestyle(base: &GameObjectMap) -> Option<GameString> {
     let lifestyle_node = base.get("lifestyle");
     if lifestyle_node.is_some() {
         Some(lifestyle_node.unwrap().as_string())
@@ -106,7 +106,7 @@ fn get_lifestyle(base: &GameObject) -> Option<GameString> {
 }
 
 impl FromGameObject for LineageNode {
-    fn from_game_object(base: &GameObject, game_state: &mut GameState) -> Self {
+    fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self {
         let id = base.get("character").unwrap().as_id();
         let char = game_state.get_character(&id);
         let mut perks = Vec::new();

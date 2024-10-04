@@ -12,7 +12,7 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::parser::{GameId, GameString, SaveFile};
+use super::super::parser::{GameId, GameString, SaveFile, SaveFileValue};
 
 // color stuff
 
@@ -60,18 +60,21 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let file = SaveFile::open(&path);
     let mut map = HashMap::new();
     for mut title in file {
-        let title_object = title.to_object();
+        let title_object = title.parse();
         //DFS in the structure
-        let mut stack = vec![&title_object];
+        let mut stack = vec![title_object.as_map()];
         while let Some(o) = stack.pop() {
             let pro = o.get("province");
             if pro.is_some() {
                 let id = pro.unwrap().as_id();
                 map.insert(o.get_name().to_owned(), id);
             }
-            for (_key, val) in o.get_obj_iter() {
-                if let Some(obj) = val.as_object() {
-                    stack.push(obj);
+            for (_key, val) in o {
+                match val {
+                    SaveFileValue::Object(val) => {
+                        stack.push(val.as_map());
+                    }
+                    _ => {}
                 }
             }
         }

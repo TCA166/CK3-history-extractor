@@ -7,7 +7,7 @@ use super::{
         },
         types::{RefOrRaw, Shared, Wrapper, WrapperMut},
     },
-    game_object::{GameId, GameObject, GameString},
+    game_object::{GameId, GameObjectMap, GameString},
 };
 
 use serde::{ser::SerializeStruct, Serialize};
@@ -192,7 +192,7 @@ impl GameState {
         }
     }
 
-    pub fn add_artifact(&mut self, value: &GameObject) {
+    pub fn add_artifact(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.artifacts.contains_key(&key) {
             let a = self.artifacts.get(&key).unwrap().clone();
@@ -205,7 +205,7 @@ impl GameState {
     }
 
     /// Add a character to the game state    
-    pub fn add_character(&mut self, value: &GameObject) {
+    pub fn add_character(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.characters.contains_key(&key) {
             let c = self.characters.get(&key).unwrap().clone();
@@ -218,7 +218,7 @@ impl GameState {
     }
 
     /// Add a title to the game state
-    pub fn add_title(&mut self, value: &GameObject) {
+    pub fn add_title(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.titles.contains_key(&key) {
             let t = self.titles.get(&key).unwrap().clone();
@@ -231,7 +231,7 @@ impl GameState {
     }
 
     /// Add a faith to the game state
-    pub fn add_faith(&mut self, value: &GameObject) {
+    pub fn add_faith(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.faiths.contains_key(&key) {
             let f = self.faiths.get(&key).unwrap().clone();
@@ -244,7 +244,7 @@ impl GameState {
     }
 
     /// Add a culture to the game state
-    pub fn add_culture(&mut self, value: &GameObject) {
+    pub fn add_culture(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.cultures.contains_key(&key) {
             let c = self.cultures.get(&key).unwrap().clone();
@@ -257,7 +257,7 @@ impl GameState {
     }
 
     /// Add a dynasty to the game state
-    pub fn add_dynasty(&mut self, value: &GameObject) {
+    pub fn add_dynasty(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.dynasties.contains_key(&key) {
             let d = self.dynasties.get(&key).unwrap().clone();
@@ -270,7 +270,7 @@ impl GameState {
     }
 
     /// Add a memory to the game state
-    pub fn add_memory(&mut self, value: &GameObject) {
+    pub fn add_memory(&mut self, value: &GameObjectMap) {
         let key = value.get_name().parse::<GameId>().unwrap();
         if self.memories.contains_key(&key) {
             let m = self.memories.get(&key).unwrap().clone();

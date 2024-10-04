@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizer, RenderableType},
-        parser::{GameId, GameObject, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString},
         types::WrapperMut,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
@@ -22,17 +22,12 @@ pub struct Memory {
 /// Gets the participants of the memory and appends them to the participants vector
 fn get_participants(
     participants: &mut Vec<(String, Shared<Character>)>,
-    base: &GameObject,
+    base: &GameObjectMap,
     game_state: &mut GameState,
 ) {
     let participants_node = base.get("participants");
     if participants_node.is_some() {
-        for part in participants_node
-            .unwrap()
-            .as_object()
-            .unwrap()
-            .get_obj_iter()
-        {
+        for part in participants_node.unwrap().as_object().as_map() {
             participants.push((
                 part.0.clone(),
                 game_state.get_character(&part.1.as_id()).clone(),
@@ -53,7 +48,7 @@ impl DummyInit for Memory {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
         self.date = Some(base.get("creation_date").unwrap().as_string());
         let tp = base.get("type");
         if tp.is_some() {

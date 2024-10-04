@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::FAITH_TEMPLATE_NAME,
-        parser::{GameId, GameObject, GameState, GameString},
+        parser::{GameId, GameObjectArray, GameObjectMap, GameState, GameString},
         types::{Wrapper, WrapperMut},
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
@@ -24,7 +24,7 @@ pub struct Faith {
 }
 
 /// Gets the head of the faith
-fn get_head(base: &GameObject, game_state: &mut GameState) -> Option<Shared<Character>> {
+fn get_head(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Character>> {
     let current = base.get("religious_head");
     if current.is_some() {
         let title = game_state.get_title(&current.unwrap().as_id());
@@ -34,8 +34,8 @@ fn get_head(base: &GameObject, game_state: &mut GameState) -> Option<Shared<Char
 }
 
 /// Gets the tenets of the faith and appends them to the tenets vector
-fn get_tenets(tenets: &mut Vec<GameString>, array: &GameObject) {
-    for t in array.get_array_iter() {
+fn get_tenets(tenets: &mut Vec<GameString>, array: &GameObjectArray) {
+    for t in array {
         let s = t.as_string();
         if s.contains("tenet") {
             tenets.push(s);
@@ -44,8 +44,8 @@ fn get_tenets(tenets: &mut Vec<GameString>, array: &GameObject) {
 }
 
 /// Gets the doctrines of the faith and appends them to the doctrines vector
-fn get_doctrines(doctrines: &mut Vec<GameString>, array: &GameObject) {
-    for d in array.get_array_iter() {
+fn get_doctrines(doctrines: &mut Vec<GameString>, array: &GameObjectArray) {
+    for d in array {
         let s = d.as_string();
         if !s.contains("tenet") {
             doctrines.push(s);
@@ -54,7 +54,7 @@ fn get_doctrines(doctrines: &mut Vec<GameString>, array: &GameObject) {
 }
 
 /// Gets the name of the faith
-fn get_name(base: &GameObject) -> GameString {
+fn get_name(base: &GameObjectMap) -> GameString {
     let node = base.get("name");
     if node.is_some() {
         return node.unwrap().as_string();
@@ -78,8 +78,8 @@ impl DummyInit for Faith {
         }
     }
 
-    fn init(&mut self, base: &GameObject, game_state: &mut GameState) {
-        let doctrines_array = base.get("doctrine").unwrap().as_object().unwrap();
+    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
+        let doctrines_array = base.get("doctrine").unwrap().as_object().as_array();
         get_tenets(&mut self.tenets, doctrines_array);
         self.head.clone_from(&get_head(&base, game_state));
         get_doctrines(&mut self.doctrines, doctrines_array);
