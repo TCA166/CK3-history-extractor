@@ -76,7 +76,7 @@ impl SaveFileValue {
 }
 
 /// An object that comes from a save file.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum SaveFileObject {
     Map(GameObject<HashMap<String, SaveFileValue>>),
     Array(GameObject<Vec<SaveFileValue>>),
@@ -125,6 +125,15 @@ impl SaveFileObject {
         match self {
             SaveFileObject::Map(m) => m.rename(name),
             SaveFileObject::Array(a) => a.rename(name),
+        }
+    }
+}
+
+impl Debug for SaveFileObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SaveFileObject::Map(o) => write!(f, "Map({},{:?})", o.name, o.inner),
+            SaveFileObject::Array(o) => write!(f, "Array({},{:?})", o.name, o.inner),
         }
     }
 }
