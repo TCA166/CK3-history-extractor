@@ -114,6 +114,7 @@ impl SaveFileObject {
         }
     }
 
+    /// Get the value as a mutable GameObject array
     pub fn as_array_mut(&mut self) -> &mut GameObjectArray {
         match self {
             SaveFileObject::Array(a) => a,
@@ -121,10 +122,19 @@ impl SaveFileObject {
         }
     }
 
+    /// Rename the object
     pub fn rename(&mut self, name: String) {
         match self {
             SaveFileObject::Map(m) => m.rename(name),
             SaveFileObject::Array(a) => a.rename(name),
+        }
+    }
+
+    /// Check if the object is empty
+    pub fn is_empty(&self) -> bool {
+        match self {
+            SaveFileObject::Map(m) => m.is_empty(),
+            SaveFileObject::Array(a) => a.is_empty(),
         }
     }
 }
@@ -143,20 +153,31 @@ pub type GameObjectMap = GameObject<HashMap<String, SaveFileValue>>;
 /// A game object that stores values as an array.
 pub type GameObjectArray = GameObject<Vec<SaveFileValue>>;
 
-/// A trait describing a collection that can be used to store game objects.
+/// A trait describing a collection that can be used as storage in [GameObject].
 pub trait GameObjectCollection: Debug {
+    /// Create a new instance of the collection
     fn new() -> Self;
+    /// Check if the collection is empty
+    fn is_empty(&self) -> bool;
 }
 
 impl GameObjectCollection for HashMap<String, SaveFileValue> {
     fn new() -> Self {
         HashMap::new()
     }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
+    }
 }
 
 impl<T: Debug> GameObjectCollection for Vec<T> {
     fn new() -> Self {
         Vec::new()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 }
 
@@ -198,6 +219,11 @@ impl<T: GameObjectCollection> GameObject<T> {
     pub fn get_name(&self) -> &str {
         &self.name
     }
+
+    /// Check if the GameObject is empty
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
 }
 
 impl GameObject<HashMap<String, SaveFileValue>> {
@@ -223,12 +249,32 @@ impl GameObject<HashMap<String, SaveFileValue>> {
         self.inner.get(key).unwrap().as_object()
     }
 
+    /// Get the value of a key as a mutable GameObject.
     pub fn get(&self, key: &str) -> Option<&SaveFileValue> {
         self.inner.get(key)
     }
 
+    /// Get the value of a key as a mutable GameObject.
     pub fn insert(&mut self, key: String, value: SaveFileValue) {
-        self.inner.insert(key, value);
+        let stored = self.inner.get_mut(&key);
+        match stored {
+            Some(val) => {
+                match val {
+                    SaveFileValue::Object(SaveFileObject::Array(arr)) => {
+                        arr.push(value);
+                    }
+                    _ => {
+                        let mut arr = GameObjectArray::from_name(key.clone());
+                        arr.push(val.clone());
+                        arr.push(value);
+                        self.inner.insert(key, SaveFileValue::Object(SaveFileObject::Array(arr)));
+                    }
+                }
+            }
+            None => {
+                self.inner.insert(key, value);
+            }
+        }
     }
 }
 
@@ -242,16 +288,24 @@ impl<'a> IntoIterator for &'a GameObject<HashMap<String, SaveFileValue>> {
 }
 
 impl GameObject<Vec<SaveFileValue>> {
+    /// Get the value at an index
     pub fn get_index(&self, index: usize) -> Option<&SaveFileValue> {
         self.inner.get(index)
     }
 
+    /// Get the length of the array
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
+    /// Push a value to the array
     pub fn push(&mut self, value: SaveFileValue) {
         self.inner.push(value);
+    }
+
+    /// Insert a value at an index
+    pub fn insert(&mut self, index: usize, value: SaveFileValue) {
+        self.inner.insert(index, value);
     }
 }
 
@@ -278,3 +332,5 @@ impl<T: GameObjectCollection> Debug for GameObject<T> {
         return r;
     }
 }
+
+// TODO tests

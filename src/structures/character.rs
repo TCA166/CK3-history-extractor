@@ -238,7 +238,11 @@ fn get_family(
 ) {
     let family_data = base.get("family_data");
     if family_data.is_some() {
-        let f = family_data.unwrap().as_object().as_map();
+        let f = family_data.unwrap().as_object();
+        if f.is_empty() {
+            return;
+        }
+        let f = f.as_map();
         let former_spouses_node = f.get("former_spouses");
         if former_spouses_node.is_some() {
             for s in former_spouses_node.unwrap().as_object().as_array() {

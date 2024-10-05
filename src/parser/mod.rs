@@ -41,8 +41,8 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         "landed_titles" => {
             let r = i.parse();
             let landed = r.as_map().get_object_ref("landed_titles").as_map();
-            for v in landed.into_iter() {
-                match v.1 {
+            for (_, v) in landed.into_iter() {
+                match v {
                     SaveFileValue::Object(o) => {
                         game_state.add_title(o.as_map());
                     }
@@ -82,26 +82,32 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         }
         "dynasties" => {
             let r = i.parse();
-            for d in r.as_map().into_iter() {
-                let o = d.1.as_object().as_map();
-                if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
-                    for h in o.into_iter() {
-                        match h.1 {
-                            SaveFileValue::Object(o) => {
-                                game_state.add_dynasty(o.as_map());
-                            }
-                            SaveFileValue::String(_) => {
-                                continue;
+            for (_, d) in r.as_map().into_iter() {
+                match d.as_object() {
+                    SaveFileObject::Map(o) => {
+                        if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
+                            for (_, h) in o.into_iter() {
+                                match h {
+                                    SaveFileValue::Object(o) => {
+                                        game_state.add_dynasty(o.as_map());
+                                    }
+                                    SaveFileValue::String(_) => {
+                                        continue;
+                                    }
+                                }
                             }
                         }
+                    }
+                    SaveFileObject::Array(_) => {
+                        continue;
                     }
                 }
             }
         }
         "living" => {
             let r = i.parse();
-            for l in r.as_map().into_iter() {
-                match l.1 {
+            for (_, l) in r.as_map().into_iter() {
+                match l {
                     SaveFileValue::Object(o) => {
                         let chr = o.as_map();
                         game_state.add_character(chr);
@@ -114,8 +120,8 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         }
         "dead_unprunable" => {
             let r = i.parse();
-            for d in r.as_map().into_iter() {
-                match d.1 {
+            for (_, d) in r.as_map().into_iter() {
+                match d {
                     SaveFileValue::Object(o) => {
                         let chr = o.as_map();
                         game_state.add_character(chr);
@@ -130,8 +136,8 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             let r = i.parse();
             let dead_prunable = r.as_map().get("dead_prunable");
             if dead_prunable.is_some() {
-                for d in dead_prunable.unwrap().as_object().as_map().into_iter() {
-                    match d.1 {
+                for (_, d) in dead_prunable.unwrap().as_object().as_map().into_iter() {
+                    match d {
                         SaveFileValue::Object(o) => {
                             let chr = o.as_map();
                             game_state.add_character(chr);
@@ -153,10 +159,10 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                 .unwrap()
                 .as_object()
                 .as_map();
-            for contract in active.into_iter() {
-                match contract.1 {
+            for (key, contract) in active.into_iter() {
+                match contract {
                     SaveFileValue::Object(val) => game_state.add_contract(
-                        &contract.0.parse::<GameId>().unwrap(),
+                        &key.parse::<GameId>().unwrap(),
                         &val.as_map().get("vassal").unwrap().as_id(),
                     ),
                     SaveFileValue::String(_) => {
@@ -168,22 +174,22 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         "religion" => {
             let r = i.parse();
             let faiths = r.as_map().get_object_ref("faiths").as_map();
-            for f in faiths.into_iter() {
-                game_state.add_faith(f.1.as_object().as_map());
+            for (_, f) in faiths.into_iter() {
+                game_state.add_faith(f.as_object().as_map());
             }
         }
         "culture_manager" => {
             let r = i.parse();
             let cultures = r.as_map().get_object_ref("cultures").as_map();
-            for c in cultures.into_iter() {
-                game_state.add_culture(c.1.as_object().as_map());
+            for (_, c) in cultures.into_iter() {
+                game_state.add_culture(c.as_object().as_map());
             }
         }
         "character_memory_manager" => {
             let r = i.parse();
             let database = r.as_map().get_object_ref("database").as_map();
-            for d in database.into_iter() {
-                match d.1 {
+            for (_, d) in database.into_iter() {
+                match d {
                     SaveFileValue::Object(o) => {
                         game_state.add_memory(o.as_map());
                     }
@@ -201,8 +207,8 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
         "artifacts" => {
             let artifacts = i.parse();
             let arr = artifacts.as_map().get_object_ref("artifacts").as_map();
-            for a in arr.into_iter() {
-                match a.1 {
+            for (_, a) in arr.into_iter() {
+                match a {
                     SaveFileValue::Object(o) => {
                         game_state.add_artifact(o.as_map());
                     }

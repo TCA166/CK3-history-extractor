@@ -58,7 +58,11 @@ impl DummyInit for Artifact {
         self.owner = Some(game_state.get_character(&base.get("owner").unwrap().as_id()));
         let history_node = base.get("history");
         if history_node.is_some() {
-            let history_node = history_node.unwrap().as_object().as_map();
+            let history_node = history_node.unwrap().as_object();
+            if history_node.is_empty() {
+                return;
+            }
+            let history_node = history_node.as_map();
             let entries_node = history_node.get("entries");
             if entries_node.is_some() {
                 for h in entries_node.unwrap().as_object().as_array() {

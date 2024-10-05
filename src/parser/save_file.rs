@@ -1,6 +1,6 @@
 use super::{
     super::types::{Shared, Wrapper, WrapperMut},
-    game_object::{GameObjectMap, GameObjectArray, GameString, SaveFileObject, SaveFileValue},
+    game_object::{GameObjectArray, GameObjectMap, GameString, SaveFileObject, SaveFileValue},
 };
 use std::{io::Read, mem, rc::Rc};
 use zip::read::ZipArchive;
@@ -51,13 +51,19 @@ impl Section {
         self.valid = false;
     }
 
-    /// Parse the section into a [SaveFileValue].
+    /// Parse the section into a [SaveFileObject].
     /// This is a rather costly process as it has to read the entire section contents and parse them.
     /// You can then make a choice if you want to parse the object or [Section::skip] it.
     ///
     /// # Panics
     ///
     /// Panics if the section is invalid, or a parsing error occurs.
+    /// 
+    /// # Returns
+    /// 
+    /// The parsed object. This can be a [GameObjectMap] or a [GameObjectArray].
+    /// Note that empty objects are parsed as [GameObjectArray]. 
+    /// Checking is object is empty via [SaveFileObject::is_empty] is a good idea before assuming it is a [GameObjectMap].
     pub fn parse(&mut self) -> SaveFileObject {
         if !self.valid {
             panic!("Section {} is invalid", self.name);
@@ -73,7 +79,7 @@ impl Section {
         let mut escape = false; // escape character toggle
         let mut name: Option<String> = None; // the name of the object we are parsing
         let mut depth: u32 = 0; // how deep we are in the object tree
-        //initialize the object stack
+                                //initialize the object stack
         let mut stack: Vec<SaveFileObject> = Vec::new();
         let mut off = self.offset.get_internal_mut();
 
@@ -104,9 +110,13 @@ impl Section {
                         depth += 1;
                         if name.is_some() {
                             if key.is_empty() {
-                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(name.take().unwrap())));
+                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(
+                                    name.take().unwrap(),
+                                )));
                             } else {
-                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(name.take().unwrap())));
+                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(
+                                    name.take().unwrap(),
+                                )));
                             }
                         }
                         // here's the thing, at this point we do not know if we are in an array or a map
@@ -128,7 +138,9 @@ impl Section {
                         // if there was an assignment, we insert the key value pair
                         if past_eq && !val.is_empty() {
                             if name.is_some() {
-                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(name.take().unwrap())));
+                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(
+                                    name.take().unwrap(),
+                                )));
                             }
                             stack.last_mut().unwrap().as_map_mut().insert(
                                 mem::take(&mut key),
@@ -138,25 +150,33 @@ impl Section {
                         }
                         // if there wasn't an assignment but we still gathered some data
                         else if !key.is_empty() {
-                            if name.is_some(){
-                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(name.take().unwrap())));
+                            if name.is_some() {
+                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(
+                                    name.take().unwrap(),
+                                )));
                             }
-                            stack.last_mut()
+                            stack
+                                .last_mut()
                                 .unwrap()
                                 .as_array_mut()
                                 .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         } else if name.is_some() {
-                            stack.push(SaveFileObject::Array(GameObjectArray::from_name(name.take().unwrap())));
+                            stack.push(SaveFileObject::Array(GameObjectArray::from_name(
+                                name.take().unwrap(),
+                            )));
                         }
                         // resolved the object, time to append it to the parent object
                         depth -= 1;
-                        if depth > 0 { // FIXME this happens when stack is empty, HOW?
+                        if depth > 0 {
                             // if we are still in an object, we pop the object and insert it into the parent object
                             let val = stack.pop().unwrap();
                             let parent = stack.last_mut().unwrap();
                             match parent {
                                 SaveFileObject::Map(map) => {
-                                    map.insert(val.get_name().to_owned(), SaveFileValue::Object(val));
+                                    map.insert(
+                                        val.get_name().to_owned(),
+                                        SaveFileValue::Object(val),
+                                    );
                                 }
                                 SaveFileObject::Array(array) => {
                                     array.push(SaveFileValue::Object(val));
@@ -172,7 +192,8 @@ impl Section {
                         }
                     }
                 }
-                '"' => { // TODO handle integers separately
+                '"' => {
+                    // TODO handle integers separately
                     // we have a quote, we toggle the quotes flag
                     if comment {
                         continue;
@@ -199,7 +220,9 @@ impl Section {
                             // we have a key value pair
                             past_eq = false; // we reset the past_eq flag
                             if name.is_some() {
-                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(name.take().unwrap())));
+                                stack.push(SaveFileObject::Map(GameObjectMap::from_name(
+                                    name.take().unwrap(),
+                                )));
                             } else if stack.is_empty() {
                                 key.clear();
                                 val.clear();
@@ -212,12 +235,16 @@ impl Section {
                         } else if !key.is_empty() {
                             // we have just a key { \n key \n }
                             if name.is_some() {
-                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(name.take().unwrap())));
+                                stack.push(SaveFileObject::Array(GameObjectArray::from_name(
+                                    name.take().unwrap(),
+                                )));
                             } else if stack.is_empty() {
                                 key.clear();
                                 continue;
                             }
-                            stack.last_mut().unwrap()
+                            stack
+                                .last_mut()
+                                .unwrap()
                                 .as_array_mut()
                                 .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
                         }
@@ -239,15 +266,30 @@ impl Section {
                                 //we are here color=rgb {}
                                 val.clear();
                             } else {
-                                // in case {something=else something=else}
+                                // in case {something=else something=else} or { 1 0=1 1=2 2=3 }
                                 if name.is_some() {
-                                    stack.push(SaveFileObject::Map(GameObjectMap::from_name(name.take().unwrap())));
+                                    stack.push(SaveFileObject::Map(GameObjectMap::from_name(
+                                        name.take().unwrap(),
+                                    )));
                                 }
-                                // FIXME this can happen when last stack frame is an array
-                                stack.last_mut().unwrap().as_map_mut().insert(
-                                    mem::take(&mut key),
-                                    SaveFileValue::String(GameString::wrap(mem::take(&mut val))),
-                                );
+                                let last_frame = stack.last_mut().unwrap();
+                                let val =
+                                    SaveFileValue::String(GameString::wrap(mem::take(&mut val)));
+                                match last_frame {
+                                    SaveFileObject::Map(map) => {
+                                        map.insert(mem::take(&mut key), val);
+                                    }
+                                    SaveFileObject::Array(array) => {
+                                        let index = key.parse::<usize>().unwrap();
+                                        key.clear();
+                                        if index <= array.len() {
+                                            array.insert(index, val);
+                                        } else {
+                                            // TODO technically this discards order, but I have yet to find a case where this is a problem
+                                            array.push(val);
+                                        }
+                                    }
+                                }
                                 past_eq = false;
                             }
                         } else if !key.is_empty() && !past_eq {
@@ -293,12 +335,15 @@ impl Section {
                     if maybe_array {
                         //we have a toggle that says that the last character was a space and key is not empty
                         if name.is_some() {
-                            stack.push(SaveFileObject::Array(GameObjectArray::from_name(name.take().unwrap())));
+                            stack.push(SaveFileObject::Array(GameObjectArray::from_name(
+                                name.take().unwrap(),
+                            )));
                         } else if stack.is_empty() {
                             key.clear();
                             continue;
                         }
-                        stack.last_mut()
+                        stack
+                            .last_mut()
                             .unwrap()
                             .as_array_mut()
                             .push(SaveFileValue::String(GameString::wrap(mem::take(&mut key))));
@@ -505,7 +550,7 @@ mod tests {
     }
 
     #[test]
-    fn test_save_file_array() { 
+    fn test_save_file_array() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(
             b"
@@ -830,5 +875,38 @@ mod tests {
         let mut save_file = SaveFile::open(file.path().to_str().unwrap());
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
+    }
+
+    #[test]
+    fn test_arr_index() {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(
+            b"
+            duration={ 2 0=7548 1=2096 }
+        ",
+        )
+        .unwrap();
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().parse();
+        assert_eq!(object.get_name(), "duration".to_string());
+        assert_eq!(object.as_array().len(), 3);
+    }
+
+    #[test]
+    fn test_multi_key() {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(
+            b"
+        test={
+            a=hello
+            a=world
+        }
+        ",
+        )
+        .unwrap();
+        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        let object = save_file.next().unwrap().parse();
+        let arr = object.as_map().get_object_ref("a").as_array();
+        assert_eq!(arr.len(), 2);
     }
 }

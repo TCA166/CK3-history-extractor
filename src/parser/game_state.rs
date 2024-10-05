@@ -116,6 +116,7 @@ impl GameState {
 
     /// Adds a new vassal contract
     pub fn add_contract(&mut self, contract_id: &GameId, character_id: &GameId) {
+        // TODO function template here
         let char = self.get_character(character_id);
         if self.contract_transform.contains_key(contract_id) {
             let entry = self.contract_transform.get(contract_id).unwrap();
