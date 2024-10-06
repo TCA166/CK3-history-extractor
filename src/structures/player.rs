@@ -7,7 +7,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Renderable, RenderableType, Renderer},
+        display::{Cullable, Renderable, RenderableType, Renderer, Localizable, Localizer},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
@@ -233,6 +233,14 @@ impl Renderable for Player {
                 true,
                 &format!("{}/line.svg", renderer.get_path()),
             );
+        }
+    }
+}
+
+impl Localizable for Player {
+    fn localize(&mut self, localization: &Localizer) {
+        for node in self.lineage.iter_mut() {
+            node.localize(localization);
         }
     }
 }

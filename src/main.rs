@@ -361,6 +361,7 @@ fn main() {
         .template("[{elapsed_precise}] {spinner} {msg}")
         .unwrap();
     for player in player_progress.wrap_iter(players.iter_mut()) {
+        player.localize(&localizer);
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));

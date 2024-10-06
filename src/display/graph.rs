@@ -235,8 +235,7 @@ impl Grapher {
                 let id = layout[i * 3] as usize;
                 let x = layout[i * 3 + 1];
                 let y = layout[i * 3 + 2];
-                let node_data = storage.get(&id).unwrap();
-                let class = &node_data.4;
+                let (_, _, (node_width, node_height), _, class) = storage.get(&id).unwrap();
                 if class.is_some() {
                     // group resolving
                     let class = class.as_ref().unwrap();
@@ -264,17 +263,21 @@ impl Grapher {
                 }
                 // canvas size resolving
                 positions.insert(id, (x, y));
-                if x < min_x || min_x == 0.0 {
-                    min_x = x - node_data.2 .0;
+                let candidate_x = x - node_width;
+                if candidate_x < min_x || min_x == 0.0 {
+                    min_x = candidate_x;
                 }
-                if x > max_x {
-                    max_x = x + node_data.2 .0;
+                let candidate_x = x + node_width;
+                if candidate_x > max_x {
+                    max_x = candidate_x;
                 }
-                if y < min_y {
-                    min_y = y - node_data.2 .1;
+                let candidate_y = y - node_height;
+                if candidate_y < min_y {
+                    min_y = candidate_y;
                 }
-                if y > max_y {
-                    max_y = y + node_data.2 .1;
+                let candidate_y = y + node_height;
+                if candidate_y > max_y {
+                    max_y = candidate_y;
                 }
             }
 
@@ -302,15 +305,15 @@ impl Grapher {
         }
         //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions {
-            let node_data = storage.get(&id).unwrap();
-            if node_data.0 != NO_PARENT {
+            let (parent, _, (_, node_height), _, _) = storage.get(&id).unwrap();
+            if *parent != NO_PARENT {
                 //draw the line if applicable
-                let (parent_x, parent_y) = positions.get(&node_data.0).unwrap();
+                let (parent_x, parent_y) = positions.get(&parent).unwrap();
                 //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
                     vec![
-                        (*x, *y - (node_data.2 .1 / 2.0)),
-                        (*parent_x, *parent_y + (node_data.2 .1 / 2.0)),
+                        (*x, *y - (node_height / 2.0)),
+                        (*parent_x, *parent_y + (node_height / 2.0)),
                     ],
                     Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
                 ))
@@ -319,8 +322,7 @@ impl Grapher {
         }
         //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions {
-            let node_data = storage.get(&id).unwrap();
-            let class = &node_data.4;
+            let (_, node_name, (node_width, node_height), txt_point, class) = storage.get(&id).unwrap();
             let color = if class.is_some() {
                 groups.get(class.as_ref().unwrap().as_str()).unwrap()
             } else {
@@ -332,14 +334,14 @@ impl Grapher {
                 // the rectangle is defined by two points, the top left and the bottom right. We calculate the top left by subtracting half the size of the node from the center point
                 + Rectangle::new(
                     [
-                        (-(node_data.2.0 as i32) / 2, -(node_data.2.1 as i32) / 2),
-                        (node_data.2.0 as i32 / 2, node_data.2.1 as i32 / 2)
+                        (-(*node_width as i32) / 2, -(*node_height as i32) / 2),
+                        (*node_width as i32 / 2, *node_height as i32 / 2)
                     ],
                     Into::<ShapeStyle>::into(color.mix(0.9)).filled(),
                 //we add the text to the node, the text is drawn at the point we calculated earlier
                 ) + Text::new(
-                    node_data.1.as_str().to_owned(),
-                    node_data.3,
+                    node_name.as_str().to_owned(),
+                    *txt_point,
                     fnt.clone(),
             )),
             )

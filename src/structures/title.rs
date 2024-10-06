@@ -472,9 +472,9 @@ impl Localizable for Title {
         if self.name == self.key {
             self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
         }
-        for o in self.history.iter_mut() {
-            o.2 = localization.localize(o.2.as_str());
-        }
+        //for o in self.history.iter_mut() {
+        //    o.2 = localization.localize(o.2.as_str());
+        //}
     }
 }
 
