@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, RenderableType},
+        display::{Cullable, Localizable, Localizer, RenderableType},
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::WrapperMut,
     },
@@ -16,7 +16,6 @@ pub struct Memory {
     r#type: Option<GameString>,
     participants: Vec<(String, Shared<Character>)>,
     depth: usize,
-    localized: bool,
 }
 
 /// Gets the participants of the memory and appends them to the participants vector
@@ -44,7 +43,6 @@ impl DummyInit for Memory {
             participants: Vec::new(),
             id: id,
             depth: 0,
-            localized: false,
         }
     }
 
@@ -86,28 +84,27 @@ impl Serialize for Memory {
     }
 }
 
+impl Localizable for Memory {
+    fn localize(&mut self, localization: &Localizer) {
+        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
+        for part in self.participants.iter_mut() {
+            part.0 = localization.localize(&part.0).to_string();
+        }
+    }
+}
+
 impl Cullable for Memory {
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
-            return;
-        }
-        if !self.localized {
-            self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
-        }
-        if depth == 0 {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
             return;
         }
         self.depth = depth;
         for part in self.participants.iter_mut() {
-            if !self.localized {
-                part.0 = localization.localize(&part.0).to_string();
-            }
             let o = part.1.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
-        self.localized = true;
     }
 
     fn get_depth(&self) -> usize {

@@ -273,3 +273,9 @@ impl Localizer {
         }
     }
 }
+
+/// A trait that allows an object to be localized.
+pub trait Localizable {
+    /// Localizes the object.
+    fn localize(&mut self, localization: &Localizer);
+}

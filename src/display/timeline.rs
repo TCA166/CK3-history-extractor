@@ -8,7 +8,6 @@ use super::{
         types::{Shared, Wrapper, WrapperMut},
     },
     graph::Grapher,
-    localizer::Localizer,
     renderer::{Cullable, Renderable, Renderer},
     RenderableType,
 };
@@ -64,10 +63,10 @@ impl Cullable for RealmDifference {
         }
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         match self {
-            RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth, localization),
-            RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth, localization),
+            RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth),
+            RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth),
         }
     }
 }
@@ -286,16 +285,16 @@ impl Cullable for Timeline {
         true
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         for (title, _) in self.lifespans.iter_mut() {
-            title.get_internal_mut().set_depth(depth, localization);
+            title.get_internal_mut().set_depth(depth);
         }
         for (_, char, title, _, difference) in self.events.iter_mut() {
-            char.get_internal_mut().set_depth(depth, localization);
-            title.get_internal_mut().set_depth(depth, localization);
+            char.get_internal_mut().set_depth(depth);
+            title.get_internal_mut().set_depth(depth);
             match difference {
-                RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth, localization),
-                RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth, localization),
+                RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth),
+                RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth),
             }
         }
     }

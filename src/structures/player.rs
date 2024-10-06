@@ -7,7 +7,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, Renderable, RenderableType, Renderer},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
@@ -238,9 +238,9 @@ impl Renderable for Player {
 }
 
 impl Cullable for Player {
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         for node in self.lineage.iter_mut() {
-            node.set_depth(depth, localization);
+            node.set_depth(depth);
         }
     }
 

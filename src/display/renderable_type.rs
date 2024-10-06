@@ -42,14 +42,14 @@ impl<'a> Cullable for RenderableType<'a> {
         }
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &super::Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         match self {
-            RenderableType::Character(c) => c.get_internal_mut().set_depth(depth, localization),
-            RenderableType::Culture(c) => c.get_internal_mut().set_depth(depth, localization),
-            RenderableType::Dynasty(d) => d.get_internal_mut().set_depth(depth, localization),
-            RenderableType::Faith(f) => f.get_internal_mut().set_depth(depth, localization),
-            RenderableType::Title(t) => t.get_internal_mut().set_depth(depth, localization),
-            RenderableType::Player(p) => p.set_depth(depth, localization),
+            RenderableType::Character(c) => c.get_internal_mut().set_depth(depth),
+            RenderableType::Culture(c) => c.get_internal_mut().set_depth(depth),
+            RenderableType::Dynasty(d) => d.get_internal_mut().set_depth(depth),
+            RenderableType::Faith(f) => f.get_internal_mut().set_depth(depth),
+            RenderableType::Title(t) => t.get_internal_mut().set_depth(depth),
+            RenderableType::Player(p) => p.set_depth(depth),
         }
     }
 }

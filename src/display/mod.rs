@@ -1,6 +1,6 @@
 /// A submodule handling game localization.
 mod localizer;
-pub use localizer::Localizer;
+pub use localizer::{Localizable, Localizer};
 
 /// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
 mod renderer;

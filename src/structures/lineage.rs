@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer},
+        display::{Cullable, Localizable, Localizer},
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
@@ -154,22 +154,27 @@ impl Serialize for LineageNode {
     }
 }
 
-impl Cullable for LineageNode {
-    fn get_depth(&self) -> usize {
-        self.character.as_ref().unwrap().get_internal().get_depth()
-    }
-
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+impl Localizable for LineageNode {
+    fn localize(&mut self, localization: &Localizer) {
         if self.lifestyle.is_some() {
             self.lifestyle = Some(localization.localize(self.lifestyle.as_ref().unwrap().as_str()));
         }
         for perk in self.perks.iter_mut() {
             *perk = localization.localize(perk.as_str());
         }
+    }
+}
+
+impl Cullable for LineageNode {
+    fn get_depth(&self) -> usize {
+        self.character.as_ref().unwrap().get_internal().get_depth()
+    }
+
+    fn set_depth(&mut self, depth: usize) {
         self.character
             .as_ref()
             .unwrap()
             .get_internal_mut()
-            .set_depth(depth, localization);
+            .set_depth(depth);
     }
 }

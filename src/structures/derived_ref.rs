@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, Renderable, RenderableType, Renderer},
         parser::GameString,
         types::WrapperMut,
     },
@@ -104,12 +104,12 @@ where
         self.obj.as_ref().unwrap().get_internal().get_depth()
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         self.obj
             .as_ref()
             .unwrap()
             .get_internal_mut()
-            .set_depth(depth, localization);
+            .set_depth(depth);
     }
 }
 

@@ -2,7 +2,9 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
+        display::{
+            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+        },
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
@@ -23,8 +25,6 @@ pub struct Culture {
     traditions: Vec<GameString>,
     language: Option<GameString>,
     depth: usize,
-    localized: bool,
-    name_localized: bool,
 }
 
 /// Gets the parents of the culture and appends them to the parents vector
@@ -80,8 +80,6 @@ impl DummyInit for Culture {
             language: None,
             id: id,
             depth: 0,
-            localized: false,
-            name_localized: false,
         }
     }
 
@@ -222,43 +220,39 @@ impl Renderable for Culture {
     }
 }
 
+impl Localizable for Culture {
+    fn localize(&mut self, localization: &Localizer) {
+        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
+        self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));
+        self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str()));
+        self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str()));
+        for t in &mut self.traditions {
+            *t = localization.localize(t.as_str());
+        }
+    }
+}
+
 impl Cullable for Culture {
     fn get_depth(&self) -> usize {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
             return;
-        }
-        if !self.name_localized {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
-            self.name_localized = true;
-        }
-        if depth == 0 {
-            return;
-        }
-        if !self.localized {
-            self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
-            self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));
-            self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str()));
-            self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str()));
-            for t in &mut self.traditions {
-                *t = localization.localize(t.as_str());
-            }
-            self.localized = true;
         }
         self.depth = depth;
         for p in &self.parents {
             let r = p.try_borrow_mut();
             if r.is_ok() {
-                r.unwrap().set_depth(depth - 1, localization);
+                r.unwrap().set_depth(depth);
             }
         }
         for c in &self.children {
             let r = c.try_borrow_mut();
             if r.is_ok() {
-                r.unwrap().set_depth(depth - 1, localization);
+                r.unwrap().set_depth(depth);
             }
         }
     }

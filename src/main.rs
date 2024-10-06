@@ -27,7 +27,8 @@ use jinja_env::create_env;
 /// A module for handling the display of the parsed data.
 mod display;
 use display::{
-    Cullable, GameMap, Grapher, Localizer, Renderable, RenderableType, Renderer, Timeline,
+    Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType, Renderer,
+    Timeline,
 };
 
 /// The languages supported by the game.
@@ -335,6 +336,7 @@ fn main() {
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
+    game_state.localize(&localizer);
     let grapher;
     if !no_vis {
         grapher = Some(Grapher::new(&game_state));
@@ -345,7 +347,7 @@ fn main() {
     let timeline;
     if !no_vis {
         let mut tm = Timeline::new(&game_state);
-        tm.set_depth(depth, &localizer);
+        tm.set_depth(depth);
         timeline = Some(tm);
     } else {
         timeline = None;
@@ -367,7 +369,7 @@ fn main() {
         }
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
-        player.set_depth(depth, &localizer);
+        player.set_depth(depth);
         cull_spinner.finish_with_message("Tree traversed");
         let mut renderer = Renderer::new(
             &env,

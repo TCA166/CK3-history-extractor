@@ -2,6 +2,7 @@ use std::collections::{hash_map::Iter, HashMap};
 
 use super::{
     super::{
+        display::{Localizable, Localizer},
         structures::{
             Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
         },
@@ -302,8 +303,32 @@ impl GameState {
     pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
         self.titles.iter()
     }
+}
 
-    // TODO add a localize method
+impl Localizable for GameState {
+    fn localize(&mut self, localization: &Localizer) {
+        for (_, character) in &mut self.characters {
+            character.get_internal_mut().localize(localization);
+        }
+        for (_, title) in &mut self.titles {
+            title.get_internal_mut().localize(localization);
+        }
+        for (_, faith) in &mut self.faiths {
+            faith.get_internal_mut().localize(localization);
+        }
+        for (_, culture) in &mut self.cultures {
+            culture.get_internal_mut().localize(localization);
+        }
+        for (_, dynasty) in &mut self.dynasties {
+            dynasty.get_internal_mut().localize(localization);
+        }
+        for (_, memory) in &mut self.memories {
+            memory.get_internal_mut().localize(localization);
+        }
+        for (_, artifact) in &mut self.artifacts {
+            artifact.get_internal_mut().localize(localization);
+        }
+    }
 }
 
 impl Serialize for GameState {

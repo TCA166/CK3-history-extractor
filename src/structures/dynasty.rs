@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
@@ -25,8 +25,6 @@ pub struct Dynasty {
     found_date: Option<GameString>,
     motto: Option<(GameString, Vec<GameString>)>,
     depth: usize,
-    localized: bool,
-    name_localized: bool,
 }
 
 impl Dynasty {
@@ -251,9 +249,7 @@ impl DummyInit for Dynasty {
             found_date: None,
             id: id,
             depth: 0,
-            localized: false,
             motto: None,
-            name_localized: false,
             member_list: Vec::new(),
         }
     }
@@ -394,27 +390,15 @@ impl Renderable for Dynasty {
     }
 }
 
-impl Cullable for Dynasty {
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
+impl Localizable for Dynasty {
+    fn localize(&mut self, localization: &Localizer) {
+        if self.name.is_some() {
+            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        } else {
             return;
         }
-        if !self.name_localized {
-            if self.name.is_some() {
-                self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
-            } else {
-                self.name = Some(GameString::wrap("Unknown".to_owned()));
-            }
-            self.name_localized = true;
-        }
-        if depth == 0 {
-            return;
-        }
-        if !self.localized {
-            for perk in self.perks.iter_mut() {
-                perk.0 = localization.localize(perk.0.as_str());
-            }
-            self.localized = true;
+        for perk in self.perks.iter_mut() {
+            perk.0 = localization.localize(perk.0.as_str());
         }
         if self.motto.is_some() {
             let m = self.motto.as_mut().unwrap();
@@ -423,23 +407,25 @@ impl Cullable for Dynasty {
                 *v = localization.localize(v.as_str());
             }
         }
+    }
+}
+
+impl Cullable for Dynasty {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
+            return;
+        }
         self.depth = depth;
         for leader in self.leaders.iter() {
             let o = leader.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         if self.parent.as_ref().is_some() {
             let o = self.parent.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
-            }
-        }
-        for member in self.member_list.iter() {
-            let o = member.try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(1, localization); //this will localize the character names
+                o.unwrap().set_depth(depth);
             }
         }
     }

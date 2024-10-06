@@ -110,9 +110,9 @@ impl SaveFileObject {
     }
 
     /// Get the value as a GameObject map
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the value is not a map
     pub fn as_map(&self) -> &GameObjectMap {
         match self {
@@ -122,9 +122,9 @@ impl SaveFileObject {
     }
 
     /// Get the value as a mutable GameObject map
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the value is not a map
     pub fn as_map_mut(&mut self) -> &mut GameObjectMap {
         match self {
@@ -134,9 +134,9 @@ impl SaveFileObject {
     }
 
     /// Get the value as a GameObject array
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the value is not an array
     pub fn as_array(&self) -> &GameObjectArray {
         match self {
@@ -146,9 +146,9 @@ impl SaveFileObject {
     }
 
     /// Get the value as a mutable GameObject array
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the value is not an array
     pub fn as_array_mut(&mut self) -> &mut GameObjectArray {
         match self {

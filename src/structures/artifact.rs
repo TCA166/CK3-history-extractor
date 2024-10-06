@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, RenderableType},
+        display::{Cullable, Localizable, Localizer, RenderableType},
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Shared,
     },
@@ -103,12 +103,23 @@ impl DummyInit for Artifact {
     }
 }
 
+impl Localizable for Artifact {
+    fn localize(&mut self, localization: &Localizer) {
+        if self.rarity.is_some() {
+            self.rarity = Some(localization.localize(self.rarity.as_ref().unwrap()));
+        }
+        if self.r#type.is_some() {
+            self.r#type = Some(localization.localize(self.r#type.as_ref().unwrap()));
+        }
+    }
+}
+
 impl Cullable for Artifact {
     fn get_depth(&self) -> usize {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         if depth <= self.depth {
             return;
         }
@@ -116,28 +127,22 @@ impl Cullable for Artifact {
         if self.owner.is_some() {
             let owner = self.owner.as_ref().unwrap().try_borrow_mut();
             if owner.is_ok() {
-                owner.unwrap().set_depth(depth - 1, localization);
+                owner.unwrap().set_depth(depth);
             }
         }
         for h in self.history.iter_mut() {
             if h.2.is_some() {
                 let actor = h.2.as_ref().unwrap().try_borrow_mut();
                 if actor.is_ok() {
-                    actor.unwrap().set_depth(depth - 1, localization);
+                    actor.unwrap().set_depth(depth);
                 }
             }
             if h.3.is_some() {
                 let recipient = h.3.as_ref().unwrap().try_borrow_mut();
                 if recipient.is_ok() {
-                    recipient.unwrap().set_depth(depth - 1, localization);
+                    recipient.unwrap().set_depth(depth);
                 }
             }
-        }
-        if self.rarity.is_some() {
-            self.rarity = Some(localization.localize(self.rarity.as_ref().unwrap()));
-        }
-        if self.r#type.is_some() {
-            self.r#type = Some(localization.localize(self.r#type.as_ref().unwrap()));
         }
     }
 }

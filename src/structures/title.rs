@@ -3,13 +3,13 @@ use std::slice::Iter;
 
 use serde::{ser::SerializeStruct, Serialize};
 
-use crate::{display::TreeNode, parser::SaveFileObject};
-
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        display::{
+            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+        },
         jinja_env::TITLE_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString, SaveFileValue},
+        parser::{GameId, GameObjectMap, GameState, GameString, SaveFileObject, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
@@ -27,8 +27,6 @@ pub struct Title {
     history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
     claims: Vec<Shared<Character>>,
     depth: usize,
-    localized: bool,
-    name_localized: bool,
     capital: Option<Shared<Title>>,
     /// Only used for counties
     culture: Option<Shared<Culture>>,
@@ -246,8 +244,6 @@ impl DummyInit for Title {
             claims: Vec::new(),
             id: id,
             depth: 0,
-            localized: false,
-            name_localized: false,
             color: [70, 255, 70],
             capital: None,
             culture: None,
@@ -468,54 +464,55 @@ impl Renderable for Title {
     }
 }
 
-impl Cullable for Title {
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
+impl Localizable for Title {
+    fn localize(&mut self, localization: &Localizer) {
+        if self.key.is_none() {
             return;
         }
-        if !self.name_localized && self.key.is_some() {
-            //localization
-            if self.name == self.key {
-                self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
-            }
-            self.name_localized = true;
+        if self.name == self.key {
+            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str()));
         }
-        if depth == 0 {
+        for o in self.history.iter_mut() {
+            o.2 = localization.localize(o.2.as_str());
+        }
+    }
+}
+
+impl Cullable for Title {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
             return;
         }
         self.depth = depth;
         if self.de_jure.is_some() {
             let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok() {
-                c.unwrap().set_depth(depth - 1, localization);
+                c.unwrap().set_depth(depth - 1);
             }
         }
         if self.de_facto.is_some() {
             let c = self.de_facto.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok() {
-                c.unwrap().set_depth(depth - 1, localization);
+                c.unwrap().set_depth(depth);
             }
         }
         for v in &self.de_jure_vassals {
             let o = v.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for v in &self.de_facto_vassals {
             let o = v.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for o in self.history.iter_mut() {
-            if !self.localized {
-                o.2 = localization.localize(o.2.as_str());
-            }
             if o.1.is_some() {
                 let c = o.1.as_ref().unwrap().try_get_internal_mut();
                 if c.is_ok() {
-                    c.unwrap().set_depth(depth - 1, localization);
+                    c.unwrap().set_depth(depth);
                 }
             }
         }
@@ -524,23 +521,22 @@ impl Cullable for Title {
             if c.is_ok() {
                 let mut c = c.unwrap();
                 if c.id != self.id {
-                    c.set_depth(depth - 1, localization);
+                    c.set_depth(depth);
                 }
             }
         }
         if self.faith.is_some() {
             let c = self.faith.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok() {
-                c.unwrap().set_depth(depth - 1, localization);
+                c.unwrap().set_depth(depth);
             }
         }
         if self.culture.is_some() {
             let c = self.culture.as_ref().unwrap().try_get_internal_mut();
             if c.is_ok() {
-                c.unwrap().set_depth(depth - 1, localization);
+                c.unwrap().set_depth(depth);
             }
         }
-        self.localized = true;
     }
 
     fn get_depth(&self) -> usize {

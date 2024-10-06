@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectArray, GameObjectMap, GameState, GameString},
         types::{Wrapper, WrapperMut},
@@ -19,8 +19,6 @@ pub struct Faith {
     fervor: f32,
     doctrines: Vec<GameString>,
     depth: usize,
-    localized: bool,
-    name_localized: bool,
 }
 
 /// Gets the head of the faith
@@ -73,8 +71,6 @@ impl DummyInit for Faith {
             doctrines: Vec::new(),
             id: id,
             depth: 0,
-            localized: false,
-            name_localized: false,
         }
     }
 
@@ -186,36 +182,32 @@ impl Renderable for Faith {
     }
 }
 
+impl Localizable for Faith {
+    fn localize(&mut self, localization: &Localizer) {
+        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        for tenet in self.tenets.iter_mut() {
+            *tenet = localization.localize(tenet.as_str());
+        }
+        for doctrine in self.doctrines.iter_mut() {
+            *doctrine = localization.localize(doctrine.as_str());
+        }
+    }
+}
+
 impl Cullable for Faith {
     fn get_depth(&self) -> usize {
         self.depth
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
             return;
-        }
-        if !self.name_localized {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
-            self.name_localized = true;
-        }
-        if depth == 0 {
-            return;
-        }
-        if !self.localized {
-            for tenet in self.tenets.iter_mut() {
-                *tenet = localization.localize(tenet.as_str());
-            }
-            for doctrine in self.doctrines.iter_mut() {
-                *doctrine = localization.localize(doctrine.as_str());
-            }
-            self.localized = true;
         }
         self.depth = depth;
         if self.head.is_some() {
             let o = self.head.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
     }

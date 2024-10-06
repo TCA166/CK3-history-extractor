@@ -2,7 +2,9 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizer, Renderable, RenderableType, Renderer, TreeNode},
+        display::{
+            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+        },
         jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
@@ -62,19 +64,19 @@ impl Cullable for Vassal {
         }
     }
 
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
+    fn set_depth(&mut self, depth: usize) {
         match self {
             Vassal::Character(c) => {
                 let o = c.try_get_internal_mut();
                 if o.is_ok() {
-                    o.unwrap().set_depth(depth, localization);
+                    o.unwrap().set_depth(depth);
                 }
             }
             Vassal::Reference(r) => {
                 let o = r.get_internal().get_ref();
                 let o = o.try_get_internal_mut();
                 if o.is_ok() {
-                    o.unwrap().set_depth(depth, localization);
+                    o.unwrap().set_depth(depth);
                 }
             }
         }
@@ -136,8 +138,6 @@ pub struct Character {
     liege: Option<DerivedRef<Character>>,
     female: bool,
     depth: usize,
-    localized: bool,
-    name_localized: bool,
     artifacts: Vec<Shared<Artifact>>,
 }
 
@@ -628,8 +628,6 @@ impl DummyInit for Character {
             female: false,
             id: id,
             depth: 0,
-            localized: false,
-            name_localized: false,
             artifacts: Vec::new(),
         }
     }
@@ -893,41 +891,32 @@ impl Renderable for Character {
     }
 }
 
+impl Localizable for Character {
+    fn localize(&mut self, localization: &Localizer) {
+        if self.name.is_none() {
+            return;
+        } else {
+            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        }
+        if self.nick.is_some() {
+            self.nick = Some(localization.localize(self.nick.as_ref().unwrap().as_str()));
+        }
+        if self.reason.is_some() {
+            self.reason = Some(localization.localize(self.reason.as_ref().unwrap().as_str()));
+        }
+        for t in self.traits.iter_mut() {
+            *t = localization.localize(t.as_str());
+        }
+        for t in self.languages.iter_mut() {
+            *t = localization.localize(t.as_str());
+        }
+    }
+}
+
 impl Cullable for Character {
-    fn set_depth(&mut self, depth: usize, localization: &Localizer) {
-        if depth <= self.depth && depth != 0 {
+    fn set_depth(&mut self, depth: usize) {
+        if depth <= self.depth {
             return;
-        }
-        if !self.name_localized {
-            if self.name.is_none() {
-                self.name = Some(GameString::wrap("Unknown".to_string()));
-            } else {
-                self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
-            }
-            self.name_localized = true;
-        }
-        if depth == 0 {
-            return;
-        }
-        if !self.localized {
-            if self.nick.is_some() {
-                self.nick = Some(localization.localize(self.nick.as_ref().unwrap().as_str()));
-            }
-            if self.reason.is_some() {
-                self.reason = Some(localization.localize(self.reason.as_ref().unwrap().as_str()));
-            }
-            for t in self.traits.iter_mut() {
-                *t = localization.localize(t.as_str());
-            }
-            /*
-            for t in self.recessive.iter_mut(){
-                *t = localization.localize(t.as_str());
-            }
-            */
-            for t in self.languages.iter_mut() {
-                *t = localization.localize(t.as_str());
-            }
-            self.localized = true;
         }
         //cullable set
         self.depth = depth;
@@ -935,62 +924,62 @@ impl Cullable for Character {
             let o = self.liege.as_ref().unwrap().get_ref();
             let o = o.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.spouses.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.former.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.children.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth - 1);
             }
         }
         for s in self.parents.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for s in self.kills.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for s in self.vassals.iter_mut() {
-            s.set_depth(depth - 1, localization);
+            s.set_depth(depth);
         }
         if self.culture.is_some() {
             let o = self.culture.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         if self.faith.is_some() {
             let o = self.faith.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for s in self.titles.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         for s in self.memories.iter() {
-            s.get_internal_mut().set_depth(depth - 1, localization);
+            s.get_internal_mut().set_depth(depth);
         }
         //sort so that most worthy artifacts are shown first
         self.artifacts.sort();
@@ -998,13 +987,13 @@ impl Cullable for Character {
         for s in self.artifacts.iter() {
             let o = s.try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
         if self.house.is_some() {
             let o = self.house.as_ref().unwrap().try_get_internal_mut();
             if o.is_ok() {
-                o.unwrap().set_depth(depth - 1, localization);
+                o.unwrap().set_depth(depth);
             }
         }
     }

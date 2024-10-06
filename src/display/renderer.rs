@@ -13,7 +13,6 @@ use super::{
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
     },
     graph::Grapher,
-    localizer::Localizer,
     map::GameMap,
     RenderableType,
 };
@@ -156,9 +155,8 @@ pub trait Cullable: GameObjectDerived {
     /// Set the depth of the object and performs localization.
     /// Ideally this should be called on the root object once and the depth should be propagated to all children.
     /// Also ideally should do nothing if the depth is less than or equal to the current depth.
-    /// Localization of the objects should also be done here, hence the [Localizer] object.
     /// It is the responsibility of the implementation to ensure that the depth is propagated to all children.
-    fn set_depth(&mut self, depth: usize, localization: &Localizer);
+    fn set_depth(&mut self, depth: usize);
 
     /// Get the depth of the object.
     fn get_depth(&self) -> usize;
