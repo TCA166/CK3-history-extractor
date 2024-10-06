@@ -11,7 +11,7 @@ use zip::read::ZipArchive;
 ///
 /// # Validity
 ///
-/// A section is valid until it is converted into a [GameObject] using [Section::to_object] or skipped using [Section::skip].
+/// A section is valid until it is converted into a [SaveFileObject] using [Section::parse] or skipped using [Section::skip].
 /// After that, the section is invalidated and any further attempts to convert it will result in a panic.
 /// This is done to prevent double parsing of the same section.
 ///
@@ -46,7 +46,7 @@ impl Section {
     }
 
     /// Invalidate the section.
-    /// Both [Section::to_object] and [Section::skip] will panic if the section is invalid.
+    /// Both [Section::parse] and [Section::skip] will panic if the section is invalid.
     fn invalidate(&mut self) {
         self.valid = false;
     }
@@ -58,11 +58,11 @@ impl Section {
     /// # Panics
     ///
     /// Panics if the section is invalid, or a parsing error occurs.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The parsed object. This can be a [GameObjectMap] or a [GameObjectArray].
-    /// Note that empty objects are parsed as [GameObjectArray]. 
+    /// Note that empty objects are parsed as [GameObjectArray].
     /// Checking is object is empty via [SaveFileObject::is_empty] is a good idea before assuming it is a [GameObjectMap].
     pub fn parse(&mut self) -> SaveFileObject {
         if !self.valid {
@@ -398,7 +398,7 @@ impl Section {
 /// # Iterative behavior
 ///
 /// The idea behind the iterative behavior is that the save file is parsed as needed.
-/// Some sections are skipped, some are parsed into [GameObject].
+/// Some sections are skipped, some are parsed into [SaveFileObject].
 /// The choice is up to the user, after they are given the returned [Section] objects where they can check the section name using [Section::get_name].
 ///
 /// # Example
@@ -528,20 +528,21 @@ mod tests {
 
     use super::*;
 
+    fn get_test_obj(input: &str) -> SaveFile {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(input.as_bytes()).unwrap();
+        SaveFile::open(file.path().to_str().unwrap())
+    }
+
     #[test]
     fn test_save_file() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             test={
                 test2={
                     test3=1
                 }
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -551,9 +552,7 @@ mod tests {
 
     #[test]
     fn test_save_file_array() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             test={
                 test2={
                     1
@@ -562,10 +561,7 @@ mod tests {
                 }
                 test3={ 1 2 3}
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2");
@@ -600,9 +596,7 @@ mod tests {
 
     #[test]
     fn test_weird_syntax() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             test={
                 test2={1=2
                     3=4}
@@ -611,10 +605,7 @@ mod tests {
                 test4={1 2 3}
                 test5=42
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -624,16 +615,11 @@ mod tests {
 
     #[test]
     fn test_array_syntax() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             test={
                 test2={ 1 2 3 }
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_array();
@@ -645,9 +631,7 @@ mod tests {
 
     #[test]
     fn test_unnamed_obj() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
         3623={
             name=\"dynn_Sao\"
             variables={
@@ -667,10 +651,7 @@ mod tests {
                 }
             }
         }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         let variables = object.as_map().get_object_ref("variables").as_map();
         let data = variables.get_object_ref("data").as_array();
@@ -679,8 +660,7 @@ mod tests {
 
     #[test]
     fn test_example_1() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(b"
+        let mut save_file = get_test_obj("
         3623={
             name=\"dynn_Sao\"
             variables={
@@ -712,8 +692,7 @@ mod tests {
          }
             }
             artifact_claims={ 83888519 }
-        }").unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        }");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(
@@ -746,19 +725,14 @@ mod tests {
 
     #[test]
     fn test_space() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
         test = {
             test2 = {
                 test3 = 1
             }
             test4 = { a b c}
         }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -782,9 +756,7 @@ mod tests {
 
     #[test]
     fn test_landed() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
         c_derby = {
             color = { 255 50 20 }
 
@@ -818,10 +790,7 @@ mod tests {
                 color = { 255 50 20 }
             }
         }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "c_derby".to_string());
         let b_derby = object.as_map().get_object_ref("b_derby").as_map();
@@ -840,9 +809,7 @@ mod tests {
 
     #[test]
     fn test_invalid_line() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             some nonsense idk
             nonsense
             nonsense=idk
@@ -851,10 +818,7 @@ mod tests {
                     test3=1
                 }
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -864,29 +828,19 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             test={
             }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
     }
 
     #[test]
     fn test_arr_index() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
             duration={ 2 0=7548 1=2096 }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "duration".to_string());
         assert_eq!(object.as_array().len(), 3);
@@ -894,17 +848,12 @@ mod tests {
 
     #[test]
     fn test_multi_key() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(
-            b"
+        let mut save_file = get_test_obj("
         test={
             a=hello
             a=world
         }
-        ",
-        )
-        .unwrap();
-        let mut save_file = SaveFile::open(file.path().to_str().unwrap());
+        ");
         let object = save_file.next().unwrap().parse();
         let arr = object.as_map().get_object_ref("a").as_array();
         assert_eq!(arr.len(), 2);

@@ -258,19 +258,18 @@ impl GameObject<HashMap<String, SaveFileValue>> {
     pub fn insert(&mut self, key: String, value: SaveFileValue) {
         let stored = self.inner.get_mut(&key);
         match stored {
-            Some(val) => {
-                match val {
-                    SaveFileValue::Object(SaveFileObject::Array(arr)) => {
-                        arr.push(value);
-                    }
-                    _ => {
-                        let mut arr = GameObjectArray::from_name(key.clone());
-                        arr.push(val.clone());
-                        arr.push(value);
-                        self.inner.insert(key, SaveFileValue::Object(SaveFileObject::Array(arr)));
-                    }
+            Some(val) => match val {
+                SaveFileValue::Object(SaveFileObject::Array(arr)) => {
+                    arr.push(value);
                 }
-            }
+                _ => {
+                    let mut arr = GameObjectArray::from_name(key.clone());
+                    arr.push(val.clone());
+                    arr.push(value);
+                    self.inner
+                        .insert(key, SaveFileValue::Object(SaveFileObject::Array(arr)));
+                }
+            },
             None => {
                 self.inner.insert(key, value);
             }

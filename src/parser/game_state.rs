@@ -12,6 +12,30 @@ use super::{
 
 use serde::{ser::SerializeStruct, Serialize};
 
+/// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
+fn get_or_insert_dummy<T: DummyInit>(
+    map: &mut HashMap<GameId, Shared<T>>,
+    key: &GameId,
+) -> Shared<T> {
+    let val = map.get(key);
+    if val.is_some() {
+        return val.unwrap().clone();
+    } else {
+        let v = Shared::wrap(T::dummy(*key));
+        map.insert(*key, v.clone());
+        v
+    }
+}
+
+/// Just like [get_or_insert_dummy], but takes a [GameObjectMap] as input and uses the name field as the key.
+fn get_or_insert_dummy_from_value<T: DummyInit>(
+    map: &mut HashMap<GameId, Shared<T>>,
+    value: &GameObjectMap,
+) -> Shared<T> {
+    let key = value.get_name().parse::<GameId>().unwrap();
+    return get_or_insert_dummy(map, &key);
+}
+
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
@@ -94,13 +118,7 @@ impl GameState {
 
     /// Get a character by key
     pub fn get_character(&mut self, key: &GameId) -> Shared<Character> {
-        if !self.characters.contains_key(key) {
-            let v = Shared::wrap(Character::dummy(*key));
-            self.characters.insert(*key, v.clone());
-            v
-        } else {
-            self.characters.get(key).unwrap().clone()
-        }
+        get_or_insert_dummy(&mut self.characters, key)
     }
 
     /// Gets the vassal associated with the contract with the given id
@@ -116,7 +134,6 @@ impl GameState {
 
     /// Adds a new vassal contract
     pub fn add_contract(&mut self, contract_id: &GameId, character_id: &GameId) {
-        // TODO function template here
         let char = self.get_character(character_id);
         if self.contract_transform.contains_key(contract_id) {
             let entry = self.contract_transform.get(contract_id).unwrap();
@@ -129,158 +146,80 @@ impl GameState {
 
     /// Get a title by key
     pub fn get_title(&mut self, key: &GameId) -> Shared<Title> {
-        if !self.titles.contains_key(key) {
-            let v = Shared::wrap(Title::dummy(*key));
-            self.titles.insert(*key, v.clone());
-            v
-        } else {
-            self.titles.get(key).unwrap().clone()
-        }
+        get_or_insert_dummy(&mut self.titles, key)
     }
 
     /// Get a faith by key
     pub fn get_faith(&mut self, key: &GameId) -> Shared<Faith> {
-        if self.faiths.contains_key(key) {
-            self.faiths.get(key).unwrap().clone()
-        } else {
-            let v = Shared::wrap(Faith::dummy(*key));
-            self.faiths.insert(*key, v.clone());
-            v
-        }
+        get_or_insert_dummy(&mut self.faiths, key)
     }
 
     /// Get a culture by key
     pub fn get_culture(&mut self, key: &GameId) -> Shared<Culture> {
-        if self.cultures.contains_key(key) {
-            self.cultures.get(key).unwrap().clone()
-        } else {
-            let v = Shared::wrap(Culture::dummy(*key));
-            self.cultures.insert(*key, v.clone());
-            v
-        }
+        get_or_insert_dummy(&mut self.cultures, key)
     }
 
     /// Get a dynasty by key
     pub fn get_dynasty(&mut self, key: &GameId) -> Shared<Dynasty> {
-        if self.dynasties.contains_key(key) {
-            self.dynasties.get(key).unwrap().clone()
-        } else {
-            let v = Shared::wrap(Dynasty::dummy(*key));
-            self.dynasties.insert(*key, v.clone());
-            v
-        }
+        get_or_insert_dummy(&mut self.dynasties, key)
     }
 
     /// Get a memory by key
     pub fn get_memory(&mut self, key: &GameId) -> Shared<Memory> {
-        if self.memories.contains_key(key) {
-            self.memories.get(key).unwrap().clone()
-        } else {
-            let v = Shared::wrap(Memory::dummy(*key));
-            self.memories.insert(*key, v.clone());
-            v
-        }
+        get_or_insert_dummy(&mut self.memories, key)
     }
 
     /// Get an artifact by key
     pub fn get_artifact(&mut self, key: &GameId) -> Shared<Artifact> {
-        if self.artifacts.contains_key(key) {
-            self.artifacts.get(key).unwrap().clone()
-        } else {
-            let v = Shared::wrap(Artifact::dummy(*key));
-            self.artifacts.insert(*key, v.clone());
-            v
-        }
+        get_or_insert_dummy(&mut self.artifacts, key)
     }
 
     pub fn add_artifact(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.artifacts.contains_key(&key) {
-            let a = self.artifacts.get(&key).unwrap().clone();
-            a.get_internal_mut().init(value, self);
-        } else {
-            let a = Shared::wrap(Artifact::dummy(key));
-            self.artifacts.insert(key, a.clone());
-            a.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.artifacts, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a character to the game state    
     pub fn add_character(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.characters.contains_key(&key) {
-            let c = self.characters.get(&key).unwrap().clone();
-            c.get_internal_mut().init(value, self);
-        } else {
-            let c = Shared::wrap(Character::dummy(key));
-            self.characters.insert(key, c.clone());
-            c.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.characters, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a title to the game state
     pub fn add_title(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.titles.contains_key(&key) {
-            let t = self.titles.get(&key).unwrap().clone();
-            t.get_internal_mut().init(value, self);
-        } else {
-            let t = Shared::wrap(Title::dummy(key));
-            self.titles.insert(key, t.clone());
-            t.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.titles, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a faith to the game state
     pub fn add_faith(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.faiths.contains_key(&key) {
-            let f = self.faiths.get(&key).unwrap().clone();
-            f.get_internal_mut().init(value, self);
-        } else {
-            let f = Shared::wrap(Faith::dummy(key));
-            self.faiths.insert(key, f.clone());
-            f.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.faiths, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a culture to the game state
     pub fn add_culture(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.cultures.contains_key(&key) {
-            let c = self.cultures.get(&key).unwrap().clone();
-            c.get_internal_mut().init(value, self);
-        } else {
-            let c = Shared::wrap(Culture::dummy(key));
-            self.cultures.insert(key, c.clone());
-            c.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.cultures, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a dynasty to the game state
     pub fn add_dynasty(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.dynasties.contains_key(&key) {
-            let d = self.dynasties.get(&key).unwrap().clone();
-            d.get_internal_mut().init(value, self);
-        } else {
-            let d = Shared::wrap(Dynasty::dummy(key));
-            self.dynasties.insert(key, d.clone());
-            d.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.dynasties, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Add a memory to the game state
     pub fn add_memory(&mut self, value: &GameObjectMap) {
-        let key = value.get_name().parse::<GameId>().unwrap();
-        if self.memories.contains_key(&key) {
-            let m = self.memories.get(&key).unwrap().clone();
-            m.get_internal_mut().init(value, self);
-        } else {
-            let m = Shared::wrap(Memory::dummy(key));
-            self.memories.insert(key, m.clone());
-            m.get_internal_mut().init(value, self);
-        }
+        get_or_insert_dummy_from_value(&mut self.memories, value)
+            .get_internal_mut()
+            .init(value, self);
     }
 
     /// Creates a hashmap death year->number of deaths

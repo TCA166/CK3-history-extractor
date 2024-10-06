@@ -24,7 +24,7 @@ impl<'a, T> Deref for RefOrRaw<'a, T> {
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
-/// For example [crate::game_object::GameString] is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
+/// For example [GameString](crate::parser::GameString) is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
 pub trait Wrapper<T> {
     /// Wrap a value in the object
     fn wrap(t: T) -> Self;

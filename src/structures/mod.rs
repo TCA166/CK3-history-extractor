@@ -45,7 +45,7 @@ pub use derived_ref::{serialize_array, DerivedRef};
 mod artifact;
 pub use artifact::Artifact;
 
-/// A trait for objects that can be created from a [GameObject].
+/// A trait for objects that can be created from a [GameObjectMap].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
 pub trait GameObjectDerived: Serialize {
@@ -70,8 +70,8 @@ pub trait DummyInit: GameObjectDerived {
     fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState);
 }
 
-/// A trait for [GameObjectDerived] objects that can be created from a [GameObject].
+/// A trait for [GameObjectDerived] objects that can be created from a [GameObjectMap].
 pub trait FromGameObject: GameObjectDerived {
-    /// Create a new object from a [GameObject].
+    /// Create a new object from a [GameObjectMap].
     fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self;
 }
