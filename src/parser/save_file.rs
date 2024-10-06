@@ -262,7 +262,7 @@ impl Section {
                         // we are not in quotes, we check if we have a key value pair
                         // we are key=value <-here
                         if past_eq && !val.is_empty() {
-                            if val == "rgb" {
+                            if val == "rgb" || val == "hsv" {
                                 //we are here color=rgb {}
                                 val.clear();
                             } else {
@@ -536,13 +536,15 @@ mod tests {
 
     #[test]
     fn test_save_file() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             test={
                 test2={
                     test3=1
                 }
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -552,7 +554,8 @@ mod tests {
 
     #[test]
     fn test_save_file_array() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             test={
                 test2={
                     1
@@ -561,7 +564,8 @@ mod tests {
                 }
                 test3={ 1 2 3}
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2");
@@ -596,7 +600,8 @@ mod tests {
 
     #[test]
     fn test_weird_syntax() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             test={
                 test2={1=2
                     3=4}
@@ -605,7 +610,8 @@ mod tests {
                 test4={1 2 3}
                 test5=42
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -615,11 +621,13 @@ mod tests {
 
     #[test]
     fn test_array_syntax() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             test={
                 test2={ 1 2 3 }
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_array();
@@ -631,7 +639,8 @@ mod tests {
 
     #[test]
     fn test_unnamed_obj() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
         3623={
             name=\"dynn_Sao\"
             variables={
@@ -651,7 +660,8 @@ mod tests {
                 }
             }
         }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         let variables = object.as_map().get_object_ref("variables").as_map();
         let data = variables.get_object_ref("data").as_array();
@@ -725,14 +735,16 @@ mod tests {
 
     #[test]
     fn test_space() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
         test = {
             test2 = {
                 test3 = 1
             }
             test4 = { a b c}
         }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -756,7 +768,8 @@ mod tests {
 
     #[test]
     fn test_landed() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
         c_derby = {
             color = { 255 50 20 }
 
@@ -790,7 +803,8 @@ mod tests {
                 color = { 255 50 20 }
             }
         }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "c_derby".to_string());
         let b_derby = object.as_map().get_object_ref("b_derby").as_map();
@@ -809,7 +823,8 @@ mod tests {
 
     #[test]
     fn test_invalid_line() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             some nonsense idk
             nonsense
             nonsense=idk
@@ -818,7 +833,8 @@ mod tests {
                     test3=1
                 }
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
@@ -828,19 +844,23 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             test={
             }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "test".to_string());
     }
 
     #[test]
     fn test_arr_index() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
             duration={ 2 0=7548 1=2096 }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         assert_eq!(object.get_name(), "duration".to_string());
         assert_eq!(object.as_array().len(), 3);
@@ -848,12 +868,14 @@ mod tests {
 
     #[test]
     fn test_multi_key() {
-        let mut save_file = get_test_obj("
+        let mut save_file = get_test_obj(
+            "
         test={
             a=hello
             a=world
         }
-        ");
+        ",
+        );
         let object = save_file.next().unwrap().parse();
         let arr = object.as_map().get_object_ref("a").as_array();
         assert_eq!(arr.len(), 2);

@@ -302,6 +302,8 @@ impl GameState {
     pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
         self.titles.iter()
     }
+
+    // TODO add a localize method
 }
 
 impl Serialize for GameState {

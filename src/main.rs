@@ -59,6 +59,7 @@ const DUMP_FILE: &str = "game_state.json";
 /// 9. `--include` - A flag that tells the program where to find additional files to include in the rendering.
 /// 10. `--no-interaction` - A flag that tells the program not to interact with the user.
 /// 11. `--no-cutoff` - A flag that tells the program not to cut off the date at the player's start date.
+/// 12. `--dump` - A flag that tells the program to dump the game state to a json file.
 ///
 /// # Process
 ///

@@ -12,7 +12,7 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::parser::{GameId, GameString, SaveFile, SaveFileValue};
+use super::super::parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue};
 
 // color stuff
 
@@ -66,14 +66,27 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
         while let Some(o) = stack.pop() {
             let pro = o.get("province");
             if pro.is_some() {
-                let id = pro.unwrap().as_id();
-                map.insert(o.get_name().to_owned(), id);
+                match pro.unwrap() {
+                    SaveFileValue::String(s) => {
+                        map.insert(o.get_name().to_owned(), s.parse::<GameId>().unwrap());
+                    }
+                    // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
+                    SaveFileValue::Object(o) => {
+                        map.insert(
+                            o.get_name().to_owned(),
+                            o.as_array().get_index(0).unwrap().as_id(),
+                        );
+                    }
+                }
             }
             for (_key, val) in o {
                 match val {
-                    SaveFileValue::Object(val) => {
-                        stack.push(val.as_map());
-                    }
+                    SaveFileValue::Object(val) => match val {
+                        SaveFileObject::Map(val) => {
+                            stack.push(val);
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }
@@ -84,7 +97,6 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
 
 /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
 fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
-    //TODO is this the best way to draw text?
     let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
     let text_height = height / 20;
     let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);

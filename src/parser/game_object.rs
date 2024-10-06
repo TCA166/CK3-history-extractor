@@ -22,9 +22,11 @@ impl Wrapper<String> for GameString {
 }
 
 /// A value that comes from a save file.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum SaveFileValue {
+    /// A simple string value, may be anything in reality.
     String(GameString),
+    /// A complex object value.
     Object(SaveFileObject),
 }
 
@@ -75,11 +77,27 @@ impl SaveFileValue {
     }
 }
 
+impl Debug for SaveFileValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SaveFileValue::String(s) => write!(f, "{}", s),
+            SaveFileValue::Object(o) => write!(f, "{:?}", o),
+        }
+    }
+}
+
+/// A game object that stores values as a map.
+pub type GameObjectMap = GameObject<HashMap<String, SaveFileValue>>;
+/// A game object that stores values as an array.
+pub type GameObjectArray = GameObject<Vec<SaveFileValue>>;
+
 /// An object that comes from a save file.
 #[derive(PartialEq, Clone)]
 pub enum SaveFileObject {
-    Map(GameObject<HashMap<String, SaveFileValue>>),
-    Array(GameObject<Vec<SaveFileValue>>),
+    /// An object that stores values as a map.
+    Map(GameObjectMap),
+    /// An object that stores values as an array.
+    Array(GameObjectArray),
 }
 
 impl SaveFileObject {
@@ -92,6 +110,10 @@ impl SaveFileObject {
     }
 
     /// Get the value as a GameObject map
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the value is not a map
     pub fn as_map(&self) -> &GameObjectMap {
         match self {
             SaveFileObject::Map(o) => o,
@@ -99,6 +121,11 @@ impl SaveFileObject {
         }
     }
 
+    /// Get the value as a mutable GameObject map
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the value is not a map
     pub fn as_map_mut(&mut self) -> &mut GameObjectMap {
         match self {
             SaveFileObject::Map(o) => o,
@@ -107,6 +134,10 @@ impl SaveFileObject {
     }
 
     /// Get the value as a GameObject array
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the value is not an array
     pub fn as_array(&self) -> &GameObjectArray {
         match self {
             SaveFileObject::Array(a) => a,
@@ -115,6 +146,10 @@ impl SaveFileObject {
     }
 
     /// Get the value as a mutable GameObject array
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the value is not an array
     pub fn as_array_mut(&mut self) -> &mut GameObjectArray {
         match self {
             SaveFileObject::Array(a) => a,
@@ -148,12 +183,8 @@ impl Debug for SaveFileObject {
     }
 }
 
-/// A game object that stores values as a map.
-pub type GameObjectMap = GameObject<HashMap<String, SaveFileValue>>;
-/// A game object that stores values as an array.
-pub type GameObjectArray = GameObject<Vec<SaveFileValue>>;
-
 /// A trait describing a collection that can be used as storage in [GameObject].
+/// This is really just a way to abstract over [HashMap] and [Vec].
 pub trait GameObjectCollection: Debug {
     /// Create a new instance of the collection
     fn new() -> Self;
@@ -184,7 +215,6 @@ impl<T: Debug> GameObjectCollection for Vec<T> {
 /// Representation of a save file object.
 /// These are the main data structure used to store game data.
 /// Each belongs to a section, but that is not stored here.
-/// Acts like a named dictionary and array, may be either or both or neither.
 /// Each has a name, which isn't unique.
 /// Holds [SaveFileValue]s, which are either strings or other GameObjects.
 #[derive(PartialEq, Clone)]
@@ -254,7 +284,9 @@ impl GameObject<HashMap<String, SaveFileValue>> {
         self.inner.get(key)
     }
 
-    /// Get the value of a key as a mutable GameObject.
+    /// Insert a new value into the object.
+    /// If the key already exists, the value at that key alongside the new value will be stored in an array at that key.
+    /// Thus held values are never discarded and here the multi key feature of the save file format is implemented.
     pub fn insert(&mut self, key: String, value: SaveFileValue) {
         let stored = self.inner.get_mut(&key);
         match stored {
@@ -319,17 +351,23 @@ impl<'a> IntoIterator for &'a GameObject<Vec<SaveFileValue>> {
 
 impl<T: GameObjectCollection> Debug for GameObject<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let r = write!(f, "GameObject(name:{}", self.name);
-        if r.is_err() {
-            return r;
-        }
-        let r = write!(f, "{:?}", self.inner);
-        if r.is_err() {
-            return r;
-        }
-        let r = write!(f, ")");
-        return r;
+        write!(f, "GameObject({},{:?})", self.name, self.inner)
     }
 }
 
-// TODO tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_insert() {
+        let mut obj = GameObjectMap::from_name("test".to_owned());
+        let val = GameString::wrap("value".to_owned());
+        obj.insert("key".to_owned(), SaveFileValue::String(val.clone()));
+        assert_eq!(obj.get_string_ref("key"), val.clone());
+        let val2 = GameString::wrap("value2".to_owned());
+        obj.insert("key".to_owned(), SaveFileValue::String(val2.clone()));
+        let arr = obj.get_object_ref("key").as_array();
+        assert_eq!(arr.len(), 2);
+    }
+}

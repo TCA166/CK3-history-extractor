@@ -1,5 +1,5 @@
 /// A submodule that provides the intermediate parsing interface for the save file.
-/// The [save_file](crate::parser::save_file) module uses [GameObject](crate::parser::game_object::GameObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
+/// The parser uses [GameObject](crate::parser::game_object::GameObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
 mod game_object;
 pub use game_object::{
     GameId, GameObjectArray, GameObjectMap, GameString, SaveFileObject, SaveFileValue,
