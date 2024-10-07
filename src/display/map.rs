@@ -64,9 +64,8 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
         //DFS in the structure
         let mut stack = vec![title_object.as_map()];
         while let Some(o) = stack.pop() {
-            let pro = o.get("province");
-            if pro.is_some() {
-                match pro.unwrap() {
+            if let Some(pro) = o.get("province") {
+                match pro {
                     SaveFileValue::String(s) => {
                         map.insert(o.get_name().to_owned(), s.parse::<GameId>().unwrap());
                     }
@@ -283,9 +282,8 @@ impl GameMap {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::new();
         for k in key_list.iter() {
-            let color = self.title_color_map.get(k.as_str());
-            if color.is_some() {
-                colors.insert(color.unwrap(), assoc(k));
+            if let Some(color) = self.title_color_map.get(k.as_str()) {
+                colors.insert(color, assoc(k));
             } else {
                 // huh? this is weird
             }
@@ -299,9 +297,8 @@ impl GameMap {
                 //if we find a NULL pixel = water
                 clr = &WATER_COLOR;
             } else {
-                let color = colors.get(pixel);
-                if color.is_some() {
-                    clr = color.unwrap();
+                if let Some(color) = colors.get(pixel) {
+                    clr = color;
                 } else {
                     clr = &LAND_COLOR;
                 }

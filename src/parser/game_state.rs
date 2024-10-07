@@ -18,9 +18,8 @@ fn get_or_insert_dummy<T: DummyInit>(
     map: &mut HashMap<GameId, Shared<T>>,
     key: &GameId,
 ) -> Shared<T> {
-    let val = map.get(key);
-    if val.is_some() {
-        return val.unwrap().clone();
+    if let Some(val) = map.get(key) {
+        return val.clone();
     } else {
         let v = Shared::wrap(T::dummy(*key));
         map.insert(*key, v.clone());
@@ -234,8 +233,8 @@ impl GameState {
             }
             let death_date = death_date.unwrap();
             let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            if self.offset_date.is_some() {
-                if death_year < self.current_year.unwrap() - *self.offset_date.as_ref().unwrap() {
+            if let Some(offset) = self.offset_date {
+                if death_year < self.current_year.unwrap() - offset {
                     continue;
                 }
             }
@@ -269,8 +268,8 @@ impl GameState {
             }
             let death_date = death_date.unwrap();
             let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            if self.offset_date.is_some() {
-                if death_year < self.current_year.unwrap() - *self.offset_date.as_ref().unwrap() {
+            if let Some(offset) = self.offset_date {
+                if death_year < self.current_year.unwrap() - offset {
                     continue;
                 }
             }

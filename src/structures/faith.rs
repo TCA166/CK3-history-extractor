@@ -5,7 +5,7 @@ use super::{
         display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectArray, GameObjectMap, GameState, GameString},
-        types::{Wrapper, WrapperMut},
+        types::Wrapper,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
@@ -23,9 +23,8 @@ pub struct Faith {
 
 /// Gets the head of the faith
 fn get_head(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Character>> {
-    let current = base.get("religious_head");
-    if current.is_some() {
-        let title = game_state.get_title(&current.unwrap().as_id());
+    if let Some(current) = base.get("religious_head") {
+        let title = game_state.get_title(&current.as_id());
         return title.get_internal().get_holder();
     }
     None
@@ -53,9 +52,8 @@ fn get_doctrines(doctrines: &mut Vec<GameString>, array: &GameObjectArray) {
 
 /// Gets the name of the faith
 fn get_name(base: &GameObjectMap) -> GameString {
-    let node = base.get("name");
-    if node.is_some() {
-        return node.unwrap().as_string();
+    if let Some(node) = base.get("name") {
+        return node.as_string();
     } else {
         base.get("template").unwrap().as_string()
     }
@@ -108,8 +106,8 @@ impl Serialize for Faith {
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
         state.serialize_field("tenets", &self.tenets)?;
-        if self.head.is_some() {
-            let head = DerivedRef::<Character>::from_derived(self.head.as_ref().unwrap().clone());
+        if let Some(head) = &self.head {
+            let head = DerivedRef::<Character>::from_derived(head.clone());
             state.serialize_field("head", &head)?;
         }
         state.serialize_field("fervor", &self.fervor)?;
@@ -131,18 +129,16 @@ impl Renderable for Faith {
         if !renderer.render(self) {
             return;
         }
-        let grapher = renderer.get_grapher();
-        if grapher.is_some() {
+        if let Some(grapher) = renderer.get_grapher() {
             let path = format!(
                 "{}/{}/{}.svg",
                 renderer.get_path(),
                 Self::get_subdir(),
                 self.id
             );
-            grapher.unwrap().create_faith_graph(self.id, &path);
+            grapher.create_faith_graph(self.id, &path);
         }
-        let map = renderer.get_map();
-        if map.is_some() {
+        if let Some(map) = renderer.get_map() {
             let game_state = renderer.get_state();
             let mut keys = Vec::new();
             for entry in game_state.get_title_iter() {
@@ -166,7 +162,7 @@ impl Renderable for Faith {
                     Self::get_subdir(),
                     self.id
                 );
-                map.unwrap().create_map_file(
+                map.create_map_file(
                     keys,
                     &[70, 255, 70],
                     &path,
@@ -174,9 +170,9 @@ impl Renderable for Faith {
                 );
             }
         }
-        if self.head.is_some() {
+        if let Some(head) = &self.head {
             stack.push(RenderableType::Character(
-                self.head.as_ref().unwrap().clone(),
+                head.clone(),
             ));
         }
     }
@@ -204,10 +200,9 @@ impl Cullable for Faith {
             return;
         }
         self.depth = depth;
-        if self.head.is_some() {
-            let o = self.head.as_ref().unwrap().try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth - 1);
+        if let Some(head) = &self.head {
+            if let Ok(mut head) = head.try_borrow_mut() {
+                head.set_depth(depth - 1);
             }
         }
     }

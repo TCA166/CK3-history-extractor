@@ -157,15 +157,6 @@ fn main() {
                 .default(3)
                 .interact()
                 .unwrap();
-            let language_selection = Select::new()
-                .with_prompt("Choose the localization language")
-                .items(&LANGUAGES)
-                .default(0)
-                .interact()
-                .unwrap();
-            if language_selection != 0 {
-                language = LANGUAGES[language_selection];
-            }
             let include_input = Input::<String>::new()
                 .with_prompt("Enter the include paths separated by a coma [empty for None]")
                 .allow_empty(true)
@@ -189,6 +180,17 @@ fn main() {
                     .split(',')
                     .map(|x| x.trim().to_string())
                     .collect();
+            }
+            if game_path.is_some() || !include_paths.is_empty() {
+                let language_selection = Select::new()
+                    .with_prompt("Choose the localization language")
+                    .items(&LANGUAGES)
+                    .default(0)
+                    .interact()
+                    .unwrap();
+                if language_selection != 0 {
+                    language = LANGUAGES[language_selection];
+                }
             }
             output_path = Input::<String>::new()
                 .with_prompt("Enter the output path [empty for cwd]")
@@ -257,17 +259,12 @@ fn main() {
                     println!("Outputting to {}", output_path.as_ref().unwrap());
                 }
                 "--include" => {
-                    let mut path = iter.next();
-                    if path.is_none() {
-                        panic!("Include argument requires a value");
-                    }
-                    while path.is_some() {
-                        include_paths.push(path.unwrap().clone());
+                    while let Some(path) = iter.next() {
+                        include_paths.push(path.clone());
                         let next = iter.next();
                         if next.is_none() {
                             break;
                         }
-                        path = next;
                     }
                 }
                 "--dump" => {
@@ -365,8 +362,8 @@ fn main() {
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
-        if output_path.is_some() {
-            folder_name = output_path.as_ref().unwrap().clone() + "/" + folder_name.as_str();
+        if let Some(output_path) = &output_path {
+            folder_name = output_path.clone() + "/" + folder_name.as_str();
         }
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());

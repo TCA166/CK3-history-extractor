@@ -191,9 +191,8 @@ impl Localizer {
             for c in value.chars() {
                 if c == '$' {
                     if in_key {
-                        let localized = self.data.get(&mem::take(&mut foreign_key));
-                        if localized.is_some() {
-                            new_value.push_str(localized.unwrap().as_str());
+                        if let Some(localized) = self.data.get(&mem::take(&mut foreign_key)) {
+                            new_value.push_str(localized.as_str());
                         }
                     }
                     in_key = !in_key;
@@ -214,9 +213,8 @@ impl Localizer {
         if self.data.is_empty() {
             return GameString::wrap(demangle_generic(key));
         }
-        let d = self.data.get(key);
-        if d.is_some() {
-            let d = d.unwrap().clone();
+        if let Some(d) = self.data.get(key) {
+            let d = d.clone();
             //if the string contains []
             if d.contains('[') && d.contains(']') {
                 //handle the special function syntax

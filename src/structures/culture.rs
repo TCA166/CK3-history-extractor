@@ -34,13 +34,11 @@ fn get_parents(
     id: GameId,
     game_state: &mut GameState,
 ) {
-    let parents_obj = base.get("parents");
-    if parents_obj.is_some() {
-        for p in parents_obj.unwrap().as_object().as_array() {
+    if let Some(parents_obj) = base.get("parents") {
+        for p in parents_obj.as_object().as_array() {
             let parent = game_state.get_culture(&p.as_id()).clone();
-            let r = parent.try_borrow_mut();
-            if r.is_ok() {
-                r.unwrap().register_child(game_state.get_culture(&id));
+            if let Ok(mut r) = parent.try_borrow_mut() {
+                r.register_child(game_state.get_culture(&id));
             }
             parents.push(parent.clone());
         }
@@ -49,9 +47,8 @@ fn get_parents(
 
 /// Gets the traditions of the culture and appends them to the traditions vector
 fn get_traditions(traditions: &mut Vec<GameString>, base: &GameObjectMap) {
-    let traditions_obj = base.get("traditions");
-    if traditions_obj.is_some() {
-        for t in traditions_obj.unwrap().as_object().as_array() {
+    if let Some(traditions_obj) = base.get("traditions") {
+        for t in traditions_obj.as_object().as_array() {
             traditions.push(t.as_string());
         }
     }
@@ -59,9 +56,8 @@ fn get_traditions(traditions: &mut Vec<GameString>, base: &GameObjectMap) {
 
 /// Gets the creation date of the culture
 fn get_date(base: &GameObjectMap) -> Option<GameString> {
-    let node = base.get("created");
-    if node.is_some() {
-        return Some(node.unwrap().as_string());
+    if let Some(node) = base.get("created") {
+        return Some(node.as_string());
     }
     None
 }
@@ -87,10 +83,9 @@ impl DummyInit for Culture {
         get_parents(&mut self.parents, &base, self.id, game_state);
         get_traditions(&mut self.traditions, &base);
         self.name = Some(base.get("name").unwrap().as_string());
-        let eth = base.get("ethos");
-        if eth.is_some() {
+        if let Some(eth) = base.get("ethos") {
             //this is possible, shoutout u/Kinc4id
-            self.ethos = Some(eth.unwrap().as_string());
+            self.ethos = Some(eth.as_string());
         }
         self.heritage = Some(base.get("heritage").unwrap().as_string());
         self.martial = Some(base.get("martial_custom").unwrap().as_string());
@@ -119,8 +114,8 @@ impl TreeNode for Culture {
     }
 
     fn get_class(&self) -> Option<GameString> {
-        if self.heritage.is_some() {
-            return Some(self.heritage.as_ref().unwrap().clone());
+        if let Some(heritage) = &self.heritage {
+            return Some(heritage.clone());
         } else {
             return None;
         }
@@ -168,18 +163,16 @@ impl Renderable for Culture {
         if !renderer.render(self) {
             return;
         }
-        let grapher = renderer.get_grapher();
-        if grapher.is_some() {
+        if let Some(grapher) = renderer.get_grapher() {
             let path = format!(
                 "{}/{}/{}.svg",
                 renderer.get_path(),
                 Self::get_subdir(),
                 self.id
             );
-            grapher.unwrap().create_culture_graph(self.id, &path);
+            grapher.create_culture_graph(self.id, &path);
         }
-        let map = renderer.get_map();
-        if map.is_some() {
+        if let Some(map) = renderer.get_map() {
             let game_state = renderer.get_state();
             let mut keys = Vec::new();
             for entry in game_state.get_title_iter() {
@@ -203,7 +196,7 @@ impl Renderable for Culture {
                     Self::get_subdir(),
                     self.id
                 );
-                map.unwrap().create_map_file(
+                map.create_map_file(
                     keys,
                     &[70, 255, 70],
                     &path,
@@ -244,15 +237,13 @@ impl Cullable for Culture {
         }
         self.depth = depth;
         for p in &self.parents {
-            let r = p.try_borrow_mut();
-            if r.is_ok() {
-                r.unwrap().set_depth(depth);
+            if let Ok(mut r) = p.try_borrow_mut() {
+                r.set_depth(depth);
             }
         }
         for c in &self.children {
-            let r = c.try_borrow_mut();
-            if r.is_ok() {
-                r.unwrap().set_depth(depth);
+            if let Ok(mut r) = c.try_borrow_mut() {
+                r.set_depth(depth);
             }
         }
     }

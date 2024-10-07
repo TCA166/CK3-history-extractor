@@ -43,41 +43,35 @@ impl DummyInit for Artifact {
         self.description = Some(base.get_string_ref("description"));
         self.r#type = Some(base.get_string_ref("type"));
         self.rarity = Some(base.get_string_ref("rarity"));
-        let quality_node = base.get("quality");
-        if quality_node.is_some() {
-            self.quality = quality_node.unwrap().as_string().parse::<u32>().unwrap();
+        if let Some(quality_node) = base.get("quality") {
+            self.quality = quality_node.as_string().parse::<u32>().unwrap();
         } else {
             self.quality = 0;
         }
-        let wealth_node = base.get("wealth");
-        if wealth_node.is_some() {
-            self.wealth = wealth_node.unwrap().as_string().parse::<u32>().unwrap();
+        if let Some(wealth_node) = base.get("wealth") {
+            self.wealth = wealth_node.as_string().parse::<u32>().unwrap();
         } else {
             self.wealth = 0;
         }
         self.owner = Some(game_state.get_character(&base.get("owner").unwrap().as_id()));
-        let history_node = base.get("history");
-        if history_node.is_some() {
-            let history_node = history_node.unwrap().as_object();
+        if let Some(history_node) = base.get("history") {
+            let history_node = history_node.as_object();
             if history_node.is_empty() {
                 return;
             }
             let history_node = history_node.as_map();
-            let entries_node = history_node.get("entries");
-            if entries_node.is_some() {
-                for h in entries_node.unwrap().as_object().as_array() {
+            if let Some(entries_node) = history_node.get("entries") {
+                for h in entries_node.as_object().as_array() {
                     let h = h.as_object().as_map();
                     let r#type = h.get_string_ref("type");
                     let date = h.get_string_ref("date");
-                    let actor_node = h.get("actor");
-                    let actor = if actor_node.is_some() {
-                        Some(game_state.get_character(&actor_node.unwrap().as_id()))
+                    let actor = if let Some(actor_node) = h.get("actor") {
+                        Some(game_state.get_character(&actor_node.as_id()))
                     } else {
                         None
                     };
-                    let recipient_node = h.get("recipient");
-                    let recipient = if recipient_node.is_some() {
-                        Some(game_state.get_character(&recipient_node.unwrap().as_id()))
+                    let recipient = if let Some(recipient_node) = h.get("recipient") {
+                        Some(game_state.get_character(&recipient_node.as_id()))
                     } else {
                         None
                     };
@@ -105,11 +99,11 @@ impl DummyInit for Artifact {
 
 impl Localizable for Artifact {
     fn localize(&mut self, localization: &Localizer) {
-        if self.rarity.is_some() {
-            self.rarity = Some(localization.localize(self.rarity.as_ref().unwrap()));
+        if let Some(rarity) = &self.rarity {
+            self.rarity = Some(localization.localize(rarity));
         }
-        if self.r#type.is_some() {
-            self.r#type = Some(localization.localize(self.r#type.as_ref().unwrap()));
+        if let Some(r#type) = &self.r#type {
+            self.r#type = Some(localization.localize(r#type));
         }
     }
 }
@@ -124,23 +118,20 @@ impl Cullable for Artifact {
             return;
         }
         self.depth = depth;
-        if self.owner.is_some() {
-            let owner = self.owner.as_ref().unwrap().try_borrow_mut();
-            if owner.is_ok() {
-                owner.unwrap().set_depth(depth);
+        if let Some(owner) = &self.owner {
+            if let Ok(mut owner) = owner.try_borrow_mut() {
+                owner.set_depth(depth);
             }
         }
         for h in self.history.iter_mut() {
-            if h.2.is_some() {
-                let actor = h.2.as_ref().unwrap().try_borrow_mut();
-                if actor.is_ok() {
-                    actor.unwrap().set_depth(depth);
+            if let Some(actor) = &h.2 {
+                if let Ok(mut actor) = actor.try_borrow_mut() {
+                    actor.set_depth(depth);
                 }
             }
-            if h.3.is_some() {
-                let recipient = h.3.as_ref().unwrap().try_borrow_mut();
-                if recipient.is_ok() {
-                    recipient.unwrap().set_depth(depth);
+            if let Some(recipient) = &h.3 {
+                if let Ok(mut recipient) = recipient.try_borrow_mut() {
+                    recipient.set_depth(depth);
                 }
             }
         }
@@ -151,11 +142,11 @@ impl Artifact {
     /// Render the characters in the history of the artifact
     pub fn render_history(&self, stack: &mut Vec<RenderableType>) {
         for h in self.history.iter() {
-            if h.2.is_some() {
-                stack.push(RenderableType::Character(h.2.as_ref().unwrap().clone()));
+            if let Some(actor) = &h.2 {
+                stack.push(RenderableType::Character(actor.clone()));
             }
-            if h.3.is_some() {
-                stack.push(RenderableType::Character(h.3.as_ref().unwrap().clone()));
+            if let Some(recipient) = &h.3 {
+                stack.push(RenderableType::Character(recipient.clone()));
             }
         }
     }
@@ -181,13 +172,13 @@ impl Serialize for Artifact {
             Option<DerivedRef<Character>>,
         )> = Vec::new();
         for h in self.history.iter() {
-            let actor = if h.2.is_some() {
-                Some(DerivedRef::from_derived(h.2.as_ref().unwrap().clone()))
+            let actor = if let Some(actor) = &h.2 {
+                Some(DerivedRef::from_derived(actor.clone()))
             } else {
                 None
             };
-            let recipient = if h.3.is_some() {
-                Some(DerivedRef::from_derived(h.3.as_ref().unwrap().clone()))
+            let recipient = if let Some(recipient) = &h.3 {
+                Some(DerivedRef::from_derived(recipient.clone()))
             } else {
                 None
             };

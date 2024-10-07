@@ -60,10 +60,9 @@ impl Dynasty {
     pub fn register_member(&mut self, member: Shared<Character>) {
         self.members += 1;
         self.member_list.push(member.clone());
-        if self.parent.as_ref().is_some() {
-            let mut p = self.parent.as_ref().unwrap().try_get_internal_mut();
-            if p.is_ok() {
-                p.as_mut().unwrap().register_member(member);
+        if let Some(parent) = &self.parent {
+            if let Ok(mut p) = parent.try_get_internal_mut() {
+                p.register_member(member);
             }
         }
     }
@@ -78,24 +77,23 @@ impl Dynasty {
 
     /// Checks if the dynasty is the same as another dynasty
     pub fn is_same_dynasty(&self, other: &Dynasty) -> bool {
-        let id = if self.parent.is_none() {
+        let id = if let Some(parent) = &self.parent {
+            parent.get_internal().id
+        } else {
             self.id
-        } else {
-            self.parent.as_ref().unwrap().get_internal().id
         };
-        if other.parent.is_none() {
-            return id == other.id;
+        if let Some(other_parent) = &other.parent {
+            return id == other_parent.get_internal().id;
         } else {
-            return id == other.parent.as_ref().unwrap().get_internal().id;
+            return id == other.id;
         }
     }
 }
 
 ///Gets the perks of the dynasty and appends them to the perks vector
 fn get_perks(perks: &mut Vec<(GameString, u8)>, base: &GameObjectMap) {
-    let perks_obj = base.get("perk");
-    if perks_obj.is_some() {
-        for p in perks_obj.unwrap().as_object().as_array() {
+    if let Some(perks_obj) = base.get("perk") {
+        for p in perks_obj.as_object().as_array() {
             let perk = p.as_string();
             //get the split perk by the second underscore
             let mut i: u8 = 0;
@@ -137,34 +135,28 @@ fn get_leaders(
     base: &GameObjectMap,
     game_state: &mut GameState,
 ) {
-    let leaders_obj = base.get("historical");
-    if leaders_obj.is_some() {
+    if let Some(leaders_obj) = base.get("historical") {
         if !leaders.is_empty() {
             leaders.clear();
         }
-        for l in leaders_obj.unwrap().as_object().as_array() {
+        for l in leaders_obj.as_object().as_array() {
             leaders.push(game_state.get_character(&l.as_id()).clone());
         }
     } else if leaders.is_empty() {
-        let current = base.get("dynasty_head");
-        if current.is_some() {
-            leaders.push(game_state.get_character(&current.unwrap().as_id()));
-        } else {
-            let current = base.get("head_of_house");
-            if current.is_some() {
-                leaders.push(game_state.get_character(&current.unwrap().as_id()));
-            }
+        if let Some(current) = base.get("dynasty_head") {
+            leaders.push(game_state.get_character(&current.as_id()));
+        } else if let Some(current) = base.get("head_of_house") {
+            leaders.push(game_state.get_character(&current.as_id()));
         }
     }
 }
 
 ///Gets the prestige of the dynasty and returns a tuple with the total prestige and the current prestige
 fn get_prestige(base: &GameObjectMap) -> (f32, f32) {
-    let currency = base.get("prestige");
     let mut prestige_tot = 0.0;
     let mut prestige = 0.0;
-    if currency.is_some() {
-        let o = currency.unwrap().as_object().as_map();
+    if let Some(currency) = base.get("prestige") {
+        let o = currency.as_object().as_map();
         match o.get("accumulated") {
             Some(v) => match v {
                 SaveFileValue::Object(ref o) => {
@@ -228,11 +220,10 @@ fn get_name(base: &GameObjectMap, parent: Option<Shared<Dynasty>>) -> Option<Gam
 }
 
 fn get_date(base: &GameObjectMap) -> Option<GameString> {
-    let date = base.get("found_date");
-    if date.is_none() {
-        return None;
+    if let Some(date) = base.get("found_date") {
+        return Some(date.as_string());
     }
-    Some(date.unwrap().as_string())
+    None
 }
 
 impl DummyInit for Dynasty {
@@ -269,9 +260,8 @@ impl DummyInit for Dynasty {
             self.name = name;
         }
         self.found_date = get_date(&base);
-        let motto_node = base.get("motto");
-        if motto_node.is_some() {
-            match motto_node.unwrap() {
+        if let Some(motto_node) = base.get("motto") {
+            match motto_node {
                 SaveFileValue::String(ref s) => {
                     self.motto = Some((s.clone(), Vec::new()));
                 }
@@ -297,13 +287,13 @@ impl GameObjectDerived for Dynasty {
     }
 
     fn get_name(&self) -> GameString {
-        if self.name.is_none() {
-            if self.parent.as_ref().is_some() {
-                return self.parent.as_ref().unwrap().get_internal().get_name();
-            }
+        if let Some(name) = &self.name {
+            return name.clone();
+        } else if let Some(parent) = &self.parent {
+            return parent.get_internal().get_name();
+        } else {
             return GameString::wrap("Unknown".to_owned());
         }
-        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -314,8 +304,8 @@ impl Serialize for Dynasty {
     {
         let mut state = serializer.serialize_struct("Dynasty", 11)?;
         state.serialize_field("id", &self.id)?;
-        if self.parent.as_ref().is_some() {
-            let parent = DerivedRef::<Dynasty>::from_derived(self.parent.as_ref().unwrap().clone());
+        if let Some(parent) = &self.parent {
+            let parent = DerivedRef::<Dynasty>::from_derived(parent.clone());
             state.serialize_field("parent", &parent)?;
         }
         state.serialize_field("name", &self.name)?;
@@ -327,8 +317,7 @@ impl Serialize for Dynasty {
         let leaders = serialize_array(&self.leaders);
         state.serialize_field("leaders", &leaders)?;
         state.serialize_field("found_date", &self.found_date)?;
-        if self.motto.is_some() {
-            let motto_raw = self.motto.as_ref().unwrap();
+        if let Some(motto_raw) = &self.motto {
             let motto = motto_raw.0.split(' ').collect::<Vec<&str>>();
             let var_len = motto_raw.1.len();
             let rebuilt = if var_len == 0 {
@@ -368,23 +357,21 @@ impl Renderable for Dynasty {
         if !renderer.render(self) {
             return;
         }
-        let grapher = renderer.get_grapher();
-        if grapher.is_some() {
-            let g = grapher.unwrap();
+        if let Some(grapher) = renderer.get_grapher() {
             let path = format!(
                 "{}/{}/{}.svg",
                 renderer.get_path(),
                 Self::get_subdir(),
                 self.id
             );
-            g.create_dynasty_graph(self, &path);
+            grapher.create_dynasty_graph(self, &path);
         }
         for leader in self.leaders.iter() {
             stack.push(RenderableType::Character(leader.clone()));
         }
-        if self.parent.as_ref().is_some() {
+        if let Some(parent) = &self.parent {
             stack.push(RenderableType::Dynasty(
-                self.parent.as_ref().unwrap().clone(),
+                parent.clone(),
             ));
         }
     }
@@ -392,18 +379,17 @@ impl Renderable for Dynasty {
 
 impl Localizable for Dynasty {
     fn localize(&mut self, localization: &Localizer) {
-        if self.name.is_some() {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+        if let Some(name) = &self.name {
+            self.name = Some(localization.localize(name.as_str()));
         } else {
             return;
         }
         for perk in self.perks.iter_mut() {
             perk.0 = localization.localize(perk.0.as_str());
         }
-        if self.motto.is_some() {
-            let m = self.motto.as_mut().unwrap();
-            m.0 = localization.localize(m.0.as_str());
-            for v in m.1.iter_mut() {
+        if let Some(motto) = &mut self.motto {
+            motto.0 = localization.localize(motto.0.as_str());
+            for v in motto.1.iter_mut() {
                 *v = localization.localize(v.as_str());
             }
         }
@@ -417,15 +403,13 @@ impl Cullable for Dynasty {
         }
         self.depth = depth;
         for leader in self.leaders.iter() {
-            let o = leader.try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth);
+            if let Ok(mut o) = leader.try_get_internal_mut() {
+                o.set_depth(depth);
             }
         }
-        if self.parent.as_ref().is_some() {
-            let o = self.parent.as_ref().unwrap().try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth);
+        if let Some(parent) = &self.parent {
+            if let Ok(mut o) = parent.try_get_internal_mut() {
+                o.set_depth(depth);
             }
         }
     }

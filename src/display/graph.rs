@@ -162,9 +162,8 @@ impl Grapher {
         Grapher {
             faith_graph_complete: game_state.get_yearly_deaths(
                 |c| {
-                    let faith = c.get_faith();
-                    if faith.is_some() {
-                        return Some(faith.unwrap().get_internal().get_id());
+                    if let Some(faith) = c.get_faith() {
+                        return Some(faith.get_internal().get_id());
                     }
                     None
                 },
@@ -172,9 +171,8 @@ impl Grapher {
             ),
             culture_graph_complete: game_state.get_yearly_deaths(
                 |c| {
-                    let culture = c.get_culture();
-                    if culture.is_some() {
-                        return Some(culture.unwrap().get_internal().get_id());
+                    if let Some(culture) = c.get_culture() {
+                        return Some(culture.get_internal().get_id());
                     }
                     None
                 },
@@ -236,9 +234,8 @@ impl Grapher {
                 let x = layout[i * 3 + 1];
                 let y = layout[i * 3 + 2];
                 let (_, _, (node_width, node_height), _, class) = storage.get(&id).unwrap();
-                if class.is_some() {
+                if let Some(class) = class {
                     // group resolving
-                    let class = class.as_ref().unwrap();
                     if !groups.contains_key(class.as_str()) {
                         let mut rng = thread_rng();
                         let base: u8 = 85;
@@ -322,9 +319,10 @@ impl Grapher {
         }
         //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions {
-            let (_, node_name, (node_width, node_height), txt_point, class) = storage.get(&id).unwrap();
-            let color = if class.is_some() {
-                groups.get(class.as_ref().unwrap().as_str()).unwrap()
+            let (_, node_name, (node_width, node_height), txt_point, class) =
+                storage.get(&id).unwrap();
+            let color = if let Some(class) = class {
+                groups.get(class.as_str()).unwrap()
             } else {
                 &WHITE
             };
@@ -359,20 +357,16 @@ impl Grapher {
 
     /// Creates a death graph for a culture
     pub fn create_culture_graph(&self, culture_id: GameId, output_path: &str) {
-        let data = self.culture_graph_complete.get(&culture_id);
-        if data.is_none() {
-            return;
+        if let Some(data) = self.culture_graph_complete.get(&culture_id) {
+            create_graph(data, output_path, Some(Y_LABEL), None)
         }
-        create_graph(data.unwrap(), output_path, Some(Y_LABEL), None)
     }
 
     /// Creates a death graph for a faith
     pub fn create_faith_graph(&self, faith_id: GameId, output_path: &str) {
-        let data = self.faith_graph_complete.get(&faith_id);
-        if data.is_none() {
-            return;
+        if let Some(data) = self.faith_graph_complete.get(&faith_id) {
+            create_graph(data, output_path, Some(Y_LABEL), None)
         }
-        create_graph(data.unwrap(), output_path, Some(Y_LABEL), None)
     }
 
     pub fn create_timeline_graph(

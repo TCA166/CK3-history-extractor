@@ -4,7 +4,6 @@ use super::{
     super::{
         display::{Cullable, Localizable, Localizer, RenderableType},
         parser::{GameId, GameObjectMap, GameState, GameString},
-        types::WrapperMut,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
@@ -24,9 +23,8 @@ fn get_participants(
     base: &GameObjectMap,
     game_state: &mut GameState,
 ) {
-    let participants_node = base.get("participants");
-    if participants_node.is_some() {
-        for part in participants_node.unwrap().as_object().as_map() {
+    if let Some(participants_node) = base.get("participants") {
+        for part in participants_node.as_object().as_map() {
             participants.push((
                 part.0.clone(),
                 game_state.get_character(&part.1.as_id()).clone(),
@@ -48,9 +46,8 @@ impl DummyInit for Memory {
 
     fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
         self.date = Some(base.get("creation_date").unwrap().as_string());
-        let tp = base.get("type");
-        if tp.is_some() {
-            self.r#type = Some(tp.unwrap().as_string());
+        if let Some(tp) = base.get("type") {
+            self.r#type = Some(tp.as_string());
         }
         get_participants(&mut self.participants, &base, game_state);
     }
@@ -100,9 +97,8 @@ impl Cullable for Memory {
         }
         self.depth = depth;
         for part in self.participants.iter_mut() {
-            let o = part.1.try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth - 1);
+            if let Ok(mut part) = part.1.try_borrow_mut() {
+                part.set_depth(depth - 1);
             }
         }
     }

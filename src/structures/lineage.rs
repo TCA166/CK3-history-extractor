@@ -31,10 +31,8 @@ impl LineageNode {
 
 ///Gets the perk of the lineage node
 fn get_perks(perks: &mut Vec<GameString>, base: &GameObjectMap) {
-    let perks_node = base.get("perk");
-    if perks_node.is_some() {
-        let node = perks_node.unwrap();
-        match node {
+    if let Some(perks_node) = base.get("perk") {
+        match perks_node {
             SaveFileValue::Object(o) => {
                 for perk in o.as_array() {
                     perks.push(perk.as_string())
@@ -49,57 +47,44 @@ fn get_perks(perks: &mut Vec<GameString>, base: &GameObjectMap) {
 
 ///Gets the dread of the lineage node
 fn get_dread(base: &GameObjectMap) -> f32 {
-    let dread;
-    let dread_node = base.get("dread");
-    if dread_node.is_some() {
-        dread = dread_node.unwrap().as_string().parse::<f32>().unwrap();
+    if let Some(dread_node) = base.get("dread") {
+        dread_node.as_string().parse::<f32>().unwrap()
     } else {
-        dread = 0.0;
+        0.0
     }
-    return dread;
 }
 
 ///Gets the score of the lineage node
 fn get_score(base: &GameObjectMap) -> i32 {
-    let score;
-    let score_node = base.get("score");
-    if score_node.is_some() {
-        score = score_node.unwrap().as_string().parse::<i32>().unwrap();
+    if let Some(score_node) = base.get("score") {
+        score_node.as_string().parse::<i32>().unwrap()
     } else {
-        score = 0;
+        0
     }
-    score
 }
 
 ///Gets the prestige of the lineage node
 fn get_prestige(base: &GameObjectMap) -> i32 {
-    let prestige;
-    let prestige_node = base.get("prestige");
-    if prestige_node.is_some() {
-        prestige = prestige_node.unwrap().as_string().parse::<i32>().unwrap();
+    if let Some(prestige_node) = base.get("prestige") {
+        prestige_node.as_string().parse::<i32>().unwrap()
     } else {
-        prestige = 0;
+        0
     }
-    prestige
 }
 
 ///Gets the piety of the lineage node
 fn get_piety(base: &GameObjectMap) -> i32 {
-    let piety;
-    let piety_node = base.get("piety");
-    if piety_node.is_some() {
-        piety = piety_node.unwrap().as_string().parse::<i32>().unwrap();
+    if let Some(piety_node) = base.get("piety") {
+        piety_node.as_string().parse::<i32>().unwrap()
     } else {
-        piety = 0;
+        0
     }
-    piety
 }
 
 ///Gets the lifestyle of the lineage node
 fn get_lifestyle(base: &GameObjectMap) -> Option<GameString> {
-    let lifestyle_node = base.get("lifestyle");
-    if lifestyle_node.is_some() {
-        Some(lifestyle_node.unwrap().as_string())
+    if let Some(lifestyle_node) = base.get("lifestyle") {
+        Some(lifestyle_node.as_string())
     } else {
         None
     }
@@ -156,8 +141,8 @@ impl Serialize for LineageNode {
 
 impl Localizable for LineageNode {
     fn localize(&mut self, localization: &Localizer) {
-        if self.lifestyle.is_some() {
-            self.lifestyle = Some(localization.localize(self.lifestyle.as_ref().unwrap().as_str()));
+        if let Some(lifestyle) = &self.lifestyle {
+            self.lifestyle = Some(localization.localize(&lifestyle.as_str()));
         }
         for perk in self.perks.iter_mut() {
             *perk = localization.localize(perk.as_str());

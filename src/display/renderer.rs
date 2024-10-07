@@ -76,11 +76,10 @@ impl<'a> Renderer<'a> {
 
     /// Returns true if the object has already been rendered.
     fn is_rendered<T: Renderable>(&self, id: GameId) -> bool {
-        let rendered = self.rendered.get(T::get_subdir());
-        if rendered.is_none() {
-            return false;
+        if let Some(rendered) = self.rendered.get(T::get_subdir()) {
+            return rendered.contains(&id);
         }
-        return rendered.unwrap().contains(&id);
+        return false;
     }
 
     /// Renders the object and returns true if it was actually rendered.

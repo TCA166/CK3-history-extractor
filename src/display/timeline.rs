@@ -93,20 +93,19 @@ impl Timeline {
         for (_, title) in game_state.get_title_iter() {
             //first we handle the empires and collect titles that might be relevant for events
             let t = title.get_internal();
-            let k = t.get_key();
             let hist = t.get_history_iter();
             if hist.len() == 0 {
                 continue;
             }
-            if k.is_some() {
+            if let Some(k) = t.get_key() {
                 //if the key is there
-                let kingdom = k.as_ref().unwrap().starts_with("k_");
+                let kingdom = k.as_ref().starts_with("k_");
                 if kingdom {
                     event_checkout.push(title.clone());
                     //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
                     continue;
                 }
-                let empire = k.as_ref().unwrap().starts_with("e_");
+                let empire = k.as_ref().starts_with("e_");
                 if !empire {
                     continue;
                 }

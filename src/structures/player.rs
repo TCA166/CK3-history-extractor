@@ -7,7 +7,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Renderable, RenderableType, Renderer, Localizable, Localizer},
+        display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
@@ -94,11 +94,9 @@ impl Renderable for Player {
 
     fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
         renderer.render(self);
-        let map = renderer.get_map();
-        if map.is_some() {
+        if let Some(map) = renderer.get_map() {
             let game_state = renderer.get_state();
             //timelapse rendering
-            let map = map.unwrap();
             let path = renderer.get_path().to_owned() + "/timelapse.gif";
             let mut file = File::create(&path).unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
@@ -115,8 +113,8 @@ impl Renderable for Player {
                 //we get the provinces held by the character and the vassals who died under their reign.
                 //This is the closes approximation we can get of changes in the map that are 100% accurate
                 let death_date = char.get_death_date();
-                let date = if death_date.is_some() {
-                    death_date.as_ref().unwrap().as_str()
+                let date = if let Some(death_date) = &death_date {
+                    death_date.as_str()
                 } else {
                     game_state.get_current_date().unwrap()
                 };
@@ -143,14 +141,12 @@ impl Renderable for Player {
                 if !(key.starts_with("c_") || key.starts_with("b_")) {
                     continue;
                 }
-                let similarity;
-                let ruler = title.get_holder();
-                if ruler.is_none() {
-                    similarity = 0.0;
+                let similarity = if let Some(ruler) = title.get_holder() {
+                    let ruler = ruler.get_internal();
+                    ruler.dna_similarity(last.clone())
                 } else {
-                    let ruler = ruler.as_ref().unwrap().get_internal();
-                    similarity = ruler.dna_similarity(last.clone());
-                }
+                    0.0
+                };
                 for barony in title.get_de_jure_barony_keys() {
                     if sim.contains_key(barony.as_ref())
                         && similarity < *sim.get(barony.as_ref()).unwrap()
@@ -162,15 +158,14 @@ impl Renderable for Player {
             }
             map.create_map_graph(
                 |key: &String| {
-                    let mult = sim.get(key);
-                    if mult.is_none() {
-                        return BASE_COLOR;
-                    } else {
+                    if let Some(sim) = sim.get(key) {
                         return [
                             BASE_COLOR[0],
                             BASE_COLOR[1],
-                            (BASE_COLOR[2] as f32 * (1.0 - mult.unwrap())) as u8,
+                            (BASE_COLOR[2] as f32 * (1.0 - sim)) as u8,
                         ];
+                    } else {
+                        return BASE_COLOR;
                     }
                 },
                 &format!("{}/sim.png", renderer.get_path()),
@@ -225,10 +220,9 @@ impl Renderable for Player {
                 .get_internal()
                 .render_all(stack, renderer);
         }
-        let grapher = renderer.get_grapher();
-        if grapher.is_some() {
+        if let Some(grapher) = renderer.get_grapher() {
             let last = self.lineage.last().unwrap().get_character();
-            grapher.unwrap().create_tree_graph::<Character>(
+            grapher.create_tree_graph::<Character>(
                 last,
                 true,
                 &format!("{}/line.svg", renderer.get_path()),

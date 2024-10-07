@@ -95,13 +95,10 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             //get the name of the file without the extension
             let name = file_name.to_str().unwrap().splitn(2, '.').next().unwrap();
             //it needs to be a template file
-            let i = TEMPLATE_NAMES.iter().position(|&x| x == name);
-            if i.is_none() {
-                continue;
+            if let Some(i) = TEMPLATE_NAMES.iter().position(|&x| x == name) {
+                let template = fs::read_to_string(entry.path()).unwrap();
+                env.add_template_owned(TEMPLATE_NAMES[i], template).unwrap();
             }
-            let template = fs::read_to_string(entry.path()).unwrap();
-            env.add_template_owned(TEMPLATE_NAMES[i.unwrap()], template)
-                .unwrap();
         }
     }
     env

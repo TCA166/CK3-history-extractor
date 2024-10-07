@@ -69,9 +69,8 @@ fn get_history(
     game_state: &mut GameState,
 ) -> Vec<(GameString, Option<Shared<Character>>, GameString)> {
     let mut history: Vec<(GameString, Option<Shared<Character>>, GameString)> = Vec::new();
-    let hist = base.get("history");
-    if hist.is_some() {
-        let hist_obj = hist.unwrap().as_object().as_map();
+    if let Some(hist) = base.get("history") {
+        let hist_obj = hist.as_object().as_map();
         for (h, val) in hist_obj {
             let character;
             let action: GameString;
@@ -206,8 +205,8 @@ impl Title {
 
     /// Returns the culture of the title
     pub fn get_culture(&self) -> Option<Shared<Culture>> {
-        if self.culture.as_ref().is_some() {
-            return Some(self.culture.as_ref().unwrap().clone());
+        if let Some(culture) = &self.culture {
+            return Some(culture.clone());
         } else {
             return None;
         }
@@ -215,19 +214,19 @@ impl Title {
 
     /// Returns the faith of the title
     pub fn get_faith(&self) -> Option<Shared<Faith>> {
-        if self.faith.as_ref().is_some() {
-            return Some(self.faith.as_ref().unwrap().clone());
+        if let Some(faith) = &self.faith {
+            return Some(faith.clone());
         } else {
             return None;
         }
     }
 
+    /// Returns the holder of the title
     pub fn get_holder(&self) -> Option<Shared<Character>> {
-        let entry = self.history.last();
-        if entry.is_none() {
-            return None;
+        if let Some(entry) = self.history.last() {
+            return entry.1.clone();
         }
-        entry.unwrap().1.clone()
+        None
     }
 }
 
@@ -261,24 +260,20 @@ impl DummyInit for Title {
             self.color = [color[0], color[1], color[2]];
         }*/
         self.key = Some(base.get_string_ref("key"));
-        let de_jure_id = base.get("de_jure_liege");
-        if de_jure_id.is_some() {
-            let o = game_state.get_title(&de_jure_id.unwrap().as_id()).clone();
+        if let Some(de_jure_id) = base.get("de_jure_liege") {
+            let o = game_state.get_title(&de_jure_id.as_id()).clone();
             self.de_jure = Some(o.clone());
             o.get_internal_mut()
                 .add_jure_vassal(game_state.get_title(&self.id).clone());
         }
-        let de_facto_id = base.get("de_facto_liege");
-        if de_facto_id.is_some() {
-            let o = game_state.get_title(&de_facto_id.unwrap().as_id()).clone();
+        if let Some(de_facto_id) = base.get("de_facto_liege") {
+            let o = game_state.get_title(&de_facto_id.as_id()).clone();
             self.de_facto = Some(o.clone());
             o.get_internal_mut()
                 .add_facto_vassal(game_state.get_title(&self.id).clone());
         }
-        let claim_node = base.get("claim");
-        if claim_node.is_some() {
-            let c = claim_node.unwrap();
-            match c {
+        if let Some(claims) = base.get("claim") {
+            match claims {
                 SaveFileValue::Object(claim) => {
                     for claim in claim.as_array() {
                         self.claims
@@ -294,9 +289,8 @@ impl DummyInit for Title {
                 }
             }
         }
-        let capital = base.get("capital");
-        if capital.is_some() {
-            self.capital = Some(game_state.get_title(&capital.unwrap().as_id()).clone());
+        if let Some(capital) = base.get("capital") {
+            self.capital = Some(game_state.get_title(&capital.as_id()).clone());
         }
         self.name = Some(base.get("name").unwrap().as_string().clone());
         let history = get_history(base, game_state);
@@ -310,10 +304,11 @@ impl GameObjectDerived for Title {
     }
 
     fn get_name(&self) -> GameString {
-        if self.name.is_none() {
+        if let Some(name) = &self.name {
+            return name.clone();
+        } else {
             return GameString::wrap("Unnamed".to_owned());
         }
-        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -363,26 +358,25 @@ impl Serialize for Title {
         let mut state = serializer.serialize_struct("Title", 12)?;
         state.serialize_field("id", &self.id)?;
         state.serialize_field("name", &self.name)?;
-        let tier = self.get_class();
-        if tier.is_some() {
+        if let Some(tier) = self.get_class() {
             state.serialize_field("tier", &tier)?;
         } else {
             state.serialize_field("tier", "")?;
         }
-        if self.faith.is_some() {
-            let faith = DerivedRef::from_derived(self.faith.as_ref().unwrap().clone());
+        if let Some(faith) = &self.faith {
+            let faith = DerivedRef::from_derived(faith.clone());
             state.serialize_field("faith", &faith)?;
         }
-        if self.culture.is_some() {
-            let culture = DerivedRef::from_derived(self.culture.as_ref().unwrap().clone());
+        if let Some(culture) = &self.culture {
+            let culture = DerivedRef::from_derived(culture.clone());
             state.serialize_field("culture", &culture)?;
         }
-        if self.de_jure.is_some() {
-            let de_jure = DerivedRef::from_derived(self.de_jure.as_ref().unwrap().clone());
+        if let Some(de_jure) = &self.de_jure {
+            let de_jure = DerivedRef::from_derived(de_jure.clone());
             state.serialize_field("de_jure", &de_jure)?;
         }
-        if self.de_facto.is_some() {
-            let de_facto = DerivedRef::from_derived(self.de_facto.as_ref().unwrap().clone());
+        if let Some(de_facto) = &self.de_facto {
+            let de_facto = DerivedRef::from_derived(de_facto.clone());
             state.serialize_field("de_facto", &de_facto)?;
         }
         state.serialize_field("de_jure_vassals", &serialize_array(&self.de_jure_vassals))?;
@@ -390,18 +384,18 @@ impl Serialize for Title {
         let mut history = Vec::new();
         for h in self.history.iter() {
             let mut o = (h.0.clone(), None, h.2.clone());
-            if h.1.is_some() {
-                let c = DerivedRef::from_derived(h.1.as_ref().unwrap().clone());
+            if let Some(holder) = &h.1 {
+                let c = DerivedRef::from_derived(holder.clone());
                 o.1 = Some(c);
             }
             history.push(o);
         }
         state.serialize_field("claims", &serialize_array(&self.claims))?;
         state.serialize_field("history", &history)?;
-        if self.capital.is_some() {
+        if let Some(capital) = &self.capital {
             state.serialize_field(
                 "capital",
-                &DerivedRef::from_derived(self.capital.as_ref().unwrap().clone()),
+                &DerivedRef::from_derived(capital.clone()),
             )?;
         }
         state.end()
@@ -438,27 +432,27 @@ impl Renderable for Title {
             );
             map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
         }
-        if self.de_jure.is_some() {
+        if let Some(de_jure) = &self.de_jure {
             stack.push(RenderableType::Title(
-                self.de_jure.as_ref().unwrap().clone(),
+                de_jure.clone(),
             ));
         }
-        if self.de_facto.is_some() {
+        if let Some(de_facto) = &self.de_facto {
             stack.push(RenderableType::Title(
-                self.de_facto.as_ref().unwrap().clone(),
+                de_facto.clone(),
             ));
         }
         for v in &self.de_jure_vassals {
             stack.push(RenderableType::Title(v.clone()));
         }
         for o in &self.history {
-            if o.1.is_some() {
-                stack.push(RenderableType::Character(o.1.as_ref().unwrap().clone()));
+            if let Some(character) = &o.1 {
+                stack.push(RenderableType::Character(character.clone()));
             }
         }
-        if self.capital.is_some() {
+        if let Some(capital) = &self.capital {
             stack.push(RenderableType::Title(
-                self.capital.as_ref().unwrap().clone(),
+                capital.clone(),
             ));
         }
     }
@@ -484,57 +478,48 @@ impl Cullable for Title {
             return;
         }
         self.depth = depth;
-        if self.de_jure.is_some() {
-            let c = self.de_jure.as_ref().unwrap().try_get_internal_mut();
-            if c.is_ok() {
-                c.unwrap().set_depth(depth - 1);
+        if let Some(de_jure) = &self.de_jure {
+            if let Ok(mut c) = de_jure.try_borrow_mut() {
+                c.set_depth(depth - 1);
             }
         }
-        if self.de_facto.is_some() {
-            let c = self.de_facto.as_ref().unwrap().try_get_internal_mut();
-            if c.is_ok() {
-                c.unwrap().set_depth(depth);
+        if let Some(de_facto) = &self.de_facto {
+            if let Ok(mut c) = de_facto.try_borrow_mut() {
+                c.set_depth(depth);
             }
         }
         for v in &self.de_jure_vassals {
-            let o = v.try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth);
+            if let Ok(mut v) = v.try_borrow_mut() {
+                v.set_depth(depth);
             }
         }
         for v in &self.de_facto_vassals {
-            let o = v.try_get_internal_mut();
-            if o.is_ok() {
-                o.unwrap().set_depth(depth);
+            if let Ok(mut v) = v.try_borrow_mut() {
+                v.set_depth(depth);
             }
         }
         for o in self.history.iter_mut() {
-            if o.1.is_some() {
-                let c = o.1.as_ref().unwrap().try_get_internal_mut();
-                if c.is_ok() {
-                    c.unwrap().set_depth(depth);
+            if let Some(character) = &o.1 {
+                if let Ok(mut c) = character.try_borrow_mut() {
+                    c.set_depth(depth);
                 }
             }
         }
-        if self.capital.is_some() {
-            let c = self.capital.as_ref().unwrap().try_get_internal_mut();
-            if c.is_ok() {
-                let mut c = c.unwrap();
+        if let Some(capital) = &self.capital {
+            if let Ok(mut c) = capital.try_borrow_mut() {
                 if c.id != self.id {
                     c.set_depth(depth);
                 }
             }
         }
-        if self.faith.is_some() {
-            let c = self.faith.as_ref().unwrap().try_get_internal_mut();
-            if c.is_ok() {
-                c.unwrap().set_depth(depth);
+        if let Some(faith) = &self.faith {
+            if let Ok(mut f) = faith.try_borrow_mut() {
+                f.set_depth(depth);
             }
         }
-        if self.culture.is_some() {
-            let c = self.culture.as_ref().unwrap().try_get_internal_mut();
-            if c.is_ok() {
-                c.unwrap().set_depth(depth);
+        if let Some(culture) = &self.culture {
+            if let Ok(mut c) = culture.try_borrow_mut() {
+                c.set_depth(depth);
             }
         }
     }
