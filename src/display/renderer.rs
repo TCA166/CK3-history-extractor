@@ -1,5 +1,4 @@
 use std::{
-    collections::{HashMap, HashSet},
     fs, thread,
 };
 
@@ -11,6 +10,7 @@ use super::{
     super::{
         parser::{GameId, GameState},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
+        types::{HashMap, HashSet}
     },
     graph::Grapher,
     map::GameMap,
@@ -66,7 +66,7 @@ impl<'a> Renderer<'a> {
         create_dir_maybe(format!("{path}/{}", Culture::get_subdir()).as_str());
         Renderer {
             env,
-            rendered: HashMap::new(),
+            rendered: HashMap::default(),
             path,
             game_map,
             grapher,
@@ -99,7 +99,7 @@ impl<'a> Renderer<'a> {
         let rendered = self
             .rendered
             .entry(T::get_subdir())
-            .or_insert(HashSet::new());
+            .or_insert(HashSet::default());
         rendered.insert(obj.get_id());
         return true;
     }

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use rand::{thread_rng, Rng};
 
 use plotters::{
@@ -14,7 +12,7 @@ use tidy_tree::TidyTree;
 use super::super::{
     parser::{GameId, GameState, GameString},
     structures::{Character, Dynasty, GameObjectDerived, Title},
-    types::{Shared, Wrapper},
+    types::{Shared, Wrapper, HashMap},
 };
 
 /// Common graph size in pixels
@@ -191,7 +189,7 @@ impl Grapher {
     ) {
         let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
         //tree nodes don't have any data attached to them, so we need to store the data separately
-        let mut storage = HashMap::new();
+        let mut storage = HashMap::default();
         let fnt = ("sans-serif", 6.66 * TREE_SCALE).into_font();
         let mut stack = Vec::new(); //BFS stack
         handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
@@ -218,8 +216,8 @@ impl Grapher {
 
         let root;
 
-        let mut groups: HashMap<&str, RGBColor> = HashMap::new(); //class groups
-        let mut positions = HashMap::new();
+        let mut groups: HashMap<&str, RGBColor> = HashMap::default(); //class groups
+        let mut positions = HashMap::default();
         {
             //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
             let layout = tree.get_pos(); //this isn't documented, but this function dumps the layout into a 3xN matrix (id, x, y)
@@ -302,10 +300,10 @@ impl Grapher {
         }
         //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions {
-            let (parent, _, (_, node_height), _, _) = storage.get(&id).unwrap();
+            let (parent, _, (_, node_height), _, _) = storage.get(id).unwrap();
             if *parent != NO_PARENT {
                 //draw the line if applicable
-                let (parent_x, parent_y) = positions.get(&parent).unwrap();
+                let (parent_x, parent_y) = positions.get(parent).unwrap();
                 //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
                     vec![
@@ -320,7 +318,7 @@ impl Grapher {
         //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions {
             let (_, node_name, (node_width, node_height), txt_point, class) =
-                storage.get(&id).unwrap();
+                storage.get(id).unwrap();
             let color = if let Some(class) = class {
                 groups.get(class.as_str()).unwrap()
             } else {

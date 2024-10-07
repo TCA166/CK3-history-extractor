@@ -1,4 +1,4 @@
-use std::{collections::HashMap, thread};
+use std::thread;
 
 use csv::ReaderBuilder;
 
@@ -12,7 +12,7 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue};
+use super::super::{parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue}, types::HashMap};
 
 // color stuff
 
@@ -58,7 +58,7 @@ fn read_png_bytes(path: String) -> Vec<u8> {
 fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
     let file = SaveFile::open(&path);
-    let mut map = HashMap::new();
+    let mut map = HashMap::default();
     for mut title in file {
         let title_object = title.parse();
         //DFS in the structure
@@ -200,7 +200,7 @@ impl GameMap {
                 //unique scaling algorithm here, we take the most common color in a SCALE x SCALE square and set all the pixels in that square to that color
                 //UNLESS a set amount are water, in which case we set the square to water
                 let mut water: u8 = 0;
-                let mut occurences = HashMap::new();
+                let mut occurences = HashMap::default();
                 for i in 0..SCALE {
                     for j in 0..SCALE {
                         let idx = ((y + i) * IMG_WIDTH * 3 + (x + j) * 3) as usize;
@@ -238,7 +238,7 @@ impl GameMap {
         let height = IMG_HEIGHT / SCALE;
         //save_buffer("provinces.png", &new_bytes, width, height, image::ExtendedColorType::Rgb8).unwrap();
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
-        let mut id_colors = HashMap::new();
+        let mut id_colors = HashMap::default();
         let mut rdr = ReaderBuilder::new()
             .comment(Some(b'#'))
             .flexible(true)
@@ -280,7 +280,7 @@ impl GameMap {
         F: Fn(&String) -> [u8; 3],
     {
         let mut new_map = Vec::with_capacity(self.province_map.len());
-        let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::new();
+        let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::default();
         for k in key_list.iter() {
             if let Some(color) = self.title_color_map.get(k.as_str()) {
                 colors.insert(color, assoc(k));

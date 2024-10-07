@@ -1,6 +1,6 @@
-use std::{collections::HashMap, fmt::Debug, rc::Rc};
+use std::{fmt::Debug, rc::Rc};
 
-use super::super::types::{RefOrRaw, Wrapper};
+use super::super::types::{RefOrRaw, Wrapper, HashMap, HashMapIter};
 
 /// A type alias for a game object id.
 pub type GameId = u32;
@@ -194,7 +194,7 @@ pub trait GameObjectCollection: Debug {
 
 impl GameObjectCollection for HashMap<String, SaveFileValue> {
     fn new() -> Self {
-        HashMap::new()
+        HashMap::default()
     }
 
     fn is_empty(&self) -> bool {
@@ -311,7 +311,7 @@ impl GameObject<HashMap<String, SaveFileValue>> {
 
 impl<'a> IntoIterator for &'a GameObject<HashMap<String, SaveFileValue>> {
     type Item = (&'a String, &'a SaveFileValue);
-    type IntoIter = std::collections::hash_map::Iter<'a, String, SaveFileValue>;
+    type IntoIter = HashMapIter<'a, String, SaveFileValue>;
 
     fn into_iter(self) -> Self::IntoIter {
         (&self.inner).into_iter()

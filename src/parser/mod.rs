@@ -18,9 +18,8 @@ pub use game_state::GameState;
 
 use super::{
     structures::{FromGameObject, Player},
-    types::{Wrapper, WrapperMut},
+    types::{Wrapper, WrapperMut, HashMap},
 };
-use std::collections::HashMap;
 
 /// A function that processes a section of the save file.
 /// Based on the given section, it will update the [GameState] object and the [Player] vector.
@@ -58,7 +57,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             let counties = r.as_map().get_object_ref("counties").as_map();
             // we create an association between the county key and the faith and culture of the county
             // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
-            let mut key_assoc = HashMap::new();
+            let mut key_assoc = HashMap::default();
             for (key, p) in counties.into_iter() {
                 let p = p.as_object().as_map();
                 let faith = game_state.get_faith(&p.get("faith").unwrap().as_id());

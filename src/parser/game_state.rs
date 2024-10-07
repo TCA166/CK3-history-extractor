@@ -1,12 +1,10 @@
-use std::collections::{hash_map::Iter, HashMap};
-
 use super::{
     super::{
         display::{Localizable, Localizer},
         structures::{
             Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
         },
-        types::{RefOrRaw, Shared, Wrapper, WrapperMut},
+        types::{RefOrRaw, Shared, Wrapper, WrapperMut, HashMap, HashMapIter},
     },
     game_object::{GameId, GameObjectMap, GameString},
 };
@@ -71,15 +69,15 @@ impl GameState {
     /// Create a new GameState
     pub fn new() -> GameState {
         GameState {
-            characters: HashMap::new(),
-            titles: HashMap::new(),
-            faiths: HashMap::new(),
-            cultures: HashMap::new(),
-            dynasties: HashMap::new(),
-            memories: HashMap::new(),
-            artifacts: HashMap::new(),
+            characters: HashMap::default(),
+            titles: HashMap::default(),
+            faiths: HashMap::default(),
+            cultures: HashMap::default(),
+            dynasties: HashMap::default(),
+            memories: HashMap::default(),
+            artifacts: HashMap::default(),
             traits_lookup: Vec::new(),
-            contract_transform: HashMap::new(),
+            contract_transform: HashMap::default(),
             current_date: None,
             current_year: None,
             offset_date: None,
@@ -224,7 +222,7 @@ impl GameState {
 
     /// Creates a hashmap death year->number of deaths
     pub fn get_total_yearly_deaths(&self) -> HashMap<u32, u32> {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         for (_, character) in &self.characters {
             let char = character.get_internal();
             let death_date = char.get_death_date();
@@ -255,7 +253,7 @@ impl GameState {
     where
         F: Fn(RefOrRaw<Character>) -> Option<GameId>,
     {
-        let mut result = HashMap::new();
+        let mut result = HashMap::default();
         for (_, character) in &self.characters {
             let char = character.get_internal();
             let death_date = char.get_death_date();
@@ -273,12 +271,12 @@ impl GameState {
                     continue;
                 }
             }
-            let entry = result.entry(key.unwrap()).or_insert(HashMap::new());
+            let entry = result.entry(key.unwrap()).or_insert(HashMap::default());
             let count = entry.entry(death_year).or_insert(0);
             *count += 1;
         }
         // convert the internal hashmaps to vectors
-        let mut res = HashMap::new();
+        let mut res = HashMap::default();
         for (id, data) in result {
             let mut v = Vec::new();
             for (year, count) in &data {
@@ -299,7 +297,7 @@ impl GameState {
     }
 
     /// Returns a iterator over the titles
-    pub fn get_title_iter(&self) -> Iter<GameId, Shared<Title>> {
+    pub fn get_title_iter(&self) -> HashMapIter<GameId, Shared<Title>> {
         self.titles.iter()
     }
 }

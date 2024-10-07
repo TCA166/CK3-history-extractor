@@ -1,8 +1,7 @@
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::{fs, mem};
 
-use super::super::{parser::GameString, types::Wrapper};
+use super::super::{parser::GameString, types::{Wrapper, HashMap}};
 
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.
@@ -85,7 +84,7 @@ impl Localizer {
     /// After the data is added, the [Localizer::resolve] function should be called to resolve the special localisation invocations.
     pub fn new() -> Self {
         Localizer {
-            data: HashMap::new(),
+            data: HashMap::default(),
         }
     }
 
