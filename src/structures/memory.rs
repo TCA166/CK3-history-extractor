@@ -4,6 +4,7 @@ use super::{
     super::{
         display::{Cullable, Localizable, Localizer, RenderableType},
         parser::{GameId, GameObjectMap, GameState, GameString},
+        types::WrapperMut
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
@@ -97,7 +98,7 @@ impl Cullable for Memory {
         }
         self.depth = depth;
         for part in self.participants.iter_mut() {
-            if let Ok(mut part) = part.1.try_borrow_mut() {
+            if let Ok(mut part) = part.1.try_get_internal_mut() {
                 part.set_depth(depth - 1);
             }
         }

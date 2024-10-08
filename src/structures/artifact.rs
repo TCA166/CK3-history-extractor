@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, Localizable, Localizer, RenderableType},
         parser::{GameId, GameObjectMap, GameState, GameString},
-        types::Shared,
+        types::{Shared, WrapperMut},
     },
     Character, DerivedRef, DummyInit, GameObjectDerived,
 };
@@ -119,18 +119,18 @@ impl Cullable for Artifact {
         }
         self.depth = depth;
         if let Some(owner) = &self.owner {
-            if let Ok(mut owner) = owner.try_borrow_mut() {
+            if let Ok(mut owner) = owner.try_get_internal_mut() {
                 owner.set_depth(depth);
             }
         }
         for h in self.history.iter_mut() {
             if let Some(actor) = &h.2 {
-                if let Ok(mut actor) = actor.try_borrow_mut() {
+                if let Ok(mut actor) = actor.try_get_internal_mut() {
                     actor.set_depth(depth);
                 }
             }
             if let Some(recipient) = &h.3 {
-                if let Ok(mut recipient) = recipient.try_borrow_mut() {
+                if let Ok(mut recipient) = recipient.try_get_internal_mut() {
                     recipient.set_depth(depth);
                 }
             }

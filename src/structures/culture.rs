@@ -7,7 +7,7 @@ use super::{
         },
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
-        types::Wrapper,
+        types::{Wrapper, WrapperMut},
     },
     serialize_array, DummyInit, GameObjectDerived, Shared,
 };
@@ -37,7 +37,7 @@ fn get_parents(
     if let Some(parents_obj) = base.get("parents") {
         for p in parents_obj.as_object().as_array() {
             let parent = game_state.get_culture(&p.as_id()).clone();
-            if let Ok(mut r) = parent.try_borrow_mut() {
+            if let Ok(mut r) = parent.try_get_internal_mut() {
                 r.register_child(game_state.get_culture(&id));
             }
             parents.push(parent.clone());
@@ -237,12 +237,12 @@ impl Cullable for Culture {
         }
         self.depth = depth;
         for p in &self.parents {
-            if let Ok(mut r) = p.try_borrow_mut() {
+            if let Ok(mut r) = p.try_get_internal_mut() {
                 r.set_depth(depth);
             }
         }
         for c in &self.children {
-            if let Ok(mut r) = c.try_borrow_mut() {
+            if let Ok(mut r) = c.try_get_internal_mut() {
                 r.set_depth(depth);
             }
         }

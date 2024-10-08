@@ -479,46 +479,46 @@ impl Cullable for Title {
         }
         self.depth = depth;
         if let Some(de_jure) = &self.de_jure {
-            if let Ok(mut c) = de_jure.try_borrow_mut() {
+            if let Ok(mut c) = de_jure.try_get_internal_mut() {
                 c.set_depth(depth - 1);
             }
         }
         if let Some(de_facto) = &self.de_facto {
-            if let Ok(mut c) = de_facto.try_borrow_mut() {
+            if let Ok(mut c) = de_facto.try_get_internal_mut() {
                 c.set_depth(depth);
             }
         }
         for v in &self.de_jure_vassals {
-            if let Ok(mut v) = v.try_borrow_mut() {
+            if let Ok(mut v) = v.try_get_internal_mut() {
                 v.set_depth(depth);
             }
         }
         for v in &self.de_facto_vassals {
-            if let Ok(mut v) = v.try_borrow_mut() {
+            if let Ok(mut v) = v.try_get_internal_mut() {
                 v.set_depth(depth);
             }
         }
         for o in self.history.iter_mut() {
             if let Some(character) = &o.1 {
-                if let Ok(mut c) = character.try_borrow_mut() {
+                if let Ok(mut c) = character.try_get_internal_mut() {
                     c.set_depth(depth);
                 }
             }
         }
         if let Some(capital) = &self.capital {
-            if let Ok(mut c) = capital.try_borrow_mut() {
+            if let Ok(mut c) = capital.try_get_internal_mut() {
                 if c.id != self.id {
                     c.set_depth(depth);
                 }
             }
         }
         if let Some(faith) = &self.faith {
-            if let Ok(mut f) = faith.try_borrow_mut() {
+            if let Ok(mut f) = faith.try_get_internal_mut() {
                 f.set_depth(depth);
             }
         }
         if let Some(culture) = &self.culture {
-            if let Ok(mut c) = culture.try_borrow_mut() {
+            if let Ok(mut c) = culture.try_get_internal_mut() {
                 c.set_depth(depth);
             }
         }

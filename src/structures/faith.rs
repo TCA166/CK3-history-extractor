@@ -5,7 +5,7 @@ use super::{
         display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectArray, GameObjectMap, GameState, GameString},
-        types::Wrapper,
+        types::{Wrapper, WrapperMut},
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
@@ -201,7 +201,7 @@ impl Cullable for Faith {
         }
         self.depth = depth;
         if let Some(head) = &self.head {
-            if let Ok(mut head) = head.try_borrow_mut() {
+            if let Ok(mut head) = head.try_get_internal_mut() {
                 head.set_depth(depth - 1);
             }
         }
