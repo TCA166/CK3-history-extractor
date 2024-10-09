@@ -12,7 +12,7 @@ use tidy_tree::TidyTree;
 use super::super::{
     parser::{GameId, GameState, GameString},
     structures::{Character, Dynasty, GameObjectDerived, Title},
-    types::{Shared, Wrapper, HashMap},
+    types::{HashMap, OneOrMany, Shared, Wrapper},
 };
 
 /// Common graph size in pixels
@@ -82,12 +82,12 @@ fn handle_node<T: TreeNode>(
 }
 
 /// A trait for objects that can be used in a tree structure
-pub trait TreeNode: GameObjectDerived {
+pub trait TreeNode: GameObjectDerived + Sized {
     /// Returns an iterator over the children of the node
-    fn get_children(&self) -> &Vec<Shared<Self>>;
+    fn get_children(&self) -> Option<OneOrMany<Self>>;
 
     /// Returns an iterator over the parent of the node
-    fn get_parent(&self) -> &Vec<Shared<Self>>;
+    fn get_parent(&self) -> Option<OneOrMany<Self>>;
 
     /// Returns the class of the node
     fn get_class(&self) -> Option<GameString>;
@@ -195,20 +195,43 @@ impl Grapher {
         handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
         while let Some(current) = stack.pop() {
             let char = current.1.get_internal();
-            let iter = if reverse {
-                char.get_parent()
+            let iter;
+            if reverse {
+                if let Some(parent) = char.get_parent() {
+                    iter = parent;
+                } else {
+                    continue;
+                }
             } else {
-                char.get_children()
-            };
-            for child in iter {
-                handle_node(
-                    child.clone(),
-                    &mut tree,
-                    &mut stack,
-                    &mut storage,
-                    current.0,
-                    &fnt,
-                );
+                if let Some(children) = char.get_children() {
+                    iter = children;
+                } else {
+                    continue;
+                }
+            }
+            match iter {
+                OneOrMany::One(child) => {
+                    handle_node(
+                        child.clone(),
+                        &mut tree,
+                        &mut stack,
+                        &mut storage,
+                        current.0,
+                        &fnt,
+                    );
+                }
+                OneOrMany::Many(children) => {
+                    for child in children {
+                        handle_node(
+                            child.clone(),
+                            &mut tree,
+                            &mut stack,
+                            &mut storage,
+                            current.0,
+                            &fnt,
+                        );
+                    }
+                }
             }
         }
 

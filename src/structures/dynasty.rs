@@ -370,9 +370,7 @@ impl Renderable for Dynasty {
             stack.push(RenderableType::Character(leader.clone()));
         }
         if let Some(parent) = &self.parent {
-            stack.push(RenderableType::Dynasty(
-                parent.clone(),
-            ));
+            stack.push(RenderableType::Dynasty(parent.clone()));
         }
     }
 }
@@ -418,3 +416,6 @@ impl Cullable for Dynasty {
         self.depth
     }
 }
+
+// TODO add test, especially for dynastic graphs with incest and multiple marriages
+// Probably the weirdest comment I've ever written

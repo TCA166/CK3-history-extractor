@@ -12,7 +12,10 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::{parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue}, types::HashMap};
+use super::super::{
+    parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue},
+    types::HashMap,
+};
 
 // color stuff
 

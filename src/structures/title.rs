@@ -10,7 +10,7 @@ use super::{
         },
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, SaveFileObject, SaveFileValue},
-        types::{Wrapper, WrapperMut},
+        types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
 };
@@ -313,8 +313,11 @@ impl GameObjectDerived for Title {
 }
 
 impl TreeNode for Title {
-    fn get_children(&self) -> &Vec<Shared<Self>> {
-        &self.de_jure_vassals
+    fn get_children(&self) -> Option<OneOrMany<Self>> {
+        if self.de_jure_vassals.is_empty() {
+            return None;
+        }
+        Some(OneOrMany::Many(&self.de_jure_vassals))
     }
 
     fn get_class(&self) -> Option<GameString> {
@@ -344,9 +347,11 @@ impl TreeNode for Title {
         }
     }
 
-    fn get_parent(&self) -> &Vec<Shared<Self>> {
-        // TODO: Implement this
-        &self.de_jure_vassals
+    fn get_parent(&self) -> Option<OneOrMany<Self>> {
+        if let Some(de_jure) = &self.de_jure {
+            return Some(OneOrMany::One(de_jure));
+        }
+        None
     }
 }
 
@@ -393,10 +398,7 @@ impl Serialize for Title {
         state.serialize_field("claims", &serialize_array(&self.claims))?;
         state.serialize_field("history", &history)?;
         if let Some(capital) = &self.capital {
-            state.serialize_field(
-                "capital",
-                &DerivedRef::from_derived(capital.clone()),
-            )?;
+            state.serialize_field("capital", &DerivedRef::from_derived(capital.clone()))?;
         }
         state.end()
     }
@@ -433,14 +435,10 @@ impl Renderable for Title {
             map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
         }
         if let Some(de_jure) = &self.de_jure {
-            stack.push(RenderableType::Title(
-                de_jure.clone(),
-            ));
+            stack.push(RenderableType::Title(de_jure.clone()));
         }
         if let Some(de_facto) = &self.de_facto {
-            stack.push(RenderableType::Title(
-                de_facto.clone(),
-            ));
+            stack.push(RenderableType::Title(de_facto.clone()));
         }
         for v in &self.de_jure_vassals {
             stack.push(RenderableType::Title(v.clone()));
@@ -451,9 +449,7 @@ impl Renderable for Title {
             }
         }
         if let Some(capital) = &self.capital {
-            stack.push(RenderableType::Title(
-                capital.clone(),
-            ));
+            stack.push(RenderableType::Title(capital.clone()));
         }
     }
 }

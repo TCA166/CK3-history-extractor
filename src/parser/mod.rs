@@ -18,7 +18,7 @@ pub use game_state::GameState;
 
 use super::{
     structures::{FromGameObject, Player},
-    types::{Wrapper, WrapperMut, HashMap},
+    types::{HashMap, Wrapper, WrapperMut},
 };
 
 /// A function that processes a section of the save file.

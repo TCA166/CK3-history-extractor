@@ -7,7 +7,7 @@ use super::{
         },
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
-        types::{Wrapper, WrapperMut},
+        types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, DummyInit, GameObjectDerived, Shared,
 };
@@ -105,12 +105,18 @@ impl GameObjectDerived for Culture {
 }
 
 impl TreeNode for Culture {
-    fn get_children(&self) -> &Vec<Shared<Self>> {
-        &self.children
+    fn get_children(&self) -> Option<OneOrMany<Self>> {
+        if self.children.is_empty() {
+            return None;
+        }
+        Some(OneOrMany::Many(&self.children))
     }
 
-    fn get_parent(&self) -> &Vec<Shared<Self>> {
-        &self.parents
+    fn get_parent(&self) -> Option<OneOrMany<Self>> {
+        if self.parents.is_empty() {
+            return None;
+        }
+        Some(OneOrMany::Many(&self.parents))
     }
 
     fn get_class(&self) -> Option<GameString> {

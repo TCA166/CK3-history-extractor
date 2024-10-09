@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 use std::{fs, mem};
 
-use super::super::{parser::GameString, types::{Wrapper, HashMap}};
+use super::super::{
+    parser::GameString,
+    types::{HashMap, Wrapper},
+};
 
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.

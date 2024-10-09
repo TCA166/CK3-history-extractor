@@ -82,3 +82,9 @@ impl<T> WrapperMut<T> for Shared<T> {
         self.try_borrow_mut()
     }
 }
+
+/// A type that can be either a single value or a vector of values.
+pub enum OneOrMany<'a, T> {
+    One(&'a Shared<T>),
+    Many(&'a Vec<Shared<T>>),
+}

@@ -171,9 +171,7 @@ impl Renderable for Faith {
             }
         }
         if let Some(head) = &self.head {
-            stack.push(RenderableType::Character(
-                head.clone(),
-            ));
+            stack.push(RenderableType::Character(head.clone()));
         }
     }
 }

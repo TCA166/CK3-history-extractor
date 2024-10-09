@@ -1,6 +1,6 @@
 use std::{fmt::Debug, rc::Rc};
 
-use super::super::types::{RefOrRaw, Wrapper, HashMap, HashMapIter};
+use super::super::types::{HashMap, HashMapIter, RefOrRaw, Wrapper};
 
 /// A type alias for a game object id.
 pub type GameId = u32;

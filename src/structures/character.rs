@@ -7,7 +7,7 @@ use super::{
         },
         jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
-        types::{Wrapper, WrapperMut},
+        types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId,
     GameObjectDerived, Memory, Shared, Title,
@@ -503,21 +503,23 @@ impl Character {
 
     /// Gets the DNA similarity of the character with another character
     pub fn dna_similarity(&self, other: Shared<Character>) -> f32 {
-        if self.dna.is_none() {
+        if let Some(dna) = &self.dna {
+            // Ok so I did discover that dna string lengths are always multiple of 4, which does imply that they are encoded ints or shorts
+            // but that seems to be just a coincidence? experimenting with comparing multiples of 4 characters doesn't seem to give any meaningful results
+            // so single char comparison it is, the metric is still far from perfect, but until we know more about the encoding, it's the best we can do
+            let mut dna_chars = dna.chars();
+            let other = other.get_internal();
+            let mut other_chars = other.dna.as_ref().unwrap().chars();
+            let mut similarity = 0;
+            while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()) {
+                if d == o {
+                    similarity += 1;
+                }
+            }
+            return similarity as f32 / dna.len() as f32;
+        } else {
             return 0.0;
         }
-        //MAYBE improve this measure, tends to jump by 0.3
-        let dna = self.dna.as_ref().unwrap().as_str();
-        let mut similarity = 0;
-        let mut dna_chars = dna.chars();
-        let other = other.get_internal();
-        let mut other_chars = other.dna.as_ref().unwrap().chars();
-        while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()) {
-            if d == o {
-                similarity += 1;
-            }
-        }
-        return similarity as f32 / dna.len() as f32;
     }
 
     /// Gets the descendants of the character
@@ -669,12 +671,18 @@ impl GameObjectDerived for Character {
 }
 
 impl TreeNode for Character {
-    fn get_children(&self) -> &Vec<Shared<Character>> {
-        &self.children
+    fn get_children(&self) -> Option<OneOrMany<Character>> {
+        if self.children.is_empty() {
+            return None;
+        }
+        Some(OneOrMany::Many(&self.children))
     }
 
-    fn get_parent(&self) -> &Vec<Shared<Character>> {
-        &self.parents
+    fn get_parent(&self) -> Option<OneOrMany<Character>> {
+        if self.parents.is_empty() {
+            return None;
+        }
+        Some(OneOrMany::Many(&self.parents))
     }
 
     fn get_class(&self) -> Option<GameString> {
@@ -788,19 +796,13 @@ impl Renderable for Character {
             stack.push(RenderableType::Faith(faith.clone()));
         }
         if let Some(culture) = &self.culture {
-            stack.push(RenderableType::Culture(
-                culture.clone(),
-            ));
+            stack.push(RenderableType::Culture(culture.clone()));
         }
         if let Some(house) = &self.house {
-            stack.push(RenderableType::Dynasty(
-                house.clone(),
-            ));
+            stack.push(RenderableType::Dynasty(house.clone()));
         }
         if let Some(liege) = &self.liege {
-            stack.push(RenderableType::Character(
-                liege.get_ref().clone(),
-            ));
+            stack.push(RenderableType::Character(liege.get_ref().clone()));
         }
         for s in self.spouses.iter() {
             stack.push(RenderableType::Character(s.clone()));
@@ -867,7 +869,7 @@ impl Cullable for Character {
         //cullable set
         self.depth = depth;
         if let Some(liege) = &self.liege {
-            if let Ok(mut o) =  liege.get_ref().try_get_internal_mut() {
+            if let Ok(mut o) = liege.get_ref().try_get_internal_mut() {
                 o.set_depth(depth - 1);
             }
         }

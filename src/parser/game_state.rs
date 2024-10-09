@@ -4,7 +4,7 @@ use super::{
         structures::{
             Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
         },
-        types::{RefOrRaw, Shared, Wrapper, WrapperMut, HashMap, HashMapIter},
+        types::{HashMap, HashMapIter, RefOrRaw, Shared, Wrapper, WrapperMut},
     },
     game_object::{GameId, GameObjectMap, GameString},
 };
@@ -343,5 +343,34 @@ impl Serialize for GameState {
         state.serialize_field("artifacts", &self.artifacts)?;
         state.serialize_field("current_date", &self.current_date)?;
         state.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::structures::GameObjectDerived;
+
+    use super::*;
+
+    #[test]
+    fn test_get_or_insert_dummy() {
+        let mut map = HashMap::default();
+        let key = 1;
+        let val = get_or_insert_dummy::<Artifact>(&mut map, &key);
+        assert_eq!(val.get_internal().get_id(), key);
+        let val2 = get_or_insert_dummy(&mut map, &key);
+        assert_eq!(val.get_internal().get_id(), val2.get_internal().get_id());
+    }
+
+    #[test]
+    fn test_get_or_insert_dummy_from_value() {
+        let mut map = HashMap::default();
+        let key = 1;
+        let mut value = GameObjectMap::new();
+        value.rename("1".to_owned());
+        let val = get_or_insert_dummy_from_value::<Artifact>(&mut map, &value);
+        assert_eq!(val.get_internal().get_id(), key);
+        let val2 = get_or_insert_dummy(&mut map, &key);
+        assert_eq!(val.get_internal().get_id(), val2.get_internal().get_id());
     }
 }

@@ -1,6 +1,4 @@
-use std::{
-    fs, thread,
-};
+use std::{fs, thread};
 
 use minijinja::{Environment, Value};
 
@@ -10,7 +8,7 @@ use super::{
     super::{
         parser::{GameId, GameState},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
-        types::{HashMap, HashSet}
+        types::{HashMap, HashSet},
     },
     graph::Grapher,
     map::GameMap,
