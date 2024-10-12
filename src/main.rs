@@ -134,7 +134,8 @@ fn main() {
             }
         } else {
             //console interface only if we are in a terminal
-            let random_save_file = find_first_file_with_extension(".", CK3_EXTENSION).unwrap_or("".to_string());
+            let random_save_file =
+                find_first_file_with_extension(".", CK3_EXTENSION).unwrap_or("".to_string());
             filename = Input::<String>::new()
                 .with_prompt("Enter the save file path")
                 .validate_with(|input: &String| -> Result<(), &str> {
@@ -333,7 +334,7 @@ fn main() {
     }
     localizer.resolve();
     //initialize the save file
-    let save = SaveFile::open(filename.as_str());
+    let save = SaveFile::open(filename.as_str()).unwrap();
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();

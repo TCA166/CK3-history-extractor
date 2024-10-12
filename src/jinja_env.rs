@@ -63,7 +63,8 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
     env.add_global("map_present", map_present);
     env.add_global("no_vis", no_vis);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
-    if internal || !Path::new("./templates").exists() {
+    let template_path = Path::new("./templates");
+    if internal || !template_path.exists() {
         #[cfg(feature = "internal")]
         {
             use internal_templates::*;
@@ -85,7 +86,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             panic!("Internal templates requested but not compiled in");
         }
     } else {
-        let template_dir = fs::read_dir("templates").unwrap();
+        let template_dir = fs::read_dir(template_path).unwrap();
         for entry in template_dir {
             let entry = entry.unwrap();
             let file_name = entry.file_name();

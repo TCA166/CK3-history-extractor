@@ -60,7 +60,7 @@ fn read_png_bytes(path: String) -> Vec<u8> {
 /// Creates a mapping from barony title keys to province ids
 fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
-    let file = SaveFile::open(&path);
+    let file = SaveFile::open(&path).unwrap();
     let mut map = HashMap::default();
     for mut title in file {
         let title_object = title.parse();
