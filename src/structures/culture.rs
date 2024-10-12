@@ -3,7 +3,8 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{
-            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+            Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType,
+            TreeNode,
         },
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
@@ -165,21 +166,18 @@ impl Renderable for Culture {
         "cultures"
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self) {
-            return;
-        }
-        if let Some(grapher) = renderer.get_grapher() {
-            let path = format!(
-                "{}/{}/{}.svg",
-                renderer.get_path(),
-                Self::get_subdir(),
-                self.id
-            );
+    fn render(
+        &self,
+        path: &str,
+        game_state: &GameState,
+        grapher: Option<&Grapher>,
+        map: Option<&GameMap>,
+    ) {
+        if let Some(grapher) = grapher {
+            let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
             grapher.create_culture_graph(self.id, &path);
         }
-        if let Some(map) = renderer.get_map() {
-            let game_state = renderer.get_state();
+        if let Some(map) = map {
             let mut keys = Vec::new();
             for entry in game_state.get_title_iter() {
                 let title = entry.1.get_internal();
@@ -196,12 +194,7 @@ impl Renderable for Culture {
                 }
             }
             if !keys.is_empty() {
-                let path = format!(
-                    "{}/{}/{}.png",
-                    renderer.get_path(),
-                    Self::get_subdir(),
-                    self.id
-                );
+                let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
                 map.create_map_file(
                     keys,
                     &[70, 255, 70],
@@ -210,6 +203,9 @@ impl Renderable for Culture {
                 );
             }
         }
+    }
+
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
         for p in &self.parents {
             stack.push(RenderableType::Culture(p.clone()));
         }

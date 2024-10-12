@@ -26,10 +26,7 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{
-    Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType, Renderer,
-    Timeline,
-};
+use display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, Renderer, Timeline};
 
 /// The languages supported by the game.
 const LANGUAGES: [&'static str; 7] = [
@@ -378,18 +375,10 @@ fn main() {
         );
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         render_spinner.set_style(spinner_style.clone());
-        let mut queue = vec![RenderableType::Player(player)];
         if !no_vis {
-            timeline
-                .as_ref()
-                .unwrap()
-                .render_all(&mut queue, &mut renderer);
-            render_spinner.inc(1);
+            render_spinner.inc(renderer.render_all(timeline.as_ref().unwrap()));
         }
-        while let Some(obj) = queue.pop() {
-            obj.render_all(&mut queue, &mut renderer);
-            render_spinner.inc(1);
-        }
+        render_spinner.inc(renderer.render_all(player));
         render_spinner.finish_with_message("Rendering complete");
         if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
             open::that(player.get_path(&folder_name)).unwrap();

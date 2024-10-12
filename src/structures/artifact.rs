@@ -140,7 +140,7 @@ impl Cullable for Artifact {
 
 impl Artifact {
     /// Render the characters in the history of the artifact
-    pub fn render_history(&self, stack: &mut Vec<RenderableType>) {
+    pub fn add_ref(&self, stack: &mut Vec<RenderableType>) {
         for h in self.history.iter() {
             if let Some(actor) = &h.2 {
                 stack.push(RenderableType::Character(actor.clone()));

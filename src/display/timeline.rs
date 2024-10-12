@@ -8,8 +8,8 @@ use super::{
         types::{Shared, Wrapper, WrapperMut},
     },
     graph::Grapher,
-    renderer::{Cullable, Renderable, Renderer},
-    RenderableType,
+    renderer::{Cullable, Renderable},
+    GameMap, RenderableType,
 };
 
 //const CREATED_STR:&str = "Created";
@@ -312,16 +312,18 @@ impl Renderable for Timeline {
         TIMELINE_TEMPLATE_NAME
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        let grapher = renderer.get_grapher();
+    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: Option<&GameMap>) {
         if grapher.is_some() {
-            let path = format!("{}/timeline.svg", renderer.get_path());
+            let path = format!("{}/timeline.svg", path);
             Grapher::create_timeline_graph(&self.lifespans, self.latest_event, &path)
         }
-        renderer.render(self);
+    }
+
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
         for (title, _) in &self.lifespans {
             stack.push(RenderableType::Title(title.clone()));
         }
+
         for (_, char, _, _, difference) in &self.events {
             stack.push(RenderableType::Character(char.clone()));
             match difference {

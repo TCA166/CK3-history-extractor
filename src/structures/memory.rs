@@ -110,7 +110,7 @@ impl Cullable for Memory {
 }
 
 impl Memory {
-    pub fn render_participants(&self, stack: &mut Vec<RenderableType>) {
+    pub fn add_participants(&self, stack: &mut Vec<RenderableType>) {
         for part in self.participants.iter() {
             stack.push(RenderableType::Character(part.1.clone()));
         }

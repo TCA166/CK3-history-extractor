@@ -8,7 +8,7 @@ use super::{
     super::{
         parser::{GameId, GameState},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
-        types::{HashMap, HashSet},
+        types::{HashMap, HashSet, RefOrRaw, Wrapper},
     },
     graph::Grapher,
     map::GameMap,
@@ -28,13 +28,14 @@ fn create_dir_maybe(name: &str) {
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
 /// Additionally holds references to the [GameMap] and [Grapher] objects, should they exist of course.
-/// It is meant to be used in the [Renderable] trait to render objects and generally act as a helper for rendering objects.
+/// It is meant to be used as a worker object that renders objects into html pages.
 pub struct Renderer<'a> {
     /// The [minijinja] environment object that is used to render the templates.
     env: &'a Environment<'a>,
     /// A hashmap that tracks which objects have been rendered.
     rendered: HashMap<&'static str, HashSet<GameId>>,
     /// The path where the objects will be rendered to.
+    /// This usually takes the form of './{username}'s history/'.
     path: String,
     /// The game map object, if it exists.
     /// It may be utilized during the rendering process to render the map.
@@ -49,6 +50,19 @@ pub struct Renderer<'a> {
 
 impl<'a> Renderer<'a> {
     /// Create a new Renderer with the given [Environment] and path.
+    /// [create_dir_maybe] is called on the path to ensure that the directory exists, and the subdirectories are created.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `env` - The [Environment] object that is used to render the templates.
+    /// * `path` - The root path where the objects will be rendered to. Usually takes the form of './{username}'s history/'.
+    /// * `state` - The game state object.
+    /// * `game_map` - The game map object, if it exists.
+    /// * `grapher` - The grapher object, if it exists.
+    /// 
+    /// # Returns
+    /// 
+    /// A new Renderer object.
     pub fn new(
         env: &'a Environment<'a>,
         path: String,
@@ -81,19 +95,27 @@ impl<'a> Renderer<'a> {
     }
 
     /// Renders the object and returns true if it was actually rendered.
-    pub fn render<T: Renderable + Cullable>(&mut self, obj: &T) -> bool {
+    /// If the object is already rendered or is not ok to be rendered, then it returns false.
+    /// If the object was rendered it calls the [Renderable::render] method on the object and [Renderable::append_ref] on the object.
+    fn render<T: Renderable + Cullable>(
+        &mut self,
+        obj: RefOrRaw<T>,
+        stack: &mut Vec<RenderableType>,
+    ) -> bool {
         //if it is rendered then return
         if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok() {
             return false;
         }
         let path = obj.get_path(&self.path);
-        let ctx = Value::from_serialize(obj);
+        let ctx = Value::from_serialize(&obj);
         let template = self.env.get_template(T::get_template()).unwrap();
         let contents = template.render(ctx).unwrap();
         thread::spawn(move || {
             //IO heavy, so spawn a thread
             fs::write(path, contents).unwrap();
         });
+        obj.render(&self.path, &self.state, self.grapher, self.game_map);
+        obj.append_ref(stack);
         let rendered = self
             .rendered
             .entry(T::get_subdir())
@@ -102,24 +124,59 @@ impl<'a> Renderer<'a> {
         return true;
     }
 
-    /// Returns the root path of the rendered output
-    pub fn get_path(&self) -> &str {
-        &self.path
+    /// Renders a renderable enum object.
+    /// Calls [Renderer::render] on the object if it is not already rendered.
+    fn render_enum(&mut self, obj: &RenderableType, stack: &mut Vec<RenderableType>) -> bool {
+        match obj {
+            RenderableType::Character(obj) => self.render(obj.get_internal(), stack),
+            RenderableType::Dynasty(obj) => self.render(obj.get_internal(), stack),
+            RenderableType::Title(obj) => self.render(obj.get_internal(), stack),
+            RenderableType::Faith(obj) => self.render(obj.get_internal(), stack),
+            RenderableType::Culture(obj) => self.render(obj.get_internal(), stack),
+        }
     }
 
-    /// Returns the [Grapher] object if it exists.
-    pub fn get_grapher(&self) -> Option<&Grapher> {
-        self.grapher
-    }
-
-    /// Returns the [GameMap] object if it exists.
-    pub fn get_map(&self) -> Option<&GameMap> {
-        self.game_map
-    }
-
-    /// Returns the [GameState] object.
-    pub fn get_state(&self) -> &GameState {
-        self.state
+    /// Renders all the objects that are related to the given object.
+    /// It uses a stack to keep track of the objects that need to be rendered.
+    /// 
+    /// # Method
+    /// 
+    /// This method renders templates for given objects and the necessary graphics.
+    /// 
+    /// ## Template Rendering
+    /// 
+    /// First a corresponding template is retrieved from the [Environment] object using
+    /// the template name given by [Renderable::get_template].
+    /// Then the object is serialized (using [serde::Serialize]) into a [minijinja::Value] object.
+    /// Using this value object the template is rendered and the contents are written to a file 
+    /// using the path given by [Renderable::get_path].
+    /// 
+    /// ## Object Rendering
+    /// 
+    /// In order to ensure all the necessary objects for the template to display correctly are rendered,
+    /// the [Renderable::render] method is called on the object.
+    /// This method is meant to render all the graphics that are related to the object.
+    /// 
+    /// ## Related Objects
+    /// 
+    /// The [Renderable::append_ref] method is called on the object to append all the related objects to the stack.
+    /// This is done to ensure that all the related objects are rendered and the process is repeated for all the objects.
+    /// 
+    /// # Returns
+    /// 
+    /// The number of objects that were rendered.
+    pub fn render_all<T: Renderable + Cullable>(&mut self, obj: &T) -> u64 {
+        let mut stack: Vec<RenderableType> = Vec::new();
+        if !self.render(RefOrRaw::Raw(obj), &mut stack) {
+            return 0;
+        }
+        let mut counter = 1;
+        while let Some(obj) = stack.pop() {
+            if self.render_enum(&obj, &mut stack) {
+                counter += 1;
+            }
+        }
+        return counter;
     }
 }
 
@@ -128,21 +185,61 @@ impl<'a> Renderer<'a> {
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
 pub trait Renderable: Serialize + GameObjectDerived {
     /// Returns the template file name.
+    /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
     fn get_template() -> &'static str;
 
-    /// Returns the subdirectory name where the object should be written to.
+    /// Returns the subdirectory name where the rendered template should be written to.
+    /// This method is used to create a subdirectory in the root output path, and by the [Renderable::get_path] method.
     fn get_subdir() -> &'static str;
 
-    /// Returns the path where the object should be written to.
+    /// Returns the path where the rendered template should be written to.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `path` - The root output path of the renderer.
+    /// 
+    /// # Default Implementation
+    /// 
+    /// The default implementation returns a path in the format: `{path}/{subdir}/{id}.html`.
+    /// Subdir is returned by [Renderable::get_subdir] and id is returned by [GameObjectDerived::get_id].
+    /// This can be of course overridden by the implementing object.
+    /// 
+    /// # Returns
+    /// 
+    /// The full path where the object should be written to.
     fn get_path(&self, path: &str) -> String {
         format!("{}/{}/{}.html", path, Self::get_subdir(), self.get_id())
     }
 
-    /// Renders the object and all the references of the object if they are not already rendered.
-    /// This is used to render the object and add the references to the stack for rendering.
-    /// The implementation should call [Renderer::render] to render the object, render whatever else it needs and add the references to the stack.
-    /// It is the responsibility of the implementation to ensure that all the references are rendered.
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer);
+    /// Renders all the objects that are related to this object.
+    /// For example: graphs, maps, etc.
+    /// This is where your custom rendering logic should go.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `path` - The root output path of the renderer.
+    /// * `game_state` - The game state object.
+    /// * `grapher` - The grapher object, if it exists.
+    /// * `map` - The game map object, if it exists.
+    /// 
+    /// # Default Implementation
+    /// 
+    /// The default implementation does nothing. It is up to the implementing object to override this method.
+    #[allow(unused_variables)]
+    fn render(
+        &self,
+        path: &str,
+        game_state: &GameState,
+        grapher: Option<&Grapher>,
+        map: Option<&GameMap>,
+    ) {
+    }
+
+    /// Appends all the related objects to the stack.
+    /// This is used to ensure that all the related objects are rendered.
+    /// If you have a reference to another object that should be rendered, then you should append it to the stack.
+    /// Failure to do so will result in broken links in the rendered html pages.
+    fn append_ref(&self, stack: &mut Vec<RenderableType>);
 }
 
 /// Trait for objects that can be culled.

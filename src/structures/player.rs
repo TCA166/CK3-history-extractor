@@ -7,7 +7,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString},
         types::Wrapper,
@@ -92,13 +92,22 @@ impl Renderable for Player {
         H_TEMPLATE_NAME
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        renderer.render(self);
-        if let Some(map) = renderer.get_map() {
-            let game_state = renderer.get_state();
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+        for char in self.lineage.iter() {
+            stack.push(RenderableType::Character(char.get_character()));
+        }
+    }
+
+    fn render(
+        &self,
+        path: &str,
+        game_state: &GameState,
+        grapher: Option<&Grapher>,
+        map: Option<&GameMap>,
+    ) {
+        if let Some(map) = map {
             //timelapse rendering
-            let path = renderer.get_path().to_owned() + "/timelapse.gif";
-            let mut file = File::create(&path).unwrap();
+            let mut file = File::create(path.to_owned() + "/timelapse.gif").unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
             for char in self.lineage.iter() {
                 /* Note on timelapse:
@@ -168,7 +177,7 @@ impl Renderable for Player {
                         return BASE_COLOR;
                     }
                 },
-                &format!("{}/sim.png", renderer.get_path()),
+                &format!("{}/sim.png", path),
                 vec![
                     ("0%".to_string(), BASE_COLOR),
                     ("100%".to_string(), [BASE_COLOR[0], BASE_COLOR[1], 0]),
@@ -208,25 +217,16 @@ impl Renderable for Player {
                         return BASE_COLOR;
                     }
                 },
-                &format!("{}/dynastyMap.png", renderer.get_path()),
+                &format!("{}/dynastyMap.png", path),
                 vec![
                     ("Dynastic titles".to_string(), TARGET_COLOR),
                     ("Descendant titles".to_string(), SECONDARY_COLOR),
                 ],
             );
         }
-        for char in self.lineage.iter() {
-            char.get_character()
-                .get_internal()
-                .render_all(stack, renderer);
-        }
-        if let Some(grapher) = renderer.get_grapher() {
+        if let Some(grapher) = grapher {
             let last = self.lineage.last().unwrap().get_character();
-            grapher.create_tree_graph::<Character>(
-                last,
-                true,
-                &format!("{}/line.svg", renderer.get_path()),
-            );
+            grapher.create_tree_graph::<Character>(last, true, &format!("{}/line.svg", path));
         }
     }
 }

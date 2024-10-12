@@ -4,6 +4,8 @@ use std::{
     rc::Rc,
 };
 
+use serde::Serialize;
+
 // Opaque type aliases for the standard library types.
 /// A type alias for a hash map.
 pub type HashMap<K, V> = std::collections::HashMap<K, V>;
@@ -26,6 +28,18 @@ impl<'a, T> Deref for RefOrRaw<'a, T> {
         match self {
             RefOrRaw::Ref(r) => r.deref(),
             RefOrRaw::Raw(r) => r,
+        }
+    }
+}
+
+impl<'a, T: Serialize> Serialize for RefOrRaw<'a, T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            RefOrRaw::Ref(r) => r.deref().serialize(serializer),
+            RefOrRaw::Raw(r) => r.serialize(serializer),
         }
     }
 }

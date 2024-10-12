@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer},
+        display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
         types::{Wrapper, WrapperMut},
@@ -353,19 +353,14 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self) {
-            return;
-        }
-        if let Some(grapher) = renderer.get_grapher() {
-            let path = format!(
-                "{}/{}/{}.svg",
-                renderer.get_path(),
-                Self::get_subdir(),
-                self.id
-            );
+    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: Option<&GameMap>) {
+        if let Some(grapher) = grapher {
+            let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
             grapher.create_dynasty_graph(self, &path);
         }
+    }
+
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
         for leader in self.leaders.iter() {
             stack.push(RenderableType::Character(leader.clone()));
         }

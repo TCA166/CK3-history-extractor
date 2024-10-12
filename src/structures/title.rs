@@ -6,7 +6,8 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{
-            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+            Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType,
+            TreeNode,
         },
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, SaveFileObject, SaveFileValue},
@@ -413,27 +414,7 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self) {
-            return;
-        }
-        let game_map = renderer.get_map();
-        if game_map.is_some() && self.de_facto_vassals.len() > 0 {
-            let game_state = renderer.get_state();
-            let map = game_map.unwrap();
-            let path = format!(
-                "{}/{}/{}.png",
-                renderer.get_path(),
-                Self::get_subdir(),
-                self.id
-            );
-            let label = format!(
-                "{} at {}",
-                self.name.as_ref().unwrap(),
-                game_state.get_current_date().unwrap()
-            );
-            map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
-        }
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
         if let Some(de_jure) = &self.de_jure {
             stack.push(RenderableType::Title(de_jure.clone()));
         }
@@ -450,6 +431,25 @@ impl Renderable for Title {
         }
         if let Some(capital) = &self.capital {
             stack.push(RenderableType::Title(capital.clone()));
+        }
+    }
+
+    fn render(
+        &self,
+        path: &str,
+        game_state: &GameState,
+        _: Option<&Grapher>,
+        map: Option<&GameMap>,
+    ) {
+        if map.is_some() && self.de_facto_vassals.len() > 0 {
+            let map = map.unwrap();
+            let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
+            let label = format!(
+                "{} at {}",
+                self.name.as_ref().unwrap(),
+                game_state.get_current_date().unwrap()
+            );
+            map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
         }
     }
 }

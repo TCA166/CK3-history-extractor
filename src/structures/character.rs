@@ -3,7 +3,8 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{
-            Cullable, Localizable, Localizer, Renderable, RenderableType, Renderer, TreeNode,
+            Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType,
+            TreeNode,
         },
         jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, SaveFileValue},
@@ -89,14 +90,29 @@ impl Renderable for Vassal {
         Character::get_subdir()
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+    fn render(
+        &self,
+        path: &str,
+        game_state: &GameState,
+        grapher: Option<&Grapher>,
+        map: Option<&GameMap>,
+    ) {
         match self {
-            Vassal::Character(c) => c.get_internal().render_all(stack, renderer),
+            Vassal::Character(c) => c.get_internal().render(path, game_state, grapher, map),
             Vassal::Reference(r) => r
                 .get_internal()
                 .get_ref()
                 .get_internal()
-                .render_all(stack, renderer),
+                .render(path, game_state, grapher, map),
+        }
+    }
+
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+        match self {
+            Vassal::Character(c) => stack.push(RenderableType::Character(c.clone())),
+            Vassal::Reference(r) => stack.push(RenderableType::Character(
+                r.get_internal().get_ref().clone(),
+            )),
         }
     }
 }
@@ -788,10 +804,7 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
-        if !renderer.render(self) {
-            return;
-        }
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
         if let Some(faith) = &self.faith {
             stack.push(RenderableType::Faith(faith.clone()));
         }
@@ -831,10 +844,10 @@ impl Renderable for Character {
             stack.push(RenderableType::Title(s.clone()));
         }
         for m in self.memories.iter() {
-            m.get_internal().render_participants(stack);
+            m.get_internal().add_participants(stack);
         }
         for a in self.artifacts.iter() {
-            a.get_internal().render_history(stack);
+            a.get_internal().add_ref(stack);
         }
     }
 }

@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Renderable, RenderableType, Renderer},
+        display::{Cullable, Renderable, RenderableType},
         parser::GameString,
         types::WrapperMut,
     },
@@ -129,11 +129,21 @@ where
         T::get_template()
     }
 
-    fn render_all(&self, stack: &mut Vec<RenderableType>, renderer: &mut Renderer) {
+    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+        self.obj.as_ref().unwrap().get_internal().append_ref(stack);
+    }
+
+    fn render(
+        &self,
+        path: &str,
+        game_state: &crate::parser::GameState,
+        grapher: Option<&crate::display::Grapher>,
+        map: Option<&crate::display::GameMap>,
+    ) {
         self.obj
             .as_ref()
             .unwrap()
             .get_internal()
-            .render_all(stack, renderer);
+            .render(path, game_state, grapher, map);
     }
 }

@@ -3,19 +3,15 @@ use std::{fs, path::Path};
 use minijinja::{AutoEscape, Environment, Value};
 
 #[cfg(feature = "internal")]
-static INT_H_TEMPLATE: &str = include_str!("../templates/homeTemplate.html");
-#[cfg(feature = "internal")]
-static INT_C_TEMPLATE: &str = include_str!("../templates/charTemplate.html");
-#[cfg(feature = "internal")]
-static INT_CUL_TEMPLATE: &str = include_str!("../templates/cultureTemplate.html");
-#[cfg(feature = "internal")]
-static INT_DYN_TEMPLATE: &str = include_str!("../templates/dynastyTemplate.html");
-#[cfg(feature = "internal")]
-static INT_FAITH_TEMPLATE: &str = include_str!("../templates/faithTemplate.html");
-#[cfg(feature = "internal")]
-static INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
-#[cfg(feature = "internal")]
-static INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
+mod internal_templates {
+    pub const INT_H_TEMPLATE: &str = include_str!("../templates/homeTemplate.html");
+    pub const INT_C_TEMPLATE: &str = include_str!("../templates/charTemplate.html");
+    pub const INT_CUL_TEMPLATE: &str = include_str!("../templates/cultureTemplate.html");
+    pub const INT_DYN_TEMPLATE: &str = include_str!("../templates/dynastyTemplate.html");
+    pub const INT_FAITH_TEMPLATE: &str = include_str!("../templates/faithTemplate.html");
+    pub const INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
+    pub const INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
+}
 
 pub const H_TEMPLATE_NAME: &str = "homeTemplate";
 pub const C_TEMPLATE_NAME: &str = "charTemplate";
@@ -70,6 +66,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
     if internal || !Path::new("./templates").exists() {
         #[cfg(feature = "internal")]
         {
+            use internal_templates::*;
             env.add_template(H_TEMPLATE_NAME, INT_H_TEMPLATE).unwrap();
             env.add_template(C_TEMPLATE_NAME, INT_C_TEMPLATE).unwrap();
             env.add_template(CUL_TEMPLATE_NAME, INT_CUL_TEMPLATE)
