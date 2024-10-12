@@ -42,6 +42,11 @@ const LANGUAGES: [&'static str; 7] = [
 /// The name of the file to dump the game state to.
 const DUMP_FILE: &str = "game_state.json";
 
+/// The interval at which the progress bars should update.
+const INTERVAL: Duration = Duration::from_secs(1);
+
+
+
 /// Main function. This is the entry point of the program.
 ///
 /// # Arguments
@@ -100,15 +105,11 @@ fn main() {
     let mut depth = 3; // The depth to render the player's history
                        // whether the game state should be dumped to json
     let mut dump = false;
+    // user interface stuff
     if args.len() < 2 {
-        if !stdin().is_terminal() {
-            //raw file contents
+        if !stdin().is_terminal() { 
+            // simplified interface for non-terminal environments
             stdin().read_line(&mut filename).unwrap();
-            filename = filename.trim().to_string();
-            filename = filename.trim().to_string();
-            if filename.is_empty() {
-                panic!("No filename provided");
-            }
             filename = filename.trim().to_string();
             if filename.is_empty() {
                 panic!("No filename provided");
@@ -276,6 +277,7 @@ fn main() {
             }
         }
     }
+    // arguments passed
     let p = Path::new(&filename);
     if !p.exists() || !p.is_file() {
         panic!("File does not exist");
@@ -295,7 +297,7 @@ fn main() {
         let progress_bar = ProgressBar::new(include_paths.len() as u64);
         progress_bar.set_style(bar_style.clone());
         // "items" in this case are huge, 8s on my ssd, so we enable the steady tick
-        progress_bar.enable_steady_tick(Duration::from_secs(1));
+        progress_bar.enable_steady_tick(INTERVAL);
         progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
             let loc_path = path.clone() + "/localization/" + language;
@@ -312,7 +314,6 @@ fn main() {
     }
     localizer.resolve();
     //initialize the save file
-    println!("Ready for save parsing...");
     let save: SaveFile;
     if compressed {
         save = SaveFile::open_compressed(filename.as_str());
@@ -350,7 +351,7 @@ fn main() {
     let rendering_progress_bar = MultiProgress::new();
     let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));
     player_progress.set_style(bar_style);
-    player_progress.enable_steady_tick(Duration::from_secs(1));
+    player_progress.enable_steady_tick(INTERVAL);
     let spinner_style = ProgressStyle::default_spinner()
         .template("[{elapsed_precise}] {spinner} {msg}")
         .unwrap();
@@ -364,6 +365,7 @@ fn main() {
         }
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
+        cull_spinner.enable_steady_tick(INTERVAL);
         player.set_depth(depth);
         cull_spinner.finish_with_message("Tree traversed");
         let mut renderer = Renderer::new(
@@ -375,6 +377,7 @@ fn main() {
         );
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         render_spinner.set_style(spinner_style.clone());
+        render_spinner.enable_steady_tick(INTERVAL);
         if !no_vis {
             render_spinner.inc(renderer.render_all(timeline.as_ref().unwrap()));
         }
