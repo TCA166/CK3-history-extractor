@@ -45,7 +45,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                     SaveFileValue::Object(o) => {
                         game_state.add_title(o.as_map());
                     }
-                    SaveFileValue::String(_) => {
+                    _ => {
                         // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
                         continue;
                     }
@@ -90,7 +90,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                                     SaveFileValue::Object(o) => {
                                         game_state.add_dynasty(o.as_map());
                                     }
-                                    SaveFileValue::String(_) => {
+                                    _ => {
                                         continue;
                                     }
                                 }
@@ -111,7 +111,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                         let chr = o.as_map();
                         game_state.add_character(chr);
                     }
-                    SaveFileValue::String(_) => {
+                    _ => {
                         continue;
                     }
                 }
@@ -125,7 +125,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                         let chr = o.as_map();
                         game_state.add_character(chr);
                     }
-                    SaveFileValue::String(_) => {
+                    _ => {
                         continue;
                     }
                 }
@@ -141,7 +141,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                             let chr = o.as_map();
                             game_state.add_character(chr);
                         }
-                        SaveFileValue::String(_) => {
+                        _ => {
                             continue;
                         }
                     }
@@ -164,7 +164,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                         &key.parse::<GameId>().unwrap(),
                         &val.as_map().get("vassal").unwrap().as_id(),
                     ),
-                    SaveFileValue::String(_) => {
+                    _ => {
                         continue;
                     }
                 }
@@ -192,7 +192,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                     SaveFileValue::Object(o) => {
                         game_state.add_memory(o.as_map());
                     }
-                    SaveFileValue::String(_) => {
+                    _ => {
                         continue;
                     }
                 }
@@ -211,7 +211,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
                     SaveFileValue::Object(o) => {
                         game_state.add_artifact(o.as_map());
                     }
-                    SaveFileValue::String(_) => {
+                    _ => {
                         continue;
                     }
                 }

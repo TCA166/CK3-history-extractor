@@ -9,7 +9,7 @@ use super::{
     game_object::{GameId, GameObjectMap, GameString},
 };
 
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
 fn get_or_insert_dummy<T: DummyInit>(
@@ -38,6 +38,7 @@ fn get_or_insert_dummy_from_value<T: DummyInit>(
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
 /// This is mainly used during the process of gathering data from the parsed save file.
+#[derive(Serialize)]
 pub struct GameState {
     /// A character id->Character transform
     characters: HashMap<GameId, Shared<Character>>,
@@ -325,24 +326,6 @@ impl Localizable for GameState {
         for (_, artifact) in &mut self.artifacts {
             artifact.get_internal_mut().localize(localization);
         }
-    }
-}
-
-impl Serialize for GameState {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("GameState", 8)?;
-        state.serialize_field("characters", &self.characters)?;
-        state.serialize_field("titles", &self.titles)?;
-        state.serialize_field("faiths", &self.faiths)?;
-        state.serialize_field("cultures", &self.cultures)?;
-        state.serialize_field("dynasties", &self.dynasties)?;
-        state.serialize_field("memories", &self.memories)?;
-        state.serialize_field("artifacts", &self.artifacts)?;
-        state.serialize_field("current_date", &self.current_date)?;
-        state.end()
     }
 }
 

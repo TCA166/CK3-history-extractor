@@ -28,6 +28,10 @@ use jinja_env::create_env;
 mod display;
 use display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, Renderer, Timeline};
 
+/// A submodule for handling Steam integration
+mod steam;
+use steam::{get_ck3_path, CK3_PATH};
+
 /// The languages supported by the game.
 const LANGUAGES: [&'static str; 7] = [
     "english",
@@ -44,8 +48,6 @@ const DUMP_FILE: &str = "game_state.json";
 
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
-
-
 
 /// Main function. This is the entry point of the program.
 ///
@@ -107,7 +109,7 @@ fn main() {
     let mut dump = false;
     // user interface stuff
     if args.len() < 2 {
-        if !stdin().is_terminal() { 
+        if !stdin().is_terminal() {
             // simplified interface for non-terminal environments
             stdin().read_line(&mut filename).unwrap();
             filename = filename.trim().to_string();
@@ -133,6 +135,13 @@ fn main() {
                 .default(false)
                 .interact()
                 .unwrap();
+            let ck3_path = match get_ck3_path() {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("Error trying to find your CK3 installation: {:?}", e);
+                    CK3_PATH.to_string()
+                }
+            };
             game_path = Input::<String>::new()
                 .with_prompt("Enter the game path [empty for None]")
                 .allow_empty(true)
@@ -147,8 +156,8 @@ fn main() {
                         Err("Path does not exist")
                     }
                 })
-                //.with_initial_text("/common/Crusader Kings III/game") //TODO this doesn't work for some reason, library issues?
-                .interact()
+                .with_initial_text(ck3_path)
+                .interact_text()
                 .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
             depth = Input::<usize>::new()
                 .with_prompt("Enter the rendering depth")

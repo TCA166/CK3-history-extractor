@@ -51,17 +51,17 @@ pub struct Renderer<'a> {
 impl<'a> Renderer<'a> {
     /// Create a new Renderer with the given [Environment] and path.
     /// [create_dir_maybe] is called on the path to ensure that the directory exists, and the subdirectories are created.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `env` - The [Environment] object that is used to render the templates.
     /// * `path` - The root path where the objects will be rendered to. Usually takes the form of './{username}'s history/'.
     /// * `state` - The game state object.
     /// * `game_map` - The game map object, if it exists.
     /// * `grapher` - The grapher object, if it exists.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// A new Renderer object.
     pub fn new(
         env: &'a Environment<'a>,
@@ -138,32 +138,32 @@ impl<'a> Renderer<'a> {
 
     /// Renders all the objects that are related to the given object.
     /// It uses a stack to keep track of the objects that need to be rendered.
-    /// 
+    ///
     /// # Method
-    /// 
+    ///
     /// This method renders templates for given objects and the necessary graphics.
-    /// 
+    ///
     /// ## Template Rendering
-    /// 
+    ///
     /// First a corresponding template is retrieved from the [Environment] object using
     /// the template name given by [Renderable::get_template].
     /// Then the object is serialized (using [serde::Serialize]) into a [minijinja::Value] object.
-    /// Using this value object the template is rendered and the contents are written to a file 
+    /// Using this value object the template is rendered and the contents are written to a file
     /// using the path given by [Renderable::get_path].
-    /// 
+    ///
     /// ## Object Rendering
-    /// 
+    ///
     /// In order to ensure all the necessary objects for the template to display correctly are rendered,
     /// the [Renderable::render] method is called on the object.
     /// This method is meant to render all the graphics that are related to the object.
-    /// 
+    ///
     /// ## Related Objects
-    /// 
+    ///
     /// The [Renderable::append_ref] method is called on the object to append all the related objects to the stack.
     /// This is done to ensure that all the related objects are rendered and the process is repeated for all the objects.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The number of objects that were rendered.
     pub fn render_all<T: Renderable + Cullable>(&mut self, obj: &T) -> u64 {
         let mut stack: Vec<RenderableType> = Vec::new();
@@ -193,19 +193,19 @@ pub trait Renderable: Serialize + GameObjectDerived {
     fn get_subdir() -> &'static str;
 
     /// Returns the path where the rendered template should be written to.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `path` - The root output path of the renderer.
-    /// 
+    ///
     /// # Default Implementation
-    /// 
+    ///
     /// The default implementation returns a path in the format: `{path}/{subdir}/{id}.html`.
     /// Subdir is returned by [Renderable::get_subdir] and id is returned by [GameObjectDerived::get_id].
     /// This can be of course overridden by the implementing object.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The full path where the object should be written to.
     fn get_path(&self, path: &str) -> String {
         format!("{}/{}/{}.html", path, Self::get_subdir(), self.get_id())
@@ -214,16 +214,16 @@ pub trait Renderable: Serialize + GameObjectDerived {
     /// Renders all the objects that are related to this object.
     /// For example: graphs, maps, etc.
     /// This is where your custom rendering logic should go.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `path` - The root output path of the renderer.
     /// * `game_state` - The game state object.
     /// * `grapher` - The grapher object, if it exists.
     /// * `map` - The game map object, if it exists.
-    /// 
+    ///
     /// # Default Implementation
-    /// 
+    ///
     /// The default implementation does nothing. It is up to the implementing object to override this method.
     #[allow(unused_variables)]
     fn render(
