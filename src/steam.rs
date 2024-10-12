@@ -1,7 +1,6 @@
+use std::{fmt::Debug, fs::read_to_string, path::Path};
 
-use std::{fs::read_to_string, path::Path, fmt::Debug};
-
-use keyvalues_parser::{Vdf, Value};
+use keyvalues_parser::{Value, Vdf};
 
 /// The Steam ID for Crusader Kings III.
 /// Source: https://steamdb.info/app/1158310/
@@ -49,22 +48,22 @@ impl Debug for SteamError {
 }
 
 /// Get the path to the Crusader Kings III directory.
-/// 
+///
 /// # Errors
-/// 
+///
 /// This function shouldn't panic, but it can return an error.
 /// Generally speaking error checking regarding VDF expected format is not performed.
 /// So if the VDF file is weird, then [SteamError::CK3Missing] will be returned.
-/// 
+///
 /// # Returns
-/// 
+///
 /// The path to the Crusader Kings III directory.
 pub fn get_ck3_path() -> Result<String, SteamError> {
     let steam_path = if cfg!(target_os = "windows") {
         Path::new(DEFAULT_STEAM_PATH).to_path_buf()
-        
     } else if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
-        #[allow(deprecated)] // home_dir is deprecated, because Windows is bad, but we don't care since we are only using it for Linux
+        #[allow(deprecated)]
+        // home_dir is deprecated, because Windows is bad, but we don't care since we are only using it for Linux
         std::env::home_dir().unwrap().join(DEFAULT_STEAM_PATH)
     } else {
         return Err(SteamError::SteamDirNotFound);
@@ -80,17 +79,20 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
     let vdf_contents = read_to_string(&vdf_path).unwrap();
     let vdf = Vdf::parse(&vdf_contents);
     match vdf {
-        Ok(vdf) => { 
+        Ok(vdf) => {
             // vdf was parsed successfully
             if let Value::Obj(folders) = vdf.value {
                 // root of the VDF file is an object
-                for folder_objs in folders.values() { // foreach value set in the root object
-                    for folder in folder_objs { // foreach value in the value set
-                        if let Value::Obj(folder) = folder { 
+                for folder_objs in folders.values() {
+                    // foreach value set in the root object
+                    for folder in folder_objs {
+                        // foreach value in the value set
+                        if let Value::Obj(folder) = folder {
                             // if the value is an object
                             if let Some(apps_objs) = folder.get("apps") {
                                 // if the object has an "apps" key
-                                for app in apps_objs { // foreach value in the "apps" object
+                                for app in apps_objs {
+                                    // foreach value in the "apps" object
                                     if let Value::Obj(app) = app {
                                         // if the value is an object
                                         if app.keys().find(|k| *k == CK3_ID).is_some() {
@@ -101,7 +103,9 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
                                                     library_path = Some(path.to_owned());
                                                     break;
                                                 } else {
-                                                    return Err(SteamError::VdfProcessingError("Path is not a string"));
+                                                    return Err(SteamError::VdfProcessingError(
+                                                        "Path is not a string",
+                                                    ));
                                                 }
                                             }
                                         }
@@ -123,7 +127,9 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
                     }
                 }
             } else {
-                return Err(SteamError::VdfProcessingError("Root of VDF file is not an object"));
+                return Err(SteamError::VdfProcessingError(
+                    "Root of VDF file is not an object",
+                ));
             }
         }
         Err(e) => {
@@ -140,5 +146,4 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
     } else {
         return Err(SteamError::CK3Missing);
     }
-
 }

@@ -35,33 +35,31 @@ After making your choice go find your save file in the format the program accept
 In order to use any version of the program you are going to need a text based unzipped CK3 save file.
 You can find your save files in your documents directory in ```%USERPROFILE%\Documents\Paradox Interactive\Crusader Kings III\save games\```.
 If you are running the game with the default settings chances are the save file is compressed and if the save was for an iron-man run then the save file is saved in their internal binary format.
-You will need to decompress the save file and convert the save file to the text format then.
+You will need to convert the save file to the text format if that's the case.
 
 #### De-iron-manning your save file
 
 1. Backup your iron-man save file
-2. Run the game in debug mode (add -debug_mode to launch options)
+2. Run the game in [debug mode](https://ck3.paradoxwikis.com/Console_commands#Enabling_debug_mode) (add -debug_mode to launch options)
 3. Load the iron-man save file and let the game run for a month so that it saves the file in debug mode
 4. Congrats! your save file in the save file folder is now no longer binary encoded
 
 If you want to make sure that's actually the case, open the file in a text editor and see if you can see any gibberish or weird symbols.
 If the save file has no gibberish(non ASCII characters) that means that the save file is ready to go.
 
-#### Decompressing your save file
+#### Save file compression
 
 The save file *may* be compressed.
-This depends on the settings and game version.
-If you aren't sure if it is just try decompressing as if the file is a ```.zip``` file.
-If the process fails, then the save file isn't compressed and the save file is ready to go.
-If it the file gets decompressed successfully then enter the newly created directory and copy the ```gamestate``` file inside.
-That file is your actual file the program is expecting.
-If the save file is compressed but you are sure the contents are plain text, you can also just run the tool with ```--zip``` which will make the tool decompress the input file as if it was an archive.
-It's worth noting that compressed save files taken straight out of the save folder may have a plain text header - a section of readable text that will be followed by gibberish so if you want to check if a save file is compressed scroll to the middle
+This is no issue for the program however, it should automatically detect that and decompress the savefile.
+A problem however, might arise if the compressed save file was also then iron-man encoded.
+In such a case you will need to follow the steps laid out [in the previous section](#de-iron-manning-your-save-file).
 
 ### Running the program
 
 You can run the program from the command line or just by double clicking it.
 If you ran it with no arguments it will ask you for the path to the file and for the path to the game.
+Within the console interface the program should automatically pre-enter the save file path and game path.
+You can modify this pre-entered path of course and on some systems this feature might not function.
 **It is very important that game path provided points to the ```/game``` subdirectory in your ```Crusader Kings III folder```**.
 Otherwise you will receive errors when providing the path.
 For users familiar with console environments here are details on that interface:
@@ -75,12 +73,12 @@ And here are the arguments that the utility accepts as of right now:
 1. ```--internal``` forces the utility to use the internal templates.
 2. ```--depth %d``` sets the maximum depth of the data to retrieve in the save file. The characters you played have depth=0, their relatives have depth=1 and so on.
 3. ```--game-path %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate. Assuming you have the game installed via Steam you can do the following ```--game-path "*YOUR STEAM PATH*/steamapps/common/Crusader Kings III/game"```.
-4. ```--zip``` informs the program that the input file is a compressed archive
-5. ```--no-vis``` disables all forms of visualization within the output
-6. ```--language``` toggles which localization files shall be used if the game path is provided
-7. ```--output %s``` changes where the output folder will be located
-8. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
-9. ```--dump``` makes the tool dump all the extracted data into a json file
+4. ```--no-vis``` disables all forms of visualization within the output
+5. ```--language``` toggles which localization files shall be used if the game path is provided
+6. ```--output %s``` changes where the output folder will be located
+7. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
+8. ```--dump``` makes the tool dump all the extracted data into a json file
+9. ```--no-interaction``` disables automatic output opening and exit prompt
 
 ## Mod support
 

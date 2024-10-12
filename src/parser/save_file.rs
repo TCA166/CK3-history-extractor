@@ -2,8 +2,10 @@ use super::{
     super::types::{Shared, Wrapper, WrapperMut},
     game_object::{GameObjectArray, GameObjectMap, GameString, SaveFileObject, SaveFileValue},
 };
-use std::{io::Read, mem, rc::Rc};
+use std::{io::Read, mem, rc::Rc, fs::File};
 use zip::read::ZipArchive;
+
+const ARCHIVE_HEADER: &[u8; 4] = b"PK\x03\x04";
 
 /// A struct that represents a section in a ck3 save file.
 /// Each section has a name, holds a reference to the contents of the save file and the current parsing offset.
@@ -418,39 +420,49 @@ pub struct SaveFile {
 impl SaveFile {
     /// Create a new SaveFile instance.
     /// The filename must be valid of course.
+    /// 
+    /// # Compression
+    /// 
+    /// The save file can be compressed using the zip format.
+    /// Function will automatically detect if the save file is compressed and decompress it.
+    /// 
+    /// # Returns
+    /// 
+    /// A new SaveFile instance.
+    /// It is an iterator that returns sections from the save file.
     pub fn open(filename: &str) -> SaveFile {
-        let contents = std::fs::read_to_string(filename);
-        if contents.is_err() {
-            let err = contents.as_ref().err().unwrap();
+        let mut file = File::open(filename).unwrap();
+        let mut contents = vec![];
+        if let Err(err) = file.read_to_end(&mut contents) {
             match err.kind() {
                 std::io::ErrorKind::NotFound => {
                     panic!("Save file not found: {}", filename);
-                }
-                std::io::ErrorKind::InvalidData => {
-                    panic!(
-                        "Save file is not valid utf-8: {}. Is it compressed or iron man encoded?",
-                        filename
-                    );
                 }
                 _ => {
                     panic!("Error opening save file: {}", err);
                 }
             }
         }
-        SaveFile {
-            contents: Rc::new(contents.unwrap()),
-            offset: Shared::wrap(0),
+        let mut compressed = false;
+        // find if ARCHIVE_HEADER is in the file
+        for i in 0..contents.len() - ARCHIVE_HEADER.len() {
+            if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
+                compressed = true;
+                break;
+            }
         }
-    }
-
-    pub fn open_compressed(filename: &str) -> SaveFile {
-        let mut archive = ZipArchive::new(std::fs::File::open(filename).unwrap()).unwrap();
-        let mut gamestate = archive.by_index(0).unwrap();
-        if gamestate.is_dir() {
-            panic!("Gamestate is a directory");
-        }
-        let mut contents = String::new();
-        gamestate.read_to_string(&mut contents).unwrap();
+        let contents = if compressed {
+            let mut archive = ZipArchive::new(std::io::Cursor::new(contents)).unwrap();
+            let mut gamestate = archive.by_index(0).unwrap();
+            if gamestate.is_dir() {
+                panic!("Gamestate is a directory");
+            }
+            let mut contents = String::new();
+            gamestate.read_to_string(&mut contents).unwrap();
+            contents
+        } else {
+            String::from_utf8(contents).unwrap()
+        };
         SaveFile {
             contents: Rc::new(contents),
             offset: Shared::wrap(0),

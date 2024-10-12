@@ -1,4 +1,4 @@
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::{Input, Select};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
 use std::{
@@ -49,6 +49,26 @@ const DUMP_FILE: &str = "game_state.json";
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
+const CK3_EXTENSION: &str = "ck3";
+
+/// A helper function that finds the first file with a given extension in a directory.
+fn find_first_file_with_extension(dir: &str, extension: &str) -> Option<String> {
+    let path = Path::new(dir);
+    if path.is_dir() {
+        for entry in fs::read_dir(path).expect("Directory not found") {
+            let entry = entry.expect("Unable to read entry").path();
+            if entry.is_file() {
+                if let Some(ext) = entry.extension() {
+                    if ext == extension {
+                        return Some(entry.to_string_lossy().into_owned());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 /// Main function. This is the entry point of the program.
 ///
 /// # Arguments
@@ -57,14 +77,12 @@ const INTERVAL: Duration = Duration::from_secs(1);
 /// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
 /// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
 /// 4. `--game-path` - A flag that tells the program where to find the game files. If not provided, the program will use a crude localization.
-/// 5. `--zip` - A flag that tells the program that the input file is compressed into an archive.
-/// 6. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
-/// 7. `--no-vis` - A flag that tells the program not to render any images
-/// 8. `--output` - A flag that tells the program where to output the rendered files.
-/// 9. `--include` - A flag that tells the program where to find additional files to include in the rendering.
-/// 10. `--no-interaction` - A flag that tells the program not to interact with the user.
-/// 11. `--no-cutoff` - A flag that tells the program not to cut off the date at the player's start date.
-/// 12. `--dump` - A flag that tells the program to dump the game state to a json file.
+/// 5. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
+/// 6. `--no-vis` - A flag that tells the program not to render any images
+/// 7. `--output` - A flag that tells the program where to output the rendered files.
+/// 8. `--include` - A flag that tells the program where to find additional files to include in the rendering.
+/// 9. `--no-interaction` - A flag that tells the program not to interact with the user.
+/// 10. `--dump` - A flag that tells the program to dump the game state to a json file.
 ///
 /// # Process
 ///
@@ -89,8 +107,6 @@ fn main() {
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
-    // if we need to decompress the savefile
-    let mut compressed = false;
     #[cfg(feature = "internal")]
     let mut use_internal = false;
     #[cfg(not(feature = "internal"))]
@@ -118,22 +134,19 @@ fn main() {
             }
         } else {
             //console interface only if we are in a terminal
+            let random_save_file = find_first_file_with_extension(".", CK3_EXTENSION).unwrap_or("".to_string());
             filename = Input::<String>::new()
                 .with_prompt("Enter the save file path")
                 .validate_with(|input: &String| -> Result<(), &str> {
-                    let p = Path::new(input);
+                    let p = Path::new(input).canonicalize().unwrap();
                     if p.exists() && p.is_file() {
                         Ok(())
                     } else {
                         Err("File does not exist")
                     }
                 })
-                .interact()
-                .unwrap();
-            compressed = Confirm::new()
-                .with_prompt("Is the file compressed?")
-                .default(false)
-                .interact()
+                .with_initial_text(random_save_file)
+                .interact_text()
                 .unwrap();
             let ck3_path = match get_ck3_path() {
                 Ok(p) => p,
@@ -246,9 +259,6 @@ fn main() {
                             .clone(),
                     );
                 }
-                "--zip" => {
-                    compressed = true;
-                }
                 "--language" => {
                     //we don't validate the language here, args are trusted, if someone uses them to mess with the behaviour we let them
                     language = iter.next().expect("Language argument requires a value");
@@ -323,12 +333,7 @@ fn main() {
     }
     localizer.resolve();
     //initialize the save file
-    let save: SaveFile;
-    if compressed {
-        save = SaveFile::open_compressed(filename.as_str());
-    } else {
-        save = SaveFile::open(filename.as_str());
-    }
+    let save = SaveFile::open(filename.as_str());
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
