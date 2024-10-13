@@ -30,7 +30,7 @@ use display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, Re
 
 /// A submodule for handling Steam integration
 mod steam;
-use steam::{get_ck3_path, CK3_PATH};
+use steam::{get_ck3_path, SteamError, CK3_PATH};
 
 /// The languages supported by the game.
 const LANGUAGES: [&'static str; 7] = [
@@ -152,8 +152,22 @@ fn main() {
             let ck3_path = match get_ck3_path() {
                 Ok(p) => p,
                 Err(e) => {
-                    eprintln!("Error trying to find your CK3 installation: {:?}", e);
-                    CK3_PATH.to_string()
+                    match e {
+                        SteamError::SteamDirNotFound => {
+                            // we don't assume us being incompetent at finding the steam path is the user's fault
+                            // so we don't print an error here
+                            CK3_PATH.to_string()
+                        }
+                        SteamError::CK3Missing => {
+                            // not having CK3 installed is also fine
+                            "".to_string()
+                        }
+                        e => {
+                            // but if we can't find the CK3 path for some other reason, we print an error
+                            eprintln!("Error trying to find your CK3 installation: {:?}", e);
+                            CK3_PATH.to_string()
+                        }
+                    }
                 }
             };
             game_path = Input::<String>::new()
