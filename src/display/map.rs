@@ -63,7 +63,7 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let file = SaveFile::open(&path).unwrap();
     let mut map = HashMap::default();
     for mut title in file {
-        let title_object = title.parse();
+        let title_object = title.parse().unwrap();
         //DFS in the structure
         let mut stack = vec![title_object.as_map()];
         while let Some(o) = stack.pop() {
