@@ -252,14 +252,14 @@ impl DummyInit for Title {
     }
 
     fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
-        /*
-        if base.get_array_iter().len() > 3 {
-            let color = base
-                .get_array_iter()
-                .map(|x| x.as_string().parse::<u8>().unwrap())
-                .collect::<Vec<u8>>();
-            self.color = [color[0], color[1], color[2]];
-        }*/
+        if let Some(color) = base.get("color") {
+            let color = color.as_object().as_array();
+            self.color = [
+                color[0].as_string().parse::<u8>().unwrap(),
+                color[1].as_string().parse::<u8>().unwrap(),
+                color[2].as_string().parse::<u8>().unwrap(),
+            ];
+        }
         self.key = Some(base.get_string_ref("key"));
         if let Some(de_jure_id) = base.get("de_jure_liege") {
             let o = game_state.get_title(&de_jure_id.as_id()).clone();

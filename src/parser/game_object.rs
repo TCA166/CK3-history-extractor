@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, rc::Rc, ops::Index};
 
 use super::super::types::{HashMap, HashMapIter, RefOrRaw, Wrapper};
 
@@ -337,6 +337,14 @@ impl GameObject<Vec<SaveFileValue>> {
     /// Insert a value at an index
     pub fn insert(&mut self, index: usize, value: SaveFileValue) {
         self.inner.insert(index, value);
+    }
+}
+
+impl Index<usize> for GameObject<Vec<SaveFileValue>> {
+    type Output = SaveFileValue;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.inner[index]
     }
 }
 
