@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc, ops::Index};
+use std::{fmt::Debug, ops::Index, rc::Rc};
 
 use super::super::types::{HashMap, HashMapIter, RefOrRaw, Wrapper};
 
