@@ -20,7 +20,6 @@ internal = []
 [dependencies]
 minijinja = {version="2.3.1", features=["loader"]}
 serde = {version="1.0.210" , features=["rc", "derive"] }
-tempfile = "3.13.0"
 syn = "2.0.79"
 quote = "1.0.37"
 proc-macro2 = "1.0.88"
@@ -35,3 +34,6 @@ open = "5.1.4"
 rand = "0.8.5"
 indicatif = "0.17.8"
 keyvalues-parser = "0.2.0"
+
+[dev-dependencies]
+tempfile = "3.13.0"
