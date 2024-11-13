@@ -1,11 +1,7 @@
-
-use dialoguer::{Completion, Input, Select};
 use clap_derive::Parser;
+use dialoguer::{Completion, Input, Select};
 
-use std::{
-    fs,
-    path::Path
-};
+use std::{fs, path::Path};
 
 use super::steam::{get_ck3_path, SteamError, CK3_PATH};
 
@@ -68,39 +64,76 @@ fn validate_path(input: &String) -> Result<(), &'static str> {
 
 /// A function to parse the language argument.
 fn parse_lang_arg(input: &str) -> Result<&'static str, &'static str> {
-    LANGUAGES.iter().find(|x| **x == input).map_or(Err("Invalid language"), |e| Ok(*e))
+    LANGUAGES
+        .iter()
+        .find(|x| **x == input)
+        .map_or(Err("Invalid language"), |e| Ok(*e))
+}
+
+/// A function to parse the path argument.
+fn parse_path_arg(input: &str) -> Result<String, &'static str> {
+    let p = Path::new(input);
+    if p.exists() {
+        Ok(input.to_string())
+    } else {
+        Err("Invalid path")
+    }
 }
 
 /// The arguments to the program.
 #[derive(Parser)]
 pub struct Args {
     /// The name of the save file to parse.
+    #[arg(help="The name of the save file to parse.", value_parser = parse_path_arg)]
     pub filename: String,
-    #[arg(short, long, default_value_t = 3, help="The depth to render the player's history.")]
+    #[arg(
+        short,
+        long,
+        default_value_t = 3,
+        help = "The depth to render the player's history."
+    )]
     /// The depth to render the player's history.
     pub depth: usize,
     #[arg(short, long, default_value_t = LANGUAGES[0], value_parser = parse_lang_arg, help="The language to use for localization.")]
     /// The language to use for localization.
     pub language: &'static str,
-    #[arg(short, long, default_value = None, help="The path to the game files.")]
+    #[arg(short, long, default_value = None, help="The path to the game files.", value_parser = parse_path_arg)]
     /// The path to the game files.
     pub game_path: Option<String>,
-    #[arg(short, long, help="The paths to include in the rendering.")]
+    #[arg(short, long, help = "The paths to include in the rendering.", value_parser = parse_path_arg)]
     /// The paths to include in the rendering.
     pub include: Vec<String>,
-    #[arg(short, long, default_value = None, help="The output path for the rendered files.")]
+    #[arg(short, long, default_value = None, help="The output path for the rendered files.", value_parser = parse_path_arg)]
     /// The output path for the rendered files.
     pub output: Option<String>,
-    #[arg(long, default_value_t = false, help="A flag that tells the program to dump the game state to a json file.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "A flag that tells the program to dump the game state to a json file."
+    )]
     /// A flag that tells the program to dump the game state to a json file.
     pub dump: bool,
-    #[arg(long, default_value_t = false, help="A flag that tells the program not to render any images.")]
+    #[arg(
+        long,
+        default_value_t = false,
+        help = "A flag that tells the program not to render any images."
+    )]
     /// A flag that tells the program not to render any images.
     pub no_vis: bool,
-    #[arg(short, long, default_value_t = false, help="A flag that tells the program not to interact with the user.")]
+    #[arg(
+        short,
+        long,
+        default_value_t = false,
+        help = "A flag that tells the program not to interact with the user."
+    )]
     /// A flag that tells the program not to interact with the user.
     pub no_interaction: bool,
-    #[arg(short, long, default_value_t = false, help="A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.")]
+    #[arg(
+        short,
+        long,
+        default_value_t = false,
+        help = "A flag that tells the program to use the internal templates instead of the templates in the `templates` folder."
+    )]
     /// A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
     pub use_internal: bool,
 }
