@@ -67,7 +67,7 @@ impl Stack {
             }
         }
     }
-    
+
     /// Insert a key value pair into the current object.
     fn insert(&mut self, key: &mut String, val: &mut String) -> Result<(), SectionError> {
         if self.name.is_some() {

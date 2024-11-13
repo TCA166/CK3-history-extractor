@@ -1,7 +1,7 @@
-use dialoguer::{Input, Select};
+use dialoguer::{Completion, Input, Select};
+use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
-use human_panic::setup_panic;
 use std::{
     env, fs,
     io::{stdin, stdout, IsTerminal},
@@ -52,23 +52,38 @@ const INTERVAL: Duration = Duration::from_secs(1);
 
 const CK3_EXTENSION: &str = "ck3";
 
-/// A helper function that lists all files with a certain extension in directory
-fn find_files_with_extension(dir: &str, extension: &str) -> Vec<String> {
-    let mut res = Vec::new();
-    let path = Path::new(dir);
-    if path.is_dir() {
-        for entry in fs::read_dir(path).expect("Directory not found") {
-            let entry = entry.expect("Unable to read entry").path();
-            if entry.is_file() {
-                if let Some(ext) = entry.extension() {
-                    if ext == extension {
-                        res.push(entry.to_string_lossy().into_owned());
+/// A [Completion] struct for save file names, that also acts as a list of save files in the current directory.
+struct SaveFileNameCompletion {
+    pub save_files: Vec<String>,
+}
+
+impl Default for SaveFileNameCompletion {
+    fn default() -> Self {
+        let mut res = Vec::new();
+        let path = Path::new(".");
+        if path.is_dir() {
+            for entry in fs::read_dir(path).expect("Directory not found") {
+                let entry = entry.expect("Unable to read entry").path();
+                if entry.is_file() {
+                    if let Some(ext) = entry.extension() {
+                        if ext == CK3_EXTENSION {
+                            res.push(entry.to_string_lossy().into_owned());
+                        }
                     }
                 }
             }
         }
+        SaveFileNameCompletion { save_files: res }
     }
-    return res;
+}
+
+impl Completion for SaveFileNameCompletion {
+    fn get(&self, input: &str) -> Option<String> {
+        self.save_files
+            .iter()
+            .find(|x| x.contains(input))
+            .cloned()
+    }
 }
 
 /// Main function. This is the entry point of the program.
@@ -137,7 +152,7 @@ fn main() {
             }
         } else {
             //console interface only if we are in a terminal
-            let save_files = find_files_with_extension(".", CK3_EXTENSION);
+            let completion = SaveFileNameCompletion::default();
             filename = Input::<String>::new()
                 .with_prompt("Enter the save file path")
                 .validate_with(|input: &String| -> Result<(), &str> {
@@ -148,7 +163,8 @@ fn main() {
                         Err("File does not exist")
                     }
                 })
-                .with_initial_text(save_files.get(0).unwrap_or(&"".to_string()))
+                .with_initial_text(completion.save_files.get(0).unwrap_or(&"".to_string()))
+                .completion_with(&completion)
                 .interact_text()
                 .unwrap();
             let ck3_path = match get_ck3_path() {
@@ -201,8 +217,7 @@ fn main() {
                     if input.is_empty() {
                         return Ok(());
                     }
-                    let paths: Vec<&str> = input.split(',').collect();
-                    for p in paths.iter() {
+                    for p in input.split(',') {
                         let path = Path::new(p.trim());
                         if !path.exists() || !path.is_dir() {
                             return Err("Path does not exist");

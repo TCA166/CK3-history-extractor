@@ -47,7 +47,12 @@ impl FromGameObject for Player {
         get_lineage(&mut lineage, &base, game_state);
         let key = base.get("character").unwrap().as_id();
         // apparently the player id can be negative?
-        let id = base.get("player").unwrap().as_string().parse::<i32>().unwrap();
+        let id = base
+            .get("player")
+            .unwrap()
+            .as_string()
+            .parse::<i32>()
+            .unwrap();
         Player {
             name: base.get("name").unwrap().as_string(),
             id: id as u32,
