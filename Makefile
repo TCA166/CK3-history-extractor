@@ -26,7 +26,7 @@ crosscompile:
 
 windows: src/*.rs src/structures/*.rs
 	@echo "Building for Windows..."
-	RUSTFLAGS="--cfg internal" cargo build --target x86_64-pc-windows-gnu --release
+	RUSTFLAGS="" cargo build --target x86_64-pc-windows-gnu --release --features internal
 
 clean:
 	@echo "Cleaning up..."

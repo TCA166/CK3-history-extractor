@@ -46,9 +46,11 @@ impl FromGameObject for Player {
         let mut lineage: Vec<LineageNode> = Vec::new();
         get_lineage(&mut lineage, &base, game_state);
         let key = base.get("character").unwrap().as_id();
+        // apparently the player id can be negative?
+        let id = base.get("player").unwrap().as_string().parse::<i32>().unwrap();
         Player {
             name: base.get("name").unwrap().as_string(),
-            id: base.get("player").unwrap().as_id(),
+            id: id as u32,
             character: Some(game_state.get_character(&key).clone()),
             lineage: lineage,
         }
