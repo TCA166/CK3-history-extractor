@@ -1,6 +1,7 @@
 use dialoguer::{Input, Select};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
+use human_panic::setup_panic;
 use std::{
     env, fs,
     io::{stdin, stdout, IsTerminal},
@@ -51,8 +52,9 @@ const INTERVAL: Duration = Duration::from_secs(1);
 
 const CK3_EXTENSION: &str = "ck3";
 
-/// A helper function that finds the first file with a given extension in a directory.
-fn find_first_file_with_extension(dir: &str, extension: &str) -> Option<String> {
+/// A helper function that lists all files with a certain extension in directory
+fn find_files_with_extension(dir: &str, extension: &str) -> Vec<String> {
+    let mut res = Vec::new();
     let path = Path::new(dir);
     if path.is_dir() {
         for entry in fs::read_dir(path).expect("Directory not found") {
@@ -60,13 +62,13 @@ fn find_first_file_with_extension(dir: &str, extension: &str) -> Option<String> 
             if entry.is_file() {
                 if let Some(ext) = entry.extension() {
                     if ext == extension {
-                        return Some(entry.to_string_lossy().into_owned());
+                        res.push(entry.to_string_lossy().into_owned());
                     }
                 }
             }
         }
     }
-    None
+    return res;
 }
 
 /// Main function. This is the entry point of the program.
@@ -104,6 +106,7 @@ fn main() {
     if cfg!(debug_assertions) {
         env::set_var("RUST_BACKTRACE", "1");
     }
+    setup_panic!();
     //User IO
     let mut filename = String::new();
     let args: Vec<String> = env::args().collect();
@@ -134,8 +137,7 @@ fn main() {
             }
         } else {
             //console interface only if we are in a terminal
-            let random_save_file =
-                find_first_file_with_extension(".", CK3_EXTENSION).unwrap_or("".to_string());
+            let save_files = find_files_with_extension(".", CK3_EXTENSION);
             filename = Input::<String>::new()
                 .with_prompt("Enter the save file path")
                 .validate_with(|input: &String| -> Result<(), &str> {
@@ -146,7 +148,7 @@ fn main() {
                         Err("File does not exist")
                     }
                 })
-                .with_initial_text(random_save_file)
+                .with_initial_text(save_files.get(0).unwrap_or(&"".to_string()))
                 .interact_text()
                 .unwrap();
             let ck3_path = match get_ck3_path() {

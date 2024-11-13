@@ -9,7 +9,7 @@ const CK3_ID: &str = "1158310";
 #[cfg(target_os = "linux")]
 const DEFAULT_STEAM_PATH: &str = ".local/share/Steam/steamapps/";
 #[cfg(target_os = "windows")]
-const DEFAULT_STEAM_PATH: &str = "C:/Program Files (x86)/Steam/steamapps/";
+const DEFAULT_STEAM_PATH: &str = "C:\\Program Files (x86)\\Steam\\steamapps\\";
 #[cfg(target_os = "macos")]
 const DEFAULT_STEAM_PATH: &str = "Library/Application Support/Steam/steamapps/";
 
