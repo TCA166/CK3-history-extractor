@@ -76,9 +76,10 @@ And here are the arguments that the utility accepts as of right now:
 4. ```--no-vis``` disables all forms of visualization within the output
 5. ```--language``` toggles which localization files shall be used if the game path is provided
 6. ```--output %s``` changes where the output folder will be located
-7. ```--include %s %s ...``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
+7. ```--include %s``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
 8. ```--dump``` makes the tool dump all the extracted data into a json file
 9. ```--no-interaction``` disables automatic output opening and exit prompt
+10. ```--help``` provides a detailed breakdown of the CLI interface
 
 ## Mod support
 

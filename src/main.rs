@@ -1,4 +1,4 @@
-use dialoguer::{Completion, Input, Select};
+use clap::Parser;
 use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
@@ -29,20 +29,12 @@ use jinja_env::create_env;
 mod display;
 use display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, Renderer, Timeline};
 
+/// A submodule for handling the arguments passed to the program
+mod args;
+use args::Args;
+
 /// A submodule for handling Steam integration
 mod steam;
-use steam::{get_ck3_path, SteamError, CK3_PATH};
-
-/// The languages supported by the game.
-const LANGUAGES: [&'static str; 7] = [
-    "english",
-    "french",
-    "german",
-    "korean",
-    "russian",
-    "simp_chinese",
-    "spanish",
-];
 
 /// The name of the file to dump the game state to.
 const DUMP_FILE: &str = "game_state.json";
@@ -50,56 +42,7 @@ const DUMP_FILE: &str = "game_state.json";
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
-const CK3_EXTENSION: &str = "ck3";
-
-/// A [Completion] struct for save file names, that also acts as a list of save files in the current directory.
-struct SaveFileNameCompletion {
-    pub save_files: Vec<String>,
-}
-
-impl Default for SaveFileNameCompletion {
-    fn default() -> Self {
-        let mut res = Vec::new();
-        let path = Path::new(".");
-        if path.is_dir() {
-            for entry in fs::read_dir(path).expect("Directory not found") {
-                let entry = entry.expect("Unable to read entry").path();
-                if entry.is_file() {
-                    if let Some(ext) = entry.extension() {
-                        if ext == CK3_EXTENSION {
-                            res.push(entry.to_string_lossy().into_owned());
-                        }
-                    }
-                }
-            }
-        }
-        SaveFileNameCompletion { save_files: res }
-    }
-}
-
-impl Completion for SaveFileNameCompletion {
-    fn get(&self, input: &str) -> Option<String> {
-        self.save_files
-            .iter()
-            .find(|x| x.contains(input))
-            .cloned()
-    }
-}
-
 /// Main function. This is the entry point of the program.
-///
-/// # Arguments
-///
-/// 1. `filename` - The name of the save file to parse. If not provided as a command line argument, the program will prompt the user to enter it.
-/// 2. `--internal` - A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
-/// 3. `--depth` - A flag that tells the program how deep to render the player's history. Defaults to 3.
-/// 4. `--game-path` - A flag that tells the program where to find the game files. If not provided, the program will use a crude localization.
-/// 5. `--language` - A flag that tells the program which language to use for localization. Defaults to `english`.
-/// 6. `--no-vis` - A flag that tells the program not to render any images
-/// 7. `--output` - A flag that tells the program where to output the rendered files.
-/// 8. `--include` - A flag that tells the program where to find additional files to include in the rendering.
-/// 9. `--no-interaction` - A flag that tells the program not to interact with the user.
-/// 10. `--dump` - A flag that tells the program to dump the game state to a json file.
 ///
 /// # Process
 ///
@@ -123,213 +66,13 @@ fn main() {
     }
     setup_panic!();
     //User IO
-    let mut filename = String::new();
-    let args: Vec<String> = env::args().collect();
-    #[cfg(feature = "internal")]
-    let mut use_internal = false;
-    #[cfg(not(feature = "internal"))]
-    let use_internal = false;
-    // if we don't want to render any images
-    let mut no_vis = false;
-    let mut no_interaction = false;
-    // The output path, if provided by the user
-    let mut output_path: Option<String> = None;
-    // The game path and mod paths, if provided by the user
-    let mut game_path: Option<String> = None;
-    let mut include_paths: Vec<String> = Vec::new(); //the game path should be the first element
-    let mut language = LANGUAGES[0]; // The language to use for localization
-    let mut depth = 3; // The depth to render the player's history
-                       // whether the game state should be dumped to json
-    let mut dump = false;
-    // user interface stuff
-    if args.len() < 2 {
-        if !stdin().is_terminal() {
-            // simplified interface for non-terminal environments
-            stdin().read_line(&mut filename).unwrap();
-            filename = filename.trim().to_string();
-            if filename.is_empty() {
-                panic!("No filename provided");
-            }
-        } else {
-            //console interface only if we are in a terminal
-            let completion = SaveFileNameCompletion::default();
-            filename = Input::<String>::new()
-                .with_prompt("Enter the save file path")
-                .validate_with(|input: &String| -> Result<(), &str> {
-                    let p = Path::new(input).canonicalize().unwrap();
-                    if p.exists() && p.is_file() {
-                        Ok(())
-                    } else {
-                        Err("File does not exist")
-                    }
-                })
-                .with_initial_text(completion.save_files.get(0).unwrap_or(&"".to_string()))
-                .completion_with(&completion)
-                .interact_text()
-                .unwrap();
-            let ck3_path = match get_ck3_path() {
-                Ok(p) => p,
-                Err(e) => {
-                    match e {
-                        SteamError::SteamDirNotFound => {
-                            // we don't assume us being incompetent at finding the steam path is the user's fault
-                            // so we don't print an error here
-                            CK3_PATH.to_string()
-                        }
-                        SteamError::CK3Missing => {
-                            // not having CK3 installed is also fine
-                            "".to_string()
-                        }
-                        e => {
-                            // but if we can't find the CK3 path for some other reason, we print an error
-                            eprintln!("Error trying to find your CK3 installation: {:?}", e);
-                            CK3_PATH.to_string()
-                        }
-                    }
-                }
-            };
-            game_path = Input::<String>::new()
-                .with_prompt("Enter the game path [empty for None]")
-                .allow_empty(true)
-                .validate_with(|input: &String| -> Result<(), &str> {
-                    if input.is_empty() {
-                        return Ok(());
-                    }
-                    let p = Path::new(input);
-                    if p.exists() && p.is_dir() {
-                        Ok(())
-                    } else {
-                        Err("Path does not exist")
-                    }
-                })
-                .with_initial_text(ck3_path)
-                .interact_text()
-                .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
-            depth = Input::<usize>::new()
-                .with_prompt("Enter the rendering depth")
-                .default(3)
-                .interact()
-                .unwrap();
-            let include_input = Input::<String>::new()
-                .with_prompt("Enter the include paths separated by a coma [empty for None]")
-                .allow_empty(true)
-                .validate_with(|input: &String| -> Result<(), &str> {
-                    if input.is_empty() {
-                        return Ok(());
-                    }
-                    for p in input.split(',') {
-                        let path = Path::new(p.trim());
-                        if !path.exists() || !path.is_dir() {
-                            return Err("Path does not exist");
-                        }
-                    }
-                    Ok(())
-                })
-                .interact()
-                .unwrap();
-            if !include_input.is_empty() {
-                include_paths = include_input
-                    .split(',')
-                    .map(|x| x.trim().to_string())
-                    .collect();
-            }
-            if game_path.is_some() || !include_paths.is_empty() {
-                let language_selection = Select::new()
-                    .with_prompt("Choose the localization language")
-                    .items(&LANGUAGES)
-                    .default(0)
-                    .interact()
-                    .unwrap();
-                if language_selection != 0 {
-                    language = LANGUAGES[language_selection];
-                }
-            }
-            output_path = Input::<String>::new()
-                .with_prompt("Enter the output path [empty for cwd]")
-                .allow_empty(true)
-                .validate_with(|input: &String| -> Result<(), &str> {
-                    if input.is_empty() {
-                        return Ok(());
-                    }
-                    let p = Path::new(input);
-                    if p.exists() && p.is_dir() {
-                        Ok(())
-                    } else {
-                        Err("Path does not exist")
-                    }
-                })
-                .interact()
-                .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
-        }
+    let args = if env::args().len() < 2 {
+        Args::get_from_user()
     } else {
-        //console interface
-        filename = args[1].clone();
-        // foreach argument above 1
-        let mut iter = args.iter().skip(2);
-        while let Some(arg) = iter.next() {
-            match arg.as_str() {
-                "--internal" => {
-                    #[cfg(feature = "internal")]
-                    {
-                        println!("Using internal templates");
-                        use_internal = true;
-                    }
-                    #[cfg(not(feature = "internal"))]
-                    panic!("Internal templates requested but not compiled in")
-                }
-                "--depth" => {
-                    let depth_str = iter.next().expect("Depth argument requires a value");
-                    depth = depth_str
-                        .parse::<usize>()
-                        .expect("Depth argument must be a number");
-                    println!("Setting depth to {}", depth)
-                }
-                "--game-path" => {
-                    game_path = Some(
-                        iter.next()
-                            .expect("Game path argument requires a value")
-                            .clone(),
-                    );
-                }
-                "--language" => {
-                    //we don't validate the language here, args are trusted, if someone uses them to mess with the behaviour we let them
-                    language = iter.next().expect("Language argument requires a value");
-                    println!("Using language {}", language);
-                }
-                "--no-vis" => {
-                    no_vis = true;
-                }
-                "--output" => {
-                    output_path = Some(
-                        iter.next()
-                            .expect("Output path argument requires a value")
-                            .clone(),
-                    );
-                    println!("Outputting to {}", output_path.as_ref().unwrap());
-                }
-                "--include" => {
-                    while let Some(path) = iter.next() {
-                        include_paths.push(path.clone());
-                        let next = iter.next();
-                        if next.is_none() {
-                            break;
-                        }
-                    }
-                }
-                "--dump" => {
-                    dump = true;
-                }
-                "--no-interaction" => {
-                    no_interaction = true;
-                }
-                _ => {
-                    eprintln!("Unknown argument: {}", arg);
-                }
-            }
-        }
-    }
+        Args::parse()
+    };
     // arguments passed
-    let p = Path::new(&filename);
+    let p = Path::new(&args.filename);
     if !p.exists() || !p.is_file() {
         panic!("File does not exist");
     }
@@ -337,9 +80,10 @@ fn main() {
         .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
         .unwrap()
         .progress_chars("#>-");
+    let mut include_paths = args.include;
     //even though we don't need these for parsing, we load them here to error out early
-    if game_path.is_some() {
-        include_paths.insert(0, game_path.unwrap());
+    if args.game_path.is_some() {
+        include_paths.insert(0, args.game_path.unwrap());
     }
     let mut localizer = Localizer::new();
     let mut map = None;
@@ -351,9 +95,9 @@ fn main() {
         progress_bar.enable_steady_tick(INTERVAL);
         progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
-            let loc_path = path.clone() + "/localization/" + language;
+            let loc_path = path.clone() + "/localization/" + args.language;
             localizer.add_from_path(loc_path);
-            if !no_vis && map.is_none() {
+            if !args.no_vis && map.is_none() {
                 let map_data = path.clone() + "/map_data";
                 let p = Path::new(&map_data);
                 if p.exists() && p.is_dir() {
@@ -365,7 +109,7 @@ fn main() {
     }
     localizer.resolve();
     //initialize the save file
-    let save = SaveFile::open(filename.as_str()).unwrap();
+    let save = SaveFile::open(args.filename.as_str()).unwrap();
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
@@ -379,16 +123,16 @@ fn main() {
     //prepare things for rendering
     game_state.localize(&localizer);
     let grapher;
-    if !no_vis {
+    if !args.no_vis {
         grapher = Some(Grapher::new(&game_state));
     } else {
         grapher = None;
     }
-    let env = create_env(use_internal, map.is_some(), no_vis);
+    let env = create_env(args.use_internal, map.is_some(), args.no_vis);
     let timeline;
-    if !no_vis {
+    if !args.no_vis {
         let mut tm = Timeline::new(&game_state);
-        tm.set_depth(depth);
+        tm.set_depth(args.depth);
         timeline = Some(tm);
     } else {
         timeline = None;
@@ -406,13 +150,13 @@ fn main() {
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
-        if let Some(output_path) = &output_path {
+        if let Some(output_path) = &args.output {
             folder_name = output_path.clone() + "/" + folder_name.as_str();
         }
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
         cull_spinner.enable_steady_tick(INTERVAL);
-        player.set_depth(depth);
+        player.set_depth(args.depth);
         cull_spinner.finish_with_message("Tree traversed");
         let mut renderer = Renderer::new(
             &env,
@@ -424,27 +168,20 @@ fn main() {
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         render_spinner.set_style(spinner_style.clone());
         render_spinner.enable_steady_tick(INTERVAL);
-        if !no_vis {
+        if !args.no_vis {
             render_spinner.inc(renderer.render_all(timeline.as_ref().unwrap()));
         }
         render_spinner.inc(renderer.render_all(player));
         render_spinner.finish_with_message("Rendering complete");
-        if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
+        if stdin().is_terminal() && stdout().is_terminal() && !args.no_interaction {
             open::that(player.get_path(&folder_name)).unwrap();
         }
         rendering_progress_bar.remove(&cull_spinner);
         rendering_progress_bar.remove(&render_spinner);
     }
     player_progress.finish_with_message("Players rendered");
-    if dump {
+    if args.dump {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write(DUMP_FILE, json).unwrap();
-    }
-    if stdin().is_terminal() && stdout().is_terminal() && !no_interaction {
-        Input::<String>::new()
-            .with_prompt("Press enter to exit")
-            .allow_empty(true)
-            .interact()
-            .unwrap();
     }
 }
