@@ -83,7 +83,7 @@ impl Serialize for Memory {
 }
 
 impl Localizable for Memory {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
         for part in self.participants.iter_mut() {
             part.0 = localization.localize(&part.0).to_string();

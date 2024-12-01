@@ -121,7 +121,7 @@ fn main() {
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
-    game_state.localize(&localizer);
+    game_state.localize(&mut localizer);
     let grapher;
     if !args.no_vis {
         grapher = Some(Grapher::new(&game_state));
@@ -146,7 +146,7 @@ fn main() {
         .template("[{elapsed_precise}] {spinner} {msg}")
         .unwrap();
     for player in player_progress.wrap_iter(players.iter_mut()) {
-        player.localize(&localizer);
+        player.localize(&mut localizer);
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));

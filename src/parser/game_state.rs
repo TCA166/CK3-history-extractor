@@ -304,7 +304,7 @@ impl GameState {
 }
 
 impl Localizable for GameState {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         for (_, character) in &mut self.characters {
             character.get_internal_mut().localize(localization);
         }

@@ -43,6 +43,7 @@ fn demangle_generic(input: &str) -> String {
 
 /// A function that handles the stack of function calls.
 /// It will replace characters from start to end in result according to the functions and arguments in the stack.
+#[inline(always)]
 fn handle_stack(
     stack: Vec<(String, Vec<String>)>,
     start: usize,
@@ -72,6 +73,64 @@ fn handle_stack(
             *end = start;
         }
     }
+}
+
+/// A function that resolves the special localisation invocations.
+fn resolve_stack(str: &GameString) -> GameString {
+    let mut value = str.to_string();
+    let mut start = 0;
+    let mut stack: Vec<(String, Vec<String>)> = Vec::new();
+    {
+        //create a call stack
+        let mut call = String::new();
+        let mut args: Vec<String> = Vec::new();
+        let mut arg = String::new();
+        let mut collect = false;
+        let mut collect_args = false;
+        let mut ind: usize = 1;
+        for c in str.chars() {
+            match c {
+                '[' => {
+                    collect = true;
+                    start = ind - 1;
+                }
+                ']' => {
+                    collect = false;
+                    handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
+                }
+                '(' => {
+                    if collect {
+                        collect_args = true;
+                    }
+                }
+                ')' => {
+                    if collect_args {
+                        collect_args = false;
+                        args.push(mem::take(&mut arg));
+                    }
+                }
+                ',' => {
+                    if collect_args {
+                        args.push(mem::take(&mut arg));
+                    }
+                }
+                '.' => {
+                    if collect {
+                        stack.push((mem::take(&mut call), mem::take(&mut args)));
+                    }
+                }
+                _ => {
+                    if collect_args {
+                        arg.push(c);
+                    } else if collect {
+                        call.push(c);
+                    }
+                }
+            }
+            ind += 1;
+        }
+    }
+    return GameString::wrap(value);
 }
 
 /// An object that localizes strings.
@@ -184,8 +243,7 @@ impl Localizer {
         - $key$ - use that key instead of the key that was used to look up the string
         - [function(arg).function(arg)...] handling this one is going to be a nightmare
         */
-        let iterable_clone = self.data.clone();
-        for (key, value) in iterable_clone.iter() {
+        for (key, value) in self.data.clone() { // unfortunate clone, but we need to iterate over the data while modifying it
             // resolve the borrowed keys
             let mut new_value = String::new();
             let mut foreign_key = String::new();
@@ -211,65 +269,19 @@ impl Localizer {
     }
 
     /// Localizes a string.
-    pub fn localize(&self, key: &str) -> GameString {
-        if self.data.is_empty() {
-            return GameString::wrap(demangle_generic(key));
-        }
+    pub fn localize(&mut self, key: &str) -> GameString {
         if let Some(d) = self.data.get(key) {
-            let d = d.clone();
             //if the string contains []
             if d.contains('[') && d.contains(']') {
                 //handle the special function syntax
-                let mut value = d.to_string();
-                let mut start = 0;
-                let mut stack: Vec<(String, Vec<String>)> = Vec::new();
-                {
-                    //create a call stack
-                    let mut call = String::new();
-                    let mut args: Vec<String> = Vec::new();
-                    let mut arg = String::new();
-                    let mut collect = false;
-                    let mut collect_args = false;
-                    let mut ind: usize = 1;
-                    for c in d.chars() {
-                        match c {
-                            '[' => {
-                                collect = true;
-                                start = ind - 1;
-                            }
-                            ']' => {
-                                collect = false;
-                                handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
-                            }
-                            '(' => {
-                                collect_args = true;
-                            }
-                            ')' => {
-                                collect_args = false;
-                                args.push(mem::take(&mut arg));
-                            }
-                            ',' => {
-                                args.push(mem::take(&mut arg));
-                            }
-                            '.' => {
-                                stack.push((mem::take(&mut call), mem::take(&mut args)));
-                            }
-                            _ => {
-                                if collect_args {
-                                    arg.push(c);
-                                } else if collect {
-                                    call.push(c);
-                                }
-                            }
-                        }
-                        ind += 1;
-                    }
-                }
-                return GameString::wrap(value);
+                return resolve_stack(d);
+            } else {
+                return d.clone();
             }
-            return d;
         } else {
-            return GameString::wrap(demangle_generic(key));
+            let res = GameString::wrap(demangle_generic(key));
+            self.data.insert(key.to_string(), res.clone());
+            return res;
         }
     }
 }
@@ -277,5 +289,37 @@ impl Localizer {
 /// A trait that allows an object to be localized.
 pub trait Localizable {
     /// Localizes the object.
-    fn localize(&mut self, localization: &Localizer);
+    fn localize(&mut self, localization: &mut Localizer);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_links() {
+        let mut localizer = Localizer::new();
+        localizer.data.insert("key".to_string(), GameString::wrap("value".to_owned()));
+        localizer.data.insert("test".to_string(), GameString::wrap("$key$".to_owned()));
+        localizer.data.insert("test2".to_string(), GameString::wrap(" $key$ ".to_owned()));
+        localizer.data.insert("test3".to_string(), GameString::wrap(" $key$ $key$ ".to_owned()));
+        localizer.resolve();
+        assert_eq!(localizer.data.get("test").unwrap().as_str(), "value");
+        assert_eq!(localizer.data.get("test2").unwrap().as_str(), " value ");
+        assert_eq!(localizer.data.get("test3").unwrap().as_str(), " value value ");
+    }
+
+    #[test]
+    fn test_stack() {
+        let mut localizer = Localizer::new();
+        localizer.data.insert("test".to_string(), GameString::wrap("[GetTrait(trait_test).GetName()]".to_owned()));
+        localizer.data.insert("test2".to_string(), GameString::wrap("   [GetTrait(trait_test).GetName()]  ".to_owned()));
+        localizer.data.insert("test3".to_string(), GameString::wrap(" hello( [GetTrait(trait_test).GetName()] ) ".to_owned()));
+        localizer.data.insert("test4".to_string(), GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()));
+        localizer.resolve();
+        assert_eq!(localizer.localize("test").as_str(), "trait_test");
+        assert_eq!(localizer.localize("test2").as_str(), "   trait_test  ");
+        assert_eq!(localizer.localize("test3").as_str(), " hello( trait_test ) ");
+        assert_eq!(localizer.localize("test4").as_str(), " hello,.(., trait_test ) ");
+    }
 }

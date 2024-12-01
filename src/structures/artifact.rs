@@ -98,7 +98,7 @@ impl DummyInit for Artifact {
 }
 
 impl Localizable for Artifact {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         if let Some(rarity) = &self.rarity {
             self.rarity = Some(localization.localize(rarity));
         }

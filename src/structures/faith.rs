@@ -172,7 +172,7 @@ impl Renderable for Faith {
 }
 
 impl Localizable for Faith {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         for tenet in self.tenets.iter_mut() {
             *tenet = localization.localize(tenet.as_str());

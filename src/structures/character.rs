@@ -853,7 +853,7 @@ impl Renderable for Character {
 }
 
 impl Localizable for Character {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         if self.name.is_none() {
             return;
         } else {

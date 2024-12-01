@@ -371,7 +371,7 @@ impl Renderable for Dynasty {
 }
 
 impl Localizable for Dynasty {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         if let Some(name) = &self.name {
             self.name = Some(localization.localize(name.as_str()));
         } else {

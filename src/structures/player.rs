@@ -239,7 +239,7 @@ impl Renderable for Player {
 }
 
 impl Localizable for Player {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         for node in self.lineage.iter_mut() {
             node.localize(localization);
         }

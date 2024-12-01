@@ -140,7 +140,7 @@ impl Serialize for LineageNode {
 }
 
 impl Localizable for LineageNode {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         if let Some(lifestyle) = &self.lifestyle {
             self.lifestyle = Some(localization.localize(&lifestyle.as_str()));
         }

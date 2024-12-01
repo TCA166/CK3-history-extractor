@@ -216,7 +216,7 @@ impl Renderable for Culture {
 }
 
 impl Localizable for Culture {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
         self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));

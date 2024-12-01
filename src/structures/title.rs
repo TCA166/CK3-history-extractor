@@ -455,7 +455,7 @@ impl Renderable for Title {
 }
 
 impl Localizable for Title {
-    fn localize(&mut self, localization: &Localizer) {
+    fn localize(&mut self, localization: &mut Localizer) {
         if self.key.is_none() {
             return;
         }
