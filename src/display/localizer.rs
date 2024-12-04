@@ -51,7 +51,7 @@ fn handle_stack(
     result: &mut String,
 ) {
     // sanity check?
-    if start >= result.len() || *end >= result.len() {
+    if start > result.len() || *end > result.len() {
         return;
     }
     //TODO add more handling, will improve the accuracy of localization, especially for memories
