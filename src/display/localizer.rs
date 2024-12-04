@@ -50,6 +50,10 @@ fn handle_stack(
     end: &mut usize,
     result: &mut String,
 ) {
+    // sanity check?
+    if start >= result.len() || *end >= result.len() {
+        return;
+    }
     //TODO add more handling, will improve the accuracy of localization, especially for memories
     //println!("{:?}", stack);
     match stack.len() {
@@ -96,6 +100,10 @@ fn resolve_stack(str: &GameString) -> GameString {
                 }
                 ']' => {
                     collect = false;
+                    collect_args = false;
+                    if !call.is_empty() {
+                        stack.push((mem::take(&mut call), mem::take(&mut args)));
+                    }
                     handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
                 }
                 '(' => {
@@ -106,7 +114,9 @@ fn resolve_stack(str: &GameString) -> GameString {
                 ')' => {
                     if collect_args {
                         collect_args = false;
-                        args.push(mem::take(&mut arg));
+                        if !arg.is_empty() {
+                            args.push(mem::take(&mut arg));
+                        }
                     }
                 }
                 ',' => {
@@ -317,9 +327,28 @@ mod tests {
         localizer.data.insert("test3".to_string(), GameString::wrap(" hello( [GetTrait(trait_test).GetName()] ) ".to_owned()));
         localizer.data.insert("test4".to_string(), GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()));
         localizer.resolve();
-        assert_eq!(localizer.localize("test").as_str(), "trait_test");
-        assert_eq!(localizer.localize("test2").as_str(), "   trait_test  ");
-        assert_eq!(localizer.localize("test3").as_str(), " hello( trait_test ) ");
-        assert_eq!(localizer.localize("test4").as_str(), " hello,.(., trait_test ) ");
+        assert_eq!(localizer.localize("test").as_str(), "Trait test");
+        assert_eq!(localizer.localize("test2").as_str(), "   Trait test  ");
+        assert_eq!(localizer.localize("test3").as_str(), " hello( Trait test ) ");
+        assert_eq!(localizer.localize("test4").as_str(), " hello,.(., Trait test ) ");
+    }
+
+    #[test]
+    fn test_handle_stack() {
+        let mut stack: Vec<(String, Vec<String>)> = Vec::new();
+        stack.push(("GetTrait".to_owned(), vec!["trait_test".to_owned()]));
+        stack.push(("GetName".to_owned(), vec![]));
+        let mut result = "trait_test".to_owned();
+        let start = 0;
+        let mut end = 10;
+        handle_stack(stack, start, &mut end, &mut result);
+        assert_eq!(result, "Trait test");
+    }
+
+    #[test]
+    fn test_really_nasty() {
+        let input = "[GetTrait(trait_test).GetName()]";
+        let result = resolve_stack(&GameString::wrap(input.to_owned()));
+        assert_eq!(result.as_str(), "Trait test");
     }
 }
