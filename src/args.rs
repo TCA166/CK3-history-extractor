@@ -49,13 +49,40 @@ impl Completion for SaveFileNameCompletion {
     }
 }
 
-/// A function to validate the path input.
-fn validate_path(input: &String) -> Result<(), &'static str> {
+/// A function to validate the file path input.
+fn validate_file_path(input: &String) -> Result<(), &'static str> {
     if input.is_empty() {
         return Ok(());
     }
     let p = Path::new(input);
-    if p.exists() {
+    if p.exists() && p.is_file() {
+        Ok(())
+    } else {
+        Err("Invalid path")
+    }
+}
+
+/// A function to validate the path list input.
+fn validate_path_list(input: &String) -> Result<(), &'static str> {
+    if input.is_empty() {
+        return Ok(());
+    }
+    for p in input.split(',') {
+        let r = validate_dir_path(&p.to_string());
+        if r.is_err() {
+            return r;
+        }
+    }
+    Ok(())
+}
+
+/// A function to validate the path input.
+fn validate_dir_path(input: &String) -> Result<(), &'static str> {
+    if input.is_empty() {
+        return Ok(());
+    }
+    let p = Path::new(input);
+    if p.exists() && p.is_dir() {
         Ok(())
     } else {
         Err("Invalid path")
@@ -145,7 +172,7 @@ impl Args {
         let completion = SaveFileNameCompletion::default();
         let filename = Input::<String>::new()
             .with_prompt("Enter the save file path")
-            .validate_with(validate_path)
+            .validate_with(validate_file_path)
             .with_initial_text(completion.save_files.get(0).unwrap_or(&"".to_string()))
             .completion_with(&completion)
             .interact_text()
@@ -174,7 +201,7 @@ impl Args {
         let game_path = Input::<String>::new()
             .with_prompt("Enter the game path [empty for None]")
             .allow_empty(true)
-            .validate_with(validate_path)
+            .validate_with(validate_dir_path)
             .with_initial_text(ck3_path)
             .interact_text()
             .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
@@ -186,7 +213,7 @@ impl Args {
         let include_input = Input::<String>::new()
             .with_prompt("Enter the include paths separated by a coma [empty for None]")
             .allow_empty(true)
-            .validate_with(validate_path)
+            .validate_with(validate_path_list)
             .interact()
             .unwrap();
         let mut include_paths = Vec::new();
@@ -211,7 +238,7 @@ impl Args {
         let output_path = Input::<String>::new()
             .with_prompt("Enter the output path [empty for cwd]")
             .allow_empty(true)
-            .validate_with(validate_path)
+            .validate_with(validate_dir_path)
             .interact()
             .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
         Args {
