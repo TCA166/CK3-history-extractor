@@ -144,7 +144,8 @@ fn main() {
     player_progress.enable_steady_tick(INTERVAL);
     let spinner_style = ProgressStyle::default_spinner()
         .template("[{elapsed_precise}] {spinner} {msg}")
-        .unwrap();
+        .unwrap()
+        .tick_chars("|/-\\ ");
     for player in player_progress.wrap_iter(players.iter_mut()) {
         player.localize(&mut localizer);
         //render each player

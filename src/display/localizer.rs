@@ -50,16 +50,12 @@ fn handle_stack(
     end: &mut usize,
     result: &mut String,
 ) {
-    // sanity check?
-    if start > result.len() || *end > result.len() {
-        return;
-    }
     //TODO add more handling, will improve the accuracy of localization, especially for memories
     //println!("{:?}", stack);
     match stack.len() {
         2 => {
             if stack[0].0 == "GetTrait" && stack[1].0 == "GetName" {
-                let l = stack[0].1[0].len();
+                let l = stack[0].1[0].chars().count();
                 let replace = demangle_generic(stack[0].1[0].as_str().trim_matches('\''));
                 result.replace_range(start..*end, &replace);
                 // move end to the end of the string
@@ -67,13 +63,13 @@ fn handle_stack(
             }
         }
         _ => {
-            let replace: String;
+            let replace: &str;
             if stack.len() > 0 && stack[0].1.len() > 0 {
-                replace = stack[0].1[0].clone();
+                replace = stack[0].1[0].as_str();
             } else {
-                replace = "".to_owned();
+                replace = "";
             }
-            result.replace_range(start..*end, &replace);
+            result.replace_range(start..*end, replace);
             *end = start;
         }
     }
@@ -126,7 +122,11 @@ fn resolve_stack(str: &GameString) -> GameString {
                 }
                 '.' => {
                     if collect {
-                        stack.push((mem::take(&mut call), mem::take(&mut args)));
+                        if collect_args {
+                            arg.push(c);
+                        } else {
+                            stack.push((mem::take(&mut call), mem::take(&mut args)));
+                        }
                     }
                 }
                 _ => {
@@ -137,7 +137,7 @@ fn resolve_stack(str: &GameString) -> GameString {
                     }
                 }
             }
-            ind += 1;
+            ind += c.len_utf8();
         }
     }
     return GameString::wrap(value);
@@ -253,7 +253,8 @@ impl Localizer {
         - $key$ - use that key instead of the key that was used to look up the string
         - [function(arg).function(arg)...] handling this one is going to be a nightmare
         */
-        for (key, value) in self.data.clone() { // unfortunate clone, but we need to iterate over the data while modifying it
+        for (key, value) in self.data.clone() {
+            // unfortunate clone, but we need to iterate over the data while modifying it
             // resolve the borrowed keys
             let mut new_value = String::new();
             let mut foreign_key = String::new();
@@ -309,28 +310,58 @@ mod tests {
     #[test]
     fn test_links() {
         let mut localizer = Localizer::new();
-        localizer.data.insert("key".to_string(), GameString::wrap("value".to_owned()));
-        localizer.data.insert("test".to_string(), GameString::wrap("$key$".to_owned()));
-        localizer.data.insert("test2".to_string(), GameString::wrap(" $key$ ".to_owned()));
-        localizer.data.insert("test3".to_string(), GameString::wrap(" $key$ $key$ ".to_owned()));
+        localizer
+            .data
+            .insert("key".to_string(), GameString::wrap("value".to_owned()));
+        localizer
+            .data
+            .insert("test".to_string(), GameString::wrap("$key$".to_owned()));
+        localizer
+            .data
+            .insert("test2".to_string(), GameString::wrap(" $key$ ".to_owned()));
+        localizer.data.insert(
+            "test3".to_string(),
+            GameString::wrap(" $key$ $key$ ".to_owned()),
+        );
         localizer.resolve();
         assert_eq!(localizer.data.get("test").unwrap().as_str(), "value");
         assert_eq!(localizer.data.get("test2").unwrap().as_str(), " value ");
-        assert_eq!(localizer.data.get("test3").unwrap().as_str(), " value value ");
+        assert_eq!(
+            localizer.data.get("test3").unwrap().as_str(),
+            " value value "
+        );
     }
 
     #[test]
     fn test_stack() {
         let mut localizer = Localizer::new();
-        localizer.data.insert("test".to_string(), GameString::wrap("[GetTrait(trait_test).GetName()]".to_owned()));
-        localizer.data.insert("test2".to_string(), GameString::wrap("   [GetTrait(trait_test).GetName()]  ".to_owned()));
-        localizer.data.insert("test3".to_string(), GameString::wrap(" hello( [GetTrait(trait_test).GetName()] ) ".to_owned()));
-        localizer.data.insert("test4".to_string(), GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()));
+        localizer.data.insert(
+            "test".to_string(),
+            GameString::wrap("[GetTrait(trait_test).GetName()]".to_owned()),
+        );
+        localizer.data.insert(
+            "test2".to_string(),
+            GameString::wrap("   [GetTrait(trait_test).GetName()]  ".to_owned()),
+        );
+        localizer.data.insert(
+            "test3".to_string(),
+            GameString::wrap(" hello( [GetTrait(trait_test).GetName()] ) ".to_owned()),
+        );
+        localizer.data.insert(
+            "test4".to_string(),
+            GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()),
+        );
         localizer.resolve();
         assert_eq!(localizer.localize("test").as_str(), "Trait test");
         assert_eq!(localizer.localize("test2").as_str(), "   Trait test  ");
-        assert_eq!(localizer.localize("test3").as_str(), " hello( Trait test ) ");
-        assert_eq!(localizer.localize("test4").as_str(), " hello,.(., Trait test ) ");
+        assert_eq!(
+            localizer.localize("test3").as_str(),
+            " hello( Trait test ) "
+        );
+        assert_eq!(
+            localizer.localize("test4").as_str(),
+            " hello,.(., Trait test ) "
+        );
     }
 
     #[test]
@@ -350,5 +381,12 @@ mod tests {
         let input = "[GetTrait(trait_test).GetName()]";
         let result = resolve_stack(&GameString::wrap(input.to_owned()));
         assert_eq!(result.as_str(), "Trait test");
+    }
+
+    #[test]
+    fn test_french() {
+        let input =
+            "a brûlé [Select_CString(CHARACTER.IsFemale,'vive','vif')] dans un feu de forêt";
+        resolve_stack(&GameString::wrap(input.to_owned()));
     }
 }
