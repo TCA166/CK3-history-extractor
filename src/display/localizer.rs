@@ -72,7 +72,8 @@ fn handle_stack(
             result.replace_range(start..*end, replace);
             *end = start;
         }
-    }
+    } // TODO add a catch for the CHARACTER.Custom('FR_E') and other stuff
+      // MAYBE json input for easy customisation?
 }
 
 /// A function that resolves the special localisation invocations.
@@ -142,6 +143,8 @@ fn resolve_stack(str: &GameString) -> GameString {
     }
     return GameString::wrap(value);
 }
+
+// TODO add common phrase localization
 
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
