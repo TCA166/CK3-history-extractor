@@ -7,7 +7,7 @@ pub use game_object::{
 
 /// A submodule that provides the [SaveFile] object, which is used to store the entire save file.
 mod save_file;
-pub use save_file::SaveFile;
+pub use save_file::{SaveFile, SaveFileError};
 
 /// A submodule that provides the [Section] object, which is used to store the parsed data of a section of the save file.
 mod section;

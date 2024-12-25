@@ -3,7 +3,9 @@ use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
 use std::{
-    env, fs,
+    env,
+    fmt::{self, Debug, Formatter},
+    fs,
     io::{stdin, stdout, IsTerminal},
     path::Path,
     time::Duration,
@@ -14,7 +16,7 @@ mod types;
 
 /// A submodule that handles save file parsing
 mod parser;
-use parser::{process_section, GameState, SaveFile};
+use parser::{process_section, GameState, SaveFile, SaveFileError};
 
 /// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
@@ -42,6 +44,24 @@ const DUMP_FILE: &str = "game_state.json";
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
+enum UserError {
+    NoTerminal,
+    FileDoesNotExist,
+    FileError(SaveFileError),
+}
+
+impl Debug for UserError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            UserError::NoTerminal => write!(f, "Not in a terminal"),
+            UserError::FileDoesNotExist => write!(f, "File does not exist"),
+            UserError::FileError(e) => {
+                write!(f, "Error occurred during save file handling {:?}", e)
+            }
+        }
+    }
+}
+
 /// Main function. This is the entry point of the program.
 ///
 /// # Process
@@ -60,13 +80,16 @@ const INTERVAL: Duration = Duration::from_secs(1);
 ///     2. Renders the objects into HTML using the templates and writes them to the folder
 /// 5. Prints the time taken to parse the save file
 ///
-fn main() {
+fn main() -> Result<(), UserError> {
     if cfg!(debug_assertions) {
         env::set_var("RUST_BACKTRACE", "1");
     }
     setup_panic!();
     //User IO
     let args = if env::args().len() < 2 {
+        if !stdout().is_terminal() {
+            return Err(UserError::NoTerminal);
+        }
         Args::get_from_user()
     } else {
         Args::parse()
@@ -74,7 +97,7 @@ fn main() {
     // arguments passed
     let p = Path::new(&args.filename);
     if !p.exists() || !p.is_file() {
-        panic!("File does not exist");
+        return Err(UserError::FileDoesNotExist);
     }
     let bar_style = ProgressStyle::default_bar()
         .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
@@ -82,8 +105,8 @@ fn main() {
         .progress_chars("#>-");
     let mut include_paths = args.include;
     //even though we don't need these for parsing, we load them here to error out early
-    if args.game_path.is_some() {
-        include_paths.insert(0, args.game_path.unwrap());
+    if let Some(game_path) = args.game_path {
+        include_paths.insert(0, game_path);
     }
     let mut localizer = Localizer::new();
     let mut map = None;
@@ -109,7 +132,10 @@ fn main() {
     }
     localizer.resolve();
     //initialize the save file
-    let save = SaveFile::open(args.filename.as_str()).unwrap();
+    let save = match SaveFile::open(args.filename.as_str()) {
+        Ok(s) => s,
+        Err(e) => return Err(UserError::FileError(e)),
+    };
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
@@ -117,6 +143,7 @@ fn main() {
     progress_bar.set_style(bar_style.clone());
     for mut i in progress_bar.wrap_iter(save.into_iter()) {
         progress_bar.set_message(i.get_name().to_owned());
+        // TODO make this return a Result
         process_section(&mut i, &mut game_state, &mut players);
     }
     progress_bar.finish_with_message("Save parsing complete");
@@ -185,4 +212,5 @@ fn main() {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write(DUMP_FILE, json).unwrap();
     }
+    return Ok(());
 }
