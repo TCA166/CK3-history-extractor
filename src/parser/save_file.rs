@@ -5,8 +5,9 @@ use super::{
 use std::{
     fmt::Debug,
     fs::File,
-    io::{Cursor, Read},
+    io::{self, Cursor, Read},
     rc::Rc,
+    string::FromUtf8Error,
 };
 use zip::{read::ZipArchive, result::ZipError};
 
@@ -27,6 +28,24 @@ impl Debug for SaveFileError {
             SaveFileError::ParseError(s) => write!(f, "Parse error: {}", s),
             SaveFileError::DecompressionError(e) => write!(f, "Decompression error: {}", e),
         }
+    }
+}
+
+impl From<ZipError> for SaveFileError {
+    fn from(value: ZipError) -> Self {
+        return Self::DecompressionError(value);
+    }
+}
+
+impl From<io::Error> for SaveFileError {
+    fn from(value: io::Error) -> Self {
+        return Self::IoError(value);
+    }
+}
+
+impl From<FromUtf8Error> for SaveFileError {
+    fn from(_: FromUtf8Error) -> Self {
+        return Self::ParseError("Failed to parse UTF8");
     }
 }
 
@@ -70,60 +89,37 @@ impl SaveFile {
     /// A new SaveFile instance.
     /// It is an iterator that returns sections from the save file.
     pub fn open(filename: &str) -> Result<SaveFile, SaveFileError> {
-        match File::open(filename) {
-            Ok(mut file) => {
-                let mut contents = vec![];
-                if let Err(err) = file.read_to_end(&mut contents) {
-                    return Err(SaveFileError::IoError(err));
-                }
-                let mut compressed = false;
-                // find if ARCHIVE_HEADER is in the file
-                for i in 0..contents.len() - ARCHIVE_HEADER.len() {
-                    if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
-                        compressed = true;
-                        break;
-                    }
-                }
-                let contents = if compressed {
-                    match ZipArchive::new(Cursor::new(contents)) {
-                        Ok(mut archive) => match archive.by_index(0) {
-                            Ok(mut gamestate) => {
-                                if gamestate.is_dir() {
-                                    return Err(SaveFileError::ParseError(
-                                        "Save file is a directory",
-                                    ));
-                                }
-                                let mut contents = String::new();
-                                if let Err(err) = gamestate.read_to_string(&mut contents) {
-                                    return Err(SaveFileError::IoError(err));
-                                }
-                                contents
-                            }
-                            Err(err) => {
-                                return Err(SaveFileError::DecompressionError(err));
-                            }
-                        },
-                        Err(err) => {
-                            return Err(SaveFileError::DecompressionError(err));
-                        }
-                    }
-                } else {
-                    match String::from_utf8(contents) {
-                        Ok(contents) => contents,
-                        Err(_) => {
-                            return Err(SaveFileError::ParseError("Save file is not valid UTF-8"));
-                        }
-                    }
-                };
-                return Ok(SaveFile {
-                    contents: Rc::new(contents),
-                    offset: Shared::wrap(0),
-                });
-            }
-            Err(err) => {
-                return Err(SaveFileError::IoError(err));
+        let mut file = File::open(filename)?;
+        let mut contents = vec![];
+        if let Err(err) = file.read_to_end(&mut contents) {
+            return Err(SaveFileError::IoError(err));
+        }
+        let mut compressed = false;
+        // find if ARCHIVE_HEADER is in the file
+        for i in 0..contents.len() - ARCHIVE_HEADER.len() {
+            if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
+                compressed = true;
+                break;
             }
         }
+        let contents = if compressed {
+            let mut archive = ZipArchive::new(Cursor::new(contents))?;
+            let mut gamestate = archive.by_index(0)?;
+            if gamestate.is_dir() {
+                return Err(SaveFileError::ParseError("Save file is a directory"));
+            }
+            let mut contents = String::new();
+            if let Err(err) = gamestate.read_to_string(&mut contents) {
+                return Err(SaveFileError::IoError(err));
+            }
+            contents
+        } else {
+            String::from_utf8(contents)?
+        };
+        return Ok(SaveFile {
+            contents: Rc::new(contents),
+            offset: Shared::wrap(0),
+        });
     }
 }
 
