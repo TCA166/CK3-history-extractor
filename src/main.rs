@@ -62,6 +62,12 @@ impl Debug for UserError {
     }
 }
 
+impl From<SaveFileError> for UserError {
+    fn from(value: SaveFileError) -> Self {
+        return UserError::FileError(value);
+    }
+}
+
 /// Main function. This is the entry point of the program.
 ///
 /// # Process
@@ -132,19 +138,17 @@ fn main() -> Result<(), UserError> {
     }
     localizer.resolve();
     //initialize the save file
-    let save = match SaveFile::open(args.filename.as_str()) {
-        Ok(s) => s,
-        Err(e) => return Err(UserError::FileError(e)),
-    };
+    let save = SaveFile::open(args.filename.as_str())?;
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
     let progress_bar = ProgressBar::new(save.len() as u64);
     progress_bar.set_style(bar_style.clone());
-    for mut i in progress_bar.wrap_iter(save.into_iter()) {
-        progress_bar.set_message(i.get_name().to_owned());
-        // TODO make this return a Result
-        process_section(&mut i, &mut game_state, &mut players);
+    for i in progress_bar.wrap_iter(save.into_iter()) {
+        let mut section = i.unwrap();
+        progress_bar.set_message(section.get_name().to_owned());
+        // if an error occured somewhere here, there's nothing we can do
+        process_section(&mut section, &mut game_state, &mut players).unwrap();
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering

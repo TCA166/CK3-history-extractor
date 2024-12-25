@@ -12,6 +12,7 @@ pub use save_file::{SaveFile, SaveFileError};
 /// A submodule that provides the [Section] object, which is used to store the parsed data of a section of the save file.
 mod section;
 use section::Section;
+pub use section::SectionError;
 
 /// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
@@ -26,21 +27,25 @@ use super::{
 /// A function that processes a section of the save file.
 /// Based on the given section, it will update the [GameState] object and the [Player] vector.
 /// The [GameState] object is used to store all the data from the save file, while the [Player] vector is used to store the player data.
-pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mut Vec<Player>) {
+pub fn process_section(
+    i: &mut Section,
+    game_state: &mut GameState,
+    players: &mut Vec<Player>,
+) -> Result<(), SectionError> {
     match i.get_name() {
         "meta_data" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let r = r.as_map();
             game_state.set_current_date(r.get_string_ref("meta_date"));
             game_state.set_offset_date(r.get_string_ref("meta_real_date"));
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             game_state.add_lookup(r.as_array().into_iter().map(|x| x.as_string()).collect());
         }
         "landed_titles" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let landed = r.as_map().get_object_ref("landed_titles").as_map();
             for (_, v) in landed.into_iter() {
                 match v {
@@ -55,7 +60,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "county_manager" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let counties = r.as_map().get_object_ref("counties").as_map();
             // we create an association between the county key and the faith and culture of the county
             // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
@@ -82,7 +87,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "dynasties" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             for (_, d) in r.as_map().into_iter() {
                 match d.as_object() {
                     SaveFileObject::Map(o) => {
@@ -106,7 +111,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "living" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             for (_, l) in r.as_map().into_iter() {
                 match l {
                     SaveFileValue::Object(o) => {
@@ -120,7 +125,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "dead_unprunable" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             for (_, d) in r.as_map().into_iter() {
                 match d {
                     SaveFileValue::Object(o) => {
@@ -134,7 +139,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "characters" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let dead_prunable = r.as_map().get("dead_prunable");
             if dead_prunable.is_some() {
                 for (_, d) in dead_prunable.unwrap().as_object().as_map().into_iter() {
@@ -151,7 +156,7 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "vassal_contracts" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let r = r.as_map();
             // if version <= 1.12 then the key is active, otherwise it is database, why paradox?
             let active = r
@@ -173,21 +178,21 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "religion" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let faiths = r.as_map().get_object_ref("faiths").as_map();
             for (_, f) in faiths.into_iter() {
                 game_state.add_faith(f.as_object().as_map());
             }
         }
         "culture_manager" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let cultures = r.as_map().get_object_ref("cultures").as_map();
             for (_, c) in cultures.into_iter() {
                 game_state.add_culture(c.as_object().as_map());
             }
         }
         "character_memory_manager" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let database = r.as_map().get_object_ref("database").as_map();
             for (_, d) in database.into_iter() {
                 match d {
@@ -201,12 +206,12 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             }
         }
         "played_character" => {
-            let r = i.parse().unwrap();
+            let r = i.parse()?;
             let p = Player::from_game_object(r.as_map(), game_state);
             players.push(p);
         }
         "artifacts" => {
-            let artifacts = i.parse().unwrap();
+            let artifacts = i.parse()?;
             let arr = artifacts.as_map().get_object_ref("artifacts").as_map();
             for (_, a) in arr.into_iter() {
                 match a {
@@ -223,4 +228,5 @@ pub fn process_section(i: &mut Section, game_state: &mut GameState, players: &mu
             i.skip();
         }
     }
+    return Ok(());
 }

@@ -151,17 +151,19 @@ impl SaveFile {
 }
 
 impl Iterator for SaveFile {
-    type Item = Section;
+    type Item = Result<Section, SaveFileError>;
 
     /// Get the next object in the save file
     /// If the file pointer has reached the end of the save file then it will return None.
-    fn next(&mut self) -> Option<Section> {
+    fn next(&mut self) -> Option<Self::Item> {
         let mut key = String::new();
         let off = self.offset.get_internal_mut();
         for c in self.contents[*off..].chars() {
             match c {
                 '}' | '"' => {
-                    panic!("Unexpected character at {}", *off);
+                    return Some(Err(SaveFileError::ParseError(
+                        "Unexpected character encountered in-between sections",
+                    )));
                 }
                 '{' => {
                     break;
@@ -180,11 +182,11 @@ impl Iterator for SaveFile {
         if key.is_empty() {
             return None;
         }
-        return Some(Section::new(
+        return Some(Ok(Section::new(
             key,
             self.contents.clone(),
             self.offset.clone(),
-        ));
+        )));
     }
 }
 
@@ -214,7 +216,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
         let test3 = test2.get_string_ref("test3");
@@ -235,7 +237,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2");
         let test2_val = test2.as_array();
@@ -281,7 +283,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
         assert_eq!(*(test2.get_string_ref("1")), "2".to_string());
@@ -297,7 +299,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_array();
         assert_eq!(*(test2.get_index(0).unwrap().as_string()), "1".to_string());
@@ -331,7 +333,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         let variables = object.as_map().get_object_ref("variables").as_map();
         let data = variables.get_object_ref("data").as_array();
         assert_ne!(data.len(), 0)
@@ -372,7 +374,7 @@ mod tests {
             }
             artifact_claims={ 83888519 }
         }");
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(
             *(object.as_map().get_string_ref("name")),
@@ -414,7 +416,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
         let test3 = test2.get_string_ref("test3");
@@ -474,7 +476,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "c_derby".to_string());
         let b_derby = object.as_map().get_object_ref("b_derby").as_map();
         assert_eq!(*(b_derby.get_string_ref("province")), "1621".to_string());
@@ -504,7 +506,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
         let test2 = object.as_map().get_object_ref("test2").as_map();
         let test3 = test2.get_string_ref("test3");
@@ -519,7 +521,7 @@ mod tests {
             }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
     }
 
@@ -530,7 +532,7 @@ mod tests {
             duration={ 2 0=7548 1=2096 }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "duration".to_string());
         assert_eq!(object.as_array().len(), 3);
     }
@@ -545,7 +547,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse().unwrap();
+        let object = save_file.next().unwrap().unwrap().parse().unwrap();
         let arr = object.as_map().get_object_ref("a").as_array();
         assert_eq!(arr.len(), 2);
     }
@@ -560,7 +562,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse();
+        let object = save_file.next().unwrap().unwrap().parse();
         assert!(object.is_err())
     }
 
@@ -574,7 +576,7 @@ mod tests {
         }
         ",
         );
-        let object = save_file.next().unwrap().parse();
+        let object = save_file.next().unwrap().unwrap().parse();
         assert!(object.is_err())
     }
     #[test]
@@ -594,7 +596,7 @@ mod tests {
         b={
         ",
         );
-        let object = save_file.next().unwrap().parse();
+        let object = save_file.next().unwrap().unwrap().parse();
         assert!(object.is_err())
     }
 }

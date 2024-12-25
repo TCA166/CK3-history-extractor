@@ -62,8 +62,8 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
     let file = SaveFile::open(&path).unwrap();
     let mut map = HashMap::default();
-    for mut title in file {
-        let title_object = title.parse().unwrap();
+    for title in file {
+        let title_object = title.unwrap().parse().unwrap();
         //DFS in the structure
         let mut stack = vec![title_object.as_map()];
         while let Some(o) = stack.pop() {
