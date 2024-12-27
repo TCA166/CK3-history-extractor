@@ -28,8 +28,8 @@ internal = []
 [dependencies]
 minijinja = { version = "2.5.0", features = ["loader"] }
 serde = { version = "1.0.216", features = ["rc", "derive"] }
-syn = "2.0.87"
-quote = "1.0.37"
+syn = "2.0.92"
+quote = "1.0.38"
 proc-macro2 = "1.0.88"
 zip = "2.2.2"
 image = "0.25.5"
@@ -45,6 +45,4 @@ keyvalues-parser = "0.2.0"
 human-panic = "=2.0.2"
 clap = "4.5.23"
 clap_derive = "4.5.18"
-
-[dev-dependencies]
-tempfile = "3.14.0"
+jomini = "0.27.2"

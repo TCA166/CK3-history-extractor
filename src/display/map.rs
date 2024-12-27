@@ -13,7 +13,7 @@ use plotters::{
 };
 
 use super::super::{
-    parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue},
+    parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue, SectionReader},
     types::HashMap,
 };
 
@@ -61,8 +61,10 @@ fn read_png_bytes(path: String) -> Vec<u8> {
 fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
     let file = SaveFile::open(&path).unwrap();
+    let tape = file.tape().unwrap();
+    let reader = SectionReader::new(&tape);
     let mut map = HashMap::default();
-    for title in file {
+    for title in reader {
         let title_object = title.unwrap().parse().unwrap();
         //DFS in the structure
         let mut stack = vec![title_object.as_map()];
@@ -78,6 +80,9 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
                             o.get_name().to_owned(),
                             o.as_array().get_index(0).unwrap().as_id(),
                         );
+                    }
+                    _ => {
+                        unreachable!()
                     }
                 }
             }

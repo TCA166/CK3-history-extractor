@@ -165,6 +165,9 @@ fn get_prestige(base: &GameObjectMap) -> (f32, f32) {
                 SaveFileValue::String(ref o) => {
                     prestige_tot = o.parse::<f32>().unwrap();
                 }
+                _ => {
+                    unreachable!()
+                }
             },
             None => {}
         }
@@ -175,6 +178,9 @@ fn get_prestige(base: &GameObjectMap) -> (f32, f32) {
                 }
                 SaveFileValue::String(ref o) => {
                     prestige = o.parse::<f32>().unwrap();
+                }
+                _ => {
+                    unreachable!()
                 }
             },
             None => {}
@@ -275,6 +281,9 @@ impl DummyInit for Dynasty {
                         vars.push(value.clone());
                     }
                     self.motto = Some((key.clone(), vars));
+                }
+                _ => {
+                    unreachable!()
                 }
             }
         }

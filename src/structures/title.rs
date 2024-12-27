@@ -106,6 +106,9 @@ fn get_history(
                                                 .clone(),
                                         );
                                     }
+                                    _ => {
+                                        unreachable!()
+                                    }
                                 }
                                 history.push((
                                     GameString::wrap(h.to_string()),
@@ -136,6 +139,9 @@ fn get_history(
                             .get_character(&o.parse::<GameId>().unwrap())
                             .clone(),
                     );
+                }
+                _ => {
+                    unreachable!()
                 }
             }
             history.push((GameString::wrap(h.to_string()), character, action));
@@ -287,6 +293,9 @@ impl DummyInit for Title {
                             .get_character(&claim.parse::<GameId>().unwrap())
                             .clone(),
                     );
+                }
+                _ => {
+                    unreachable!()
                 }
             }
         }

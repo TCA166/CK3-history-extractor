@@ -272,6 +272,9 @@ fn get_family(
                         spouses.push(c);
                     }
                 }
+                _ => {
+                    unreachable!()
+                }
             }
         }
         if let Some(primary_spouse_node) = f.get("primary_spouse") {

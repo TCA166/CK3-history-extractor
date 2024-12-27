@@ -16,7 +16,7 @@ mod types;
 
 /// A submodule that handles save file parsing
 mod parser;
-use parser::{process_section, GameState, SaveFile, SaveFileError};
+use parser::{process_section, GameState, SaveFile, SaveFileError, SectionReader};
 
 /// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
@@ -139,12 +139,14 @@ fn main() -> Result<(), UserError> {
     localizer.resolve();
     //initialize the save file
     let save = SaveFile::open(args.filename.as_str())?;
+    let tape = save.tape()?;
+    let reader = SectionReader::new(&tape);
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
-    let progress_bar = ProgressBar::new(save.len() as u64);
+    let progress_bar = ProgressBar::new(reader.len() as u64);
     progress_bar.set_style(bar_style.clone());
-    for i in progress_bar.wrap_iter(save.into_iter()) {
+    for i in progress_bar.wrap_iter(reader.into_iter()) {
         let mut section = i.unwrap();
         progress_bar.set_message(section.get_name().to_owned());
         // if an error occured somewhere here, there's nothing we can do

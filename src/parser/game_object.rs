@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ops::Index, rc::Rc};
+use std::{fmt::Debug, num::ParseIntError, ops::Index, rc::Rc};
 
 use super::super::types::{HashMap, HashMapIter, RefOrRaw, Wrapper};
 
@@ -21,14 +21,31 @@ impl Wrapper<String> for GameString {
     }
 }
 
+#[derive(Debug)]
+pub enum ConversionError {
+    InvalidType,
+    InvalidValue,
+}
+
+impl From<ParseIntError> for ConversionError {
+    fn from(_: ParseIntError) -> Self {
+        ConversionError::InvalidValue
+    }
+}
+
 /// A value that comes from a save file.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum SaveFileValue {
     /// A simple string value, may be anything in reality.
     String(GameString),
     /// A complex object value.
     Object(SaveFileObject),
+    Real(f64),
+    Integer(i64),
+    Boolean(bool),
 }
+
+// TODO add results here
 
 impl SaveFileValue {
     /// Get the value as a string
@@ -57,7 +74,11 @@ impl SaveFileValue {
     ///
     /// The GameId
     pub fn as_id(&self) -> GameId {
-        self.as_string().parse::<GameId>().unwrap()
+        match self {
+            SaveFileValue::String(s) => s.parse::<GameId>().unwrap(),
+            SaveFileValue::Integer(i) => *i as GameId,
+            _ => panic!("Invalid value"),
+        }
     }
 
     /// Get the value as a GameObject
@@ -75,13 +96,12 @@ impl SaveFileValue {
             _ => panic!("Invalid value"),
         }
     }
-}
 
-impl Debug for SaveFileValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub fn as_integer(&self) -> Result<i64, ConversionError> {
         match self {
-            SaveFileValue::String(s) => write!(f, "{}", s),
-            SaveFileValue::Object(o) => write!(f, "{:?}", o),
+            SaveFileValue::Integer(i) => Ok(*i),
+            SaveFileValue::String(s) => Ok(s.parse::<i64>()?),
+            _ => return Err(ConversionError::InvalidType),
         }
     }
 }
@@ -337,6 +357,10 @@ impl GameObject<Vec<SaveFileValue>> {
     /// Insert a value at an index
     pub fn insert(&mut self, index: usize, value: SaveFileValue) {
         self.inner.insert(index, value);
+    }
+
+    pub fn pop(&mut self) -> Option<SaveFileValue> {
+        self.inner.pop()
     }
 }
 

@@ -41,6 +41,9 @@ fn get_perks(perks: &mut Vec<GameString>, base: &GameObjectMap) {
             SaveFileValue::String(o) => {
                 perks.push(o.clone());
             }
+            _ => {
+                unreachable!()
+            }
         }
     }
 }
