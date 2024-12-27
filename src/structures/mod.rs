@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use super::{
-    parser::{GameId, GameObjectMap, GameState, GameString},
+    parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
     types::{Shared, Wrapper},
 };
 
@@ -67,7 +67,11 @@ pub trait DummyInit: GameObjectDerived {
 
     /// Initialize the object (ideally dummy) with auxiliary data from the game state.
     /// This can be called multiple times, but why would you do that?
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState);
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError>;
 }
 
 /// A trait for [GameObjectDerived] objects that can be created from a [GameObjectMap].

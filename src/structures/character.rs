@@ -7,7 +7,7 @@ use super::{
             TreeNode,
         },
         jinja_env::C_TEMPLATE_NAME,
-        parser::{GameObjectMap, GameState, GameString, SaveFileValue},
+        parser::{GameObjectMap, GameState, GameString, KeyError, ParsingError, SaveFileValue},
         types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId,
@@ -159,22 +159,6 @@ pub struct Character {
 // the characters that the houses hold reference to are likely still dummy, so we can't read the faith and culture from the house leader.
 // So we will be returning None for now in case either is missing, but later during serialization read the one from house.
 
-/// Gets the faith of the character
-fn get_faith(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Faith>> {
-    if let Some(faith_node) = base.get("faith") {
-        return Some(game_state.get_faith(&faith_node.as_id()).clone());
-    }
-    None
-}
-
-/// Gets the culture of the character
-fn get_culture(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Culture>> {
-    if let Some(culture_node) = base.get("culture") {
-        return Some(game_state.get_culture(&culture_node.as_id()).clone());
-    }
-    None
-}
-
 /// Gets the skills of the character
 fn get_skills(skills: &mut Vec<i8>, base: &GameObjectMap) {
     for s in base.get_object_ref("skill").as_array().into_iter() {
@@ -314,122 +298,16 @@ fn get_traits(traits: &mut Vec<GameString>, base: &GameObjectMap, game_state: &m
 }
 
 /// Processes a currency node of the character
-fn process_currency(currency_node: Option<&SaveFileValue>) -> f32 {
-    match currency_node {
-        Some(o) => {
-            if let Some(currency) = o.as_object().as_map().get("accumulated") {
-                currency.as_string().parse::<f32>().unwrap()
-            } else {
-                0.0
-            }
+fn process_currency(currency_node: Result<&SaveFileValue, KeyError>) -> Result<f32, ParsingError> {
+    if let Ok(o) = currency_node {
+        if let Ok(currency) = o.as_object()?.as_map()?.get("accumulated") {
+            return Ok(currency.as_real()? as f32);
+        } else {
+            return Ok(0.0);
         }
-        None => 0.0,
+    } else {
+        return Ok(0.0);
     }
-}
-
-/// Parses the alive_data field of the character
-fn parse_alive_data(
-    base: &GameObjectMap,
-    piety: &mut f32,
-    prestige: &mut f32,
-    gold: &mut f32,
-    kills: &mut Vec<Shared<Character>>,
-    languages: &mut Vec<GameString>,
-    traits: &mut Vec<GameString>,
-    memories: &mut Vec<Shared<Memory>>,
-    artifacts: &mut Vec<Shared<Artifact>>,
-    game_state: &mut GameState,
-) {
-    if let Some(alive_data) = base.get("alive_data") {
-        let alive_data = alive_data.as_object().as_map();
-        *piety = process_currency(alive_data.get("piety"));
-        *prestige = process_currency(alive_data.get("prestige"));
-        if let Some(kills_node) = alive_data.get("kills") {
-            for k in kills_node.as_object().as_array() {
-                kills.push(game_state.get_character(&k.as_id()).clone());
-            }
-        }
-        if let Some(gold_node) = alive_data.get("gold") {
-            *gold = gold_node.as_string().parse::<f32>().unwrap();
-        }
-        for l in alive_data.get_object_ref("languages").as_array() {
-            languages.push(l.as_string());
-        }
-        if let Some(perk_node) = alive_data.get("perks") {
-            for p in perk_node.as_object().as_array() {
-                traits.push(p.as_string());
-            }
-        }
-        if let Some(memory_node) = alive_data.get("memories") {
-            for m in memory_node.as_object().as_array() {
-                memories.push(game_state.get_memory(&m.as_id()).clone());
-            }
-        }
-        if let Some(inventory_node) = alive_data.get("inventory") {
-            if let Some(artifacts_node) = inventory_node.as_object().as_map().get("artifacts") {
-                for a in artifacts_node.as_object().as_array() {
-                    artifacts.push(game_state.get_artifact(&a.as_id()).clone());
-                }
-            }
-        }
-    }
-}
-
-/// Parses the landed_data field of the character
-fn get_landed_data(
-    dread: &mut f32,
-    strength: &mut f32,
-    titles: &mut Vec<Shared<Title>>,
-    vassals: &mut Vec<Vassal>,
-    base: &GameObjectMap,
-    game_state: &mut GameState,
-) {
-    if let Some(landed_data_node) = base.get("landed_data") {
-        let landed_data = landed_data_node.as_object().as_map();
-        if let Some(dread_node) = landed_data.get("dread") {
-            *dread = dread_node.as_string().parse::<f32>().unwrap();
-        }
-        if let Some(strength_node) = landed_data.get("strength") {
-            *strength = strength_node.as_string().parse::<f32>().unwrap();
-        }
-        if let Some(titles_node) = landed_data.get("domain") {
-            for t in titles_node.as_object().as_array() {
-                titles.push(game_state.get_title(&t.as_id()));
-            }
-        }
-        if let Some(vassals_node) = landed_data.get("vassal_contracts") {
-            for v in vassals_node.as_object().as_array() {
-                vassals.push(Vassal::Reference(game_state.get_vassal(&v.as_id())));
-            }
-        }
-    }
-}
-
-/// Gets the dynasty of the character
-fn get_dynasty(
-    base: &GameObjectMap,
-    game_state: &mut GameState,
-    self_id: &GameId,
-) -> Option<Shared<Dynasty>> {
-    if let Some(dynasty_id) = base.get("dynasty_house") {
-        let d = game_state.get_dynasty(&dynasty_id.as_id());
-        d.get_internal_mut()
-            .register_member(game_state.get_character(&self_id));
-        return Some(d);
-    }
-    None
-}
-
-/// Gets the nickname of the character
-fn get_nick(base: &GameObjectMap) -> Option<GameString> {
-    // this feature is new i think with roads to power, but very handy
-    if let Some(text) = base.get("nickname_text") {
-        return Some(text.as_string());
-    }
-    if let Some(nick) = base.get("nickname") {
-        return Some(nick.as_string());
-    }
-    None
 }
 
 impl Character {
@@ -608,9 +486,13 @@ impl DummyInit for Character {
         }
     }
 
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
-        if let Some(female) = base.get("female") {
-            self.female = female.as_string().as_str() == "yes";
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
+        if let Ok(female) = base.get("female") {
+            self.female = female.as_string()?.as_str() == "yes";
         }
         get_dead(
             &mut self.dead,
@@ -635,44 +517,90 @@ impl DummyInit for Character {
             game_state,
         );
         //find dna
-        let dna = match base.get("dna") {
-            Some(d) => Some(d.as_string()),
-            None => None,
-        };
+        if let Ok(dna) = base.get("dna") {
+            self.dna = Some(dna.as_string()?);
+        }
         //find traits
         get_traits(&mut self.traits, &base, game_state);
         //find alive data
         if !self.dead {
-            parse_alive_data(
-                &base,
-                &mut self.piety,
-                &mut self.prestige,
-                &mut self.gold,
-                &mut self.kills,
-                &mut self.languages,
-                &mut self.traits,
-                &mut self.memories,
-                &mut self.artifacts,
-                game_state,
-            );
+            if let Ok(alive_data) = base.get("alive_data") {
+                let alive_data = alive_data.as_object()?.as_map()?;
+                self.piety = process_currency(alive_data.get("piety"))?;
+                self.prestige = process_currency(alive_data.get("prestige"))?;
+                if let Ok(kills_node) = alive_data.get("kills") {
+                    for k in kills_node.as_object()?.as_array()? {
+                        self.kills
+                            .push(game_state.get_character(&k.as_id()?).clone());
+                    }
+                }
+                if let Ok(gold_node) = alive_data.get("gold") {
+                    *gold = gold_node.as_string().parse::<f32>().unwrap();
+                }
+                for l in alive_data.get_object_ref("languages").as_array() {
+                    languages.push(l.as_string());
+                }
+                if let Some(perk_node) = alive_data.get("perks") {
+                    for p in perk_node.as_object().as_array() {
+                        traits.push(p.as_string());
+                    }
+                }
+                if let Some(memory_node) = alive_data.get("memories") {
+                    for m in memory_node.as_object().as_array() {
+                        memories.push(game_state.get_memory(&m.as_id()).clone());
+                    }
+                }
+                if let Some(inventory_node) = alive_data.get("inventory") {
+                    if let Some(artifacts_node) =
+                        inventory_node.as_object().as_map().get("artifacts")
+                    {
+                        for a in artifacts_node.as_object().as_array() {
+                            artifacts.push(game_state.get_artifact(&a.as_id()).clone());
+                        }
+                    }
+                }
+            }
         }
         //find landed data
-        get_landed_data(
-            &mut self.dread,
-            &mut self.strength,
-            &mut self.titles,
-            &mut self.vassals,
-            &base,
-            game_state,
-        );
+        if let Ok(landed_data_node) = base.get("landed_data") {
+            let landed_data = landed_data_node.as_object()?.as_map()?;
+            if let Ok(dread_node) = landed_data.get("dread") {
+                self.dread = dread_node.as_real()? as f32;
+            }
+            if let Ok(strength_node) = landed_data.get("strength") {
+                self.strength = strength_node.as_real()? as f32;
+            }
+            if let Ok(titles_node) = landed_data.get("domain") {
+                for t in titles_node.as_object()?.as_array()? {
+                    self.titles.push(game_state.get_title(&t.as_id()?));
+                }
+            }
+            if let Ok(vassals_node) = landed_data.get("vassal_contracts") {
+                for v in vassals_node.as_object()?.as_array()? {
+                    self.vassals
+                        .push(Vassal::Reference(game_state.get_vassal(&v.as_id()?)));
+                }
+            }
+        }
         //find house
-        self.name = Some(base.get("first_name").unwrap().as_string());
-        self.nick = get_nick(&base);
-        self.birth = Some(base.get("birth").unwrap().as_string());
-        self.house = get_dynasty(&base, game_state, &self.id);
-        self.faith = get_faith(&base, game_state);
-        self.culture = get_culture(&base, game_state);
-        self.dna = dna;
+        self.name = Some(base.get("first_name")?.as_string()?);
+        if let Ok(text) = base.get("nickname_text").or(base.get("nickname")) {
+            self.nick = Some(text.as_string()?);
+        }
+        self.birth = Some(base.get("birth")?.as_string()?);
+        if let Ok(dynasty_id) = base.get("dynasty_house") {
+            let d = game_state.get_dynasty(&dynasty_id.as_id()?);
+            d.get_internal_mut()
+                .register_member(game_state.get_character(&self.id));
+            self.house = Some(d);
+        }
+        if let Ok(faith_node) = base.get("faith") {
+            self.faith = Some(game_state.get_faith(&faith_node.as_id()?))
+        }
+        if let Ok(culture_node) = base.get("culture") {
+            self.culture = Some(game_state.get_culture(&culture_node.as_id()?).clone());
+        }
+        Ok(())
     }
 }
 

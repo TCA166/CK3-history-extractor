@@ -6,9 +6,8 @@ mod types;
 mod game_object;
 use std::fmt::{self, Debug, Display};
 
-use game_object::KeyError;
 pub use game_object::{
-    ConversionError, GameId, GameObjectArray, GameObjectMap, GameString, SaveFileObject,
+    ConversionError, GameId, GameObjectArray, GameObjectMap, GameString, KeyError, SaveFileObject,
     SaveFileValue,
 };
 
@@ -109,8 +108,16 @@ pub fn process_section(
         "meta_data" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            game_state.set_current_date(map.get("meta_date")?.as_string()?);
-            game_state.set_offset_date(map.get("meta_real_date")?.as_string()?);
+            game_state.set_current_date(
+                map.get("meta_date")
+                    .ok_or_else(|| KeyError::MissingKey("meta_date", map.clone()))?
+                    .as_string()?,
+            );
+            game_state.set_offset_date(
+                map.get("meta_real_date")
+                    .ok_or_else(|| KeyError::MissingKey("meta_real_date", map.clone()))?
+                    .as_string()?,
+            );
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {
@@ -124,9 +131,10 @@ pub fn process_section(
         }
         "landed_titles" => {
             let parsed = i.parse()?;
-            for (_, v) in parsed
-                .as_map()?
-                .get("landed_titles")?
+            let map = parsed.as_map()?;
+            for (_, v) in map
+                .get("landed_titles")
+                .ok_or_else(|| KeyError::MissingKey("landed_titles", map.clone()))?
                 .as_object()?
                 .as_map()?
             {
@@ -137,13 +145,27 @@ pub fn process_section(
         }
         "county_manager" => {
             let parsed = i.parse()?;
+            let map = parsed.as_map()?;
             // we create an association between the county key and the faith and culture of the county
             // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
             let mut key_assoc = HashMap::default();
-            for (key, p) in parsed.as_map()?.get("counties")?.as_object()?.as_map()? {
+            for (key, p) in map
+                .get("counties")
+                .ok_or_else(|| KeyError::MissingKey("counties", map.clone()))?
+                .as_object()?
+                .as_map()?
+            {
                 let p = p.as_object()?.as_map()?;
-                let faith = game_state.get_faith(&p.get("faith")?.as_id()?);
-                let culture = game_state.get_culture(&p.get("culture")?.as_id()?);
+                let faith = game_state.get_faith(
+                    &p.get("faith")
+                        .ok_or_else(|| KeyError::MissingKey("faith", map.clone()))?
+                        .as_id()?,
+                );
+                let culture = game_state.get_culture(
+                    &p.get("culture")
+                        .ok_or_else(|| KeyError::MissingKey("culture", map.clone()))?
+                        .as_id()?,
+                );
                 key_assoc.insert(key.as_str(), (faith, culture));
             }
             for (_, title) in game_state.get_title_iter() {
@@ -199,7 +221,7 @@ pub fn process_section(
             }
         }
         "characters" => {
-            if let Ok(dead_prunable) = i.parse()?.as_map()?.get("dead_prunable") {
+            if let Some(dead_prunable) = i.parse()?.as_map()?.get("dead_prunable") {
                 for (_, d) in dead_prunable.as_object()?.as_map()? {
                     match d {
                         SaveFileValue::Object(o) => {
@@ -218,34 +240,55 @@ pub fn process_section(
             // if version <= 1.12 then the key is active, otherwise it is database, why paradox?
             for (key, contract) in map
                 .get("database")
-                .or(map.get("active"))?
+                .or(map.get("active"))
+                .ok_or_else(|| KeyError::MissingKey("database | active", map.clone()))?
                 .as_object()?
                 .as_map()?
             {
                 if let SaveFileValue::Object(val) = contract {
+                    let val = val.as_map()?;
                     game_state.add_contract(
                         &key.parse::<GameId>().unwrap(),
-                        &val.as_map()?.get("vassal")?.as_id()?,
+                        &val.get("vassal")
+                            .ok_or_else(|| KeyError::MissingKey("val", val.clone()))?
+                            .as_id()?,
                     )
                 }
             }
         }
         "religion" => {
             let parsed = i.parse()?;
-            for (_, f) in parsed.as_map()?.get("faiths")?.as_object()?.as_map()? {
+            let map = parsed.as_map()?;
+            for (_, f) in map
+                .get("faiths")
+                .ok_or_else(|| KeyError::MissingKey("faiths", map.clone()))?
+                .as_object()?
+                .as_map()?
+            {
                 game_state.add_faith(f.as_object()?.as_map()?);
             }
         }
         "culture_manager" => {
             let parsed = i.parse()?;
-            let cultures = parsed.as_map()?.get("cultures")?.as_object()?.as_map()?;
+            let map = parsed.as_map()?;
+            let cultures = map
+                .get("cultures")
+                .ok_or_else(|| KeyError::MissingKey("cultures", map.clone()))?
+                .as_object()?
+                .as_map()?;
             for (_, c) in cultures {
                 game_state.add_culture(c.as_object()?.as_map()?);
             }
         }
         "character_memory_manager" => {
             let parsed = i.parse()?;
-            for (_, d) in parsed.as_map()?.get("database")?.as_object()?.as_map()? {
+            let map = parsed.as_map()?;
+            for (_, d) in map
+                .get("database")
+                .ok_or_else(|| KeyError::MissingKey("database", map.clone()))?
+                .as_object()?
+                .as_map()?
+            {
                 if let SaveFileValue::Object(o) = d {
                     game_state.add_memory(o.as_map()?);
                 }
@@ -256,10 +299,11 @@ pub fn process_section(
             players.push(p);
         }
         "artifacts" => {
-            for (_, a) in i
-                .parse()?
-                .as_map()?
-                .get("artifacts")?
+            let parsed = i.parse()?;
+            let map = parsed.as_map()?;
+            for (_, a) in map
+                .get("artifacts")
+                .ok_or_else(|| KeyError::MissingKey("artifacts", map.clone()))?
                 .as_object()?
                 .as_map()?
                 .into_iter()
@@ -301,8 +345,13 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
-        let test3 = test2.get("test3")?.as_string()?;
+        let test2 = object
+            .as_map()?
+            .get("test2")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        let test3 = test2.get("test3").unwrap().as_string()?;
         assert_eq!(*(test3), "1".to_string());
         return Ok(());
     }
@@ -335,7 +384,7 @@ mod tests {
         assert_eq!(*(test2_val.get_index(0)?.as_string()?), "1".to_string());
         assert_eq!(*(test2_val.get_index(1)?.as_string()?), "2".to_string());
         assert_eq!(*(test2_val.get_index(2)?.as_string()?), "3".to_string());
-        let test3 = object.as_map()?.get("test3")?.as_object()?;
+        let test3 = object.as_map()?.get("test3").unwrap().as_object()?;
         let test3_val = test3.as_array()?;
         assert_eq!(*(test3_val.get_index(0)?.as_string()?), "1".to_string());
         assert_eq!(*(test3_val.get_index(1)?.as_string()?), "2".to_string());
@@ -361,9 +410,14 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
-        assert_eq!(*(test2.get("1")?.as_string()?), "2".to_string());
-        assert_eq!(*(test2.get("3")?.as_string()?), "4".to_string());
+        let test2 = object
+            .as_map()?
+            .get("test2")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        assert_eq!(*(test2.get("1").unwrap().as_string()?), "2".to_string());
+        assert_eq!(*(test2.get("3").unwrap().as_string()?), "4".to_string());
         Ok(())
     }
 
@@ -380,7 +434,12 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map()?.get("test2")?.as_object()?.as_array()?;
+        let test2 = object
+            .as_map()?
+            .get("test2")
+            .unwrap()
+            .as_object()?
+            .as_array()?;
         assert_eq!(*(test2.get_index(0)?.as_string()?), "1".to_string());
         assert_eq!(*(test2.get_index(1)?.as_string()?), "2".to_string());
         assert_eq!(*(test2.get_index(2)?.as_string()?), "3".to_string());
@@ -416,8 +475,13 @@ mod tests {
         .unwrap();
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
-        let variables = object.as_map()?.get("variables")?.as_object()?.as_map()?;
-        let data = variables.get("data")?.as_object()?.as_array()?;
+        let variables = object
+            .as_map()?
+            .get("variables")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        let data = variables.get("data").unwrap().as_object()?.as_array()?;
         assert_ne!(data.len(), 0);
         Ok(())
     }
@@ -461,12 +525,13 @@ mod tests {
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(
-            *(object.as_map()?.get("name")?.as_string()?),
+            *(object.as_map()?.get("name").unwrap().as_string()?),
             "dynn_Sao".to_string()
         );
         let historical = object
             .as_map()?
-            .get("historical")?
+            .get("historical")
+            .unwrap()
             .as_object()?
             .as_array()?;
         assert_eq!(*(historical.get_index(0)?.as_string()?), "4440".to_string());
@@ -500,10 +565,15 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
-        let test3 = test2.get("test3")?.as_string()?;
+        let test2 = object
+            .as_map()?
+            .get("test2")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        let test3 = test2.get("test3").unwrap().as_string()?;
         assert_eq!(*(test3), "1".to_string());
-        let test4 = object.as_map()?.get("test4")?.as_object()?;
+        let test4 = object.as_map()?.get("test4").unwrap().as_object()?;
         let test4_val = test4.as_array()?;
         assert_eq!(*(test4_val.get_index(0)?.as_string()?), "a".to_string());
         assert_eq!(*(test4_val.get_index(1)?.as_string()?), "b".to_string());
@@ -554,20 +624,34 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "c_derby".to_string());
-        let b_derby = object.as_map()?.get("b_derby")?.as_object()?.as_map()?;
-        assert_eq!(*(b_derby.get("province")?.as_string()?), "1621".to_string());
-        let b_chesterfield = object
+        let b_derby = object
             .as_map()?
-            .get("b_chesterfield")?
+            .get("b_derby")
+            .unwrap()
             .as_object()?
             .as_map()?;
         assert_eq!(
-            *(b_chesterfield.get("province")?.as_string()?),
+            *(b_derby.get("province").unwrap().as_string()?),
+            "1621".to_string()
+        );
+        let b_chesterfield = object
+            .as_map()?
+            .get("b_chesterfield")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        assert_eq!(
+            *(b_chesterfield.get("province").unwrap().as_string()?),
             "1622".to_string()
         );
-        let b_castleton = object.as_map()?.get("b_castleton")?.as_object()?.as_map()?;
+        let b_castleton = object
+            .as_map()?
+            .get("b_castleton")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
         assert_eq!(
-            *(b_castleton.get("province")?.as_string()?),
+            *(b_castleton.get("province").unwrap().as_string()?),
             "1623".to_string()
         );
         Ok(())
@@ -589,8 +673,13 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
-        let test3 = test2.get("test3")?.as_string()?;
+        let test2 = object
+            .as_map()?
+            .get("test2")
+            .unwrap()
+            .as_object()?
+            .as_map()?;
+        let test3 = test2.get("test3").unwrap().as_string()?;
         assert_eq!(*(test3), "1".to_string());
         Ok(())
     }
@@ -638,7 +727,7 @@ mod tests {
         .unwrap();
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
-        let arr = object.as_map()?.get("a")?.as_object()?.as_array()?;
+        let arr = object.as_map()?.get("a").unwrap().as_object()?.as_array()?;
         assert_eq!(arr.len(), 2);
         Ok(())
     }

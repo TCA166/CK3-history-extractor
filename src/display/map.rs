@@ -72,7 +72,7 @@ fn create_title_province_map(game_path: &str) -> Result<HashMap<String, GameId>,
         //DFS in the structure
         let mut stack = vec![title_object.as_map()?];
         while let Some(o) = stack.pop() {
-            if let Ok(pro) = o.get("province") {
+            if let Some(pro) = o.get("province") {
                 match pro {
                     // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
                     SaveFileValue::Object(o) => {

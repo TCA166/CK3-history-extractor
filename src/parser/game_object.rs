@@ -1,4 +1,5 @@
 use std::{
+    any::type_name,
     error,
     fmt::{self, Debug, Display},
     num::{ParseFloatError, ParseIntError},
@@ -32,7 +33,7 @@ impl Wrapper<String> for GameString {
 #[derive(Debug)]
 pub enum ConversionError {
     /// The value is not of the expected type.
-    InvalidType,
+    InvalidType(SaveFileValue, &'static str),
     /// The value is not a valid value.
     InvalidValue,
 }
@@ -58,7 +59,7 @@ impl From<ParseBoolError> for ConversionError {
 impl Display for ConversionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidType => write!(f, "encountered an invalid type for conversion"),
+            Self::InvalidType(t1, t2) => write!(f, "failed converting {:?} to {}", t1, t2),
             Self::InvalidValue => write!(f, "the value is invalid for conversion"),
         }
     }
@@ -77,8 +78,11 @@ pub enum SaveFileValue {
     String(GameString),
     /// A complex object value.
     Object(SaveFileObject),
+    /// A floating point value
     Real(f64),
+    /// An integer
     Integer(i64),
+    /// A boolean
     Boolean(bool),
 }
 
@@ -91,7 +95,10 @@ impl SaveFileValue {
     pub fn as_string(&self) -> Result<GameString, ConversionError> {
         match self {
             SaveFileValue::String(s) => Ok(s.clone()),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<GameString>(),
+            )),
         }
     }
 
@@ -112,7 +119,10 @@ impl SaveFileValue {
     pub fn as_object(&self) -> Result<&SaveFileObject, ConversionError> {
         match self {
             SaveFileValue::Object(o) => Ok(o),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<SaveFileObject>(),
+            )),
         }
     }
 
@@ -120,7 +130,10 @@ impl SaveFileValue {
         match self {
             SaveFileValue::Integer(i) => Ok(*i),
             SaveFileValue::String(s) => Ok(s.parse::<i64>()?),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<i64>(),
+            )),
         }
     }
 
@@ -128,7 +141,10 @@ impl SaveFileValue {
         match self {
             SaveFileValue::Real(r) => Ok(*r),
             SaveFileValue::String(s) => Ok(s.parse::<f64>()?),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<f64>(),
+            )),
         }
     }
 
@@ -137,7 +153,10 @@ impl SaveFileValue {
             SaveFileValue::Boolean(b) => Ok(*b),
             SaveFileValue::Integer(i) => Ok(*i != 0),
             SaveFileValue::String(s) => Ok(s.parse::<bool>()?),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<bool>(),
+            )),
         }
     }
 }
@@ -173,7 +192,10 @@ impl SaveFileObject {
     pub fn as_map(&self) -> Result<&GameObjectMap, ConversionError> {
         match self {
             SaveFileObject::Map(o) => Ok(o),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                SaveFileValue::Object(self.clone()),
+                type_name::<GameObjectMap>(),
+            )),
         }
     }
 
@@ -185,7 +207,10 @@ impl SaveFileObject {
     pub fn as_map_mut(&mut self) -> Result<&mut GameObjectMap, ConversionError> {
         match self {
             SaveFileObject::Map(o) => Ok(o),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                SaveFileValue::Object(self.clone()),
+                type_name::<GameObjectMap>(),
+            )),
         }
     }
 
@@ -197,7 +222,10 @@ impl SaveFileObject {
     pub fn as_array(&self) -> Result<&GameObjectArray, ConversionError> {
         match self {
             SaveFileObject::Array(a) => Ok(a),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                SaveFileValue::Object(self.clone()),
+                type_name::<GameObjectArray>(),
+            )),
         }
     }
 
@@ -209,7 +237,10 @@ impl SaveFileObject {
     pub fn as_array_mut(&mut self) -> Result<&mut GameObjectArray, ConversionError> {
         match self {
             SaveFileObject::Array(a) => Ok(a),
-            _ => Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType(
+                SaveFileValue::Object(self.clone()),
+                type_name::<GameObjectArray>(),
+            )),
         }
     }
 
@@ -338,11 +369,11 @@ impl error::Error for KeyError {
 
 impl GameObject<HashMap<String, SaveFileValue>> {
     /// Get the value of a key as a mutable GameObject.
-    pub fn get(&self, key: &str) -> Result<&SaveFileValue, KeyError> {
-        self.inner
-            .get(key)
-            .ok_or(KeyError::MissingKey(key.to_owned(), self.clone()))
+    pub fn get(&self, key: &str) -> Option<&SaveFileValue> {
+        self.inner.get(key)
     }
+
+    // TODO add simplified API that returns errors
 
     /// Insert a new value into the object.
     /// If the key already exists, the value at that key alongside the new value will be stored in an array at that key.

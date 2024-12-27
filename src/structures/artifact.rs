@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizable, Localizer, RenderableType},
-        parser::{GameId, GameObjectMap, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString, KeyError, ParsingError},
         types::{Shared, WrapperMut},
     },
     Character, DerivedRef, DummyInit, GameObjectDerived,
@@ -38,40 +38,47 @@ impl GameObjectDerived for Artifact {
 }
 
 impl DummyInit for Artifact {
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
-        self.name = Some(base.get_string_ref("name"));
-        self.description = Some(base.get_string_ref("description"));
-        self.r#type = Some(base.get_string_ref("type"));
-        self.rarity = Some(base.get_string_ref("rarity"));
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
+        self.name = Some(
+            base.get("name")
+                .ok_or_else(|| KeyError::MissingKey("name", base.clone()))?
+                .as_string()?,
+        );
+        self.description = Some(base.get("description")?.as_string()?);
+        self.r#type = Some(base.get("type")?.as_string()?);
+        self.rarity = Some(base.get("rarity")?.as_string()?);
         if let Some(quality_node) = base.get("quality") {
-            self.quality = quality_node.as_string().parse::<u32>().unwrap();
+            self.quality = quality_node.as_integer()? as u32;
         } else {
             self.quality = 0;
         }
-        if let Some(wealth_node) = base.get("wealth") {
-            self.wealth = wealth_node.as_string().parse::<u32>().unwrap();
+        if let Ok(wealth_node) = base.get("wealth") {
+            self.wealth = wealth_node.as_integer()? as u32;
         } else {
             self.wealth = 0;
         }
-        self.owner = Some(game_state.get_character(&base.get("owner").unwrap().as_id()));
-        if let Some(history_node) = base.get("history") {
-            let history_node = history_node.as_object();
+        self.owner = Some(game_state.get_character(&base.get("owner")?.as_id()?));
+        if let Ok(history_node) = base.get("history") {
+            let history_node = history_node.as_object()?.as_map()?;
             if history_node.is_empty() {
-                return;
+                return Ok(());
             }
-            let history_node = history_node.as_map();
-            if let Some(entries_node) = history_node.get("entries") {
-                for h in entries_node.as_object().as_array() {
-                    let h = h.as_object().as_map();
-                    let r#type = h.get_string_ref("type");
-                    let date = h.get_string_ref("date");
-                    let actor = if let Some(actor_node) = h.get("actor") {
-                        Some(game_state.get_character(&actor_node.as_id()))
+            if let Ok(entries_node) = history_node.get("entries") {
+                for h in entries_node.as_object()?.as_array()? {
+                    let h = h.as_object()?.as_map()?;
+                    let r#type = h.get("type")?.as_string()?;
+                    let date = h.get("date")?.as_string()?;
+                    let actor = if let Ok(actor_node) = h.get("actor") {
+                        Some(game_state.get_character(&actor_node.as_id()?))
                     } else {
                         None
                     };
-                    let recipient = if let Some(recipient_node) = h.get("recipient") {
-                        Some(game_state.get_character(&recipient_node.as_id()))
+                    let recipient = if let Ok(recipient_node) = h.get("recipient") {
+                        Some(game_state.get_character(&recipient_node.as_id()?))
                     } else {
                         None
                     };
@@ -79,6 +86,7 @@ impl DummyInit for Artifact {
                 }
             }
         }
+        Ok(())
     }
 
     fn dummy(id: GameId) -> Self {
