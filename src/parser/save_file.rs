@@ -1,13 +1,14 @@
 use jomini::{self, BinaryTape, TextTape};
 use std::{
-    fmt::Debug,
+    error,
+    fmt::{self, Debug, Display},
     fs::File,
     io::{self, Cursor, Read},
     string::FromUtf8Error,
 };
 use zip::{read::ZipArchive, result::ZipError};
 
-use super::types::{Tape, Tokens};
+use super::types::Tape;
 
 /// The header of an archive within a save file.
 const ARCHIVE_HEADER: &[u8; 4] = b"PK\x03\x04";
@@ -26,6 +27,8 @@ pub enum SaveFileError {
     DecompressionError(ZipError),
     /// Jomini found a problem, on the tape level probably
     JominiError(jomini::Error),
+    /// Decoding bytes failed
+    DecodingError(FromUtf8Error),
 }
 
 impl From<ZipError> for SaveFileError {
@@ -41,14 +44,38 @@ impl From<io::Error> for SaveFileError {
 }
 
 impl From<FromUtf8Error> for SaveFileError {
-    fn from(_: FromUtf8Error) -> Self {
-        Self::ParseError("Failed to parse UTF8")
+    fn from(value: FromUtf8Error) -> Self {
+        Self::DecodingError(value)
     }
 }
 
 impl From<jomini::Error> for SaveFileError {
     fn from(value: jomini::Error) -> Self {
         Self::JominiError(value)
+    }
+}
+
+impl Display for SaveFileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DecompressionError(err) => Display::fmt(err, f),
+            Self::IoError(err) => Display::fmt(err, f),
+            Self::JominiError(err) => Display::fmt(err, f),
+            Self::DecodingError(err) => Display::fmt(err, f),
+            Self::ParseError(err) => write!(f, "{}", err),
+        }
+    }
+}
+
+impl error::Error for SaveFileError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::DecompressionError(err) => Some(err),
+            Self::IoError(err) => Some(err),
+            Self::JominiError(err) => Some(err),
+            Self::DecodingError(err) => Some(err),
+            Self::ParseError(_) => None,
+        }
     }
 }
 

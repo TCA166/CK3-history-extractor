@@ -13,7 +13,9 @@ use plotters::{
 };
 
 use super::super::{
-    parser::{GameId, GameString, SaveFile, SaveFileObject, SaveFileValue, SectionReader},
+    parser::{
+        GameId, GameString, ParsingError, SaveFile, SaveFileObject, SaveFileValue, SectionReader,
+    },
     types::HashMap,
 };
 
@@ -58,31 +60,29 @@ fn read_png_bytes(path: String) -> Vec<u8> {
 }
 
 /// Creates a mapping from barony title keys to province ids
-fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
+fn create_title_province_map(game_path: &str) -> Result<HashMap<String, GameId>, ParsingError> {
     let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
-    let file = SaveFile::open(&path).unwrap();
-    let tape = file.tape().unwrap();
+    let file = SaveFile::open(&path)?;
+    let tape = file.tape()?;
     let reader = SectionReader::new(&tape);
     let mut map = HashMap::default();
     for title in reader {
-        let title_object = title.unwrap().parse().unwrap();
+        let section = title?;
+        let title_object = section.parse()?;
         //DFS in the structure
-        let mut stack = vec![title_object.as_map()];
+        let mut stack = vec![title_object.as_map()?];
         while let Some(o) = stack.pop() {
-            if let Some(pro) = o.get("province") {
+            if let Ok(pro) = o.get("province") {
                 match pro {
-                    SaveFileValue::String(s) => {
-                        map.insert(o.get_name().to_owned(), s.parse::<GameId>().unwrap());
-                    }
                     // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
                     SaveFileValue::Object(o) => {
                         map.insert(
                             o.get_name().to_owned(),
-                            o.as_array().get_index(0).unwrap().as_id(),
+                            o.as_array()?.get_index(0)?.as_id()?,
                         );
                     }
-                    _ => {
-                        unreachable!()
+                    s => {
+                        map.insert(o.get_name().to_owned(), s.as_id()?);
                     }
                 }
             }
@@ -99,7 +99,7 @@ fn create_title_province_map(game_path: &str) -> HashMap<String, GameId> {
             }
         }
     }
-    return map;
+    return Ok(map);
 }
 
 /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
@@ -268,7 +268,7 @@ impl GameMap {
             let b = record[3].parse::<u8>().unwrap();
             id_colors.insert(id, [r, g, b]);
         }
-        let title_province_map = create_title_province_map(game_path);
+        let title_province_map = create_title_province_map(game_path).unwrap();
         GameMap {
             height: height,
             width: width,

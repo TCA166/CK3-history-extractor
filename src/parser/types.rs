@@ -1,3 +1,5 @@
+use std::fmt::{self, Debug};
+
 use jomini::{BinaryTape, BinaryToken, TextTape, TextToken};
 
 /// An abstraction over the two [jomini] tape types: [jomini::TextTape] and [jomini::BinaryTape]
@@ -27,6 +29,30 @@ impl<'token, 'data> Tokens<'token, 'data> {
         match self {
             Self::Binary(bin) => bin.len(),
             Self::Text(text) => text.len(),
+        }
+    }
+}
+
+pub enum Token<'a> {
+    Text(TextToken<'a>),
+    Binary(BinaryToken<'a>),
+}
+
+impl<'a> Token<'a> {
+    pub fn from_text(token: &TextToken<'a>) -> Self {
+        Self::Text(token.to_owned())
+    }
+
+    pub fn from_binary(token: &BinaryToken<'a>) -> Self {
+        Self::Binary(token.to_owned())
+    }
+}
+
+impl Debug for Token<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Text(token) => token.fmt(f),
+            Self::Binary(token) => token.fmt(f),
         }
     }
 }

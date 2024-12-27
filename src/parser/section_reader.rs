@@ -1,15 +1,38 @@
-use std::fmt::Debug;
+use std::{
+    error,
+    fmt::{self, Debug, Display},
+};
 
 use jomini::{BinaryToken, TextToken};
 
 use super::{
     section::Section,
-    types::{Tape, Tokens},
+    types::{Tape, Token, Tokens},
 };
 
 #[derive(Debug)]
-pub enum SectionReaderError {
-    UnexpectedToken(&'static str, usize),
+pub enum SectionReaderError<'err> {
+    UnexpectedToken(usize, Token<'err>, &'static str),
+}
+
+impl<'err> Display for SectionReaderError<'err> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnexpectedToken(pos, tok, desc) => {
+                write!(
+                    f,
+                    "reader encountered an unexpected token {:?} at {}: {}",
+                    tok, pos, desc
+                )
+            }
+        }
+    }
+}
+
+impl<'err> error::Error for SectionReaderError<'err> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
 }
 
 pub struct SectionReader<'tape, 'data> {
@@ -65,9 +88,9 @@ impl<'tape, 'data> SectionReader<'tape, 'data> {
 }
 
 impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
-    type Item = Result<Section<'tape, 'data>, SectionReaderError>;
+    type Item = Result<Section<'tape, 'data>, SectionReaderError<'data>>;
 
-    fn next(&mut self) -> Option<Result<Section<'tape, 'data>, SectionReaderError>> {
+    fn next(&mut self) -> Option<Result<Section<'tape, 'data>, SectionReaderError<'data>>> {
         match self.tape {
             Tokens::Text(text) => {
                 while self.offset < self.length {
@@ -77,8 +100,9 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                             if let Some(scalar) = text[self.offset - 1].as_scalar() {
                                 if !scalar.is_ascii() {
                                     return Some(Err(SectionReaderError::UnexpectedToken(
-                                        "Non-ascii key encountered",
                                         self.offset,
+                                        Token::from_text(tok),
+                                        "non-ascii key encountered",
                                     )));
                                 }
                                 let key = scalar.to_string();
@@ -88,8 +112,9 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                                 return Some(Ok(section));
                             } else {
                                 return Some(Err(SectionReaderError::UnexpectedToken(
-                                    "Non-scalar key encountered",
                                     self.offset,
+                                    Token::from_text(tok),
+                                    "non-scalar key encountered",
                                 )));
                             }
                         }
@@ -100,8 +125,9 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                         }
                         _ => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
-                                "Unexpected token",
                                 self.offset,
+                                Token::from_text(tok),
+                                "weird token in between sections",
                             )))
                         }
                     }
@@ -127,16 +153,18 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                                 }
                                 _ => {
                                     return Some(Err(SectionReaderError::UnexpectedToken(
-                                        "Non-ascii key encountered",
                                         self.offset,
+                                        Token::from_binary(tok),
+                                        "Non-ascii key encountered",
                                     )));
                                 }
                             }
                         }
                         BinaryToken::End(_) | BinaryToken::MixedContainer => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
-                                "Unexpected token",
                                 self.offset,
+                                Token::from_binary(tok),
+                                "Weird token in between sections",
                             )));
                         }
                         _ => {

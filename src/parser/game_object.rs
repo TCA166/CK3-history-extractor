@@ -1,4 +1,11 @@
-use std::{fmt::Debug, num::ParseIntError, ops::Index, rc::Rc};
+use std::{
+    error,
+    fmt::{self, Debug, Display},
+    num::{ParseFloatError, ParseIntError},
+    ops::Index,
+    rc::Rc,
+    str::ParseBoolError,
+};
 
 use super::super::types::{HashMap, HashMapIter, RefOrRaw, Wrapper};
 
@@ -21,15 +28,45 @@ impl Wrapper<String> for GameString {
     }
 }
 
+/// An error that can occur when converting a value from a save file.
 #[derive(Debug)]
 pub enum ConversionError {
+    /// The value is not of the expected type.
     InvalidType,
+    /// The value is not a valid value.
     InvalidValue,
 }
 
 impl From<ParseIntError> for ConversionError {
     fn from(_: ParseIntError) -> Self {
         ConversionError::InvalidValue
+    }
+}
+
+impl From<ParseFloatError> for ConversionError {
+    fn from(_: ParseFloatError) -> Self {
+        ConversionError::InvalidValue
+    }
+}
+
+impl From<ParseBoolError> for ConversionError {
+    fn from(_: ParseBoolError) -> Self {
+        ConversionError::InvalidValue
+    }
+}
+
+impl Display for ConversionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidType => write!(f, "encountered an invalid type for conversion"),
+            Self::InvalidValue => write!(f, "the value is invalid for conversion"),
+        }
+    }
+}
+
+impl error::Error for ConversionError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
     }
 }
 
@@ -45,55 +82,37 @@ pub enum SaveFileValue {
     Boolean(bool),
 }
 
-// TODO add results here
-
 impl SaveFileValue {
     /// Get the value as a string
-    ///
-    /// # Panics
-    ///
-    /// Panics if the value is not a string
     ///
     /// # Returns
     ///
     /// A reference to the string
-    pub fn as_string(&self) -> GameString {
+    pub fn as_string(&self) -> Result<GameString, ConversionError> {
         match self {
-            SaveFileValue::String(s) => s.clone(),
-            _ => panic!("Invalid value"),
+            SaveFileValue::String(s) => Ok(s.clone()),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
     /// Get the value as a GameId
     ///
-    /// # Panics
-    ///
-    /// Panics if the value is not a string or the string is not a valid GameId
-    ///
     /// # Returns
     ///
     /// The GameId
-    pub fn as_id(&self) -> GameId {
-        match self {
-            SaveFileValue::String(s) => s.parse::<GameId>().unwrap(),
-            SaveFileValue::Integer(i) => *i as GameId,
-            _ => panic!("Invalid value"),
-        }
+    pub fn as_id(&self) -> Result<GameId, ConversionError> {
+        return Ok(self.as_integer()? as GameId);
     }
 
     /// Get the value as a GameObject
     ///
-    /// # Panics
-    ///
-    /// Panics if the value is not an object
-    ///
     /// # Returns
     ///
     /// A reference to the object
-    pub fn as_object(&self) -> &SaveFileObject {
+    pub fn as_object(&self) -> Result<&SaveFileObject, ConversionError> {
         match self {
-            SaveFileValue::Object(o) => o,
-            _ => panic!("Invalid value"),
+            SaveFileValue::Object(o) => Ok(o),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
@@ -101,7 +120,24 @@ impl SaveFileValue {
         match self {
             SaveFileValue::Integer(i) => Ok(*i),
             SaveFileValue::String(s) => Ok(s.parse::<i64>()?),
-            _ => return Err(ConversionError::InvalidType),
+            _ => Err(ConversionError::InvalidType),
+        }
+    }
+
+    pub fn as_real(&self) -> Result<f64, ConversionError> {
+        match self {
+            SaveFileValue::Real(r) => Ok(*r),
+            SaveFileValue::String(s) => Ok(s.parse::<f64>()?),
+            _ => Err(ConversionError::InvalidType),
+        }
+    }
+
+    pub fn as_boolean(&self) -> Result<bool, ConversionError> {
+        match self {
+            SaveFileValue::Boolean(b) => Ok(*b),
+            SaveFileValue::Integer(i) => Ok(*i != 0),
+            SaveFileValue::String(s) => Ok(s.parse::<bool>()?),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 }
@@ -134,10 +170,10 @@ impl SaveFileObject {
     /// # Panics
     ///
     /// Panics if the value is not a map
-    pub fn as_map(&self) -> &GameObjectMap {
+    pub fn as_map(&self) -> Result<&GameObjectMap, ConversionError> {
         match self {
-            SaveFileObject::Map(o) => o,
-            _ => panic!("Invalid value"),
+            SaveFileObject::Map(o) => Ok(o),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
@@ -146,10 +182,10 @@ impl SaveFileObject {
     /// # Panics
     ///
     /// Panics if the value is not a map
-    pub fn as_map_mut(&mut self) -> &mut GameObjectMap {
+    pub fn as_map_mut(&mut self) -> Result<&mut GameObjectMap, ConversionError> {
         match self {
-            SaveFileObject::Map(o) => o,
-            _ => panic!("Invalid value"),
+            SaveFileObject::Map(o) => Ok(o),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
@@ -158,10 +194,10 @@ impl SaveFileObject {
     /// # Panics
     ///
     /// Panics if the value is not an array
-    pub fn as_array(&self) -> &GameObjectArray {
+    pub fn as_array(&self) -> Result<&GameObjectArray, ConversionError> {
         match self {
-            SaveFileObject::Array(a) => a,
-            _ => panic!("Invalid value"),
+            SaveFileObject::Array(a) => Ok(a),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
@@ -170,10 +206,10 @@ impl SaveFileObject {
     /// # Panics
     ///
     /// Panics if the value is not an array
-    pub fn as_array_mut(&mut self) -> &mut GameObjectArray {
+    pub fn as_array_mut(&mut self) -> Result<&mut GameObjectArray, ConversionError> {
         match self {
-            SaveFileObject::Array(a) => a,
-            _ => panic!("Invalid value"),
+            SaveFileObject::Array(a) => Ok(a),
+            _ => Err(ConversionError::InvalidType),
         }
     }
 
@@ -276,32 +312,36 @@ impl<T: GameObjectCollection> GameObject<T> {
     }
 }
 
+// I like my getter error handling less verbose
+#[derive(Debug)]
+pub enum KeyError {
+    MissingKey(String, GameObjectMap),
+    IndexError(usize, GameObjectArray),
+    ArrEmpty,
+}
+
+impl fmt::Display for KeyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingKey(key, obj) => write!(f, "key {} missing from object {:?}", key, obj),
+            Self::IndexError(index, obj) => write!(f, "index {} out of range for {:?}", index, obj),
+            Self::ArrEmpty => write!(f, "array is empty"),
+        }
+    }
+}
+
+impl error::Error for KeyError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
+}
+
 impl GameObject<HashMap<String, SaveFileValue>> {
-    /// Get the value of a key as a string.
-    /// Mainly used for convenience.
-    ///
-    /// # Panics
-    ///
-    /// If the key is missing or the value is not a string
-    ///
-    pub fn get_string_ref(&self, key: &str) -> GameString {
-        self.inner.get(key).unwrap().as_string()
-    }
-
-    /// Get the value of a key as a GameObject.
-    /// Mainly used for convenience.
-    ///
-    /// # Panics
-    ///
-    /// If the key is missing or the value is not a GameObject
-    ///
-    pub fn get_object_ref(&self, key: &str) -> &SaveFileObject {
-        self.inner.get(key).unwrap().as_object()
-    }
-
     /// Get the value of a key as a mutable GameObject.
-    pub fn get(&self, key: &str) -> Option<&SaveFileValue> {
-        self.inner.get(key)
+    pub fn get(&self, key: &str) -> Result<&SaveFileValue, KeyError> {
+        self.inner
+            .get(key)
+            .ok_or(KeyError::MissingKey(key.to_owned(), self.clone()))
     }
 
     /// Insert a new value into the object.
@@ -340,8 +380,10 @@ impl<'a> IntoIterator for &'a GameObject<HashMap<String, SaveFileValue>> {
 
 impl GameObject<Vec<SaveFileValue>> {
     /// Get the value at an index
-    pub fn get_index(&self, index: usize) -> Option<&SaveFileValue> {
-        self.inner.get(index)
+    pub fn get_index(&self, index: usize) -> Result<&SaveFileValue, KeyError> {
+        self.inner
+            .get(index)
+            .ok_or(KeyError::IndexError(index, self.clone()))
     }
 
     /// Get the length of the array
@@ -359,8 +401,8 @@ impl GameObject<Vec<SaveFileValue>> {
         self.inner.insert(index, value);
     }
 
-    pub fn pop(&mut self) -> Option<SaveFileValue> {
-        self.inner.pop()
+    pub fn pop(&mut self) -> Result<SaveFileValue, KeyError> {
+        self.inner.pop().ok_or(KeyError::ArrEmpty)
     }
 }
 
@@ -396,10 +438,16 @@ mod tests {
         let mut obj = GameObjectMap::from_name("test".to_owned());
         let val = GameString::wrap("value".to_owned());
         obj.insert("key".to_owned(), SaveFileValue::String(val.clone()));
-        assert_eq!(obj.get_string_ref("key"), val.clone());
+        assert_eq!(obj.get("key").unwrap().as_string().unwrap(), val.clone());
         let val2 = GameString::wrap("value2".to_owned());
         obj.insert("key".to_owned(), SaveFileValue::String(val2.clone()));
-        let arr = obj.get_object_ref("key").as_array();
+        let arr = obj
+            .get("key")
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .as_array()
+            .unwrap();
         assert_eq!(arr.len(), 2);
     }
 }

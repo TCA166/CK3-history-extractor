@@ -4,8 +4,12 @@ mod types;
 /// A submodule that provides the intermediate parsing interface for the save file.
 /// The parser uses [GameObject](crate::parser::game_object::GameObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
 mod game_object;
+use std::fmt::{self, Debug, Display};
+
+use game_object::KeyError;
 pub use game_object::{
-    GameId, GameObjectArray, GameObjectMap, GameString, SaveFileObject, SaveFileValue,
+    ConversionError, GameId, GameObjectArray, GameObjectMap, GameString, SaveFileObject,
+    SaveFileValue,
 };
 
 /// A submodule that provides the [SaveFile] object, which is used to store the entire save file.
@@ -22,6 +26,71 @@ pub use section_reader::SectionReader;
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
 mod game_state;
 pub use game_state::GameState;
+use section_reader::SectionReaderError;
+
+#[derive(Debug)]
+pub enum ParsingError {
+    SectionError(String),
+    SaveFileError(SaveFileError),
+    ConversionError(ConversionError),
+    StructureError(KeyError),
+    ReaderError(String),
+}
+
+impl<'a> From<SectionError<'a>> for ParsingError {
+    fn from(e: SectionError<'a>) -> Self {
+        ParsingError::SectionError(format!("{:?}", e))
+    }
+}
+
+impl From<SaveFileError> for ParsingError {
+    fn from(e: SaveFileError) -> Self {
+        ParsingError::SaveFileError(e)
+    }
+}
+
+impl From<ConversionError> for ParsingError {
+    fn from(e: ConversionError) -> Self {
+        ParsingError::ConversionError(e)
+    }
+}
+
+impl From<KeyError> for ParsingError {
+    fn from(value: KeyError) -> Self {
+        ParsingError::StructureError(value)
+    }
+}
+
+impl<'a, 'b: 'a> From<SectionReaderError<'b>> for ParsingError {
+    fn from(value: SectionReaderError<'b>) -> Self {
+        ParsingError::ReaderError(format!("{:?}", value))
+    }
+}
+
+impl<'a> Display for ParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ConversionError(err) => Display::fmt(err, f),
+            Self::SaveFileError(err) => Display::fmt(err, f),
+            Self::SectionError(err) => Display::fmt(err, f),
+            Self::StructureError(err) => Display::fmt(err, f),
+            Self::ReaderError(err) => Display::fmt(err, f),
+        }
+    }
+}
+
+/*
+impl<'a> error::Error for ParsingError<'a> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::SectionError(err) => Some(err),
+            Self::SaveFileError(err) => Some(err),
+            Self::StructureError(err) => Some(err),
+            Self::ConversionError(err) => Some(err),
+        }
+    }
+}
+*/
 
 use super::{
     structures::{FromGameObject, Player},
@@ -35,44 +104,46 @@ pub fn process_section(
     i: &mut Section,
     game_state: &mut GameState,
     players: &mut Vec<Player>,
-) -> Result<(), SectionError> {
+) -> Result<(), ParsingError> {
     match i.get_name() {
         "meta_data" => {
-            let r = i.parse()?;
-            let r = r.as_map();
-            game_state.set_current_date(r.get_string_ref("meta_date"));
-            game_state.set_offset_date(r.get_string_ref("meta_real_date"));
+            let parsed = i.parse()?;
+            let map = parsed.as_map()?;
+            game_state.set_current_date(map.get("meta_date")?.as_string()?);
+            game_state.set_offset_date(map.get("meta_real_date")?.as_string()?);
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {
-            let r = i.parse()?;
-            game_state.add_lookup(r.as_array().into_iter().map(|x| x.as_string()).collect());
+            let lookup: Result<Vec<_>, _> = i
+                .parse()?
+                .as_array()?
+                .into_iter()
+                .map(|x| x.as_string())
+                .collect();
+            game_state.add_lookup(lookup?);
         }
         "landed_titles" => {
-            let r = i.parse()?;
-            let landed = r.as_map().get_object_ref("landed_titles").as_map();
-            for (_, v) in landed.into_iter() {
-                match v {
-                    SaveFileValue::Object(o) => {
-                        game_state.add_title(o.as_map());
-                    }
-                    _ => {
-                        // apparently this isn't a bug, its a feature. Thats how it is in the savefile v.0=none\n
-                        continue;
-                    }
+            let parsed = i.parse()?;
+            for (_, v) in parsed
+                .as_map()?
+                .get("landed_titles")?
+                .as_object()?
+                .as_map()?
+            {
+                if let SaveFileValue::Object(o) = v {
+                    game_state.add_title(o.as_map()?);
                 }
             }
         }
         "county_manager" => {
-            let r = i.parse()?;
-            let counties = r.as_map().get_object_ref("counties").as_map();
+            let parsed = i.parse()?;
             // we create an association between the county key and the faith and culture of the county
             // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
             let mut key_assoc = HashMap::default();
-            for (key, p) in counties.into_iter() {
-                let p = p.as_object().as_map();
-                let faith = game_state.get_faith(&p.get("faith").unwrap().as_id());
-                let culture = game_state.get_culture(&p.get("culture").unwrap().as_id());
+            for (key, p) in parsed.as_map()?.get("counties")?.as_object()?.as_map()? {
+                let p = p.as_object()?.as_map()?;
+                let faith = game_state.get_faith(&p.get("faith")?.as_id()?);
+                let culture = game_state.get_culture(&p.get("culture")?.as_id()?);
                 key_assoc.insert(key.as_str(), (faith, culture));
             }
             for (_, title) in game_state.get_title_iter() {
@@ -91,36 +162,28 @@ pub fn process_section(
             }
         }
         "dynasties" => {
-            let r = i.parse()?;
-            for (_, d) in r.as_map().into_iter() {
-                match d.as_object() {
-                    SaveFileObject::Map(o) => {
-                        if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
-                            for (_, h) in o.into_iter() {
-                                match h {
-                                    SaveFileValue::Object(o) => {
-                                        game_state.add_dynasty(o.as_map());
-                                    }
-                                    _ => {
-                                        continue;
-                                    }
+            for (_, d) in i.parse()?.as_map()? {
+                if let SaveFileObject::Map(o) = d.as_object()? {
+                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
+                        for (_, h) in o {
+                            match h {
+                                SaveFileValue::Object(o) => {
+                                    game_state.add_dynasty(o.as_map()?);
+                                }
+                                _ => {
+                                    continue;
                                 }
                             }
                         }
-                    }
-                    SaveFileObject::Array(_) => {
-                        continue;
                     }
                 }
             }
         }
         "living" => {
-            let r = i.parse()?;
-            for (_, l) in r.as_map().into_iter() {
+            for (_, l) in i.parse()?.as_map()? {
                 match l {
                     SaveFileValue::Object(o) => {
-                        let chr = o.as_map();
-                        game_state.add_character(chr);
+                        game_state.add_character(o.as_map()?);
                     }
                     _ => {
                         continue;
@@ -129,28 +192,18 @@ pub fn process_section(
             }
         }
         "dead_unprunable" => {
-            let r = i.parse()?;
-            for (_, d) in r.as_map().into_iter() {
-                match d {
-                    SaveFileValue::Object(o) => {
-                        let chr = o.as_map();
-                        game_state.add_character(chr);
-                    }
-                    _ => {
-                        continue;
-                    }
+            for (_, d) in i.parse()?.as_map()? {
+                if let SaveFileValue::Object(o) = d {
+                    game_state.add_character(o.as_map()?);
                 }
             }
         }
         "characters" => {
-            let r = i.parse()?;
-            let dead_prunable = r.as_map().get("dead_prunable");
-            if dead_prunable.is_some() {
-                for (_, d) in dead_prunable.unwrap().as_object().as_map().into_iter() {
+            if let Ok(dead_prunable) = i.parse()?.as_map()?.get("dead_prunable") {
+                for (_, d) in dead_prunable.as_object()?.as_map()? {
                     match d {
                         SaveFileValue::Object(o) => {
-                            let chr = o.as_map();
-                            game_state.add_character(chr);
+                            game_state.add_character(o.as_map()?);
                         }
                         _ => {
                             continue;
@@ -161,70 +214,58 @@ pub fn process_section(
         }
         "vassal_contracts" => {
             let r = i.parse()?;
-            let r = r.as_map();
+            let map = r.as_map()?;
             // if version <= 1.12 then the key is active, otherwise it is database, why paradox?
-            let active = r
+            for (key, contract) in map
                 .get("database")
-                .or(r.get("active"))
-                .unwrap()
-                .as_object()
-                .as_map();
-            for (key, contract) in active.into_iter() {
-                match contract {
-                    SaveFileValue::Object(val) => game_state.add_contract(
+                .or(map.get("active"))?
+                .as_object()?
+                .as_map()?
+            {
+                if let SaveFileValue::Object(val) = contract {
+                    game_state.add_contract(
                         &key.parse::<GameId>().unwrap(),
-                        &val.as_map().get("vassal").unwrap().as_id(),
-                    ),
-                    _ => {
-                        continue;
-                    }
+                        &val.as_map()?.get("vassal")?.as_id()?,
+                    )
                 }
             }
         }
         "religion" => {
-            let r = i.parse()?;
-            let faiths = r.as_map().get_object_ref("faiths").as_map();
-            for (_, f) in faiths.into_iter() {
-                game_state.add_faith(f.as_object().as_map());
+            let parsed = i.parse()?;
+            for (_, f) in parsed.as_map()?.get("faiths")?.as_object()?.as_map()? {
+                game_state.add_faith(f.as_object()?.as_map()?);
             }
         }
         "culture_manager" => {
-            let r = i.parse()?;
-            let cultures = r.as_map().get_object_ref("cultures").as_map();
-            for (_, c) in cultures.into_iter() {
-                game_state.add_culture(c.as_object().as_map());
+            let parsed = i.parse()?;
+            let cultures = parsed.as_map()?.get("cultures")?.as_object()?.as_map()?;
+            for (_, c) in cultures {
+                game_state.add_culture(c.as_object()?.as_map()?);
             }
         }
         "character_memory_manager" => {
-            let r = i.parse()?;
-            let database = r.as_map().get_object_ref("database").as_map();
-            for (_, d) in database.into_iter() {
-                match d {
-                    SaveFileValue::Object(o) => {
-                        game_state.add_memory(o.as_map());
-                    }
-                    _ => {
-                        continue;
-                    }
+            let parsed = i.parse()?;
+            for (_, d) in parsed.as_map()?.get("database")?.as_object()?.as_map()? {
+                if let SaveFileValue::Object(o) = d {
+                    game_state.add_memory(o.as_map()?);
                 }
             }
         }
         "played_character" => {
-            let r = i.parse()?;
-            let p = Player::from_game_object(r.as_map(), game_state);
+            let p = Player::from_game_object(i.parse()?.as_map()?, game_state);
             players.push(p);
         }
         "artifacts" => {
-            let artifacts = i.parse()?;
-            let arr = artifacts.as_map().get_object_ref("artifacts").as_map();
-            for (_, a) in arr.into_iter() {
-                match a {
-                    SaveFileValue::Object(o) => {
-                        game_state.add_artifact(o.as_map());
-                    }
-                    _ => {
-                        continue;
-                    }
+            for (_, a) in i
+                .parse()?
+                .as_map()?
+                .get("artifacts")?
+                .as_object()?
+                .as_map()?
+                .into_iter()
+            {
+                if let SaveFileValue::Object(o) = a {
+                    game_state.add_artifact(o.as_map()?);
                 }
             }
         }
@@ -247,7 +288,7 @@ mod tests {
     }
 
     #[test]
-    fn test_save_file() {
+    fn test_save_file() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
             test={
@@ -256,18 +297,18 @@ mod tests {
                 }
             }
         ",
-        )
-        .unwrap();
+        )?;
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2").as_map();
-        let test3 = test2.get_string_ref("test3");
+        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
+        let test3 = test2.get("test3")?.as_string()?;
         assert_eq!(*(test3), "1".to_string());
+        return Ok(());
     }
 
     #[test]
-    fn test_save_file_array() {
+    fn test_save_file_array() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
             test={
@@ -279,43 +320,31 @@ mod tests {
                 test3={ 1 2 3}
             }
         ",
-        )
-        .unwrap();
+        )?;
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2");
-        let test2_val = test2.as_array();
-        assert_eq!(
-            *(test2_val.get_index(0).unwrap().as_string()),
-            "1".to_string()
-        );
-        assert_eq!(
-            *(test2_val.get_index(1).unwrap().as_string()),
-            "2".to_string()
-        );
-        assert_eq!(
-            *(test2_val.get_index(2).unwrap().as_string()),
-            "3".to_string()
-        );
-        let test3 = object.as_map().get_object_ref("test3");
-        let test3_val = test3.as_array();
-        assert_eq!(
-            *(test3_val.get_index(0).unwrap().as_string()),
-            "1".to_string()
-        );
-        assert_eq!(
-            *(test3_val.get_index(1).unwrap().as_string()),
-            "2".to_string()
-        );
-        assert_eq!(
-            *(test3_val.get_index(2).unwrap().as_string()),
-            "3".to_string()
-        );
+        let test2 = object
+            .as_map()
+            .unwrap()
+            .get("test2")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        let test2_val = test2.as_array()?;
+        assert_eq!(*(test2_val.get_index(0)?.as_string()?), "1".to_string());
+        assert_eq!(*(test2_val.get_index(1)?.as_string()?), "2".to_string());
+        assert_eq!(*(test2_val.get_index(2)?.as_string()?), "3".to_string());
+        let test3 = object.as_map()?.get("test3")?.as_object()?;
+        let test3_val = test3.as_array()?;
+        assert_eq!(*(test3_val.get_index(0)?.as_string()?), "1".to_string());
+        assert_eq!(*(test3_val.get_index(1)?.as_string()?), "2".to_string());
+        assert_eq!(*(test3_val.get_index(2)?.as_string()?), "3".to_string());
+        Ok(())
     }
 
     #[test]
-    fn test_weird_syntax() {
+    fn test_weird_syntax() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
             test={
@@ -332,13 +361,14 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2").as_map();
-        assert_eq!(*(test2.get_string_ref("1")), "2".to_string());
-        assert_eq!(*(test2.get_string_ref("3")), "4".to_string());
+        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
+        assert_eq!(*(test2.get("1")?.as_string()?), "2".to_string());
+        assert_eq!(*(test2.get("3")?.as_string()?), "4".to_string());
+        Ok(())
     }
 
     #[test]
-    fn test_array_syntax() {
+    fn test_array_syntax() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
             test={
@@ -350,15 +380,16 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2").as_array();
-        assert_eq!(*(test2.get_index(0).unwrap().as_string()), "1".to_string());
-        assert_eq!(*(test2.get_index(1).unwrap().as_string()), "2".to_string());
-        assert_eq!(*(test2.get_index(2).unwrap().as_string()), "3".to_string());
+        let test2 = object.as_map()?.get("test2")?.as_object()?.as_array()?;
+        assert_eq!(*(test2.get_index(0)?.as_string()?), "1".to_string());
+        assert_eq!(*(test2.get_index(1)?.as_string()?), "2".to_string());
+        assert_eq!(*(test2.get_index(2)?.as_string()?), "3".to_string());
         assert_eq!(test2.len(), 3);
+        Ok(())
     }
 
     #[test]
-    fn test_unnamed_obj() {
+    fn test_unnamed_obj() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
         3623={
@@ -385,13 +416,14 @@ mod tests {
         .unwrap();
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
-        let variables = object.as_map().get_object_ref("variables").as_map();
-        let data = variables.get_object_ref("data").as_array();
-        assert_ne!(data.len(), 0)
+        let variables = object.as_map()?.get("variables")?.as_object()?.as_map()?;
+        let data = variables.get("data")?.as_object()?.as_array()?;
+        assert_ne!(data.len(), 0);
+        Ok(())
     }
 
     #[test]
-    fn test_example_1() {
+    fn test_example_1() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj("
         3623={
             name=\"dynn_Sao\"
@@ -429,35 +461,31 @@ mod tests {
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "3623".to_string());
         assert_eq!(
-            *(object.as_map().get_string_ref("name")),
+            *(object.as_map()?.get("name")?.as_string()?),
             "dynn_Sao".to_string()
         );
-        let historical = object.as_map().get_object_ref("historical").as_array();
+        let historical = object
+            .as_map()?
+            .get("historical")?
+            .as_object()?
+            .as_array()?;
+        assert_eq!(*(historical.get_index(0)?.as_string()?), "4440".to_string());
+        assert_eq!(*(historical.get_index(1)?.as_string()?), "5398".to_string());
+        assert_eq!(*(historical.get_index(2)?.as_string()?), "6726".to_string());
         assert_eq!(
-            *(historical.get_index(0).unwrap().as_string()),
-            "4440".to_string()
-        );
-        assert_eq!(
-            *(historical.get_index(1).unwrap().as_string()),
-            "5398".to_string()
-        );
-        assert_eq!(
-            *(historical.get_index(2).unwrap().as_string()),
-            "6726".to_string()
-        );
-        assert_eq!(
-            *(historical.get_index(3).unwrap().as_string()),
+            *(historical.get_index(3)?.as_string()?),
             "10021".to_string()
         );
         assert_eq!(
-            *(historical.get_index(4).unwrap().as_string()),
+            *(historical.get_index(4)?.as_string()?),
             "33554966".to_string()
         );
         assert_eq!(historical.len(), 12);
+        Ok(())
     }
 
     #[test]
-    fn test_space() {
+    fn test_space() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
         test = {
@@ -472,27 +500,19 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2").as_map();
-        let test3 = test2.get_string_ref("test3");
+        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
+        let test3 = test2.get("test3")?.as_string()?;
         assert_eq!(*(test3), "1".to_string());
-        let test4 = object.as_map().get_object_ref("test4");
-        let test4_val = test4.as_array();
-        assert_eq!(
-            *(test4_val.get_index(0).unwrap().as_string()),
-            "a".to_string()
-        );
-        assert_eq!(
-            *(test4_val.get_index(1).unwrap().as_string()),
-            "b".to_string()
-        );
-        assert_eq!(
-            *(test4_val.get_index(2).unwrap().as_string()),
-            "c".to_string()
-        );
+        let test4 = object.as_map()?.get("test4")?.as_object()?;
+        let test4_val = test4.as_array()?;
+        assert_eq!(*(test4_val.get_index(0)?.as_string()?), "a".to_string());
+        assert_eq!(*(test4_val.get_index(1)?.as_string()?), "b".to_string());
+        assert_eq!(*(test4_val.get_index(2)?.as_string()?), "c".to_string());
+        Ok(())
     }
 
     #[test]
-    fn test_landed() {
+    fn test_landed() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
         c_derby = {
@@ -534,22 +554,27 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "c_derby".to_string());
-        let b_derby = object.as_map().get_object_ref("b_derby").as_map();
-        assert_eq!(*(b_derby.get_string_ref("province")), "1621".to_string());
-        let b_chesterfield = object.as_map().get_object_ref("b_chesterfield").as_map();
+        let b_derby = object.as_map()?.get("b_derby")?.as_object()?.as_map()?;
+        assert_eq!(*(b_derby.get("province")?.as_string()?), "1621".to_string());
+        let b_chesterfield = object
+            .as_map()?
+            .get("b_chesterfield")?
+            .as_object()?
+            .as_map()?;
         assert_eq!(
-            *(b_chesterfield.get_string_ref("province")),
+            *(b_chesterfield.get("province")?.as_string()?),
             "1622".to_string()
         );
-        let b_castleton = object.as_map().get_object_ref("b_castleton").as_map();
+        let b_castleton = object.as_map()?.get("b_castleton")?.as_object()?.as_map()?;
         assert_eq!(
-            *(b_castleton.get_string_ref("province")),
+            *(b_castleton.get("province")?.as_string()?),
             "1623".to_string()
         );
+        Ok(())
     }
 
     #[test]
-    fn test_invalid_line() {
+    fn test_invalid_line() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
             nonsense=idk
@@ -564,9 +589,10 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "test".to_string());
-        let test2 = object.as_map().get_object_ref("test2").as_map();
-        let test3 = test2.get_string_ref("test3");
+        let test2 = object.as_map()?.get("test2")?.as_object()?.as_map()?;
+        let test3 = test2.get("test3")?.as_string()?;
         assert_eq!(*(test3), "1".to_string());
+        Ok(())
     }
 
     #[test]
@@ -594,12 +620,13 @@ mod tests {
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
         assert_eq!(object.get_name(), "duration".to_string());
-        assert_eq!(object.as_array().len(), 3);
-        assert_eq!(object.as_array()[0].as_id(), 7548);
+        let arr = object.as_array().unwrap();
+        assert_eq!(arr.len(), 3);
+        assert_eq!(arr[0].as_id().unwrap(), 7548);
     }
 
     #[test]
-    fn test_multi_key() {
+    fn test_multi_key() -> Result<(), Box<dyn std::error::Error>> {
         let tape = get_test_obj(
             "
         test={
@@ -611,8 +638,9 @@ mod tests {
         .unwrap();
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap().unwrap().parse().unwrap();
-        let arr = object.as_map().get_object_ref("a").as_array();
+        let arr = object.as_map()?.get("a")?.as_object()?.as_array()?;
         assert_eq!(arr.len(), 2);
+        Ok(())
     }
 
     #[test]
@@ -627,8 +655,8 @@ mod tests {
         )
         .unwrap();
         let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse();
-        assert!(object.is_err())
+        let object = reader.next().unwrap();
+        assert!(object.unwrap().parse().is_err())
     }
 
     #[test]
@@ -643,8 +671,8 @@ mod tests {
         )
         .unwrap();
         let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse();
-        assert!(object.is_err())
+        let object = reader.next().unwrap();
+        assert!(object.unwrap().parse().is_err())
     }
     #[test]
     fn test_invalid_syntax_3() {
