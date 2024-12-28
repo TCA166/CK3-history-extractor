@@ -4,6 +4,7 @@ use std::{
     fmt::{self, Debug, Display},
     fs::File,
     io::{self, Cursor, Read},
+    path::Path,
     string::FromUtf8Error,
 };
 use zip::{read::ZipArchive, result::ZipError};
@@ -82,9 +83,10 @@ pub struct SaveFile {
 impl<'a> SaveFile {
     /// Open a save file.
     /// Internally uses [File::open] to open the file and then [SaveFile::read] to read the contents.
-    pub fn open(filename: &str) -> Result<SaveFile, SaveFileError> {
+    pub fn open<P: AsRef<Path>>(filename: P) -> Result<SaveFile, SaveFileError> {
         let mut file = File::open(filename)?;
-        SaveFile::read(&mut file)
+        let metadata = file.metadata()?;
+        SaveFile::read(&mut file, Some(metadata.len() as usize))
     }
 
     /// Create a new SaveFile instance.
@@ -98,16 +100,23 @@ impl<'a> SaveFile {
     ///
     /// A new SaveFile instance.
     /// It is an iterator that returns sections from the save file.
-    pub fn read<F: Read>(file: &mut F) -> Result<SaveFile, SaveFileError> {
-        let mut contents = vec![];
-        let contents_size = file.read_to_end(&mut contents)?;
-        if contents_size < ARCHIVE_HEADER.len() {
+    pub fn read<F: Read>(
+        file: &mut F,
+        contents_size: Option<usize>,
+    ) -> Result<SaveFile, SaveFileError> {
+        let mut contents = if let Some(size) = contents_size {
+            Vec::with_capacity(size)
+        } else {
+            Vec::new()
+        };
+        let read_size = file.read_to_end(&mut contents)?;
+        if read_size < ARCHIVE_HEADER.len() {
             return Err(SaveFileError::ParseError("Save file is too small"));
         }
         let mut compressed = false;
         let mut binary = false;
         // find if ARCHIVE_HEADER is in the file
-        for i in 0..contents_size - ARCHIVE_HEADER.len() {
+        for i in 0..read_size - ARCHIVE_HEADER.len() {
             if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
                 compressed = true;
                 break;
@@ -126,7 +135,7 @@ impl<'a> SaveFile {
             }
             let gamestate_size = gamestate.size() as usize;
             let mut contents = Vec::with_capacity(gamestate_size);
-            if gamestate.read(&mut contents)? != gamestate_size {
+            if gamestate.read_to_end(&mut contents)? != gamestate_size {
                 return Err(SaveFileError::ParseError("Failed to read the entire file"));
             }
             return Ok(SaveFile { contents, binary });
@@ -137,10 +146,13 @@ impl<'a> SaveFile {
 
     /// Get the tape from the save file.
     pub fn tape(&'a self) -> Result<Tape<'a>, jomini::Error> {
+        // FIXME is broken
         if self.binary {
-            Ok(Tape::Text(TextTape::from_slice(&self.contents)?))
+            Ok(Tape::Text(TextTape::from_slice(&self.contents.as_slice())?))
         } else {
-            Ok(Tape::Binary(BinaryTape::from_slice(&self.contents)?))
+            Ok(Tape::Binary(BinaryTape::from_slice(
+                &self.contents.as_slice(),
+            )?))
         }
     }
 }
@@ -154,13 +166,11 @@ mod tests {
 
     use super::*;
 
-    // FIXME this somehow writes zip file that cannot be read back
     fn create_zipped_test_file(contents: &'static str) -> Cursor<Vec<u8>> {
         let file = Vec::new();
         let cur = Cursor::new(file);
         let mut zip = ZipWriter::new(cur);
-        let options =
-            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        let options = SimpleFileOptions::default();
         zip.start_file("gamestate", options).unwrap();
         if zip.write(contents.as_bytes()).unwrap() != contents.len() {
             panic!("Failed to write the entire file");
@@ -173,14 +183,24 @@ mod tests {
     #[test]
     fn test_open() {
         let mut file = Cursor::new(b"test");
-        let save = SaveFile::read(&mut file).unwrap();
+        let save = SaveFile::read(&mut file, None).unwrap();
         assert_eq!(save.contents, b"test");
     }
 
     #[test]
     fn test_compressed_open() {
         let mut file = create_zipped_test_file("test");
-        let save = SaveFile::read(&mut file).unwrap();
+        let save = SaveFile::read(&mut file, None).unwrap();
         assert_eq!(save.contents, b"test");
+    }
+
+    #[test]
+    fn test_tape() {
+        let mut file = Cursor::new(b"test");
+        let save = SaveFile::read(&mut file, None).unwrap();
+        let tape = save.tape().unwrap();
+        if let Tape::Binary(_) = tape {
+            panic!("Expected text tape, got binary tape");
+        }
     }
 }
