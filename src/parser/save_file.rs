@@ -80,6 +80,9 @@ impl error::Error for SaveFileError {
 }
 
 /// A struct that represents a ck3 save file.
+/// It is just a wrapper around the contents of the save file.
+/// This is so that we can abstract away the compression, encoding and just
+/// return an abstract [Tape] that can be used to read from the save file.
 pub struct SaveFile {
     /// The contents of the save file, shared between all sections
     contents: Vec<u8>,
@@ -128,6 +131,7 @@ impl<'a> SaveFile {
         }
     }
 
+    /// Get the tape from the save file.
     pub fn tape(&'a self) -> Result<Tape<'a>, SaveFileError> {
         if self.binary {
             Ok(Tape::Text(TextTape::from_slice(&self.contents)?))

@@ -9,7 +9,7 @@ use super::{
     Cullable,
 };
 
-/// An enum representing the different types of [Renderable] objects
+/// An enum representing the different types of [super::Renderable] objects
 pub enum RenderableType {
     Character(Shared<Character>),
     Culture(Shared<Culture>),

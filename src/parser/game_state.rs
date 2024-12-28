@@ -7,6 +7,7 @@ use super::{
         types::{HashMap, HashMapIter, RefOrRaw, Shared, Wrapper, WrapperMut},
     },
     game_object::{GameId, GameObjectMap, GameString},
+    ParsingError,
 };
 
 use serde::Serialize;
@@ -173,52 +174,52 @@ impl GameState {
         get_or_insert_dummy(&mut self.artifacts, key)
     }
 
-    pub fn add_artifact(&mut self, value: &GameObjectMap) {
+    pub fn add_artifact(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.artifacts, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a character to the game state    
-    pub fn add_character(&mut self, value: &GameObjectMap) {
+    pub fn add_character(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.characters, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a title to the game state
-    pub fn add_title(&mut self, value: &GameObjectMap) {
+    pub fn add_title(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.titles, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a faith to the game state
-    pub fn add_faith(&mut self, value: &GameObjectMap) {
+    pub fn add_faith(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.faiths, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a culture to the game state
-    pub fn add_culture(&mut self, value: &GameObjectMap) {
+    pub fn add_culture(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.cultures, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a dynasty to the game state
-    pub fn add_dynasty(&mut self, value: &GameObjectMap) {
+    pub fn add_dynasty(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.dynasties, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Add a memory to the game state
-    pub fn add_memory(&mut self, value: &GameObjectMap) {
+    pub fn add_memory(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
         get_or_insert_dummy_from_value(&mut self.memories, value)
             .get_internal_mut()
-            .init(value, self);
+            .init(value, self)
     }
 
     /// Creates a hashmap death year->number of deaths

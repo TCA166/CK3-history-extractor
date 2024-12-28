@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
         jinja_env::DYN_TEMPLATE_NAME,
-        parser::{GameObjectMap, GameState, GameString, SaveFileValue},
+        parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
@@ -90,148 +90,6 @@ impl Dynasty {
     }
 }
 
-///Gets the perks of the dynasty and appends them to the perks vector
-fn get_perks(perks: &mut Vec<(GameString, u8)>, base: &GameObjectMap) {
-    if let Some(perks_obj) = base.get("perk") {
-        for p in perks_obj.as_object().as_array() {
-            let perk = p.as_string();
-            //get the split perk by the second underscore
-            let mut i: u8 = 0;
-            let mut key: Option<&str> = None;
-            let mut val: u8 = 0;
-            for el in perk.rsplitn(2, '_') {
-                if i == 0 {
-                    val = el.parse::<u8>().unwrap();
-                } else {
-                    key = Some(el);
-                }
-                i += 1;
-            }
-            if key.is_none() {
-                continue;
-            }
-            let mut added = false;
-            for perk in perks.iter_mut() {
-                if perk.0.as_str() == key.unwrap() {
-                    if perk.1 < val {
-                        perk.1 = val;
-                    }
-                    added = true;
-                    break;
-                }
-            }
-            if added {
-                continue;
-            }
-            //if the perk is not found, add it
-            perks.push((GameString::wrap(key.unwrap().to_owned()), val));
-        }
-    }
-}
-
-///Gets the leaders of the dynasty and appends them to the leaders vector
-fn get_leaders(
-    leaders: &mut Vec<Shared<Character>>,
-    base: &GameObjectMap,
-    game_state: &mut GameState,
-) {
-    if let Some(leaders_obj) = base.get("historical") {
-        if !leaders.is_empty() {
-            leaders.clear();
-        }
-        for l in leaders_obj.as_object().as_array() {
-            leaders.push(game_state.get_character(&l.as_id()).clone());
-        }
-    } else if leaders.is_empty() {
-        if let Some(current) = base.get("dynasty_head") {
-            leaders.push(game_state.get_character(&current.as_id()));
-        } else if let Some(current) = base.get("head_of_house") {
-            leaders.push(game_state.get_character(&current.as_id()));
-        }
-    }
-}
-
-///Gets the prestige of the dynasty and returns a tuple with the total prestige and the current prestige
-fn get_prestige(base: &GameObjectMap) -> (f32, f32) {
-    let mut prestige_tot = 0.0;
-    let mut prestige = 0.0;
-    if let Some(currency) = base.get("prestige") {
-        let o = currency.as_object().as_map();
-        match o.get("accumulated") {
-            Some(v) => match v {
-                SaveFileValue::Object(ref o) => {
-                    prestige_tot = o.as_map().get_string_ref("value").parse::<f32>().unwrap();
-                }
-                SaveFileValue::String(ref o) => {
-                    prestige_tot = o.parse::<f32>().unwrap();
-                }
-                _ => {
-                    unreachable!()
-                }
-            },
-            None => {}
-        }
-        match o.get("currency") {
-            Some(v) => match v {
-                SaveFileValue::Object(ref o) => {
-                    prestige = o.as_map().get_string_ref("value").parse::<f32>().unwrap();
-                }
-                SaveFileValue::String(ref o) => {
-                    prestige = o.parse::<f32>().unwrap();
-                }
-                _ => {
-                    unreachable!()
-                }
-            },
-            None => {}
-        }
-    }
-    (prestige_tot, prestige)
-}
-
-///Gets the parent dynasty of the dynasty
-fn get_parent(base: &GameObjectMap, game_state: &mut GameState) -> Option<Shared<Dynasty>> {
-    let parent_id = base.get("dynasty");
-    match parent_id {
-        None => None,
-        k => {
-            let p = game_state.get_dynasty(&k.unwrap().as_id()).clone();
-            let m = p.try_get_internal_mut();
-            if m.is_err() {
-                return None;
-            }
-            m.unwrap().register_house();
-            Some(p)
-        }
-    }
-}
-
-fn get_name(base: &GameObjectMap, parent: Option<Shared<Dynasty>>) -> Option<GameString> {
-    let mut n = base.get("name");
-    if n.is_none() {
-        n = base.get("localized_name");
-        if n.is_none() {
-            if parent.is_none() {
-                return None;
-            }
-            let p = parent.as_ref().unwrap().get_internal();
-            if p.name.is_none() {
-                return None;
-            }
-            //this may happen for dynasties with a house with the same name
-            return Some(p.name.as_ref().unwrap().clone());
-        }
-    }
-    Some(n.unwrap().as_string())
-}
-
-fn get_date(base: &GameObjectMap) -> Option<GameString> {
-    if let Some(date) = base.get("found_date") {
-        return Some(date.as_string());
-    }
-    None
-}
-
 impl DummyInit for Dynasty {
     fn dummy(id: GameId) -> Self {
         Dynasty {
@@ -251,42 +109,117 @@ impl DummyInit for Dynasty {
         }
     }
 
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
         //NOTE: dynasties can have their main house have the same id
-        get_perks(&mut self.perks, &base);
-        get_leaders(&mut self.leaders, &base, game_state);
-        let res = get_prestige(&base);
-        if self.prestige_tot == 0.0 {
-            self.prestige_tot = res.0;
-            self.prestige = res.1;
-        }
-        self.parent = get_parent(&base, game_state);
-        let name = get_name(&base, self.parent.clone());
-        if self.name.is_none() {
-            self.name = name;
-        }
-        self.found_date = get_date(&base);
-        if let Some(motto_node) = base.get("motto") {
-            match motto_node {
-                SaveFileValue::String(ref s) => {
-                    self.motto = Some((s.clone(), Vec::new()));
-                }
-                SaveFileValue::Object(ref o) => {
-                    let o = o.as_map();
-                    let key = o.get_string_ref("key");
-                    let variables = o.get("variables");
-                    let mut vars = Vec::new();
-                    for v in variables.unwrap().as_object().as_array() {
-                        let value = v.as_object().as_map().get_string_ref("value");
-                        vars.push(value.clone());
+        if let Some(perks_obj) = base.get("perk") {
+            for p in perks_obj.as_object()?.as_array()? {
+                let perk = p.as_string()?;
+                //get the split perk by the second underscore
+                let mut i: u8 = 0;
+                let mut key: Option<&str> = None;
+                let mut val: u8 = 0;
+                for el in perk.rsplitn(2, '_') {
+                    if i == 0 {
+                        val = el.parse::<u8>().unwrap();
+                    } else {
+                        key = Some(el);
                     }
-                    self.motto = Some((key.clone(), vars));
+                    i += 1;
                 }
-                _ => {
-                    unreachable!()
+                if key.is_none() {
+                    continue;
+                }
+                let mut added = false;
+                // TODO why not hashmap?
+                for perk in self.perks.iter_mut() {
+                    if perk.0.as_str() == key.unwrap() {
+                        if perk.1 < val {
+                            perk.1 = val;
+                        }
+                        added = true;
+                        break;
+                    }
+                }
+                if added {
+                    continue;
+                }
+                //if the perk is not found, add it
+                self.perks
+                    .push((GameString::wrap(key.unwrap().to_owned()), val));
+            }
+        }
+        if let Some(leaders_obj) = base.get("historical") {
+            if !self.leaders.is_empty() {
+                self.leaders.clear();
+            }
+            for l in leaders_obj.as_object()?.as_array()? {
+                self.leaders
+                    .push(game_state.get_character(&l.as_id()?).clone());
+            }
+        } else if self.leaders.is_empty() {
+            if let Some(current) = base.get("dynasty_head").or(base.get("head_of_house")) {
+                self.leaders
+                    .push(game_state.get_character(&current.as_id()?));
+            }
+        }
+        if let Some(currency) = base.get("prestige") {
+            let o = currency.as_object()?.as_map()?;
+            if let Some(acc) = o.get("accumulated") {
+                if let SaveFileValue::Object(o) = acc {
+                    self.prestige_tot = o.as_map()?.get_real("value")? as f32;
+                } else {
+                    self.prestige_tot = acc.as_real()? as f32;
+                }
+            }
+            if let Some(c) = o.get("currency") {
+                if let SaveFileValue::Object(o) = c {
+                    self.prestige = o.as_map()?.get_real("value")? as f32;
+                } else {
+                    self.prestige = c.as_real()? as f32;
                 }
             }
         }
+        if let Some(paret) = base.get("dynasty") {
+            let p = game_state.get_dynasty(&paret.as_id()?).clone();
+            if let Ok(mut p) = p.try_get_internal_mut() {
+                p.register_house();
+            }
+            self.parent = Some(p.clone());
+        }
+        match base.get("name").or(base.get("localized_name")) {
+            Some(name) => {
+                self.name = Some(name.as_string()?);
+            }
+            None => {
+                //this may happen for dynasties with a house with the same name
+                if let Some(parent) = &self.parent {
+                    if let Some(name) = &parent.get_internal().name {
+                        self.name = Some(name.clone());
+                    }
+                }
+            }
+        }
+        if let Some(date) = base.get("found_date") {
+            self.found_date = Some(date.as_string()?);
+        }
+        if let Some(motto_node) = base.get("motto") {
+            if let SaveFileValue::Object(obj) = motto_node {
+                let o = obj.as_map()?;
+                let mut vars = Vec::new();
+                for v in o.get_object("variables")?.as_array()? {
+                    let value = v.as_object()?.as_map()?.get_string("value")?;
+                    vars.push(value.clone());
+                }
+                self.motto = Some((o.get_string("key")?.clone(), vars));
+            } else {
+                self.motto = Some((motto_node.as_string()?, Vec::new()));
+            }
+        }
+        Ok(())
     }
 }
 

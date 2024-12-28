@@ -3,7 +3,7 @@ use std::{fmt::Debug, fs::read_to_string, path::Path};
 use keyvalues_parser::{Value, Vdf};
 
 /// The Steam ID for Crusader Kings III.
-/// Source: https://steamdb.info/app/1158310/
+/// Source: [SteamDB](https://steamdb.info/app/1158310/)
 const CK3_ID: &str = "1158310";
 
 #[cfg(target_os = "linux")]

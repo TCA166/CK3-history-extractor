@@ -4,11 +4,14 @@ mod types;
 /// A submodule that provides the intermediate parsing interface for the save file.
 /// The parser uses [GameObject](crate::parser::game_object::GameObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
 mod game_object;
-use std::fmt::{self, Debug, Display};
+use std::{
+    error,
+    fmt::{self, Debug, Display},
+};
 
 pub use game_object::{
     ConversionError, GameId, GameObjectArray, GameObjectMap, GameString, KeyError, SaveFileObject,
-    SaveFileValue,
+    SaveFileValue, SaveObjectError,
 };
 
 /// A submodule that provides the [SaveFile] object, which is used to store the entire save file.
@@ -27,12 +30,17 @@ mod game_state;
 pub use game_state::GameState;
 use section_reader::SectionReaderError;
 
+/// An error that occurred somewhere within the broadly defined parsing process.
+/// Also effectively acts as a wrapper for all the different errors that originate from the [crate::parser] module.
 #[derive(Debug)]
 pub enum ParsingError {
+    /// An error that occurred while parsing a section.
     SectionError(String),
+    /// An error that occurred while processing raw save file data.
     SaveFileError(SaveFileError),
-    ConversionError(ConversionError),
-    StructureError(KeyError),
+    /// An error that occurred while processing [SaveFileValue] objects.
+    StructureError(SaveObjectError),
+    /// An error that occurred while creating [Section] objects.
     ReaderError(String),
 }
 
@@ -48,15 +56,21 @@ impl From<SaveFileError> for ParsingError {
     }
 }
 
+impl From<SaveObjectError> for ParsingError {
+    fn from(value: SaveObjectError) -> Self {
+        ParsingError::StructureError(value)
+    }
+}
+
 impl From<ConversionError> for ParsingError {
-    fn from(e: ConversionError) -> Self {
-        ParsingError::ConversionError(e)
+    fn from(value: ConversionError) -> Self {
+        ParsingError::StructureError(SaveObjectError::ConversionError(value))
     }
 }
 
 impl From<KeyError> for ParsingError {
     fn from(value: KeyError) -> Self {
-        ParsingError::StructureError(value)
+        ParsingError::StructureError(SaveObjectError::KeyError(value))
     }
 }
 
@@ -69,7 +83,6 @@ impl<'a, 'b: 'a> From<SectionReaderError<'b>> for ParsingError {
 impl<'a> Display for ParsingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ConversionError(err) => Display::fmt(err, f),
             Self::SaveFileError(err) => Display::fmt(err, f),
             Self::SectionError(err) => Display::fmt(err, f),
             Self::StructureError(err) => Display::fmt(err, f),
@@ -78,18 +91,16 @@ impl<'a> Display for ParsingError {
     }
 }
 
-/*
-impl<'a> error::Error for ParsingError<'a> {
+impl<'a> error::Error for ParsingError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            Self::SectionError(err) => Some(err),
+            Self::SectionError(_) => None,
             Self::SaveFileError(err) => Some(err),
             Self::StructureError(err) => Some(err),
-            Self::ConversionError(err) => Some(err),
+            Self::ReaderError(_) => None,
         }
     }
 }
-*/
 
 use super::{
     structures::{FromGameObject, Player},
@@ -108,16 +119,8 @@ pub fn process_section(
         "meta_data" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            game_state.set_current_date(
-                map.get("meta_date")
-                    .ok_or_else(|| KeyError::MissingKey("meta_date", map.clone()))?
-                    .as_string()?,
-            );
-            game_state.set_offset_date(
-                map.get("meta_real_date")
-                    .ok_or_else(|| KeyError::MissingKey("meta_real_date", map.clone()))?
-                    .as_string()?,
-            );
+            game_state.set_current_date(map.get_string("meta_date")?);
+            game_state.set_offset_date(map.get_string("meta_real_date")?);
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {
@@ -132,14 +135,9 @@ pub fn process_section(
         "landed_titles" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            for (_, v) in map
-                .get("landed_titles")
-                .ok_or_else(|| KeyError::MissingKey("landed_titles", map.clone()))?
-                .as_object()?
-                .as_map()?
-            {
+            for (_, v) in map.get_object("landed_titles")?.as_map()? {
                 if let SaveFileValue::Object(o) = v {
-                    game_state.add_title(o.as_map()?);
+                    game_state.add_title(o.as_map()?)?;
                 }
             }
         }
@@ -149,23 +147,10 @@ pub fn process_section(
             // we create an association between the county key and the faith and culture of the county
             // this is so that we can easily add the faith and culture to the title, so O(n) instead of O(n^2)
             let mut key_assoc = HashMap::default();
-            for (key, p) in map
-                .get("counties")
-                .ok_or_else(|| KeyError::MissingKey("counties", map.clone()))?
-                .as_object()?
-                .as_map()?
-            {
+            for (key, p) in map.get_object("counties")?.as_map()? {
                 let p = p.as_object()?.as_map()?;
-                let faith = game_state.get_faith(
-                    &p.get("faith")
-                        .ok_or_else(|| KeyError::MissingKey("faith", map.clone()))?
-                        .as_id()?,
-                );
-                let culture = game_state.get_culture(
-                    &p.get("culture")
-                        .ok_or_else(|| KeyError::MissingKey("culture", map.clone()))?
-                        .as_id()?,
-                );
+                let faith = game_state.get_faith(&p.get_game_id("faith")?);
+                let culture = game_state.get_culture(&p.get_game_id("culture")?);
                 key_assoc.insert(key.as_str(), (faith, culture));
             }
             for (_, title) in game_state.get_title_iter() {
@@ -190,7 +175,7 @@ pub fn process_section(
                         for (_, h) in o {
                             match h {
                                 SaveFileValue::Object(o) => {
-                                    game_state.add_dynasty(o.as_map()?);
+                                    game_state.add_dynasty(o.as_map()?)?;
                                 }
                                 _ => {
                                     continue;
@@ -205,7 +190,7 @@ pub fn process_section(
             for (_, l) in i.parse()?.as_map()? {
                 match l {
                     SaveFileValue::Object(o) => {
-                        game_state.add_character(o.as_map()?);
+                        game_state.add_character(o.as_map()?)?;
                     }
                     _ => {
                         continue;
@@ -216,7 +201,7 @@ pub fn process_section(
         "dead_unprunable" => {
             for (_, d) in i.parse()?.as_map()? {
                 if let SaveFileValue::Object(o) = d {
-                    game_state.add_character(o.as_map()?);
+                    game_state.add_character(o.as_map()?)?;
                 }
             }
         }
@@ -225,7 +210,7 @@ pub fn process_section(
                 for (_, d) in dead_prunable.as_object()?.as_map()? {
                     match d {
                         SaveFileValue::Object(o) => {
-                            game_state.add_character(o.as_map()?);
+                            game_state.add_character(o.as_map()?)?;
                         }
                         _ => {
                             continue;
@@ -241,75 +226,51 @@ pub fn process_section(
             for (key, contract) in map
                 .get("database")
                 .or(map.get("active"))
-                .ok_or_else(|| KeyError::MissingKey("database | active", map.clone()))?
+                .ok_or_else(|| KeyError::MissingKey("database".to_string(), map.clone()))?
                 .as_object()?
                 .as_map()?
             {
                 if let SaveFileValue::Object(val) = contract {
                     let val = val.as_map()?;
-                    game_state.add_contract(
-                        &key.parse::<GameId>().unwrap(),
-                        &val.get("vassal")
-                            .ok_or_else(|| KeyError::MissingKey("val", val.clone()))?
-                            .as_id()?,
-                    )
+                    game_state
+                        .add_contract(&key.parse::<GameId>().unwrap(), &val.get_game_id("vassal")?)
                 }
             }
         }
         "religion" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            for (_, f) in map
-                .get("faiths")
-                .ok_or_else(|| KeyError::MissingKey("faiths", map.clone()))?
-                .as_object()?
-                .as_map()?
-            {
-                game_state.add_faith(f.as_object()?.as_map()?);
+            for (_, f) in map.get_object("faiths")?.as_map()? {
+                game_state.add_faith(f.as_object()?.as_map()?)?;
             }
         }
         "culture_manager" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            let cultures = map
-                .get("cultures")
-                .ok_or_else(|| KeyError::MissingKey("cultures", map.clone()))?
-                .as_object()?
-                .as_map()?;
+            let cultures = map.get_object("cultures")?.as_map()?;
             for (_, c) in cultures {
-                game_state.add_culture(c.as_object()?.as_map()?);
+                game_state.add_culture(c.as_object()?.as_map()?)?;
             }
         }
         "character_memory_manager" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            for (_, d) in map
-                .get("database")
-                .ok_or_else(|| KeyError::MissingKey("database", map.clone()))?
-                .as_object()?
-                .as_map()?
-            {
+            for (_, d) in map.get_object("database")?.as_map()? {
                 if let SaveFileValue::Object(o) = d {
-                    game_state.add_memory(o.as_map()?);
+                    game_state.add_memory(o.as_map()?)?;
                 }
             }
         }
         "played_character" => {
-            let p = Player::from_game_object(i.parse()?.as_map()?, game_state);
+            let p = Player::from_game_object(i.parse()?.as_map()?, game_state)?;
             players.push(p);
         }
         "artifacts" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            for (_, a) in map
-                .get("artifacts")
-                .ok_or_else(|| KeyError::MissingKey("artifacts", map.clone()))?
-                .as_object()?
-                .as_map()?
-                .into_iter()
-            {
+            for (_, a) in map.get_object("artifacts")?.as_map()?.into_iter() {
                 if let SaveFileValue::Object(o) = a {
-                    game_state.add_artifact(o.as_map()?);
+                    game_state.add_artifact(o.as_map()?)?;
                 }
             }
         }

@@ -72,6 +72,8 @@ impl error::Error for ConversionError {
 }
 
 /// A value that comes from a save file.
+/// Matching against this enum is a bad idea, because [SaveFileValue::String] may actually contain any type.
+/// It's better to use the conversion methods like [SaveFileValue::as_string].
 #[derive(PartialEq, Clone, Debug)]
 pub enum SaveFileValue {
     /// A simple string value, may be anything in reality.
@@ -87,11 +89,8 @@ pub enum SaveFileValue {
 }
 
 impl SaveFileValue {
+    // this API allows for easy error collection using the ? operator.
     /// Get the value as a string
-    ///
-    /// # Returns
-    ///
-    /// A reference to the string
     pub fn as_string(&self) -> Result<GameString, ConversionError> {
         match self {
             SaveFileValue::String(s) => Ok(s.clone()),
@@ -103,19 +102,11 @@ impl SaveFileValue {
     }
 
     /// Get the value as a GameId
-    ///
-    /// # Returns
-    ///
-    /// The GameId
     pub fn as_id(&self) -> Result<GameId, ConversionError> {
         return Ok(self.as_integer()? as GameId);
     }
 
     /// Get the value as a GameObject
-    ///
-    /// # Returns
-    ///
-    /// A reference to the object
     pub fn as_object(&self) -> Result<&SaveFileObject, ConversionError> {
         match self {
             SaveFileValue::Object(o) => Ok(o),
@@ -343,7 +334,42 @@ impl<T: GameObjectCollection> GameObject<T> {
     }
 }
 
-// I like my getter error handling less verbose
+#[derive(Debug)]
+pub enum SaveObjectError {
+    ConversionError(ConversionError),
+    KeyError(KeyError),
+}
+
+impl fmt::Display for SaveObjectError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ConversionError(e) => write!(f, "conversion error: {}", e),
+            Self::KeyError(e) => write!(f, "key error: {}", e),
+        }
+    }
+}
+
+impl error::Error for SaveObjectError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::ConversionError(e) => Some(e),
+            Self::KeyError(e) => Some(e),
+        }
+    }
+}
+
+impl From<ConversionError> for SaveObjectError {
+    fn from(e: ConversionError) -> Self {
+        SaveObjectError::ConversionError(e)
+    }
+}
+
+impl From<KeyError> for SaveObjectError {
+    fn from(e: KeyError) -> Self {
+        SaveObjectError::KeyError(e)
+    }
+}
+
 #[derive(Debug)]
 pub enum KeyError {
     MissingKey(String, GameObjectMap),
@@ -369,12 +395,41 @@ impl error::Error for KeyError {
 
 impl GameObject<HashMap<String, SaveFileValue>> {
     /// Get the value of a key as a mutable GameObject.
+    /// This is the lower level interface to the object that allows for more complex operations.
     pub fn get(&self, key: &str) -> Option<&SaveFileValue> {
         self.inner.get(key)
     }
 
-    // TODO add simplified API that returns errors
+    /// A getter that returns a result
+    fn get_err(&self, key: &str) -> Result<&SaveFileValue, KeyError> {
+        self.get(key) // lazy error initialization, else we copy key and obj every time
+            .ok_or_else(|| KeyError::MissingKey(key.to_owned(), self.clone()))
+    }
 
+    /// Get the value of a key as a string.
+    pub fn get_string(&self, key: &str) -> Result<GameString, SaveObjectError> {
+        Ok(self.get_err(key)?.as_string()?)
+    }
+
+    /// Get the value of a key as a boolean.
+    pub fn get_object(&self, key: &str) -> Result<&SaveFileObject, SaveObjectError> {
+        Ok(self.get_err(key)?.as_object()?)
+    }
+
+    /// Get the value of a key as an integer.
+    pub fn get_integer(&self, key: &str) -> Result<i64, SaveObjectError> {
+        Ok(self.get_err(key)?.as_integer()?)
+    }
+
+    /// Get the value of a key as a real number.
+    pub fn get_real(&self, key: &str) -> Result<f64, SaveObjectError> {
+        Ok(self.get_err(key)?.as_real()?)
+    }
+
+    /// Get the value of a key as a GameId.
+    pub fn get_game_id(&self, key: &str) -> Result<GameId, SaveObjectError> {
+        Ok(self.get_err(key)?.as_id()?)
+    }
     /// Insert a new value into the object.
     /// If the key already exists, the value at that key alongside the new value will be stored in an array at that key.
     /// Thus held values are never discarded and here the multi key feature of the save file format is implemented.

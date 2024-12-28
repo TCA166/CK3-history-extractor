@@ -75,7 +75,10 @@ pub trait DummyInit: GameObjectDerived {
 }
 
 /// A trait for [GameObjectDerived] objects that can be created from a [GameObjectMap].
-pub trait FromGameObject: GameObjectDerived {
+pub trait FromGameObject: GameObjectDerived + Sized {
     /// Create a new object from a [GameObjectMap].
-    fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self;
+    fn from_game_object(
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError>;
 }

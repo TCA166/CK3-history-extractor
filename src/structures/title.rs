@@ -10,7 +10,10 @@ use super::{
             TreeNode,
         },
         jinja_env::TITLE_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString, SaveFileObject, SaveFileValue},
+        parser::{
+            GameId, GameObjectMap, GameState, GameString, ParsingError, SaveFileObject,
+            SaveFileValue,
+        },
         types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
@@ -62,94 +65,6 @@ fn date_string_cmp(a: &str, b: &str) -> Ordering {
         return Ordering::Greater;
     }
     Ordering::Equal
-}
-
-///Gets the history of the title and returns a hashmap with the history entries
-fn get_history(
-    base: &GameObjectMap,
-    game_state: &mut GameState,
-) -> Vec<(GameString, Option<Shared<Character>>, GameString)> {
-    let mut history: Vec<(GameString, Option<Shared<Character>>, GameString)> = Vec::new();
-    if let Some(hist) = base.get("history") {
-        let hist_obj = hist.as_object().as_map();
-        for (h, val) in hist_obj {
-            let character;
-            let action: GameString;
-            match val {
-                SaveFileValue::Object(ref o) => {
-                    match o {
-                        SaveFileObject::Array(arr) => {
-                            for entry in arr {
-                                let loc_action;
-                                let loc_character;
-                                match entry {
-                                    SaveFileValue::Object(ref o) => {
-                                        let o = o.as_map();
-                                        loc_action = o.get("type").unwrap().as_string();
-                                        let holder = o.get("holder");
-                                        match holder {
-                                            Some(h) => {
-                                                loc_character = Some(
-                                                    game_state.get_character(&h.as_id()).clone(),
-                                                );
-                                            }
-                                            None => {
-                                                loc_character = None;
-                                            }
-                                        }
-                                    }
-                                    SaveFileValue::String(ref o) => {
-                                        loc_action = GameString::wrap("Inherited".to_owned());
-                                        loc_character = Some(
-                                            game_state
-                                                .get_character(&o.parse::<GameId>().unwrap())
-                                                .clone(),
-                                        );
-                                    }
-                                    _ => {
-                                        unreachable!()
-                                    }
-                                }
-                                history.push((
-                                    GameString::wrap(h.to_string()),
-                                    loc_character,
-                                    loc_action,
-                                ))
-                            }
-                            continue; //if it's an array we handled all the adding already in the loop above
-                        }
-                        SaveFileObject::Map(o) => {
-                            action = o.get("type").unwrap().as_string();
-                            let holder = o.get("holder");
-                            match holder {
-                                Some(h) => {
-                                    character = Some(game_state.get_character(&h.as_id()).clone());
-                                }
-                                None => {
-                                    character = None;
-                                }
-                            }
-                        }
-                    }
-                }
-                SaveFileValue::String(ref o) => {
-                    action = GameString::wrap("Inherited".to_owned());
-                    character = Some(
-                        game_state
-                            .get_character(&o.parse::<GameId>().unwrap())
-                            .clone(),
-                    );
-                }
-                _ => {
-                    unreachable!()
-                }
-            }
-            history.push((GameString::wrap(h.to_string()), character, action));
-        }
-    }
-    //sort history by the first element of the tuple (the date) in descending order
-    history.sort_by(|a, b| date_string_cmp(a.0.as_str(), b.0.as_str()));
-    history
 }
 
 impl Title {
@@ -257,54 +172,106 @@ impl DummyInit for Title {
         }
     }
 
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
         if let Some(color) = base.get("color") {
-            let color = color.as_object().as_array();
+            let color = color.as_object()?.as_array()?;
             self.color = [
-                color[0].as_string().parse::<u8>().unwrap(),
-                color[1].as_string().parse::<u8>().unwrap(),
-                color[2].as_string().parse::<u8>().unwrap(),
+                color[0].as_integer()? as u8,
+                color[1].as_integer()? as u8,
+                color[2].as_integer()? as u8,
             ];
         }
-        self.key = Some(base.get_string_ref("key"));
+        self.key = Some(base.get_string("key")?);
         if let Some(de_jure_id) = base.get("de_jure_liege") {
-            let o = game_state.get_title(&de_jure_id.as_id()).clone();
-            self.de_jure = Some(o.clone());
+            let o = game_state.get_title(&de_jure_id.as_id()?).clone();
             o.get_internal_mut()
                 .add_jure_vassal(game_state.get_title(&self.id).clone());
+            self.de_jure = Some(o);
         }
         if let Some(de_facto_id) = base.get("de_facto_liege") {
-            let o = game_state.get_title(&de_facto_id.as_id()).clone();
-            self.de_facto = Some(o.clone());
+            let o = game_state.get_title(&de_facto_id.as_id()?).clone();
             o.get_internal_mut()
                 .add_facto_vassal(game_state.get_title(&self.id).clone());
+            self.de_facto = Some(o);
         }
         if let Some(claims) = base.get("claim") {
-            match claims {
-                SaveFileValue::Object(claim) => {
-                    for claim in claim.as_array() {
-                        self.claims
-                            .push(game_state.get_character(&claim.as_id()).clone());
-                    }
+            if let SaveFileValue::Object(claims) = claims {
+                for claim in claims.as_array()? {
+                    self.claims
+                        .push(game_state.get_character(&claim.as_id()?).clone());
                 }
-                SaveFileValue::String(claim) => {
-                    self.claims.push(
-                        game_state
-                            .get_character(&claim.parse::<GameId>().unwrap())
-                            .clone(),
-                    );
-                }
-                _ => {
-                    unreachable!()
-                }
+            } else {
+                self.claims
+                    .push(game_state.get_character(&claims.as_id()?).clone());
             }
         }
         if let Some(capital) = base.get("capital") {
-            self.capital = Some(game_state.get_title(&capital.as_id()).clone());
+            self.capital = Some(game_state.get_title(&capital.as_id()?).clone());
         }
-        self.name = Some(base.get("name").unwrap().as_string().clone());
-        let history = get_history(base, game_state);
-        self.history = history;
+        self.name = Some(base.get_string("name")?);
+        if let Some(hist) = base.get("history") {
+            let hist_obj = hist.as_object()?.as_map()?;
+            for (h, val) in hist_obj {
+                let character;
+                let action: GameString;
+                if let SaveFileValue::Object(o) = val {
+                    match o {
+                        SaveFileObject::Array(arr) => {
+                            for entry in arr {
+                                let loc_action;
+                                let loc_character;
+                                if let SaveFileValue::Object(o) = entry {
+                                    let o = o.as_map()?;
+                                    loc_action = o.get_string("type")?;
+                                    if let Some(holder) = o.get("holder") {
+                                        loc_character = Some(
+                                            game_state.get_character(&holder.as_id()?).clone(),
+                                        );
+                                    } else {
+                                        loc_character = None;
+                                    }
+                                } else {
+                                    loc_action = GameString::wrap("Inherited".to_owned());
+                                    loc_character =
+                                        Some(game_state.get_character(&entry.as_id()?).clone());
+                                }
+                                self.history.push((
+                                    GameString::wrap(h.to_string()),
+                                    loc_character,
+                                    loc_action,
+                                ))
+                            }
+                            continue; //if it's an array we handled all the adding already in the loop above
+                        }
+                        SaveFileObject::Map(o) => {
+                            action = o.get_string("type")?;
+                            let holder = o.get("holder");
+                            match holder {
+                                Some(h) => {
+                                    character = Some(game_state.get_character(&h.as_id()?).clone());
+                                }
+                                None => {
+                                    character = None;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    action = GameString::wrap("Inherited".to_owned());
+                    character = Some(game_state.get_character(&val.as_id()?).clone());
+                }
+                self.history
+                    .push((GameString::wrap(h.to_string()), character, action));
+            }
+        }
+        //sort history by the first element of the tuple (the date) in descending order
+        self.history
+            .sort_by(|a, b| date_string_cmp(a.0.as_str(), b.0.as_str()));
+        Ok(())
     }
 }
 

@@ -7,7 +7,7 @@ use super::{
             TreeNode,
         },
         jinja_env::CUL_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{OneOrMany, Wrapper, WrapperMut},
     },
     serialize_array, DummyInit, GameObjectDerived, Shared,
@@ -28,41 +28,6 @@ pub struct Culture {
     depth: usize,
 }
 
-/// Gets the parents of the culture and appends them to the parents vector
-fn get_parents(
-    parents: &mut Vec<Shared<Culture>>,
-    base: &GameObjectMap,
-    id: GameId,
-    game_state: &mut GameState,
-) {
-    if let Some(parents_obj) = base.get("parents") {
-        for p in parents_obj.as_object().as_array() {
-            let parent = game_state.get_culture(&p.as_id()).clone();
-            if let Ok(mut r) = parent.try_get_internal_mut() {
-                r.register_child(game_state.get_culture(&id));
-            }
-            parents.push(parent.clone());
-        }
-    }
-}
-
-/// Gets the traditions of the culture and appends them to the traditions vector
-fn get_traditions(traditions: &mut Vec<GameString>, base: &GameObjectMap) {
-    if let Some(traditions_obj) = base.get("traditions") {
-        for t in traditions_obj.as_object().as_array() {
-            traditions.push(t.as_string());
-        }
-    }
-}
-
-/// Gets the creation date of the culture
-fn get_date(base: &GameObjectMap) -> Option<GameString> {
-    if let Some(node) = base.get("created") {
-        return Some(node.as_string());
-    }
-    None
-}
-
 impl DummyInit for Culture {
     fn dummy(id: GameId) -> Self {
         Culture {
@@ -80,18 +45,37 @@ impl DummyInit for Culture {
         }
     }
 
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
-        get_parents(&mut self.parents, &base, self.id, game_state);
-        get_traditions(&mut self.traditions, &base);
-        self.name = Some(base.get("name").unwrap().as_string());
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
+        if let Some(parents_obj) = base.get("parents") {
+            for p in parents_obj.as_object()?.as_array()? {
+                let parent = game_state.get_culture(&p.as_id()?).clone();
+                if let Ok(mut r) = parent.try_get_internal_mut() {
+                    r.register_child(game_state.get_culture(&self.id));
+                }
+                self.parents.push(parent.clone());
+            }
+        }
+        if let Some(traditions_obj) = base.get("traditions") {
+            for t in traditions_obj.as_object()?.as_array()? {
+                self.traditions.push(t.as_string()?);
+            }
+        }
+        self.name = Some(base.get_string("name")?);
         if let Some(eth) = base.get("ethos") {
             //this is possible, shoutout u/Kinc4id
-            self.ethos = Some(eth.as_string());
+            self.ethos = Some(eth.as_string()?);
         }
-        self.heritage = Some(base.get("heritage").unwrap().as_string());
-        self.martial = Some(base.get("martial_custom").unwrap().as_string());
-        self.date = get_date(&base);
-        self.language = Some(base.get("language").unwrap().as_string());
+        self.heritage = Some(base.get_string("heritage")?);
+        self.martial = Some(base.get_string("martial_custom")?);
+        if let Some(node) = base.get("created") {
+            self.date = Some(node.as_string()?);
+        }
+        self.language = Some(base.get_string("language")?);
+        Ok(())
     }
 }
 

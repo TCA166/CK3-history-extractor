@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizable, Localizer, RenderableType},
-        parser::{GameId, GameObjectMap, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::WrapperMut,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
@@ -18,22 +18,6 @@ pub struct Memory {
     depth: usize,
 }
 
-/// Gets the participants of the memory and appends them to the participants vector
-fn get_participants(
-    participants: &mut Vec<(String, Shared<Character>)>,
-    base: &GameObjectMap,
-    game_state: &mut GameState,
-) {
-    if let Some(participants_node) = base.get("participants") {
-        for part in participants_node.as_object().as_map() {
-            participants.push((
-                part.0.clone(),
-                game_state.get_character(&part.1.as_id()).clone(),
-            ));
-        }
-    }
-}
-
 impl DummyInit for Memory {
     fn dummy(id: GameId) -> Self {
         Memory {
@@ -45,12 +29,24 @@ impl DummyInit for Memory {
         }
     }
 
-    fn init(&mut self, base: &GameObjectMap, game_state: &mut GameState) {
-        self.date = Some(base.get("creation_date").unwrap().as_string());
+    fn init(
+        &mut self,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<(), ParsingError> {
+        self.date = Some(base.get_string("creation_date")?);
         if let Some(tp) = base.get("type") {
-            self.r#type = Some(tp.as_string());
+            self.r#type = Some(tp.as_string()?);
         }
-        get_participants(&mut self.participants, &base, game_state);
+        if let Some(participants_node) = base.get("participants") {
+            for part in participants_node.as_object()?.as_map()? {
+                self.participants.push((
+                    part.0.clone(),
+                    game_state.get_character(&part.1.as_id()?).clone(),
+                ));
+            }
+        }
+        Ok(())
     }
 }
 

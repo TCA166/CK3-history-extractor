@@ -9,7 +9,7 @@ use super::{
     super::{
         display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
         jinja_env::H_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString},
+        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::Wrapper,
     },
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
@@ -32,33 +32,30 @@ pub struct Player {
     pub lineage: Vec<LineageNode>,
 }
 
-/// Gets the lineage of the player and appends it to the lineage vector
-fn get_lineage(lineage: &mut Vec<LineageNode>, base: &GameObjectMap, game_state: &mut GameState) {
-    let lineage_node = base.get_object_ref("legacy");
-    for leg in lineage_node.as_array() {
-        let o = leg.as_object().as_map();
-        lineage.push(LineageNode::from_game_object(o, game_state))
-    }
-}
-
 impl FromGameObject for Player {
-    fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self {
+    fn from_game_object(
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
         let mut lineage: Vec<LineageNode> = Vec::new();
-        get_lineage(&mut lineage, &base, game_state);
-        let key = base.get("character").unwrap().as_id();
-        // apparently the player id can be negative?
-        let id = base
-            .get("player")
-            .unwrap()
-            .as_string()
-            .parse::<i32>()
-            .unwrap();
-        Player {
-            name: base.get("name").unwrap().as_string(),
-            id: id as u32,
-            character: Some(game_state.get_character(&key).clone()),
-            lineage: lineage,
+        for leg in base.get_object("legacy")?.as_array()? {
+            lineage.push(LineageNode::from_game_object(
+                leg.as_object()?.as_map()?,
+                game_state,
+            )?)
         }
+        // apparently the player id can be negative?
+        let id = base.get_integer("player")? as i32;
+        Ok(Player {
+            name: base.get_string("name")?,
+            id: id as u32,
+            character: Some(
+                game_state
+                    .get_character(&base.get_game_id("character")?)
+                    .clone(),
+            ),
+            lineage: lineage,
+        })
     }
 }
 

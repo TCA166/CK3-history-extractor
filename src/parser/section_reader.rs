@@ -35,13 +35,20 @@ impl<'err> error::Error for SectionReaderError<'err> {
     }
 }
 
+/// A reader for sections in a tape.
+/// This reader will iterate over the tape and return sections, which are
+/// largest [Objects](super::SaveFileObject) in the save file.
 pub struct SectionReader<'tape, 'data> {
+    /// The tape to read from.
     tape: Tokens<'tape, 'data>,
+    /// The current offset in the tape.
     offset: usize,
+    /// The length of the tape.
     length: usize,
 }
 
 impl<'tape, 'data> SectionReader<'tape, 'data> {
+    /// Create a new section reader from a tape.
     pub fn new(tape: &'data Tape<'data>) -> Self {
         let tape = tape.tokens();
         let length = tape.len();
@@ -52,6 +59,7 @@ impl<'tape, 'data> SectionReader<'tape, 'data> {
         }
     }
 
+    /// Get the number of sections in the tape.
     pub fn len(&self) -> u32 {
         let mut offset = 0;
         let mut result = 0;
@@ -59,7 +67,8 @@ impl<'tape, 'data> SectionReader<'tape, 'data> {
             Tokens::Text(text) => {
                 while offset < self.length {
                     match &text[offset] {
-                        TextToken::Object { end, mixed } | TextToken::Array { end, mixed } => {
+                        TextToken::Object { end, mixed: _ }
+                        | TextToken::Array { end, mixed: _ } => {
                             offset = *end;
                             result += 1;
                         }
@@ -96,7 +105,8 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                 while self.offset < self.length {
                     let tok = &text[self.offset];
                     match tok {
-                        TextToken::Object { end, mixed } | TextToken::Array { end, mixed } => {
+                        TextToken::Object { end, mixed: _ }
+                        | TextToken::Array { end, mixed: _ } => {
                             if let Some(scalar) = text[self.offset - 1].as_scalar() {
                                 if !scalar.is_ascii() {
                                     return Some(Err(SectionReaderError::UnexpectedToken(

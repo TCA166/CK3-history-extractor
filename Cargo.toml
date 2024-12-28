@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor"
-version = "2.3.2"
+version = "2.4.0"
 edition = "2021"
 authors = ["TCA"]
 description = "A tool for generating a encyclopedia from your CK3 save file"
@@ -27,7 +27,7 @@ internal = []
 
 [dependencies]
 minijinja = { version = "2.5.0", features = ["loader"] }
-serde = { version = "1.0.216", features = ["rc", "derive"] }
+serde = { version = "1.0.217", features = ["rc", "derive"] }
 syn = "2.0.92"
 quote = "1.0.38"
 proc-macro2 = "1.0.88"

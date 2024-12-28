@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Localizable, Localizer},
-        parser::{GameObjectMap, GameState, GameString, SaveFileValue},
+        parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
     Character, FromGameObject, GameId, GameObjectDerived, Shared,
@@ -29,87 +29,54 @@ impl LineageNode {
     }
 }
 
-///Gets the perk of the lineage node
-fn get_perks(perks: &mut Vec<GameString>, base: &GameObjectMap) {
-    if let Some(perks_node) = base.get("perk") {
-        match perks_node {
-            SaveFileValue::Object(o) => {
-                for perk in o.as_array() {
-                    perks.push(perk.as_string())
-                }
-            }
-            SaveFileValue::String(o) => {
-                perks.push(o.clone());
-            }
-            _ => {
-                unreachable!()
-            }
-        }
-    }
-}
-
-///Gets the dread of the lineage node
-fn get_dread(base: &GameObjectMap) -> f32 {
-    if let Some(dread_node) = base.get("dread") {
-        dread_node.as_string().parse::<f32>().unwrap()
-    } else {
-        0.0
-    }
-}
-
-///Gets the score of the lineage node
-fn get_score(base: &GameObjectMap) -> i32 {
-    if let Some(score_node) = base.get("score") {
-        score_node.as_string().parse::<i32>().unwrap()
-    } else {
-        0
-    }
-}
-
-///Gets the prestige of the lineage node
-fn get_prestige(base: &GameObjectMap) -> i32 {
-    if let Some(prestige_node) = base.get("prestige") {
-        prestige_node.as_string().parse::<i32>().unwrap()
-    } else {
-        0
-    }
-}
-
-///Gets the piety of the lineage node
-fn get_piety(base: &GameObjectMap) -> i32 {
-    if let Some(piety_node) = base.get("piety") {
-        piety_node.as_string().parse::<i32>().unwrap()
-    } else {
-        0
-    }
-}
-
-///Gets the lifestyle of the lineage node
-fn get_lifestyle(base: &GameObjectMap) -> Option<GameString> {
-    if let Some(lifestyle_node) = base.get("lifestyle") {
-        Some(lifestyle_node.as_string())
-    } else {
-        None
-    }
-}
-
 impl FromGameObject for LineageNode {
-    fn from_game_object(base: &GameObjectMap, game_state: &mut GameState) -> Self {
-        let id = base.get("character").unwrap().as_id();
+    fn from_game_object(
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
+        let id = base.get_game_id("character")?;
         let char = game_state.get_character(&id);
         let mut perks = Vec::new();
-        get_perks(&mut perks, base);
-        LineageNode {
+        if let Some(perks_node) = base.get("perk") {
+            if let SaveFileValue::Object(o) = perks_node {
+                for perk in o.as_array()? {
+                    perks.push(perk.as_string()?)
+                }
+            } else {
+                perks.push(perks_node.as_string()?);
+            }
+        }
+        Ok(LineageNode {
             character: Some(char),
-            date: Some(base.get("date").unwrap().as_string()),
-            score: get_score(&base),
-            prestige: get_prestige(&base),
-            piety: get_piety(&base),
-            dread: get_dread(&base),
-            lifestyle: get_lifestyle(&base),
+            date: Some(base.get_string("date")?),
+            score: if let Some(score_node) = base.get("score") {
+                score_node.as_integer()? as i32
+            } else {
+                0
+            },
+            prestige: if let Some(prestige_node) = base.get("prestige") {
+                prestige_node.as_integer()? as i32
+            } else {
+                0
+            },
+            piety: if let Some(piety_node) = base.get("piety") {
+                piety_node.as_integer()? as i32
+            } else {
+                0
+            },
+            dread: if let Some(dread_node) = base.get("dread") {
+                dread_node.as_real()? as f32
+            } else {
+                0.0
+            },
+            lifestyle: if let Some(lifestyle_node) = base.get("lifestyle") {
+                Some(lifestyle_node.as_string()?)
+            } else {
+                None
+            },
             perks: perks,
             id: id,
-        }
+        })
     }
 }
 

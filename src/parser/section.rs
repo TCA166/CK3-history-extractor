@@ -55,6 +55,8 @@ impl<'a> error::Error for SectionError<'a> {
     }
 }
 
+/// A section of the save file.
+/// It directly maps to a [SaveFileObject] and is the largest unit of data in the save file.
 pub struct Section<'tape, 'data> {
     tape: Tokens<'tape, 'data>,
     offset: usize,
@@ -315,7 +317,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 add_key_value(&mut stack, val, &mut key, binary, offset)?;
                             }
                         }
-                        BinaryToken::Token(tok) => {
+                        BinaryToken::Token(_tok) => {
                             todo!()
                         }
                     }
