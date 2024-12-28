@@ -25,8 +25,6 @@ pub enum SaveFileError {
     ParseError(&'static str),
     /// Something went wrong with decompressing the save file.
     DecompressionError(ZipError),
-    /// Jomini found a problem, on the tape level probably
-    JominiError(jomini::Error),
     /// Decoding bytes failed
     DecodingError(FromUtf8Error),
 }
@@ -49,18 +47,11 @@ impl From<FromUtf8Error> for SaveFileError {
     }
 }
 
-impl From<jomini::Error> for SaveFileError {
-    fn from(value: jomini::Error) -> Self {
-        Self::JominiError(value)
-    }
-}
-
 impl Display for SaveFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DecompressionError(err) => Display::fmt(err, f),
             Self::IoError(err) => Display::fmt(err, f),
-            Self::JominiError(err) => Display::fmt(err, f),
             Self::DecodingError(err) => Display::fmt(err, f),
             Self::ParseError(err) => write!(f, "{}", err),
         }
@@ -72,7 +63,6 @@ impl error::Error for SaveFileError {
         match self {
             Self::DecompressionError(err) => Some(err),
             Self::IoError(err) => Some(err),
-            Self::JominiError(err) => Some(err),
             Self::DecodingError(err) => Some(err),
             Self::ParseError(_) => None,
         }
@@ -90,8 +80,14 @@ pub struct SaveFile {
 }
 
 impl<'a> SaveFile {
+    /// Open a save file.
+    /// Internally uses [File::open] to open the file and then [SaveFile::read] to read the contents.
+    pub fn open(filename: &str) -> Result<SaveFile, SaveFileError> {
+        let mut file = File::open(filename)?;
+        SaveFile::read(&mut file)
+    }
+
     /// Create a new SaveFile instance.
-    /// The filename must be valid of course.
     ///
     /// # Compression
     ///
@@ -102,14 +98,16 @@ impl<'a> SaveFile {
     ///
     /// A new SaveFile instance.
     /// It is an iterator that returns sections from the save file.
-    pub fn open(filename: &str) -> Result<SaveFile, SaveFileError> {
-        let mut file = File::open(filename)?;
+    pub fn read<F: Read>(file: &mut F) -> Result<SaveFile, SaveFileError> {
         let mut contents = vec![];
-        file.read_to_end(&mut contents)?;
+        let contents_size = file.read_to_end(&mut contents)?;
+        if contents_size < ARCHIVE_HEADER.len() {
+            return Err(SaveFileError::ParseError("Save file is too small"));
+        }
         let mut compressed = false;
         let mut binary = false;
         // find if ARCHIVE_HEADER is in the file
-        for i in 0..contents.len() - ARCHIVE_HEADER.len() {
+        for i in 0..contents_size - ARCHIVE_HEADER.len() {
             if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
                 compressed = true;
                 break;
@@ -123,8 +121,14 @@ impl<'a> SaveFile {
             if gamestate.is_dir() {
                 return Err(SaveFileError::ParseError("Save file is a directory"));
             }
-            let mut contents = Vec::with_capacity(gamestate.size() as usize);
-            gamestate.read(&mut contents)?;
+            if gamestate.name() != "gamestate" {
+                return Err(SaveFileError::ParseError("Unexpected file name"));
+            }
+            let gamestate_size = gamestate.size() as usize;
+            let mut contents = Vec::with_capacity(gamestate_size);
+            if gamestate.read(&mut contents)? != gamestate_size {
+                return Err(SaveFileError::ParseError("Failed to read the entire file"));
+            }
             return Ok(SaveFile { contents, binary });
         } else {
             return Ok(SaveFile { contents, binary });
@@ -132,7 +136,7 @@ impl<'a> SaveFile {
     }
 
     /// Get the tape from the save file.
-    pub fn tape(&'a self) -> Result<Tape<'a>, SaveFileError> {
+    pub fn tape(&'a self) -> Result<Tape<'a>, jomini::Error> {
         if self.binary {
             Ok(Tape::Text(TextTape::from_slice(&self.contents)?))
         } else {
@@ -141,4 +145,42 @@ impl<'a> SaveFile {
     }
 }
 
-//TODO add decoding tests
+#[cfg(test)]
+mod tests {
+    use std::io::Write;
+
+    use io::{Seek, SeekFrom};
+    use zip::write::{SimpleFileOptions, ZipWriter};
+
+    use super::*;
+
+    // FIXME this somehow writes zip file that cannot be read back
+    fn create_zipped_test_file(contents: &'static str) -> Cursor<Vec<u8>> {
+        let file = Vec::new();
+        let cur = Cursor::new(file);
+        let mut zip = ZipWriter::new(cur);
+        let options =
+            SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        zip.start_file("gamestate", options).unwrap();
+        if zip.write(contents.as_bytes()).unwrap() != contents.len() {
+            panic!("Failed to write the entire file");
+        }
+        let mut cur = zip.finish().unwrap();
+        cur.seek(SeekFrom::Start(0)).unwrap();
+        return cur;
+    }
+
+    #[test]
+    fn test_open() {
+        let mut file = Cursor::new(b"test");
+        let save = SaveFile::read(&mut file).unwrap();
+        assert_eq!(save.contents, b"test");
+    }
+
+    #[test]
+    fn test_compressed_open() {
+        let mut file = create_zipped_test_file("test");
+        let save = SaveFile::read(&mut file).unwrap();
+        assert_eq!(save.contents, b"test");
+    }
+}

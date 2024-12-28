@@ -139,7 +139,7 @@ fn main() -> Result<(), UserError> {
     localizer.resolve();
     //initialize the save file
     let save = SaveFile::open(args.filename.as_str())?;
-    let tape = save.tape()?;
+    let tape = save.tape().unwrap();
     let reader = SectionReader::new(&tape);
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();

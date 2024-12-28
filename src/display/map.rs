@@ -46,6 +46,8 @@ const PROVINCES_SUFFIX: &str = "/provinces.png";
 const RIVERS_SUFFIX: &str = "/rivers.png";
 const DEFINITION_SUFFIX: &str = "/definition.csv";
 
+// TODO add error handling
+
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
 fn read_png_bytes(path: String) -> Vec<u8> {
     let img = ImageReader::open(&path);
@@ -60,9 +62,7 @@ fn read_png_bytes(path: String) -> Vec<u8> {
 }
 
 /// Creates a mapping from barony title keys to province ids
-fn create_title_province_map(game_path: &str) -> Result<HashMap<String, GameId>, ParsingError> {
-    let path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
-    let file = SaveFile::open(&path)?;
+fn create_title_province_map(file: &SaveFile) -> Result<HashMap<String, GameId>, ParsingError> {
     let tape = file.tape()?;
     let reader = SectionReader::new(&tape);
     let mut map = HashMap::default();
@@ -268,7 +268,9 @@ impl GameMap {
             let b = record[3].parse::<u8>().unwrap();
             id_colors.insert(id, [r, g, b]);
         }
-        let title_province_map = create_title_province_map(game_path).unwrap();
+        let titles_path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
+        let file = SaveFile::open(&titles_path).unwrap();
+        let title_province_map = create_title_province_map(&file).unwrap();
         GameMap {
             height: height,
             width: width,

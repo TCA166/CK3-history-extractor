@@ -31,28 +31,21 @@ pub use game_state::GameState;
 use section_reader::SectionReaderError;
 
 /// An error that occurred somewhere within the broadly defined parsing process.
-/// Also effectively acts as a wrapper for all the different errors that originate from the [crate::parser] module.
 #[derive(Debug)]
 pub enum ParsingError {
     /// An error that occurred while parsing a section.
     SectionError(String),
-    /// An error that occurred while processing raw save file data.
-    SaveFileError(SaveFileError),
     /// An error that occurred while processing [SaveFileValue] objects.
     StructureError(SaveObjectError),
     /// An error that occurred while creating [Section] objects.
     ReaderError(String),
+    /// An error that occurred during low level tape processing
+    JominiError(jomini::Error),
 }
 
 impl<'a> From<SectionError<'a>> for ParsingError {
     fn from(e: SectionError<'a>) -> Self {
         ParsingError::SectionError(format!("{:?}", e))
-    }
-}
-
-impl From<SaveFileError> for ParsingError {
-    fn from(e: SaveFileError) -> Self {
-        ParsingError::SaveFileError(e)
     }
 }
 
@@ -74,6 +67,12 @@ impl From<KeyError> for ParsingError {
     }
 }
 
+impl From<jomini::Error> for ParsingError {
+    fn from(value: jomini::Error) -> Self {
+        ParsingError::JominiError(value)
+    }
+}
+
 impl<'a, 'b: 'a> From<SectionReaderError<'b>> for ParsingError {
     fn from(value: SectionReaderError<'b>) -> Self {
         ParsingError::ReaderError(format!("{:?}", value))
@@ -83,10 +82,12 @@ impl<'a, 'b: 'a> From<SectionReaderError<'b>> for ParsingError {
 impl<'a> Display for ParsingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::SaveFileError(err) => Display::fmt(err, f),
-            Self::SectionError(err) => Display::fmt(err, f),
-            Self::StructureError(err) => Display::fmt(err, f),
-            Self::ReaderError(err) => Display::fmt(err, f),
+            Self::SectionError(err) => write!(f, "error during section parsing: {}", err),
+            Self::StructureError(err) => {
+                write!(f, "SaveFileValue structure differed from expected: {}", err)
+            }
+            Self::ReaderError(err) => write!(f, "error during section reading: {}", err),
+            Self::JominiError(err) => write!(f, "Jomini encountered an error: {}", err),
         }
     }
 }
@@ -95,9 +96,9 @@ impl<'a> error::Error for ParsingError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Self::SectionError(_) => None,
-            Self::SaveFileError(err) => Some(err),
             Self::StructureError(err) => Some(err),
             Self::ReaderError(_) => None,
+            Self::JominiError(err) => Some(err),
         }
     }
 }
