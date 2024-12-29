@@ -148,11 +148,9 @@ impl<'a> SaveFile {
     pub fn tape(&'a self) -> Result<Tape<'a>, jomini::Error> {
         // FIXME is broken
         if self.binary {
-            Ok(Tape::Text(TextTape::from_slice(&self.contents.as_slice())?))
+            Ok(Tape::Binary(BinaryTape::from_slice(&self.contents)?))
         } else {
-            Ok(Tape::Binary(BinaryTape::from_slice(
-                &self.contents.as_slice(),
-            )?))
+            Ok(Tape::Text(TextTape::from_slice(&self.contents)?))
         }
     }
 }
@@ -196,11 +194,18 @@ mod tests {
 
     #[test]
     fn test_tape() {
-        let mut file = Cursor::new(b"test");
+        let mut file = Cursor::new(b"test=a");
         let save = SaveFile::read(&mut file, None).unwrap();
         let tape = save.tape().unwrap();
         if let Tape::Binary(_) = tape {
             panic!("Expected text tape, got binary tape");
         }
+    }
+
+    #[test]
+    fn test_tape_invalid() {
+        let mut file = Cursor::new(b"test");
+        let save = SaveFile::read(&mut file, None).unwrap();
+        assert!(save.tape().is_err());
     }
 }

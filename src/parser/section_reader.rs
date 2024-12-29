@@ -100,6 +100,7 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
     type Item = Result<Section<'tape, 'data>, SectionReaderError<'data>>;
 
     fn next(&mut self) -> Option<Result<Section<'tape, 'data>, SectionReaderError<'data>>> {
+        let mut mixed = false; // mixed is local to the section, so the tokenizer sets it once every section
         match self.tape {
             Tokens::Text(text) => {
                 while self.offset < self.length {
@@ -107,7 +108,9 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                     match tok {
                         TextToken::Object { end, mixed: _ }
                         | TextToken::Array { end, mixed: _ } => {
-                            if let Some(scalar) = text[self.offset - 1].as_scalar() {
+                            // if we are in a mixed container, the key is two tokens back because = is inserted
+                            let key_offset = if mixed { 2 } else { 1 };
+                            if let Some(scalar) = text[self.offset - key_offset].as_scalar() {
                                 if !scalar.is_ascii() {
                                     return Some(Err(SectionReaderError::UnexpectedToken(
                                         self.offset,
@@ -118,27 +121,34 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                                 let key = scalar.to_string();
                                 let section =
                                     Section::new(Tokens::Text(&text), key, self.offset, *end);
-                                self.offset += *end;
+                                self.offset = *end + 1;
                                 return Some(Ok(section));
                             } else {
                                 return Some(Err(SectionReaderError::UnexpectedToken(
-                                    self.offset,
-                                    Token::from_text(tok),
+                                    self.offset - key_offset,
+                                    Token::from_text(&text[self.offset - key_offset]),
                                     "non-scalar key encountered",
                                 )));
                             }
                         }
-                        TextToken::Quoted(_) | TextToken::Unquoted(_) | TextToken::Operator(_) => {
-                            // any token that may exist in the spaces between sections
-                            // skip here, we aren't looking for un-sectioned key-value pairs
+                        TextToken::MixedContainer => {
+                            mixed = true;
                             self.offset += 1;
                         }
-                        _ => {
+                        TextToken::End(_)
+                        | TextToken::Header(_)
+                        | TextToken::UndefinedParameter(_)
+                        | TextToken::Parameter(_) => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
                                 self.offset,
                                 Token::from_text(tok),
                                 "weird token in between sections",
                             )))
+                        }
+                        _ => {
+                            // any token that may exist in the spaces between sections
+                            // skip here, we aren't looking for un-sectioned key-value pairs
+                            self.offset += 1;
                         }
                     }
                 }
@@ -170,14 +180,14 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                                 }
                             }
                         }
-                        BinaryToken::End(_) | BinaryToken::MixedContainer => {
+                        BinaryToken::End(_) => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
                                 self.offset,
                                 Token::from_binary(tok),
                                 "Weird token in between sections",
                             )));
                         }
-                        _ => {
+                        BinaryToken::MixedContainer | _ => {
                             self.offset += 1;
                         }
                     }
@@ -188,10 +198,67 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
     }
 }
 
-// TODO add tests covering section initialization and iteration
-// what happens when the tape is empty?
-// what happens when the tape has a single section?
-// what happens when the tape has multiple sections?
-// what happens when the tape has a section with a non-ascii key?
-// what happens when the tape has a section with a non-scalar key?
-// what happens when the tape has an unclosed section?
+#[cfg(test)]
+mod tests {
+    use jomini::TextTape;
+
+    use super::*;
+
+    #[test]
+    fn test_empty() {
+        let tape = Tape::Text(TextTape::from_slice(b"").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        assert!(reader.next().is_none());
+    }
+
+    #[test]
+    fn test_single_section() {
+        let tape = Tape::Text(TextTape::from_slice(b"test={a=1}").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test");
+    }
+
+    #[test]
+    fn test_single_section_messy() {
+        let tape = Tape::Text(TextTape::from_slice(b" \t\r   test={a=1}   \t\r ").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test");
+        assert!(reader.next().is_none());
+    }
+
+    #[test]
+    fn test_multiple_sections() {
+        let tape = Tape::Text(TextTape::from_slice(b"test={a=1}test2={b=2}test3={c=3}").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test");
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test2");
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test3");
+        assert!(reader.next().is_none());
+    }
+
+    #[test]
+    fn test_non_ascii_key() {
+        let tape = Tape::Text(TextTape::from_slice(b"test={\x80=1}").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test");
+    }
+
+    #[test]
+    fn test_mixed() {
+        let tape =
+            Tape::Text(TextTape::from_slice(b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}").unwrap());
+        let mut reader = SectionReader::new(&tape);
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test");
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test2");
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "test3");
+    }
+}

@@ -184,11 +184,15 @@ impl DummyInit for Dynasty {
             }
         }
         if let Some(paret) = base.get("dynasty") {
-            let p = game_state.get_dynasty(&paret.as_id()?).clone();
-            if let Ok(mut p) = p.try_get_internal_mut() {
-                p.register_house();
+            let paret = paret.as_id()?;
+            if paret != self.id {
+                // MAYBE this is bad? I don't know
+                let p = game_state.get_dynasty(&paret).clone();
+                if let Ok(mut p) = p.try_get_internal_mut() {
+                    p.register_house();
+                }
+                self.parent = Some(p.clone());
             }
-            self.parent = Some(p.clone());
         }
         match base.get("name").or(base.get("localized_name")) {
             Some(name) => {

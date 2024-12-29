@@ -84,6 +84,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
         let mut key = false;
         match self.tape {
             Tokens::Text(text) => {
+                // TODO the mixed object handling is totally borked. Need a total redesign
                 while offset < self.length {
                     match &text[offset] {
                         TextToken::Array { .. } => {
@@ -325,8 +326,42 @@ impl<'tape, 'data> Section<'tape, 'data> {
                 }
             }
         }
-        return Ok(stack.pop().unwrap());
+        if stack.is_empty() {
+            return Ok(SaveFileObject::Map(GameObjectMap::from_name(
+                self.name.clone(),
+            )));
+        } else {
+            return Ok(stack.pop().unwrap());
+        }
     }
 }
 
-// TODO add tests covering section parsing
+#[cfg(test)]
+mod tests {
+
+    use jomini::TextTape;
+
+    use super::*;
+
+    use super::super::types::Tape;
+
+    #[test]
+    fn test_empty() {
+        let tape = Tape::Text(TextTape::from_slice(b"").unwrap());
+        let tokens = tape.tokens();
+        let section = Section::new(tokens, "empty".to_string(), 0, 0);
+        let obj = section.parse().unwrap();
+        assert_eq!(obj.get_name(), "empty");
+        assert!(matches!(obj, SaveFileObject::Map(_)));
+    }
+
+    #[test]
+    fn test_mixed_obj() {
+        // MAYBE support this in the future, haven't seen it in the wild yet
+        let tape = Tape::Text(TextTape::from_slice(b"test={a b 1=c 2={d=5}}").unwrap());
+        let tokens = tape.tokens();
+        let section = Section::new(tokens, "test".to_string(), 1, 14);
+        let obj = section.parse();
+        assert!(obj.is_err());
+    }
+}

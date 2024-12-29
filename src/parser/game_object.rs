@@ -453,6 +453,20 @@ impl GameObject<HashMap<String, SaveFileValue>> {
             }
         }
     }
+
+    pub fn to_array(&self) -> Result<GameObjectArray, ConversionError> {
+        let mut keys = self
+            .inner
+            .keys()
+            .map(|k| usize::from_str_radix(k, 10))
+            .collect::<Result<Vec<_>, _>>()?;
+        keys.sort();
+        let mut arr = GameObjectArray::from_name(self.name.clone());
+        for key in keys {
+            arr.push(self.inner[&key.to_string()].clone());
+        }
+        Ok(arr)
+    }
 }
 
 impl<'a> IntoIterator for &'a GameObject<HashMap<String, SaveFileValue>> {
@@ -489,6 +503,14 @@ impl GameObject<Vec<SaveFileValue>> {
 
     pub fn pop(&mut self) -> Result<SaveFileValue, KeyError> {
         self.inner.pop().ok_or(KeyError::ArrEmpty)
+    }
+
+    pub fn to_map(&self) -> GameObjectMap {
+        let mut map = GameObjectMap::from_name(self.name.clone());
+        for (i, val) in self.inner.iter().enumerate() {
+            map.insert(i.to_string(), val.clone());
+        }
+        map
     }
 }
 
