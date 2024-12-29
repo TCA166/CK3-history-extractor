@@ -10,6 +10,7 @@ use super::{
 use std::{
     error,
     fmt::{self, Debug, Display},
+    num::ParseIntError,
 };
 
 /// An error that occured while processing a specific section
@@ -36,6 +37,12 @@ impl<'a> Display for SectionError<'a> {
 impl From<ConversionError> for SectionError<'_> {
     fn from(value: ConversionError) -> Self {
         Self::ConversionError(value)
+    }
+}
+
+impl From<ParseIntError> for SectionError<'_> {
+    fn from(value: ParseIntError) -> Self {
+        Self::ConversionError(value.into())
     }
 }
 
@@ -79,15 +86,14 @@ impl<'tape, 'data> Section<'tape, 'data> {
     }
 
     pub fn parse(&self) -> Result<SaveFileObject, SectionError> {
-        let mut stack = vec![];
+        let mut stack: Vec<(SaveFileObject, bool)> = vec![];
         let mut offset = self.offset;
         let mut key = false;
         match self.tape {
             Tokens::Text(text) => {
-                // TODO the mixed object handling is totally borked. Need a total redesign
                 while offset < self.length {
                     match &text[offset] {
-                        TextToken::Array { .. } => {
+                        TextToken::Array { end: _, mixed } => {
                             let arr = if offset == 0 {
                                 GameObjectArray::from_name(self.name.clone())
                             } else if let Some(scalar) = &text[offset - 1].as_scalar() {
@@ -95,12 +101,12 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             } else {
                                 GameObjectArray::new()
                             };
-                            stack.push(SaveFileObject::Array(arr));
+                            stack.push((SaveFileObject::Array(arr), *mixed));
                             key = false;
                         }
                         TextToken::End(_) => {
-                            let new = stack.pop().unwrap();
-                            let last = stack.last_mut().unwrap();
+                            let new = stack.pop().unwrap().0;
+                            let last = &mut stack.last_mut().unwrap().0;
                             match last {
                                 SaveFileObject::Array(arr) => {
                                     arr.push(SaveFileValue::Object(new));
@@ -115,7 +121,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             key = false;
                         }
                         TextToken::Header(_) => {}
-                        TextToken::Object { .. } => {
+                        TextToken::Object { end: _, mixed } => {
                             let obj = if offset == 0 {
                                 GameObjectMap::from_name(self.name.clone())
                             } else if let Some(scalar) = &text[offset - 1].as_scalar() {
@@ -123,31 +129,63 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             } else {
                                 GameObjectMap::new()
                             };
-                            stack.push(SaveFileObject::Map(obj));
+                            stack.push((SaveFileObject::Map(obj), *mixed));
                             key = false;
                         }
                         TextToken::Quoted(string) | TextToken::Unquoted(string) => {
-                            // value of some kind
-                            let val = SaveFileValue::String(GameString::wrap(string.to_string()));
-                            let obj = stack.last_mut().unwrap();
-                            match obj {
-                                SaveFileObject::Array(arr) => {
-                                    arr.push(val);
-                                }
-                                SaveFileObject::Map(map) => {
-                                    if key {
-                                        if let Some(scalar) = &text[offset - 1].as_scalar() {
-                                            map.insert(scalar.to_string(), val);
-                                        } else {
-                                            return Err(SectionError::UnexpectedToken(
-                                                offset,
-                                                Token::from_text(&text[offset - 1]),
-                                                "expected key is non scalar",
-                                            ));
+                            let (obj, mixed) = stack.last_mut().unwrap();
+                            if *mixed {
+                                if let TextToken::Operator(_) = &text[offset + 1] {
+                                    // this is terrible, but probably least verbose
+                                } else {
+                                    match obj {
+                                        SaveFileObject::Array(arr) => {
+                                            arr.push(SaveFileValue::String(GameString::wrap(
+                                                string.to_string(),
+                                            )));
                                         }
-                                        key = false;
-                                    } else {
-                                        key = true;
+                                        SaveFileObject::Map(map) => {
+                                            // find the largest key in the map
+                                            let mut largest_key = 0;
+                                            for key in map.keys() {
+                                                if let Ok(k) = key.parse::<i64>() {
+                                                    if k > largest_key {
+                                                        largest_key = k;
+                                                    }
+                                                }
+                                            }
+                                            map.insert(
+                                                key.to_string(),
+                                                SaveFileValue::String(GameString::wrap(
+                                                    string.to_string(),
+                                                )),
+                                            );
+                                        }
+                                    }
+                                }
+                            } else {
+                                // value of some kind
+                                let val =
+                                    SaveFileValue::String(GameString::wrap(string.to_string()));
+                                match obj {
+                                    SaveFileObject::Array(arr) => {
+                                        arr.push(val);
+                                    }
+                                    SaveFileObject::Map(map) => {
+                                        if key {
+                                            if let Some(scalar) = &text[offset - 1].as_scalar() {
+                                                map.insert(scalar.to_string(), val);
+                                            } else {
+                                                return Err(SectionError::UnexpectedToken(
+                                                    offset,
+                                                    Token::from_text(&text[offset - 1]),
+                                                    "expected key is non scalar",
+                                                ));
+                                            }
+                                            key = false;
+                                        } else {
+                                            key = true;
+                                        }
                                     }
                                 }
                             }
@@ -160,20 +198,39 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                     "encountered non = operator",
                                 ));
                             }
-                            if let SaveFileObject::Array(arr) = stack.last_mut().unwrap() {
-                                let index = arr.pop().unwrap().as_integer()?;
-                                if let Some(value) = &text[offset + 1].as_scalar() {
-                                    arr.insert(
-                                        index as usize,
-                                        SaveFileValue::String(GameString::wrap(value.to_string())),
-                                    );
-                                    offset += 1;
+                            let (obj, mixed) = stack.last_mut().unwrap();
+                            if *mixed {
+                                let key = if let Some(scalar) = &text[offset - 1].as_scalar() {
+                                    scalar.to_string()
+                                } else {
+                                    return Err(SectionError::UnexpectedToken(
+                                        offset,
+                                        Token::from_text(&text[offset - 1]),
+                                        "expected key is non scalar",
+                                    ));
+                                };
+                                let val = if let Some(scalar) = &text[offset + 1].as_scalar() {
+                                    SaveFileValue::String(GameString::wrap(scalar.to_string()))
                                 } else {
                                     return Err(SectionError::UnexpectedToken(
                                         offset + 1,
                                         Token::from_text(&text[offset + 1]),
-                                        "array assignment value non scalar",
+                                        "expected value is non scalar",
                                     ));
+                                };
+                                offset += 1;
+                                match obj {
+                                    SaveFileObject::Array(arr) => {
+                                        let index: usize = key.parse()?;
+                                        if index > arr.len() {
+                                            arr.push(val); // MAYBE bad
+                                        } else {
+                                            arr.insert(index, val);
+                                        }
+                                    }
+                                    SaveFileObject::Map(map) => {
+                                        map.insert(key, val);
+                                    }
                                 }
                             } else {
                                 return Err(SectionError::UnexpectedToken(
@@ -183,15 +240,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 ));
                             }
                         }
-                        TextToken::MixedContainer => {
-                            if let SaveFileObject::Map(_) = stack.last().unwrap() {
-                                return Err(SectionError::UnexpectedToken(
-                                    offset,
-                                    Token::from_text(&text[offset]),
-                                    "MixedContainer in object",
-                                ));
-                            }
-                        }
+                        TextToken::MixedContainer => {}
                         TextToken::Parameter(_) | TextToken::UndefinedParameter(_) => {
                             return Err(SectionError::UnexpectedToken(
                                 offset,
@@ -205,13 +254,13 @@ impl<'tape, 'data> Section<'tape, 'data> {
             }
             Tokens::Binary(binary) => {
                 fn add_key_value<'a, 'tok: 'a>(
-                    stack: &mut Vec<SaveFileObject>,
+                    stack: &mut Vec<(SaveFileObject, bool)>,
                     val: SaveFileValue,
                     key: &mut bool,
                     binary: &[BinaryToken<'tok>],
                     offset: usize,
                 ) -> Result<(), SectionError<'a>> {
-                    let obj = stack.last_mut().unwrap();
+                    let (obj, _mixed) = stack.last_mut().unwrap();
                     match obj {
                         SaveFileObject::Array(arr) => {
                             arr.push(val);
@@ -244,15 +293,15 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             } else {
                                 GameObjectArray::new()
                             };
-                            stack.push(SaveFileObject::Array(arr));
+                            stack.push((SaveFileObject::Array(arr), false));
                         }
                         BinaryToken::Bool(b) => {
                             let val = SaveFileValue::Boolean(*b);
                             add_key_value(&mut stack, val, &mut key, binary, offset)?;
                         }
                         BinaryToken::End(_) => {
-                            let new = stack.pop().unwrap();
-                            let last = stack.last_mut().unwrap();
+                            let new = stack.pop().unwrap().0;
+                            let last = &mut stack.last_mut().unwrap().0;
                             match last {
                                 SaveFileObject::Array(arr) => {
                                     arr.push(SaveFileValue::Object(new));
@@ -290,6 +339,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             add_key_value(&mut stack, val, &mut key, binary, offset)?;
                         }
                         BinaryToken::MixedContainer | BinaryToken::Equal => {
+                            // TODO fix alongside the rest of the binary parser
                             return Err(SectionError::UnexpectedToken(
                                 offset,
                                 Token::from_binary(&binary[offset]),
@@ -302,7 +352,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             } else {
                                 GameObjectMap::new()
                             };
-                            stack.push(SaveFileObject::Map(obj));
+                            stack.push((SaveFileObject::Map(obj), false));
                         }
                         BinaryToken::Quoted(string) | BinaryToken::Unquoted(string) => {
                             let val = SaveFileValue::String(GameString::wrap(string.to_string()));
@@ -331,7 +381,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                 self.name.clone(),
             )));
         } else {
-            return Ok(stack.pop().unwrap());
+            return Ok(stack.pop().unwrap().0);
         }
     }
 }
@@ -363,5 +413,19 @@ mod tests {
         let section = Section::new(tokens, "test".to_string(), 1, 14);
         let obj = section.parse();
         assert!(obj.is_err());
+    }
+
+    #[test]
+    fn test_mixed() {
+        let tape = Tape::Text(TextTape::from_slice(b"test={a b 1=c 2=d}").unwrap());
+        let tokens = tape.tokens();
+        let section = Section::new(tokens, "test".to_string(), 1, 11);
+        let obj = section.parse().unwrap();
+        assert_eq!(obj.get_name(), "test");
+        if let SaveFileObject::Array(arr) = obj {
+            assert_eq!(arr.len(), 4);
+        } else {
+            panic!("expected array");
+        }
     }
 }

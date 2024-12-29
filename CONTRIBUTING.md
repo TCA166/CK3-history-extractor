@@ -20,7 +20,7 @@ I am entirely open to creating a toggleable output theme switch within the progr
 
 This is the main area where help is most needed I would say.
 Overall within the Rust source code you can help by: squashing bugs, optimising what I have written, writing documentation, improving accuracy with the in game state and adding new features.
-Within the source code itself I mark areas that need special attention by adding comments that contain specific markers like ```TODO```, ```FIXME``` and ```MAYBE```.
+Within the source code itself I mark areas that need special attention by adding comments that contain specific markers like ```TODO```, ```FIXME``` and ```MAYBE``` [here](https://github.com/search?q=repo%3ATCA166%2FCK3-history-extractor+%28TODO+OR+FIXME+OR+MAYBE%29&type=code) are all instances of me using them in the source code.
 If you work in VsCode I would advise you get [this](https://marketplace.visualstudio.com/items?itemName=Gruntfuggly.todo-tree) extension to mark them.
 
 ## Code guidelines
@@ -37,3 +37,8 @@ Here there are a few more rules I would like you to follow.
 1. No lint warnings - do not commit code that has any warnings
 2. Each entity within the code must have it's comment documenting what it does - that goes for structs, traits and functions
 3. Try to write optimal code - bit of a blanket statement, too vague to be actionable but still worth pointing out
+
+## Branches
+
+Generally speaking moving forward code will be organized into the ```main``` and ```dev``` branches.
+You should only do pull requests to the dev branch. Your changes will be merged with main on release.

@@ -146,7 +146,6 @@ impl<'a> SaveFile {
 
     /// Get the tape from the save file.
     pub fn tape(&'a self) -> Result<Tape<'a>, jomini::Error> {
-        // FIXME is broken
         if self.binary {
             Ok(Tape::Binary(BinaryTape::from_slice(&self.contents)?))
         } else {

@@ -1,5 +1,6 @@
 use std::{
     any::type_name,
+    collections::hash_map::Keys,
     error,
     fmt::{self, Debug, Display},
     num::{ParseFloatError, ParseIntError},
@@ -452,6 +453,10 @@ impl GameObject<HashMap<String, SaveFileValue>> {
                 self.inner.insert(key, value);
             }
         }
+    }
+
+    pub fn keys(&self) -> Keys<'_, String, SaveFileValue> {
+        self.inner.keys()
     }
 
     pub fn to_array(&self) -> Result<GameObjectArray, ConversionError> {

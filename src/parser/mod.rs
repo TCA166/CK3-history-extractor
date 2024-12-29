@@ -707,7 +707,7 @@ mod tests {
         .unwrap();
         let mut reader = SectionReader::new(&tape);
         let object = reader.next().unwrap();
-        assert!(object.unwrap().parse().is_err())
+        assert!(object.unwrap().parse().is_ok())
     }
 
     #[test]
