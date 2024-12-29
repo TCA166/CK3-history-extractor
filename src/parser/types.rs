@@ -33,6 +33,7 @@ impl<'token, 'data> Tokens<'token, 'data> {
     }
 }
 
+/// An abstraction over [jomini] tokens: [jomini::TextToken] and [jomini::BinaryToken]
 pub enum Token<'a> {
     Text(TextToken<'a>),
     Binary(BinaryToken<'a>),

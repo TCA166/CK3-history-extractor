@@ -67,31 +67,37 @@ impl<'a> error::Error for SectionError<'a> {
 pub struct Section<'tape, 'data> {
     tape: Tokens<'tape, 'data>,
     offset: usize,
-    length: usize,
+    end: usize,
     name: String,
 }
 
 impl<'tape, 'data> Section<'tape, 'data> {
-    pub fn new(tape: Tokens<'tape, 'data>, name: String, offset: usize, length: usize) -> Self {
+    /// Create a new section from a tape.
+    /// The section will be named `name` and will start at `offset` and end at `end`.
+    /// The first token of the section (pointed at by `offset`) is expected to an object or array token.
+    /// The end token is not included in the section.
+    pub fn new(tape: Tokens<'tape, 'data>, name: String, offset: usize, end: usize) -> Self {
         Section {
             tape,
             name,
             offset,
-            length,
+            end,
         }
     }
 
+    /// Get the name of the section.
     pub fn get_name(&self) -> &str {
         &self.name
     }
 
+    /// Parse the section into a [SaveFileObject].
     pub fn parse(&self) -> Result<SaveFileObject, SectionError> {
         let mut stack: Vec<(SaveFileObject, bool)> = vec![];
         let mut offset = self.offset;
         let mut key = false;
         match self.tape {
             Tokens::Text(text) => {
-                while offset < self.length {
+                while offset < self.end {
                     match &text[offset] {
                         TextToken::Array { end: _, mixed } => {
                             let arr = if offset == 0 {
@@ -285,7 +291,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
 
                     return Ok(());
                 }
-                while offset < self.length {
+                while offset < self.end {
                     match &binary[offset] {
                         BinaryToken::Array(_) => {
                             let arr = if let BinaryToken::Unquoted(scalar) = &binary[offset - 1] {

@@ -10,8 +10,10 @@ use super::{
     types::{Tape, Token, Tokens},
 };
 
+/// An error that occurred while reading sections from a tape.
 #[derive(Debug)]
 pub enum SectionReaderError<'err> {
+    /// An unexpected token was encountered.
     UnexpectedToken(usize, Token<'err>, &'static str),
 }
 
@@ -38,6 +40,7 @@ impl<'err> error::Error for SectionReaderError<'err> {
 /// A reader for sections in a tape.
 /// This reader will iterate over the tape and return sections, which are
 /// largest [Objects](super::SaveFileObject) in the save file.
+/// Yielded sections can (do not have to) be parsed using [Section::parse].
 pub struct SectionReader<'tape, 'data> {
     /// The tape to read from.
     tape: Tokens<'tape, 'data>,
@@ -110,14 +113,7 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                         | TextToken::Array { end, mixed: _ } => {
                             // if we are in a mixed container, the key is two tokens back because = is inserted
                             let key_offset = if mixed { 2 } else { 1 };
-                            if let Some(scalar) = text[self.offset - key_offset].as_scalar() {
-                                if !scalar.is_ascii() {
-                                    return Some(Err(SectionReaderError::UnexpectedToken(
-                                        self.offset,
-                                        Token::from_text(tok),
-                                        "non-ascii key encountered",
-                                    )));
-                                }
+                            if let TextToken::Unquoted(scalar) = &text[self.offset - key_offset] {
                                 let key = scalar.to_string();
                                 let section =
                                     Section::new(Tokens::Text(&text), key, self.offset, *end);
@@ -158,27 +154,29 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                     let tok = &binary[self.offset];
                     match tok {
                         BinaryToken::Object(end) | BinaryToken::Array(end) => {
-                            let key_token = &binary[self.offset - 1];
-                            match key_token {
-                                BinaryToken::Unquoted(scalar) => {
-                                    let key = scalar.to_string();
-                                    let section = Section::new(
-                                        Tokens::Binary(&binary),
-                                        key,
-                                        self.offset + 1,
-                                        *end - self.offset,
-                                    );
-                                    self.offset = *end;
-                                    return Some(Ok(section));
-                                }
-                                _ => {
-                                    return Some(Err(SectionReaderError::UnexpectedToken(
-                                        self.offset,
-                                        Token::from_binary(tok),
-                                        "Non-ascii key encountered",
-                                    )));
-                                }
+                            let key_offset = if mixed { 2 } else { 1 };
+                            if let BinaryToken::Unquoted(scalar) = &binary[self.offset - key_offset]
+                            {
+                                let key = scalar.to_string();
+                                let section = Section::new(
+                                    Tokens::Binary(&binary),
+                                    key,
+                                    self.offset + 1,
+                                    *end - self.offset,
+                                );
+                                self.offset = *end;
+                                return Some(Ok(section));
+                            } else {
+                                return Some(Err(SectionReaderError::UnexpectedToken(
+                                    self.offset,
+                                    Token::from_binary(tok),
+                                    "Non-ascii key encountered",
+                                )));
                             }
+                        }
+                        BinaryToken::MixedContainer => {
+                            mixed = true;
+                            self.offset += 1;
                         }
                         BinaryToken::End(_) => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
@@ -187,7 +185,7 @@ impl<'tape, 'data> Iterator for SectionReader<'tape, 'data> {
                                 "Weird token in between sections",
                             )));
                         }
-                        BinaryToken::MixedContainer | _ => {
+                        _ => {
                             self.offset += 1;
                         }
                     }

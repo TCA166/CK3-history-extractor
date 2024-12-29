@@ -59,11 +59,11 @@ impl DummyInit for Artifact {
         }
         self.owner = Some(game_state.get_character(&base.get_game_id("owner")?));
         if let Some(history_node) = base.get("history") {
-            let history_node = history_node.as_object()?.as_map()?;
+            let history_node = history_node.as_object()?;
             if history_node.is_empty() {
                 return Ok(());
             }
-            if let Some(entries_node) = history_node.get("entries") {
+            if let Some(entries_node) = history_node.as_map()?.get("entries") {
                 for h in entries_node.as_object()?.as_array()? {
                     let h = h.as_object()?.as_map()?;
                     let r#type = h.get_string("type")?;
