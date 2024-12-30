@@ -18,8 +18,12 @@ use std::{
 pub enum SectionError<'a> {
     /// A token was in some way unexpected
     UnexpectedToken(usize, Token<'a>, &'static str),
+    /// An error occured while converting a value
     ConversionError(ConversionError),
+    /// An error occured while parsing a scalar
     ScalarError(ScalarError),
+    /// An unknown token was encountered
+    UnknownToken(u16),
 }
 
 impl<'a> Display for SectionError<'a> {
@@ -30,6 +34,7 @@ impl<'a> Display for SectionError<'a> {
             }
             Self::ConversionError(err) => Display::fmt(err, f),
             Self::ScalarError(err) => Display::fmt(err, f),
+            Self::UnknownToken(tok) => write!(f, "unknown token {}", tok),
         }
     }
 }
@@ -59,6 +64,13 @@ impl<'a> error::Error for SectionError<'a> {
             Self::ScalarError(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+fn token_resolver(token: &u16) -> Result<&'static str, SectionError> {
+    match token {
+        // TODO
+        _ => Err(SectionError::UnknownToken(*token)),
     }
 }
 
@@ -254,16 +266,17 @@ impl<'tape, 'data> Section<'tape, 'data> {
                     stack: &mut Vec<(SaveFileObject, bool)>,
                     val: SaveFileValue,
                     key: &mut bool,
-                    binary: &[BinaryToken<'tok>],
+                    binary: &'a [BinaryToken<'tok>],
                     offset: usize,
                 ) -> Result<(), SectionError<'a>> {
                     let (obj, mixed) = stack.last_mut().unwrap();
                     if *mixed {
                         if let BinaryToken::Equal = &binary[offset - 1] {
-                            if let BinaryToken::Unquoted(scalar) = &binary[offset - 2] {
+                            if let BinaryToken::Token(token) = &binary[offset - 2] {
+                                let key = token_resolver(token)?;
                                 match obj {
                                     SaveFileObject::Array(arr) => {
-                                        let index = scalar.to_u64()? as usize;
+                                        let index = key.parse()?;
                                         if index >= arr.len() {
                                             arr.push(val);
                                         } else {
@@ -271,7 +284,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                         }
                                     }
                                     SaveFileObject::Map(map) => {
-                                        map.insert(scalar.to_string(), val);
+                                        map.insert(key.to_string(), val);
                                     }
                                 }
                             } else {
@@ -311,8 +324,9 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             }
                             SaveFileObject::Map(map) => {
                                 if *key {
-                                    if let BinaryToken::Unquoted(scalar) = &binary[offset - 1] {
-                                        map.insert(scalar.to_string(), val);
+                                    if let BinaryToken::Token(token) = &binary[offset - 1] {
+                                        let key = token_resolver(token)?;
+                                        map.insert(key.to_string(), val);
                                     } else {
                                         return Err(SectionError::UnexpectedToken(
                                             offset,
@@ -334,8 +348,9 @@ impl<'tape, 'data> Section<'tape, 'data> {
                         BinaryToken::Array(_) => {
                             let arr = if offset == 0 {
                                 GameObjectArray::from_name(self.name.clone())
-                            } else if let BinaryToken::Unquoted(scalar) = &binary[offset - 1] {
-                                GameObjectArray::from_name(scalar.to_string())
+                            } else if let BinaryToken::Token(token) = &binary[offset - 1] {
+                                let key = token_resolver(token)?;
+                                GameObjectArray::from_name(key.to_string())
                             } else {
                                 GameObjectArray::new()
                             };
@@ -345,8 +360,9 @@ impl<'tape, 'data> Section<'tape, 'data> {
                         BinaryToken::Object(_) => {
                             let obj = if offset == 0 {
                                 GameObjectMap::from_name(self.name.clone())
-                            } else if let BinaryToken::Unquoted(scalar) = &binary[offset - 1] {
-                                GameObjectMap::from_name(scalar.to_string())
+                            } else if let BinaryToken::Token(token) = &binary[offset - 1] {
+                                let key = token_resolver(token)?;
+                                GameObjectMap::from_name(key.to_string())
                             } else {
                                 GameObjectMap::new()
                             };
@@ -400,13 +416,6 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             let val = SaveFileValue::String(GameString::wrap(string.to_string()));
                             add_key_value(&mut stack, val, &mut key, binary, offset)?;
                         }
-                        BinaryToken::Token(_) => {
-                            return Err(SectionError::UnexpectedToken(
-                                offset,
-                                Token::from_binary(&binary[offset]),
-                                "unexpected Token",
-                            ));
-                        }
                         BinaryToken::MixedContainer => {
                             stack.last_mut().unwrap().1 = true;
                         }
@@ -420,7 +429,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 add_key_value(&mut stack, val, &mut key, binary, offset)?;
                             }
                         }
-                        BinaryToken::Equal => {}
+                        BinaryToken::Equal | BinaryToken::Token(_) => {}
                     }
                     offset += 1;
                 }
