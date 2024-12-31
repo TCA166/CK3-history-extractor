@@ -1,4 +1,4 @@
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
@@ -7,14 +7,16 @@ use super::{
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{Wrapper, WrapperMut},
     },
-    Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
+    serialize_ref, Character, DummyInit, GameObjectDerived, Shared,
 };
 
 /// A struct representing a faith in the game
+#[derive(Serialize)]
 pub struct Faith {
     id: GameId,
     name: Option<GameString>,
     tenets: Vec<GameString>,
+    #[serde(serialize_with = "serialize_ref")]
     head: Option<Shared<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
@@ -69,25 +71,6 @@ impl GameObjectDerived for Faith {
 
     fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
-    }
-}
-
-impl Serialize for Faith {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Faith", 6)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("tenets", &self.tenets)?;
-        if let Some(head) = &self.head {
-            let head = DerivedRef::<Character>::from_derived(head.clone());
-            state.serialize_field("head", &head)?;
-        }
-        state.serialize_field("fervor", &self.fervor)?;
-        state.serialize_field("doctrines", &self.doctrines)?;
-        state.end()
     }
 }
 

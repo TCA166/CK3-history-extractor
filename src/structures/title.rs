@@ -16,7 +16,8 @@ use super::{
         },
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
+    derived_ref::into_ref_array,
+    Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
 };
 
 /// A struct representing a title in the game
@@ -346,36 +347,36 @@ impl Serialize for Title {
             state.serialize_field("tier", "")?;
         }
         if let Some(faith) = &self.faith {
-            let faith = DerivedRef::from_derived(faith.clone());
+            let faith = DerivedRef::from(faith.clone());
             state.serialize_field("faith", &faith)?;
         }
         if let Some(culture) = &self.culture {
-            let culture = DerivedRef::from_derived(culture.clone());
+            let culture = DerivedRef::from(culture.clone());
             state.serialize_field("culture", &culture)?;
         }
         if let Some(de_jure) = &self.de_jure {
-            let de_jure = DerivedRef::from_derived(de_jure.clone());
+            let de_jure = DerivedRef::from(de_jure.clone());
             state.serialize_field("de_jure", &de_jure)?;
         }
         if let Some(de_facto) = &self.de_facto {
-            let de_facto = DerivedRef::from_derived(de_facto.clone());
+            let de_facto = DerivedRef::from(de_facto.clone());
             state.serialize_field("de_facto", &de_facto)?;
         }
-        state.serialize_field("de_jure_vassals", &serialize_array(&self.de_jure_vassals))?;
-        state.serialize_field("de_facto_vassals", &serialize_array(&self.de_facto_vassals))?;
+        state.serialize_field("de_jure_vassals", &into_ref_array(&self.de_jure_vassals))?;
+        state.serialize_field("de_facto_vassals", &into_ref_array(&self.de_facto_vassals))?;
         let mut history = Vec::new();
         for h in self.history.iter() {
             let mut o = (h.0.clone(), None, h.2.clone());
             if let Some(holder) = &h.1 {
-                let c = DerivedRef::from_derived(holder.clone());
+                let c = DerivedRef::from(holder.clone());
                 o.1 = Some(c);
             }
             history.push(o);
         }
-        state.serialize_field("claims", &serialize_array(&self.claims))?;
+        state.serialize_field("claims", &into_ref_array(&self.claims))?;
         state.serialize_field("history", &history)?;
         if let Some(capital) = &self.capital {
-            state.serialize_field("capital", &DerivedRef::from_derived(capital.clone()))?;
+            state.serialize_field("capital", &DerivedRef::from(capital.clone()))?;
         }
         state.end()
     }

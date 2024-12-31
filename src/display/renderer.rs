@@ -183,7 +183,7 @@ impl<'a> Renderer<'a> {
 /// Trait for objects that can be rendered into a html page.
 /// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
-pub trait Renderable: Serialize + GameObjectDerived {
+pub trait Renderable: Serialize + Cullable {
     /// Returns the template file name.
     /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
     fn get_template() -> &'static str;

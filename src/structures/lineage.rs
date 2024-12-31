@@ -1,4 +1,4 @@
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
@@ -10,6 +10,7 @@ use super::{
 };
 
 /// A struct representing a lineage node in the game
+#[derive(Serialize)]
 pub struct LineageNode {
     character: Option<Shared<Character>>,
     date: Option<GameString>,
@@ -87,25 +88,6 @@ impl GameObjectDerived for LineageNode {
 
     fn get_name(&self) -> GameString {
         self.character.as_ref().unwrap().get_internal().get_name()
-    }
-}
-
-impl Serialize for LineageNode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("LineageNode", 9)?;
-        state.serialize_field("character", &self.character)?;
-        state.serialize_field("date", &self.date)?;
-        state.serialize_field("score", &self.score)?;
-        state.serialize_field("prestige", &self.prestige)?;
-        state.serialize_field("piety", &self.piety)?;
-        state.serialize_field("dread", &self.dread)?;
-        state.serialize_field("lifestyle", &self.lifestyle)?;
-        state.serialize_field("perks", &self.perks)?;
-        state.serialize_field("id", &self.id)?;
-        state.end()
     }
 }
 

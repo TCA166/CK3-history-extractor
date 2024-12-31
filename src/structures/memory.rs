@@ -1,4 +1,4 @@
-use serde::{ser::SerializeStruct, Serialize};
+use serde::{ser::SerializeSeq, Serialize};
 
 use super::{
     super::{
@@ -9,11 +9,25 @@ use super::{
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
 
+fn serialize_participants<S: serde::Serializer>(
+    val: &Vec<(String, Shared<Character>)>,
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    let mut seq = s.serialize_seq(Some(val.len()))?;
+    for (name, character) in val {
+        let character = DerivedRef::from(character.clone());
+        seq.serialize_element(&(name, character))?;
+    }
+    seq.end()
+}
+
 /// A struct representing a memory in the game
+#[derive(Serialize)]
 pub struct Memory {
     id: GameId,
     date: Option<GameString>,
     r#type: Option<GameString>,
+    #[serde(serialize_with = "serialize_participants")]
     participants: Vec<(String, Shared<Character>)>,
     depth: usize,
 }
@@ -57,24 +71,6 @@ impl GameObjectDerived for Memory {
 
     fn get_name(&self) -> GameString {
         self.r#type.as_ref().unwrap().clone()
-    }
-}
-
-impl Serialize for Memory {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Memory", 3)?;
-        state.serialize_field("date", &self.date)?;
-        state.serialize_field("type", &self.r#type)?;
-        // serialize the participants as an array of tuples
-        let mut participants: Vec<(String, DerivedRef<Character>)> = Vec::new();
-        for part in self.participants.iter() {
-            participants.push((part.0.clone(), DerivedRef::from_derived(part.1.clone())));
-        }
-        state.serialize_field("participants", &participants)?;
-        state.end()
     }
 }
 

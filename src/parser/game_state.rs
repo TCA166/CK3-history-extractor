@@ -139,7 +139,7 @@ impl GameState {
             let entry = self.contract_transform.get(contract_id).unwrap();
             entry.get_internal_mut().init(char);
         } else {
-            let r = Shared::wrap(DerivedRef::from_derived(char));
+            let r = Shared::wrap(DerivedRef::from(char));
             self.contract_transform.insert(*contract_id, r);
         }
     }

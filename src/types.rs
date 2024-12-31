@@ -4,6 +4,8 @@ use std::{
     rc::Rc,
 };
 
+use super::structures::GameObjectDerived;
+
 use serde::Serialize;
 
 // Opaque type aliases for the standard library types.
@@ -47,6 +49,7 @@ impl<'a, T: Serialize> Serialize for RefOrRaw<'a, T> {
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
 /// For example [GameString](crate::parser::GameString) is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
+/// Literally just a different flavor of [Deref].
 pub trait Wrapper<T> {
     /// Wrap a value in the object
     fn wrap(t: T) -> Self;
@@ -57,6 +60,7 @@ pub trait Wrapper<T> {
 
 /// A trait for objects that wrap a certain value and allow mutation.
 /// Allows us to create opaque type aliases for certain types.
+/// Literally just a different flavor of [std::ops::DerefMut].
 pub trait WrapperMut<T> {
     /// Get the internal value as a mutable reference
     fn get_internal_mut(&self) -> RefMut<T>;
@@ -66,7 +70,6 @@ pub trait WrapperMut<T> {
 }
 
 /// A type alias for shared objects.
-/// Aliases: [std::rc::Rc]<[std::cell::RefCell]<>>
 ///
 /// # Example
 ///
@@ -75,25 +78,47 @@ pub trait WrapperMut<T> {
 ///
 /// let value:Ref<String> = obj.get_internal();
 /// ```
-pub type Shared<T> = Rc<RefCell<T>>;
+#[derive(Debug, PartialEq, PartialOrd, Ord, Eq)]
+pub struct Shared<T> {
+    inner: Rc<RefCell<T>>,
+}
 
 impl<T> Wrapper<T> for Shared<T> {
     fn wrap(t: T) -> Self {
-        Rc::new(RefCell::new(t))
+        Shared {
+            inner: Rc::new(RefCell::new(t)),
+        }
     }
 
     fn get_internal(&self) -> RefOrRaw<T> {
-        RefOrRaw::Ref(self.borrow())
+        RefOrRaw::Ref(self.inner.borrow())
     }
 }
 
 impl<T> WrapperMut<T> for Shared<T> {
     fn get_internal_mut(&self) -> RefMut<T> {
-        self.borrow_mut()
+        self.inner.borrow_mut()
     }
 
     fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError> {
-        self.try_borrow_mut()
+        self.inner.try_borrow_mut()
+    }
+}
+
+impl<T> Clone for Shared<T> {
+    fn clone(&self) -> Self {
+        Shared {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T: GameObjectDerived> Serialize for Shared<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.get_internal().serialize(serializer)
     }
 }
 

@@ -7,7 +7,7 @@ use super::{
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
-    serialize_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
+    into_ref_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
     Shared,
 };
 
@@ -251,7 +251,7 @@ impl Serialize for Dynasty {
         let mut state = serializer.serialize_struct("Dynasty", 11)?;
         state.serialize_field("id", &self.id)?;
         if let Some(parent) = &self.parent {
-            let parent = DerivedRef::<Dynasty>::from_derived(parent.clone());
+            let parent = DerivedRef::<Dynasty>::from(parent.clone());
             state.serialize_field("parent", &parent)?;
         }
         state.serialize_field("name", &self.name)?;
@@ -260,7 +260,7 @@ impl Serialize for Dynasty {
         state.serialize_field("prestige_tot", &self.prestige_tot)?;
         state.serialize_field("prestige", &self.prestige)?;
         state.serialize_field("perks", &self.perks)?;
-        let leaders = serialize_array(&self.leaders);
+        let leaders = into_ref_array(&self.leaders);
         state.serialize_field("leaders", &leaders)?;
         state.serialize_field("found_date", &self.found_date)?;
         if let Some(motto_raw) = &self.motto {

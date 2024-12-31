@@ -235,21 +235,19 @@ impl Serialize for Timeline {
         let ref_lifespans: Vec<(DerivedRef<Title>, Vec<(u32, u32)>)> = self
             .lifespans
             .iter()
-            .map(|(t, v)| (DerivedRef::from_derived(t.clone()), v.clone()))
+            .map(|(t, v)| (DerivedRef::from(t.clone()), v.clone()))
             .collect();
         state.serialize_field("lifespans", &ref_lifespans)?;
         state.serialize_field("latest_event", &self.latest_event)?;
         let mut ref_events = Vec::new();
         for events in &self.events {
             let (year, char, title, event_type, difference) = events;
-            let ref_char = DerivedRef::from_derived(char.clone());
-            let ref_title = DerivedRef::from_derived(title.clone());
+            let ref_char = DerivedRef::from(char.clone());
+            let ref_title = DerivedRef::from(title.clone());
             let ref_diff = match difference {
-                RealmDifference::Faith(f) => {
-                    RealmDifferenceRef::Faith(DerivedRef::from_derived(f.clone()))
-                }
+                RealmDifference::Faith(f) => RealmDifferenceRef::Faith(DerivedRef::from(f.clone())),
                 RealmDifference::Culture(c) => {
-                    RealmDifferenceRef::Culture(DerivedRef::from_derived(c.clone()))
+                    RealmDifferenceRef::Culture(DerivedRef::from(c.clone()))
                 }
             };
             ref_events.push((

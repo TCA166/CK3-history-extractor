@@ -1,4 +1,9 @@
-use serde::{ser::SerializeStruct, Serialize};
+use std::ops::{Deref, DerefMut};
+
+use serde::{
+    ser::{SerializeSeq, SerializeStruct},
+    Serialize, Serializer,
+};
 
 use super::{
     super::{
@@ -14,7 +19,7 @@ use super::{
 /// This is useful for serializing references to objects that are not in the current scope.
 pub struct DerivedRef<T>
 where
-    T: Renderable,
+    T: GameObjectDerived,
 {
     id: GameId,
     obj: Option<Shared<T>>,
@@ -22,18 +27,8 @@ where
 
 impl<T> DerivedRef<T>
 where
-    T: Renderable,
+    T: GameObjectDerived,
 {
-    /// Create a new DerivedRef from a [Shared] object.
-    /// This will clone the object and store a reference to it.
-    pub fn from_derived(obj: Shared<T>) -> Self {
-        let o = obj.get_internal();
-        DerivedRef {
-            id: o.get_id(),
-            obj: Some(obj.clone()),
-        }
-    }
-
     /// Create a new DerivedRef with a dummy object.
     /// This is useful for initializing a DerivedRef with an object that is not yet parsed.
     /// Currently this is used exclusively in [super::GameState::get_vassal].
@@ -53,20 +48,47 @@ where
 }
 
 /// Converts an array of GameObjectDerived to an array of DerivedRef
-pub fn serialize_array<T>(array: &Vec<Shared<T>>) -> Vec<DerivedRef<T>>
+pub fn into_ref_array<T>(array: &Vec<Shared<T>>) -> Vec<DerivedRef<T>>
 where
     T: Renderable,
 {
     let mut res = Vec::new();
     for s in array.iter() {
-        res.push(DerivedRef::<T>::from_derived(s.clone()));
+        res.push(DerivedRef::<T>::from(s.clone()));
     }
     res
 }
 
+/// Serialize a [Shared] object as a [DerivedRef].
+pub fn serialize_ref<S: Serializer, T: Renderable>(
+    value: &Option<Shared<T>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    match value {
+        Some(v) => {
+            let derived = DerivedRef::<T>::from(v.clone());
+            derived.serialize(serializer)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
+/// Serialize a [Vec] of [Shared] objects as a [Vec] of [DerivedRef] objects.
+pub fn serialize_array_ref<S: Serializer, T: Renderable>(
+    value: &Vec<Shared<T>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let mut state = serializer.serialize_seq(Some(value.len()))?;
+    for v in value.iter() {
+        let derived = DerivedRef::<T>::from(v.clone());
+        state.serialize_element(&derived)?;
+    }
+    state.end()
+}
+
 impl<T> Serialize for DerivedRef<T>
 where
-    T: Renderable + Cullable,
+    T: Renderable,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -85,7 +107,7 @@ where
 
 impl<T> GameObjectDerived for DerivedRef<T>
 where
-    T: Renderable + Cullable,
+    T: Renderable,
 {
     fn get_id(&self) -> GameId {
         self.id
@@ -98,7 +120,7 @@ where
 
 impl<T> Cullable for DerivedRef<T>
 where
-    T: Renderable + Cullable,
+    T: Renderable,
 {
     fn get_depth(&self) -> usize {
         self.obj.as_ref().unwrap().get_internal().get_depth()
@@ -115,7 +137,7 @@ where
 
 impl<T> Renderable for DerivedRef<T>
 where
-    T: Renderable + Cullable,
+    T: Renderable,
 {
     fn get_path(&self, path: &str) -> String {
         self.obj.as_ref().unwrap().get_internal().get_path(path)
@@ -145,5 +167,49 @@ where
             .unwrap()
             .get_internal()
             .render(path, game_state, grapher, map);
+    }
+}
+
+impl<T> Deref for DerivedRef<T>
+where
+    T: GameObjectDerived,
+{
+    type Target = Shared<T>;
+
+    fn deref(&self) -> &Self::Target {
+        self.obj.as_ref().unwrap()
+    }
+}
+
+impl<T> DerefMut for DerivedRef<T>
+where
+    T: GameObjectDerived,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.obj.as_mut().unwrap()
+    }
+}
+
+impl<T> From<Shared<T>> for DerivedRef<T>
+where
+    T: GameObjectDerived,
+{
+    fn from(obj: Shared<T>) -> Self {
+        let o = obj.get_internal();
+        DerivedRef {
+            id: o.get_id(),
+            obj: Some(obj.clone()),
+        }
+    }
+}
+
+impl<T> TryInto<Shared<T>> for DerivedRef<T>
+where
+    T: GameObjectDerived,
+{
+    type Error = &'static str;
+
+    fn try_into(self) -> Result<Shared<T>, Self::Error> {
+        self.obj.ok_or("Object not initialized")
     }
 }

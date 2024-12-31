@@ -1,4 +1,4 @@
-use serde::{ser::SerializeStruct, Serialize};
+use serde::{ser::SerializeSeq, Serialize, Serializer};
 
 use super::{
     super::{
@@ -6,9 +6,36 @@ use super::{
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{Shared, WrapperMut},
     },
-    Character, DerivedRef, DummyInit, GameObjectDerived,
+    serialize_ref, Character, DerivedRef, DummyInit, GameObjectDerived,
 };
 
+fn serialize_history<S: Serializer>(
+    val: &Vec<(
+        GameString,
+        GameString,
+        Option<Shared<Character>>,
+        Option<Shared<Character>>,
+    )>,
+    s: S,
+) -> Result<S::Ok, S::Error> {
+    let mut seq = s.serialize_seq(Some(val.len()))?;
+    for (r#type, date, actor, recipient) in val {
+        let actor = if let Some(actor) = actor {
+            Some(DerivedRef::from(actor.clone()))
+        } else {
+            None
+        };
+        let recipient = if let Some(recipient) = recipient {
+            Some(DerivedRef::from(recipient.clone()))
+        } else {
+            None
+        };
+        seq.serialize_element(&(r#type, date, actor, recipient))?;
+    }
+    seq.end()
+}
+
+#[derive(Serialize)]
 pub struct Artifact {
     id: GameId,
     name: Option<GameString>,
@@ -17,7 +44,9 @@ pub struct Artifact {
     rarity: Option<GameString>,
     quality: u32,
     wealth: u32,
+    #[serde(serialize_with = "serialize_ref")]
     owner: Option<Shared<Character>>,
+    #[serde(serialize_with = "serialize_history")]
     history: Vec<(
         GameString,
         GameString,
@@ -153,43 +182,6 @@ impl Artifact {
                 stack.push(RenderableType::Character(recipient.clone()));
             }
         }
-    }
-}
-
-impl Serialize for Artifact {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Artifact", 7)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("description", &self.description)?;
-        state.serialize_field("type", &self.r#type)?;
-        state.serialize_field("rarity", &self.rarity)?;
-        state.serialize_field("quality", &self.quality)?;
-        state.serialize_field("wealth", &self.wealth)?;
-        let mut serialized_history: Vec<(
-            GameString,
-            GameString,
-            Option<DerivedRef<Character>>,
-            Option<DerivedRef<Character>>,
-        )> = Vec::new();
-        for h in self.history.iter() {
-            let actor = if let Some(actor) = &h.2 {
-                Some(DerivedRef::from_derived(actor.clone()))
-            } else {
-                None
-            };
-            let recipient = if let Some(recipient) = &h.3 {
-                Some(DerivedRef::from_derived(recipient.clone()))
-            } else {
-                None
-            };
-            serialized_history.push((h.0.clone(), h.1.clone(), actor, recipient));
-        }
-        state.serialize_field("history", &serialized_history)?;
-        state.end()
     }
 }
 

@@ -39,7 +39,8 @@ pub use lineage::LineageNode;
 
 /// A submodule that provides an object that can be used on the frontend as a shallow reference to another [GameObjectDerived] object.
 mod derived_ref;
-pub use derived_ref::{serialize_array, DerivedRef};
+pub use derived_ref::DerivedRef;
+use derived_ref::{into_ref_array, serialize_array_ref, serialize_ref};
 
 /// A submodule that provides the [Artifact] object.
 mod artifact;

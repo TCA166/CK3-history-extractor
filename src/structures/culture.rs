@@ -1,4 +1,4 @@
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
@@ -10,10 +10,11 @@ use super::{
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    serialize_array, DummyInit, GameObjectDerived, Shared,
+    serialize_array_ref, DummyInit, GameObjectDerived, Shared,
 };
 
 /// A struct representing a culture in the game
+#[derive(Serialize)]
 pub struct Culture {
     id: GameId,
     name: Option<GameString>,
@@ -21,7 +22,9 @@ pub struct Culture {
     heritage: Option<GameString>,
     martial: Option<GameString>,
     date: Option<GameString>,
+    #[serde(serialize_with = "serialize_array_ref")]
     children: Vec<Shared<Culture>>,
+    #[serde(serialize_with = "serialize_array_ref")]
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
     language: Option<GameString>,
@@ -116,28 +119,6 @@ impl TreeNode for Culture {
 impl Culture {
     pub fn register_child(&mut self, child: Shared<Culture>) {
         self.children.push(child);
-    }
-}
-
-impl Serialize for Culture {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Culture", 10)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("ethos", &self.ethos)?;
-        state.serialize_field("heritage", &self.heritage)?;
-        state.serialize_field("martial", &self.martial)?;
-        state.serialize_field("date", &self.date)?;
-        let parents = serialize_array(&self.parents);
-        state.serialize_field("parents", &parents)?;
-        let children = serialize_array(&self.children);
-        state.serialize_field("children", &children)?;
-        state.serialize_field("traditions", &self.traditions)?;
-        state.serialize_field("language", &self.language)?;
-        state.end()
     }
 }
 

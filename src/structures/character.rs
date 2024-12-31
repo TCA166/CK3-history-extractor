@@ -10,8 +10,9 @@ use super::{
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    serialize_array, Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId,
-    GameObjectDerived, Memory, Shared, Title,
+    derived_ref::into_ref_array,
+    Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory,
+    Shared, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
@@ -375,7 +376,7 @@ impl DummyInit for Character {
                     if let Ok(mut o) = liege_chr.try_get_internal_mut() {
                         o.add_vassal(game_state.get_character(&self.id));
                     }
-                    self.liege = Some(DerivedRef::<Character>::from_derived(liege_chr.clone()));
+                    self.liege = Some(DerivedRef::<Character>::from(liege_chr.clone()));
                 }
             }
         }
@@ -596,7 +597,7 @@ impl Serialize for Character {
         let mut faith = self.faith.clone();
         let mut culture = self.culture.clone();
         if let Some(house) = &self.house {
-            let rd = DerivedRef::<Dynasty>::from_derived(house.clone());
+            let rd = DerivedRef::from(house.clone());
             state.serialize_field("house", &rd)?;
             if faith.is_none() {
                 let o = house.get_internal();
@@ -608,33 +609,33 @@ impl Serialize for Character {
             }
         }
         if let Some(faith) = faith {
-            let rf = DerivedRef::<Faith>::from_derived(faith.clone());
+            let rf = DerivedRef::<Faith>::from(faith.clone());
             state.serialize_field("faith", &rf)?;
         }
         if let Some(culture) = culture {
-            let rc = DerivedRef::<Culture>::from_derived(culture.clone());
+            let rc = DerivedRef::<Culture>::from(culture.clone());
             state.serialize_field("culture", &rc)?;
         }
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
         state.serialize_field("recessive", &self.recessive)?;
         //serialize spouses as DerivedRef
-        let spouses = serialize_array::<Character>(&self.spouses);
+        let spouses = into_ref_array::<Character>(&self.spouses);
         state.serialize_field("spouses", &spouses)?;
         //serialize former as DerivedRef
-        let former = serialize_array::<Character>(&self.former);
+        let former = into_ref_array::<Character>(&self.former);
         state.serialize_field("former", &former)?;
         //serialize children as DerivedRef
-        let children = serialize_array::<Character>(&self.children);
+        let children = into_ref_array::<Character>(&self.children);
         state.serialize_field("children", &children)?;
         //serialize parents as DerivedRef
-        let parents = serialize_array::<Character>(&self.parents);
+        let parents = into_ref_array::<Character>(&self.parents);
         state.serialize_field("parents", &parents)?;
         state.serialize_field("dna", &self.dna)?;
         //serialize memories as DerivedRef
         state.serialize_field("memories", &self.memories)?;
         //serialize titles as DerivedRef
-        let titles = serialize_array::<Title>(&self.titles);
+        let titles = into_ref_array::<Title>(&self.titles);
         state.serialize_field("titles", &titles)?;
         state.serialize_field("gold", &self.gold)?;
         state.serialize_field("piety", &self.piety)?;
@@ -642,17 +643,17 @@ impl Serialize for Character {
         state.serialize_field("dread", &self.dread)?;
         state.serialize_field("strength", &self.strength)?;
         //serialize kills as DerivedRef
-        let kills = serialize_array::<Character>(&self.kills);
+        let kills = into_ref_array::<Character>(&self.kills);
         state.serialize_field("kills", &kills)?;
         state.serialize_field("languages", &self.languages)?;
         let mut vassals = Vec::new();
         for vassal in self.vassals.iter() {
             match vassal {
                 Vassal::Character(c) => {
-                    vassals.push(DerivedRef::from_derived(c.clone()));
+                    vassals.push(DerivedRef::from(c.clone()));
                 }
                 Vassal::Reference(c) => {
-                    vassals.push(DerivedRef::from_derived(c.get_internal().get_ref().clone()))
+                    vassals.push(DerivedRef::from(c.get_internal().get_ref().clone()))
                 }
             }
         }
