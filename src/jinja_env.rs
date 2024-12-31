@@ -11,6 +11,7 @@ mod internal_templates {
     pub const INT_FAITH_TEMPLATE: &str = include_str!("../templates/faithTemplate.html");
     pub const INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
     pub const INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
+    pub const INT_BASE_TEMPLATE: &str = include_str!("../templates/base.html");
 }
 
 pub const H_TEMPLATE_NAME: &str = "homeTemplate";
@@ -20,8 +21,9 @@ pub const DYN_TEMPLATE_NAME: &str = "dynastyTemplate";
 pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
 pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
 pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
+pub const BASE_TEMPLATE_NAME: &str = "base";
 
-const TEMPLATE_NAMES: [&str; 7] = [
+const TEMPLATE_NAMES: [&str; 8] = [
     H_TEMPLATE_NAME,
     C_TEMPLATE_NAME,
     CUL_TEMPLATE_NAME,
@@ -29,6 +31,7 @@ const TEMPLATE_NAMES: [&str; 7] = [
     FAITH_TEMPLATE_NAME,
     TITLE_TEMPLATE_NAME,
     TIMELINE_TEMPLATE_NAME,
+    BASE_TEMPLATE_NAME,
 ];
 
 /// # Environment creation
@@ -79,6 +82,8 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
             env.add_template(TITLE_TEMPLATE_NAME, INT_TITLE_TEMPLATE)
                 .unwrap();
             env.add_template(TIMELINE_TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
+                .unwrap();
+            env.add_template(BASE_TEMPLATE_NAME, INT_BASE_TEMPLATE)
                 .unwrap();
         }
         #[cfg(not(feature = "internal"))]
