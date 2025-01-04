@@ -23,6 +23,12 @@ pub enum RefOrRaw<'a, T: 'a> {
     Raw(&'a T),
 }
 
+impl<T: GameObjectDerived> PartialEq for RefOrRaw<'_, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_id() == other.get_id()
+    }
+}
+
 impl<'a, T> Deref for RefOrRaw<'a, T> {
     type Target = T;
 

@@ -7,8 +7,7 @@ use super::{
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
-    into_ref_array, Character, Culture, DerivedRef, DummyInit, Faith, GameId, GameObjectDerived,
-    Shared,
+    into_ref_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,
 };
 
 pub struct Dynasty {
@@ -28,27 +27,11 @@ pub struct Dynasty {
 }
 
 impl Dynasty {
-    /// Gets the faith of the dynasty.
-    /// Really this is just the faith of the current house leader.
-    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+    pub fn get_leader(&self) -> Shared<Character> {
         if self.leaders.is_empty() {
-            return self.member_list.last().unwrap().get_internal().get_faith();
+            return self.member_list.last().unwrap().clone();
         }
-        self.leaders.last().unwrap().get_internal().get_faith()
-    }
-
-    /// Gets the culture of the dynasty.
-    /// Really this is just the culture of the current house leader.
-    pub fn get_culture(&self) -> Option<Shared<Culture>> {
-        if self.leaders.is_empty() {
-            return self
-                .member_list
-                .last()
-                .unwrap()
-                .get_internal()
-                .get_culture();
-        }
-        self.leaders.last().unwrap().get_internal().get_culture()
+        self.leaders.last().unwrap().clone()
     }
 
     /// Registers a new house in the dynasty
@@ -341,6 +324,7 @@ impl Cullable for Dynasty {
             return;
         }
         self.depth = depth;
+        let depth = depth - 1;
         for leader in self.leaders.iter() {
             if let Ok(mut o) = leader.try_get_internal_mut() {
                 o.set_depth(depth);

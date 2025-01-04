@@ -151,6 +151,7 @@ impl Cullable for Artifact {
             return;
         }
         self.depth = depth;
+        let depth = depth - 1;
         if let Some(owner) = &self.owner {
             if let Ok(mut owner) = owner.try_get_internal_mut() {
                 owner.set_depth(depth);

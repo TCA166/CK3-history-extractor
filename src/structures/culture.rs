@@ -203,6 +203,7 @@ impl Cullable for Culture {
             return;
         }
         self.depth = depth;
+        let depth = depth - 1;
         for p in &self.parents {
             if let Ok(mut r) = p.try_get_internal_mut() {
                 r.set_depth(depth);

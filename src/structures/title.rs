@@ -451,9 +451,10 @@ impl Cullable for Title {
             return;
         }
         self.depth = depth;
+        let depth = depth - 1;
         if let Some(de_jure) = &self.de_jure {
             if let Ok(mut c) = de_jure.try_get_internal_mut() {
-                c.set_depth(depth - 1);
+                c.set_depth(depth);
             }
         }
         if let Some(de_facto) = &self.de_facto {

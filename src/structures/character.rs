@@ -181,8 +181,10 @@ impl Character {
         } else {
             if let Some(house) = &self.house {
                 let o = house.get_internal();
-                if let Some(faith) = o.get_faith() {
-                    return Some(faith.clone());
+                let leader = o.get_leader();
+                let leader = leader.get_internal();
+                if leader.get_id() != self.id {
+                    return leader.get_faith();
                 }
             }
         }
@@ -196,8 +198,10 @@ impl Character {
         } else {
             if let Some(house) = &self.house {
                 let o = house.get_internal();
-                if let Some(culture) = o.get_culture() {
-                    return Some(culture.clone());
+                let leader = o.get_leader();
+                let leader = leader.get_internal();
+                if leader.get_id() != self.id {
+                    return leader.get_culture();
                 }
             }
         }
@@ -594,19 +598,11 @@ impl Serialize for Character {
         state.serialize_field("dead", &self.dead)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
-        let mut faith = self.faith.clone();
-        let mut culture = self.culture.clone();
+        let faith = self.get_faith();
+        let culture = self.get_culture();
         if let Some(house) = &self.house {
             let rd = DerivedRef::from(house.clone());
             state.serialize_field("house", &rd)?;
-            if faith.is_none() {
-                let o = house.get_internal();
-                faith = o.get_faith();
-            }
-            if culture.is_none() {
-                let o = house.get_internal();
-                culture = o.get_culture();
-            }
         }
         if let Some(faith) = faith {
             let rf = DerivedRef::<Faith>::from(faith.clone());
@@ -753,34 +749,35 @@ impl Cullable for Character {
         }
         //cullable set
         self.depth = depth;
+        let depth = depth - 1;
         if let Some(liege) = &self.liege {
             if let Ok(mut o) = liege.get_ref().try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.spouses.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.former.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.children.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.parents.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.kills.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.vassals.iter_mut() {
@@ -793,12 +790,12 @@ impl Cullable for Character {
         }
         if let Some(faith) = &self.faith {
             if let Ok(mut o) = faith.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.titles.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         for s in self.memories.iter() {
@@ -809,12 +806,12 @@ impl Cullable for Character {
         self.artifacts.reverse();
         for s in self.artifacts.iter() {
             if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
         if let Some(house) = &self.house {
             if let Ok(mut o) = house.try_get_internal_mut() {
-                o.set_depth(depth - 1);
+                o.set_depth(depth);
             }
         }
     }
