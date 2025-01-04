@@ -1,7 +1,12 @@
 use clap_derive::Parser;
 use dialoguer::{Completion, Input, Select};
 
-use std::{fs, path::Path};
+use std::{
+    error,
+    fmt::{self, Debug, Display},
+    fs,
+    path::Path,
+};
 
 use super::steam::{get_ck3_path, SteamError, CK3_PATH};
 
@@ -49,43 +54,74 @@ impl Completion for SaveFileNameCompletion {
     }
 }
 
+#[derive(Debug)]
+enum InvalidPath {
+    InvalidPath,
+    NotAFile,
+    NotADir,
+}
+
+impl Display for InvalidPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPath => write!(f, "invalid path (does not exist)"),
+            Self::NotAFile => write!(f, "not a file"),
+            Self::NotADir => write!(f, "not a directory"),
+        }
+    }
+}
+
+impl error::Error for InvalidPath {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
+    }
+}
+
 /// A function to validate the file path input.
-fn validate_file_path(input: &String) -> Result<(), &'static str> {
+fn validate_file_path(input: &String) -> Result<(), InvalidPath> {
     if input.is_empty() {
         return Ok(());
     }
     let p = Path::new(input);
-    if p.exists() && p.is_file() {
-        Ok(())
+    if p.exists() {
+        if p.is_file() {
+            return Ok(());
+        } else {
+            return Err(InvalidPath::NotAFile);
+        }
     } else {
-        Err("Invalid path")
+        return Err(InvalidPath::InvalidPath);
     }
 }
 
 /// A function to validate the path list input.
-fn validate_path_list(input: &String) -> Result<(), &'static str> {
+fn validate_path_list(input: &String) -> Result<(), InvalidPath> {
     if input.is_empty() {
         return Ok(());
     }
     for p in input.split(',') {
-        let r = validate_dir_path(&p.to_string());
-        if r.is_err() {
-            return r;
+        let res = validate_dir_path(&p.to_string());
+        if res.is_err() {
+            return res;
         }
     }
     Ok(())
 }
 
 /// A function to validate the path input.
-fn validate_dir_path(input: &String) -> Result<(), &'static str> {
+fn validate_dir_path(input: &String) -> Result<(), InvalidPath> {
     if input.is_empty() {
         return Ok(());
     }
     let p = Path::new(input);
-    if p.exists() && p.is_dir() {
-        Ok(())
+    if p.exists() {
+        if p.is_dir() {
+            return Ok(());
+        } else {
+            return Err(InvalidPath::NotADir);
+        }
     } else {
-        Err("Invalid path")
+        return Err(InvalidPath::InvalidPath);
     }
 }
 
@@ -168,6 +204,7 @@ pub struct Args {
 impl Args {
     /// Create the object based on user input.
     pub fn get_from_user() -> Self {
+        println!("Welcome to CK3 save parser!\nUse tab to autocomplete file paths.");
         //console interface only if we are in a terminal
         let completion = SaveFileNameCompletion::default();
         let filename = Input::<String>::new()
