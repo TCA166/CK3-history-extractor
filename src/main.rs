@@ -29,7 +29,10 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, Renderer, Timeline};
+use display::{Cullable, Grapher, Renderable, Renderer, Timeline};
+
+mod game_data;
+use game_data::{GameDataLoader, Localizable};
 
 /// A submodule for handling the arguments passed to the program
 mod args;
@@ -114,8 +117,7 @@ fn main() -> Result<(), UserError> {
     if let Some(game_path) = args.game_path {
         include_paths.insert(0, game_path);
     }
-    let mut localizer = Localizer::new();
-    let mut map = None;
+    let mut loader = GameDataLoader::new(args.no_vis, args.language);
     if !include_paths.is_empty() {
         println!("Using game files from: {:?}", include_paths);
         let progress_bar = ProgressBar::new(include_paths.len() as u64);
@@ -124,19 +126,11 @@ fn main() -> Result<(), UserError> {
         progress_bar.enable_steady_tick(INTERVAL);
         progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
-            let loc_path = path.clone() + "/localization/" + args.language;
-            localizer.add_from_path(loc_path);
-            if !args.no_vis && map.is_none() {
-                let map_data = path.clone() + "/map_data";
-                let p = Path::new(&map_data);
-                if p.exists() && p.is_dir() {
-                    map = Some(GameMap::new(path));
-                }
-            }
+            loader.process_path(path).unwrap();
         }
         progress_bar.finish_with_message("Game files loaded");
     }
-    localizer.resolve();
+    let mut data = loader.finalize();
     //initialize the save file
     let save = SaveFile::open(args.filename.as_str())?;
     let tape = save.tape().unwrap();
@@ -154,14 +148,14 @@ fn main() -> Result<(), UserError> {
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
-    game_state.localize(&mut localizer);
+    game_state.localize(&mut data);
     let grapher;
     if !args.no_vis {
         grapher = Some(Grapher::new(&game_state));
     } else {
         grapher = None;
     }
-    let env = create_env(args.use_internal, map.is_some(), args.no_vis);
+    let env = create_env(args.use_internal, data.found_map(), args.no_vis);
     let timeline;
     if !args.no_vis {
         let mut tm = Timeline::new(&game_state);
@@ -180,7 +174,7 @@ fn main() -> Result<(), UserError> {
         .unwrap()
         .tick_chars("|/-\\ ");
     for player in player_progress.wrap_iter(players.iter_mut()) {
-        player.localize(&mut localizer);
+        player.localize(&mut data);
         //render each player
         let mut folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
@@ -196,7 +190,7 @@ fn main() -> Result<(), UserError> {
             &env,
             folder_name.clone(),
             &game_state,
-            map.as_ref(),
+            data.get_map(),
             grapher.as_ref(),
         );
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());

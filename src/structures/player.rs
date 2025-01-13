@@ -7,7 +7,8 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
+        display::{Cullable, Grapher, Renderable, RenderableType},
+        game_data::{GameMap, Localizable, Localize},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::Wrapper,
@@ -223,7 +224,7 @@ impl Renderable for Player {
 }
 
 impl Localizable for Player {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         for node in self.lineage.iter_mut() {
             node.localize(localization);
         }

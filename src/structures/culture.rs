@@ -2,10 +2,8 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{
-            Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType,
-            TreeNode,
-        },
+        display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
+        game_data::{GameMap, Localizable, Localize},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{OneOrMany, Wrapper, WrapperMut},
@@ -181,7 +179,7 @@ impl Renderable for Culture {
 }
 
 impl Localizable for Culture {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
         self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));

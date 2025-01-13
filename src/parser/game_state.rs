@@ -1,6 +1,6 @@
 use super::{
     super::{
-        display::{Localizable, Localizer},
+        game_data::{Localizable, Localize},
         structures::{
             Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
         },
@@ -305,7 +305,7 @@ impl GameState {
 }
 
 impl Localizable for GameState {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         for (_, character) in &mut self.characters {
             character.get_internal_mut().localize(localization);
         }

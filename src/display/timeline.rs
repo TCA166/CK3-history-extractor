@@ -2,6 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
+        game_data::GameMap,
         jinja_env::TIMELINE_TEMPLATE_NAME,
         parser::{GameId, GameState, GameString},
         structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
@@ -9,7 +10,7 @@ use super::{
     },
     graph::Grapher,
     renderer::{Cullable, Renderable},
-    GameMap, RenderableType,
+    RenderableType,
 };
 
 //const CREATED_STR:&str = "Created";

@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType},
+        display::{Cullable, Grapher, Renderable, RenderableType},
+        game_data::{GameMap, Localizable, Localize},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{Wrapper, WrapperMut},
@@ -130,7 +131,7 @@ impl Renderable for Faith {
 }
 
 impl Localizable for Faith {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
         for tenet in self.tenets.iter_mut() {
             *tenet = localization.localize(tenet.as_str());

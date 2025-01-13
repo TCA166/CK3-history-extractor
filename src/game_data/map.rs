@@ -1,4 +1,11 @@
-use std::thread;
+use std::{
+    error,
+    fmt::{self, Display},
+    io,
+    num::ParseIntError,
+    path::Path,
+    thread,
+};
 
 use csv::ReaderBuilder;
 
@@ -13,9 +20,7 @@ use plotters::{
 };
 
 use super::super::{
-    parser::{
-        GameId, GameString, ParsingError, SaveFile, SaveFileObject, SaveFileValue, SectionReader,
-    },
+    parser::{GameId, GameString},
     types::HashMap,
 };
 
@@ -39,67 +44,65 @@ const IMG_HEIGHT: u32 = 4096;
 /// The scale factor for the input map image
 const SCALE: u32 = 4;
 
-// File system stuff
-
-const MAP_PATH_SUFFIX: &str = "/map_data";
-const PROVINCES_SUFFIX: &str = "/provinces.png";
-const RIVERS_SUFFIX: &str = "/rivers.png";
-const DEFINITION_SUFFIX: &str = "/definition.csv";
-
 // TODO add error handling
 
-/// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
-fn read_png_bytes(path: String) -> Vec<u8> {
-    let img = ImageReader::open(&path);
-    if img.is_err() {
-        let err = img.err().unwrap();
-        panic!("Error {} reading image at path: {}, are you sure you are pointing at the right directory?", err, path);
-    }
-    let img = img.unwrap().decode().unwrap();
-    let buff = img.to_rgb8();
-    let bytes = buff.into_raw();
-    bytes
+#[derive(Debug)]
+pub enum MapError {
+    IoError(io::Error),
+    ImageError(image::ImageError),
+    DefinitionError(csv::Error),
+    ParsingError(ParseIntError),
 }
 
-/// Creates a mapping from barony title keys to province ids
-fn create_title_province_map(file: &SaveFile) -> Result<HashMap<String, GameId>, ParsingError> {
-    let tape = file.tape()?;
-    let reader = SectionReader::new(&tape);
-    let mut map = HashMap::default();
-    for title in reader {
-        let section = title?;
-        let title_object = section.parse()?;
-        //DFS in the structure
-        let mut stack = vec![title_object.as_map()?];
-        while let Some(o) = stack.pop() {
-            if let Some(pro) = o.get("province") {
-                match pro {
-                    // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
-                    SaveFileValue::Object(o) => {
-                        map.insert(
-                            o.get_name().to_owned(),
-                            o.as_array()?.get_index(0)?.as_id()?,
-                        );
-                    }
-                    s => {
-                        map.insert(o.get_name().to_owned(), s.as_id()?);
-                    }
-                }
-            }
-            for (_key, val) in o {
-                match val {
-                    SaveFileValue::Object(val) => match val {
-                        SaveFileObject::Map(val) => {
-                            stack.push(val);
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                }
-            }
+impl From<io::Error> for MapError {
+    fn from(e: io::Error) -> Self {
+        MapError::IoError(e)
+    }
+}
+
+impl From<image::ImageError> for MapError {
+    fn from(e: image::ImageError) -> Self {
+        MapError::ImageError(e)
+    }
+}
+
+impl From<csv::Error> for MapError {
+    fn from(e: csv::Error) -> Self {
+        MapError::DefinitionError(e)
+    }
+}
+
+impl From<ParseIntError> for MapError {
+    fn from(e: ParseIntError) -> Self {
+        MapError::ParsingError(e)
+    }
+}
+
+impl Display for MapError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MapError::IoError(e) => Display::fmt(e, f),
+            MapError::ImageError(e) => Display::fmt(e, f),
+            MapError::DefinitionError(e) => Display::fmt(e, f),
+            MapError::ParsingError(e) => Display::fmt(e, f),
         }
     }
-    return Ok(map);
+}
+
+impl error::Error for MapError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            MapError::IoError(e) => Some(e),
+            MapError::ImageError(e) => Some(e),
+            MapError::DefinitionError(e) => Some(e),
+            MapError::ParsingError(e) => Some(e),
+        }
+    }
+}
+
+/// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
+fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, MapError> {
+    Ok(ImageReader::open(path)?.decode()?.to_rgb8().into_raw())
 }
 
 /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
@@ -167,10 +170,14 @@ pub struct GameMap {
 impl GameMap {
     /// Creates a new GameMap from a province map and a definition.csv file located inside the provided path.
     /// The function expects the path to be a valid CK3 game directory.
-    pub fn new(game_path: &str) -> Self {
-        let map_path = game_path.to_owned() + MAP_PATH_SUFFIX;
-        let mut provinces_bytes = read_png_bytes(map_path.to_owned() + PROVINCES_SUFFIX);
-        let river_bytes = read_png_bytes(map_path.to_owned() + RIVERS_SUFFIX);
+    pub fn new<P: AsRef<Path>>(
+        provinces_path: P,
+        rivers_path: P,
+        definition_path: P,
+        province_barony_map: HashMap<GameId, String>,
+    ) -> Result<Self, MapError> {
+        let mut provinces_bytes = read_png_bytes(provinces_path)?;
+        let river_bytes = read_png_bytes(rivers_path)?;
         //apply river bytes as a mask to the provinces bytes so that non white pixels in rivers are black
         let len = provinces_bytes.len();
         let mut x = 0;
@@ -246,41 +253,35 @@ impl GameMap {
         let height = IMG_HEIGHT / SCALE;
         //save_buffer("provinces.png", &new_bytes, width, height, image::ExtendedColorType::Rgb8).unwrap();
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
-        let mut id_colors = HashMap::default();
+        let mut key_colors: HashMap<String, [u8; 3]> = HashMap::default();
         let mut rdr = ReaderBuilder::new()
             .comment(Some(b'#'))
             .flexible(true)
             .delimiter(b';')
-            .from_path(map_path.to_owned() + DEFINITION_SUFFIX)
-            .unwrap();
+            .from_path(definition_path)?;
         for record in rdr.records() {
-            if record.is_err() {
-                continue;
+            let record = match record {
+                Ok(record) => record,
+                Err(_) => continue,
+            };
+            let id = match record[0].parse::<GameId>() {
+                Ok(id) => id,
+                Err(_) => continue,
+            };
+            let r = record[1].parse::<u8>()?;
+            let g = record[2].parse::<u8>()?;
+            let b = record[3].parse::<u8>()?;
+            if let Some(barony) = province_barony_map.get(&id) {
+                key_colors.insert(barony.clone(), [r, g, b]);
             }
-            let record = record.unwrap();
-            let id = record[0].parse::<GameId>();
-            if id.is_err() {
-                continue;
-            }
-            let id = id.unwrap();
-            let r = record[1].parse::<u8>().unwrap();
-            let g = record[2].parse::<u8>().unwrap();
-            let b = record[3].parse::<u8>().unwrap();
-            id_colors.insert(id, [r, g, b]);
         }
-        let titles_path = game_path.to_owned() + "/common/landed_titles/00_landed_titles.txt";
-        let file = SaveFile::open(&titles_path).unwrap();
-        let title_province_map = create_title_province_map(&file).unwrap();
-        GameMap {
+        Ok(GameMap {
             height: height,
             width: width,
             byte_sz: new_bytes.len(),
             province_map: new_bytes,
-            title_color_map: title_province_map
-                .iter()
-                .map(|(k, v)| (k.to_owned(), id_colors.get(v).unwrap().clone()))
-                .collect(),
-        }
+            title_color_map: key_colors,
+        })
     }
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc

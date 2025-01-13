@@ -5,10 +5,8 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{
-            Cullable, GameMap, Grapher, Localizable, Localizer, Renderable, RenderableType,
-            TreeNode,
-        },
+        display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
+        game_data::{GameMap, Localizable, Localize},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameId, GameObjectMap, GameState, GameString, ParsingError, SaveFileObject,
@@ -432,7 +430,7 @@ impl Renderable for Title {
 }
 
 impl Localizable for Title {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         if self.key.is_none() {
             return;
         }

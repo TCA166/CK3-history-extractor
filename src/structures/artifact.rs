@@ -2,7 +2,8 @@ use serde::{ser::SerializeSeq, Serialize, Serializer};
 
 use super::{
     super::{
-        display::{Cullable, Localizable, Localizer, RenderableType},
+        display::{Cullable, RenderableType},
+        game_data::{Localizable, Localize},
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{Shared, WrapperMut},
     },
@@ -131,7 +132,7 @@ impl DummyInit for Artifact {
 }
 
 impl Localizable for Artifact {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         if let Some(rarity) = &self.rarity {
             self.rarity = Some(localization.localize(rarity));
         }

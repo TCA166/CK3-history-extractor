@@ -51,10 +51,12 @@ impl From<FromUtf8Error> for SaveFileError {
 impl Display for SaveFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::DecompressionError(err) => Display::fmt(err, f),
-            Self::IoError(err) => Display::fmt(err, f),
-            Self::DecodingError(err) => Display::fmt(err, f),
-            Self::ParseError(err) => write!(f, "{}", err),
+            Self::DecompressionError(err) => write!(f, "failed to decompress file: {}", err),
+            Self::IoError(err) => {
+                write!(f, "during file handling an IO error occurred: {}", err)
+            }
+            Self::DecodingError(err) => write!(f, "failed to decode file bytes: {}", err),
+            Self::ParseError(err) => Display::fmt(err, f),
         }
     }
 }

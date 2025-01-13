@@ -9,35 +9,47 @@ use super::super::{
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.
 fn demangle_generic(input: &str) -> String {
-    let mut s = input
-        .trim_start_matches("dynn_")
-        .trim_start_matches("nick_")
-        .trim_start_matches("death_")
-        .trim_start_matches("tenet_")
-        .trim_start_matches("doctrine_")
-        .trim_start_matches("ethos_")
-        .trim_start_matches("heritage_")
-        .trim_start_matches("language_")
-        .trim_start_matches("martial_custom_")
-        .trim_start_matches("tradition_")
-        .trim_start_matches("e_")
-        .trim_start_matches("k_")
-        .trim_start_matches("d_")
-        .trim_start_matches("c_")
-        .trim_start_matches("b_")
-        .trim_start_matches("x_x_")
-        .trim_end_matches("_name")
-        .trim_end_matches("_perk");
-    let mut input_chars = s.chars();
-    if input_chars.nth(1) == Some('p') && input_chars.nth(3) == Some('_') {
+    const PREFIXES: [&str; 16] = [
+        "dynn_",
+        "nick_",
+        "death_",
+        "tenet_",
+        "doctrine_",
+        "ethos_",
+        "heritage_",
+        "language_",
+        "martial_custom_",
+        "tradition_",
+        "e_",
+        "k_",
+        "d_",
+        "c_",
+        "b_",
+        "x_x_",
+    ];
+    const SUFFIXES: [&str; 2] = ["_name", "_perk"];
+
+    let mut s = input;
+    for prefix in PREFIXES {
+        if let Some(stripped) = s.strip_prefix(prefix) {
+            s = stripped;
+            break;
+        }
+    }
+    for suffix in SUFFIXES {
+        if let Some(stripped) = s.strip_suffix(suffix) {
+            s = stripped;
+            break;
+        }
+    }
+    if s.len() > 4 && &s[1..2] == "p" && &s[3..4] == "_" {
         s = s.split_at(4).1;
     }
     let mut s = s.replace("_", " ");
     if s.is_empty() {
         return s;
     }
-    let bytes = unsafe { s.as_bytes_mut() };
-    bytes[0] = bytes[0].to_ascii_uppercase();
+    s[0..1].make_ascii_uppercase();
     s
 }
 
@@ -148,26 +160,25 @@ fn resolve_stack(str: &GameString) -> GameString {
 
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
+/// After the data is added, the [Localizer::resolve] function should be called to resolve the special localization invocations.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
 pub struct Localizer {
     data: HashMap<String, GameString>,
 }
 
-impl Localizer {
-    /// Creates a new [Localizer] object.
-    /// The object is empty and needs to be filled with localization data.
-    /// After the data is added, the [Localizer::resolve] function should be called to resolve the special localisation invocations.
-    pub fn new() -> Self {
+impl Default for Localizer {
+    fn default() -> Self {
         Localizer {
-            data: HashMap::default(),
+            data: HashMap::new(),
         }
     }
+}
 
+impl Localizer {
     /// Adds localization data from a directory.
     /// The path may be invalid, in which case the function will simply do nothing
-    pub fn add_from_path(&mut self, localization_src_path: String) {
-        // get every file in the directory and subdirectories
-        let path = Path::new(&localization_src_path);
+    pub fn add_from_path<P: AsRef<Path>>(&mut self, path: P) {
+        let path = path.as_ref();
         if path.is_dir() {
             // a stack to keep track of the directories
             let mut stack: Vec<PathBuf> = Vec::new();
@@ -194,55 +205,58 @@ impl Localizer {
             for entry in all_files {
                 // read the file to string
                 let contents = fs::read_to_string(entry).unwrap();
-                //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
-                //so we doing the thing ourselves :)
+                // add the file to the localizer
+                self.add_localization_file(&contents);
+            }
+        }
+    }
 
-                //parse the 'yaml' file
-                let mut key = String::new();
-                let mut value = String::new();
-                let mut past = false;
-                let mut quotes = false;
-                for char in contents.chars() {
-                    match char {
-                        ' ' | '\t' => {
-                            if quotes {
-                                value.push(char);
-                            }
+    pub fn add_localization_file(&mut self, contents: &str) {
+        //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
+        //so we doing the thing ourselves :)
+
+        //parse the 'yaml' file
+        let mut key = String::new();
+        let mut value = String::new();
+        let mut past = false;
+        let mut quotes = false;
+        for char in contents.chars() {
+            match char {
+                ' ' | '\t' => {
+                    if quotes {
+                        value.push(char);
+                    }
+                }
+                '\n' => {
+                    if past && !quotes && !value.is_empty() {
+                        //Removing trait_? good idea because the localization isn't consistent enough with trait names
+                        //Removing _name though... controversial. Possibly a bad idea
+                        //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
+                        key = key
+                            .trim_start_matches("trait_")
+                            .trim_end_matches("_name")
+                            .to_string();
+                        self.data
+                            .insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
+                    } else {
+                        key.clear()
+                    }
+                    past = false;
+                    quotes = false;
+                }
+                ':' => {
+                    past = true;
+                }
+                '"' => {
+                    quotes = !quotes;
+                }
+                _ => {
+                    if past {
+                        if quotes {
+                            value.push(char);
                         }
-                        '\n' => {
-                            if past && !quotes && !value.is_empty() {
-                                //Removing trait_? good idea because the localisation isnt consistent enough with trait names
-                                //Removing _name though... controversial. Possibly a bad idea
-                                //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
-                                key = key
-                                    .trim_start_matches("trait_")
-                                    .trim_end_matches("_name")
-                                    .to_string();
-                                self.data.insert(
-                                    mem::take(&mut key),
-                                    GameString::wrap(mem::take(&mut value)),
-                                );
-                            } else {
-                                key.clear()
-                            }
-                            past = false;
-                            quotes = false;
-                        }
-                        ':' => {
-                            past = true;
-                        }
-                        '"' => {
-                            quotes = !quotes;
-                        }
-                        _ => {
-                            if past {
-                                if quotes {
-                                    value.push(char);
-                                }
-                            } else {
-                                key.push(char);
-                            }
-                        }
+                    } else {
+                        key.push(char);
                     }
                 }
             }
@@ -281,9 +295,14 @@ impl Localizer {
             self.data.insert(key.clone(), GameString::wrap(new_value));
         }
     }
+}
 
-    /// Localizes a string.
-    pub fn localize(&mut self, key: &str) -> GameString {
+pub trait Localize {
+    fn localize(&mut self, key: &str) -> GameString;
+}
+
+impl Localize for Localizer {
+    fn localize(&mut self, key: &str) -> GameString {
         if let Some(d) = self.data.get(key) {
             //if the string contains []
             if d.contains('[') && d.contains(']') {
@@ -303,7 +322,7 @@ impl Localizer {
 /// A trait that allows an object to be localized.
 pub trait Localizable {
     /// Localizes the object.
-    fn localize(&mut self, localization: &mut Localizer);
+    fn localize<L: Localize>(&mut self, localization: &mut L);
 }
 
 #[cfg(test)]
@@ -311,8 +330,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_demangle_generic() {
+        assert_eq!(demangle_generic("dynn_test_name"), "Test");
+        assert_eq!(demangle_generic("dynn_test_perk"), "Test");
+        assert_eq!(demangle_generic("dynn_test"), "Test");
+    }
+
+    #[test]
     fn test_links() {
-        let mut localizer = Localizer::new();
+        let mut localizer = Localizer::default();
         localizer
             .data
             .insert("key".to_string(), GameString::wrap("value".to_owned()));
@@ -337,7 +363,7 @@ mod tests {
 
     #[test]
     fn test_stack() {
-        let mut localizer = Localizer::new();
+        let mut localizer = Localizer::default();
         localizer.data.insert(
             "test".to_string(),
             GameString::wrap("[GetTrait(trait_test).GetName()]".to_owned()),

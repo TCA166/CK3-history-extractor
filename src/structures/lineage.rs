@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, Localizable, Localizer},
+        display::Cullable,
+        game_data::{Localizable, Localize},
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
     },
@@ -92,7 +93,7 @@ impl GameObjectDerived for LineageNode {
 }
 
 impl Localizable for LineageNode {
-    fn localize(&mut self, localization: &mut Localizer) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) {
         if let Some(lifestyle) = &self.lifestyle {
             self.lifestyle = Some(localization.localize(&lifestyle.as_str()));
         }

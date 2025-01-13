@@ -6,12 +6,12 @@ use serde::Serialize;
 
 use super::{
     super::{
+        game_data::GameMap,
         parser::{GameId, GameState},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
         types::{HashMap, HashSet, RefOrRaw, Wrapper},
     },
     graph::Grapher,
-    map::GameMap,
     RenderableType,
 };
 

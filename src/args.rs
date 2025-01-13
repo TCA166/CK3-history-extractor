@@ -229,7 +229,7 @@ impl Args {
                     }
                     e => {
                         // but if we can't find the CK3 path for some other reason, we print an error
-                        eprintln!("Error trying to find your CK3 installation: {:?}", e);
+                        eprintln!("Error trying to find your CK3 installation: {}", e);
                         CK3_PATH.to_string()
                     }
                 }

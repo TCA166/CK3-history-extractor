@@ -7,8 +7,9 @@ use serde::{
 
 use super::{
     super::{
-        display::{Cullable, Renderable, RenderableType},
-        parser::GameString,
+        display::{Cullable, Grapher, Renderable, RenderableType},
+        game_data::GameMap,
+        parser::{GameState, GameString},
         types::WrapperMut,
     },
     GameId, GameObjectDerived, Shared, Wrapper,
@@ -158,9 +159,9 @@ where
     fn render(
         &self,
         path: &str,
-        game_state: &crate::parser::GameState,
-        grapher: Option<&crate::display::Grapher>,
-        map: Option<&crate::display::GameMap>,
+        game_state: &GameState,
+        grapher: Option<&Grapher>,
+        map: Option<&GameMap>,
     ) {
         self.obj
             .as_ref()

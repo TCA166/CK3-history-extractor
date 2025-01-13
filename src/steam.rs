@@ -1,4 +1,9 @@
-use std::{fmt::Debug, fs::read_to_string, path::Path};
+use std::{
+    env, error,
+    fmt::{self, Debug, Display},
+    fs::read_to_string,
+    path::{Path, PathBuf},
+};
 
 use keyvalues_parser::{Value, Vdf};
 
@@ -7,11 +12,14 @@ use keyvalues_parser::{Value, Vdf};
 const CK3_ID: &str = "1158310";
 
 #[cfg(target_os = "linux")]
-const DEFAULT_STEAM_PATH: &str = ".local/share/Steam/steamapps/";
+const DEFAULT_STEAM_PATH: [&str; 2] = [
+    ".local/share/Steam/steamapps/",
+    ".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/",
+];
 #[cfg(target_os = "windows")]
-const DEFAULT_STEAM_PATH: &str = "C:\\Program Files (x86)\\Steam\\steamapps\\";
+const DEFAULT_STEAM_PATH: [&str; 1] = ["C:\\Program Files (x86)\\Steam\\steamapps\\"];
 #[cfg(target_os = "macos")]
-const DEFAULT_STEAM_PATH: &str = "Library/Application Support/Steam/steamapps/";
+const DEFAULT_STEAM_PATH: [&str; 1] = ["Library/Application Support/Steam/steamapps/"];
 
 /// The default path from the Steam directory to the libraryfolders.vdf file.
 const DEFAULT_VDF_PATH: &str = "libraryfolders.vdf";
@@ -19,6 +27,7 @@ const DEFAULT_VDF_PATH: &str = "libraryfolders.vdf";
 /// The default path from the library to the CK3 directory.
 pub const CK3_PATH: &str = "steamapps/common/Crusader Kings III/game";
 
+#[derive(Debug)]
 pub enum SteamError {
     /// The Steam directory was not found.
     SteamDirNotFound,
@@ -34,17 +43,44 @@ pub enum SteamError {
     CK3Missing,
 }
 
-impl Debug for SteamError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for SteamError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SteamError::SteamDirNotFound => write!(f, "Steam directory not found"),
+            SteamError::SteamDirNotFound => write!(f, "steam directory not found"),
             SteamError::VdfNotFound => write!(f, "VDF file not found"),
-            SteamError::VdfParseError(e) => write!(f, "Library error parsing VDF file: {:?}", e),
-            SteamError::VdfProcessingError(e) => write!(f, "Error processing VDF file: {:?}", e),
+            SteamError::VdfParseError(e) => write!(f, "library error parsing VDF file: {}", e),
+            SteamError::VdfProcessingError(e) => write!(f, "error processing VDF file: {}", e),
             SteamError::Ck3NotFound => write!(f, "CK3 directory pointed to not found"),
             SteamError::CK3Missing => write!(f, "CK3 missing from library"),
         }
     }
+}
+
+impl error::Error for SteamError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            SteamError::VdfParseError(e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+/// Tries to get the steam path
+fn get_steam_path() -> Result<PathBuf, SteamError> {
+    for path in DEFAULT_STEAM_PATH.iter() {
+        let steam_path = if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
+            #[allow(deprecated)]
+            // home_dir is deprecated, because Windows is bad, but we don't care since we are only using it for Linux
+            env::home_dir().unwrap().join(path)
+        } else {
+            Path::new(path).to_path_buf()
+        };
+
+        if steam_path.is_dir() {
+            return Ok(steam_path.to_path_buf());
+        }
+    }
+    Err(SteamError::SteamDirNotFound)
 }
 
 /// Get the path to the Crusader Kings III directory.
@@ -59,19 +95,7 @@ impl Debug for SteamError {
 ///
 /// The path to the Crusader Kings III directory.
 pub fn get_ck3_path() -> Result<String, SteamError> {
-    let steam_path = if cfg!(target_os = "windows") {
-        Path::new(DEFAULT_STEAM_PATH).to_path_buf()
-    } else if cfg!(target_os = "linux") || cfg!(target_os = "macos") {
-        #[allow(deprecated)]
-        // home_dir is deprecated, because Windows is bad, but we don't care since we are only using it for Linux
-        std::env::home_dir().unwrap().join(DEFAULT_STEAM_PATH)
-    } else {
-        return Err(SteamError::SteamDirNotFound);
-    };
-    if !steam_path.exists() {
-        return Err(SteamError::SteamDirNotFound);
-    }
-    let vdf_path = steam_path.join(DEFAULT_VDF_PATH);
+    let vdf_path = get_steam_path()?.join(DEFAULT_VDF_PATH);
     if !vdf_path.exists() {
         return Err(SteamError::VdfNotFound);
     }
