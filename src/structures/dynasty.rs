@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameData, Localizable, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{Wrapper, WrapperMut},
@@ -283,7 +283,7 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: Option<&GameMap>) {
+    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if let Some(grapher) = grapher {
             let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
             grapher.create_dynasty_graph(self, &path);

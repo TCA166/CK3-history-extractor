@@ -8,7 +8,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameMap, Localizable, Localize, MapGenerator},
+        game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::Wrapper,
@@ -92,9 +92,9 @@ impl Renderable for Player {
         path: &str,
         game_state: &GameState,
         grapher: Option<&Grapher>,
-        map: Option<&GameMap>,
+        data: &GameData,
     ) {
-        if let Some(map) = map {
+        if let Some(map) = data.get_map() {
             //timelapse rendering
             let mut file = File::create(path.to_owned() + "/timelapse.gif").unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);

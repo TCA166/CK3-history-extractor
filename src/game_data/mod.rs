@@ -25,8 +25,4 @@ impl GameData {
     pub fn get_map(&self) -> Option<&GameMap> {
         self.map.as_ref()
     }
-
-    pub fn found_map(&self) -> bool {
-        self.map.is_some()
-    }
 }

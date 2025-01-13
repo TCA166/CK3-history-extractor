@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use super::{
     super::{
-        game_data::GameMap,
+        game_data::GameData,
         parser::{GameId, GameState},
         structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
         types::{HashMap, HashSet, RefOrRaw, Wrapper},
@@ -37,9 +37,8 @@ pub struct Renderer<'a> {
     /// The path where the objects will be rendered to.
     /// This usually takes the form of './{username}'s history/'.
     path: String,
-    /// The game map object, if it exists.
-    /// It may be utilized during the rendering process to render the map.
-    game_map: Option<&'a GameMap>,
+    /// The loaded game data object.
+    data: &'a GameData,
     /// The grapher object, if it exists.
     /// It may be utilized during the rendering process to render a variety of graphs.
     grapher: Option<&'a Grapher>,
@@ -67,7 +66,7 @@ impl<'a> Renderer<'a> {
         env: &'a Environment<'a>,
         path: String,
         state: &'a GameState,
-        game_map: Option<&'a GameMap>,
+        data: &'a GameData,
         grapher: Option<&'a Grapher>,
     ) -> Self {
         create_dir_maybe(&path);
@@ -80,7 +79,7 @@ impl<'a> Renderer<'a> {
             env,
             rendered: HashMap::default(),
             path,
-            game_map,
+            data,
             grapher,
             state,
         }
@@ -114,7 +113,7 @@ impl<'a> Renderer<'a> {
             //IO heavy, so spawn a thread
             fs::write(path, contents).unwrap();
         });
-        obj.render(&self.path, &self.state, self.grapher, self.game_map);
+        obj.render(&self.path, &self.state, self.grapher, self.data);
         obj.append_ref(stack);
         let rendered = self
             .rendered
@@ -231,7 +230,7 @@ pub trait Renderable: Serialize + Cullable {
         path: &str,
         game_state: &GameState,
         grapher: Option<&Grapher>,
-        map: Option<&GameMap>,
+        data: &GameData,
     ) {
     }
 

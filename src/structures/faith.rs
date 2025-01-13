@@ -3,7 +3,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameMap, Localizable, Localize, MapGenerator},
+        game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::{RefOrRaw, Wrapper, WrapperMut},
@@ -89,13 +89,13 @@ impl Renderable for Faith {
         path: &str,
         game_state: &GameState,
         grapher: Option<&Grapher>,
-        map: Option<&GameMap>,
+        data: &GameData,
     ) {
         if let Some(grapher) = grapher {
             let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
             grapher.create_faith_graph(self.id, &path);
         }
-        if let Some(map) = map {
+        if let Some(map) = data.get_map() {
             let filter = |title: &RefOrRaw<Title>| {
                 let key = title.get_key();
                 if key.is_none() {

@@ -8,7 +8,7 @@ use serde::{
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::GameMap,
+        game_data::GameData,
         parser::{GameState, GameString},
         types::WrapperMut,
     },
@@ -161,13 +161,13 @@ where
         path: &str,
         game_state: &GameState,
         grapher: Option<&Grapher>,
-        map: Option<&GameMap>,
+        data: &GameData,
     ) {
         self.obj
             .as_ref()
             .unwrap()
             .get_internal()
-            .render(path, game_state, grapher, map);
+            .render(path, game_state, grapher, data);
     }
 }
 

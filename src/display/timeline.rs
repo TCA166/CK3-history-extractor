@@ -2,7 +2,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        game_data::GameMap,
+        game_data::GameData,
         jinja_env::TIMELINE_TEMPLATE_NAME,
         parser::{GameId, GameState, GameString},
         structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
@@ -202,7 +202,7 @@ impl Renderable for Timeline {
         TIMELINE_TEMPLATE_NAME
     }
 
-    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: Option<&GameMap>) {
+    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if grapher.is_some() {
             let path = format!("{}/timeline.svg", path);
             create_timeline_graph(&self.lifespans, self.latest_event, &path)

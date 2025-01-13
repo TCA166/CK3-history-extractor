@@ -6,7 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameMap, Localizable, Localize, MapGenerator},
+        game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameId, GameObjectMap, GameState, GameString, ParsingError, SaveFileObject,
@@ -409,15 +409,11 @@ impl Renderable for Title {
         }
     }
 
-    fn render(
-        &self,
-        path: &str,
-        game_state: &GameState,
-        _: Option<&Grapher>,
-        map: Option<&GameMap>,
-    ) {
-        if map.is_some() && self.de_facto_vassals.len() > 0 {
-            let map = map.unwrap();
+    fn render(&self, path: &str, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
+        if let Some(map) = data.get_map() {
+            if self.de_facto_vassals.len() == 0 {
+                return;
+            }
             let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
             let label = format!(
                 "{} at {}",

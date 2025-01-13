@@ -155,7 +155,7 @@ fn main() -> Result<(), UserError> {
     } else {
         grapher = None;
     }
-    let env = create_env(args.use_internal, data.found_map(), args.no_vis);
+    let env = create_env(args.use_internal, data.get_map().is_some(), args.no_vis);
     let timeline;
     if !args.no_vis {
         let mut tm = game_state.new_timeline();
@@ -190,7 +190,7 @@ fn main() -> Result<(), UserError> {
             &env,
             folder_name.clone(),
             &game_state,
-            data.get_map(),
+            &data,
             grapher.as_ref(),
         );
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());

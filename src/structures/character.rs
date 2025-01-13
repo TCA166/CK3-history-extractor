@@ -3,7 +3,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameData, Localizable, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
         types::{OneOrMany, Wrapper, WrapperMut},
@@ -94,15 +94,15 @@ impl Renderable for Vassal {
         path: &str,
         game_state: &GameState,
         grapher: Option<&Grapher>,
-        map: Option<&GameMap>,
+        data: &GameData,
     ) {
         match self {
-            Vassal::Character(c) => c.get_internal().render(path, game_state, grapher, map),
+            Vassal::Character(c) => c.get_internal().render(path, game_state, grapher, data),
             Vassal::Reference(r) => r
                 .get_internal()
                 .get_ref()
                 .get_internal()
-                .render(path, game_state, grapher, map),
+                .render(path, game_state, grapher, data),
         }
     }
 
