@@ -283,13 +283,47 @@ impl GameMap {
             title_color_map: key_colors,
         })
     }
+}
 
+pub trait MapGenerator {
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
     /// Returns a vector of RGB bytes representing the new map
-    fn create_map<F>(&self, key_list: Vec<GameString>, assoc: F) -> Vec<u8>
-    where
-        F: Fn(&String) -> [u8; 3],
-    {
+    fn create_map<F: Fn(&String) -> [u8; 3]>(&self, key_list: Vec<GameString>, assoc: F)
+        -> Vec<u8>;
+
+    /// Creates a province map with the colors of the provinces in id_list changed to target_color
+    /// Returns a [ImageBuffer] of RGBA bytes representing the new map
+    fn create_map_buffer(
+        &self,
+        key_list: Vec<GameString>,
+        target_color: &[u8; 3],
+        label: &str,
+    ) -> ImageBuffer<Rgba<u8>, Vec<u8>>;
+
+    /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
+    fn create_map_file(
+        &self,
+        key_list: Vec<GameString>,
+        target_color: &[u8; 3],
+        output_path: &str,
+        label: &str,
+    );
+
+    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
+    fn create_map_graph<F: Fn(&String) -> [u8; 3]>(
+        &self,
+        assoc: F,
+        output_path: &str,
+        legend: Vec<(String, [u8; 3])>,
+    );
+}
+
+impl MapGenerator for GameMap {
+    fn create_map<F: Fn(&String) -> [u8; 3]>(
+        &self,
+        key_list: Vec<GameString>,
+        assoc: F,
+    ) -> Vec<u8> {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::default();
         for k in key_list.iter() {
@@ -327,9 +361,7 @@ impl GameMap {
         return new_map;
     }
 
-    /// Creates a province map with the colors of the provinces in id_list changed to target_color
-    /// Returns a [ImageBuffer] of RGBA bytes representing the new map
-    pub fn create_map_buffer(
+    fn create_map_buffer(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
@@ -350,8 +382,7 @@ impl GameMap {
         ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
     }
 
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    pub fn create_map_file(
+    fn create_map_file(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
@@ -379,11 +410,12 @@ impl GameMap {
         });
     }
 
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    pub fn create_map_graph<F>(&self, assoc: F, output_path: &str, legend: Vec<(String, [u8; 3])>)
-    where
-        F: Fn(&String) -> [u8; 3],
-    {
+    fn create_map_graph<F: Fn(&String) -> [u8; 3]>(
+        &self,
+        assoc: F,
+        output_path: &str,
+        legend: Vec<(String, [u8; 3])>,
+    ) {
         let mut new_map = self.create_map(
             self.title_color_map
                 .keys()

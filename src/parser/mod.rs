@@ -105,7 +105,7 @@ impl<'a> error::Error for ParsingError {
 
 use super::{
     structures::{FromGameObject, Player},
-    types::{HashMap, Wrapper, WrapperMut},
+    types::HashMap,
 };
 
 /// A function that processes a section of the save file.
@@ -154,20 +154,7 @@ pub fn process_section(
                 let culture = game_state.get_culture(&p.get_game_id("culture")?);
                 key_assoc.insert(key.as_str(), (faith, culture));
             }
-            for (_, title) in game_state.get_title_iter() {
-                let key = title.get_internal().get_key();
-                if key.is_none() {
-                    continue;
-                }
-                let assoc = key_assoc.get(key.unwrap().as_str());
-                if assoc.is_none() {
-                    continue;
-                }
-                let (faith, culture) = assoc.unwrap();
-                title
-                    .get_internal_mut()
-                    .add_county_data(culture.clone(), faith.clone())
-            }
+            game_state.add_county_data(key_assoc);
         }
         "dynasties" => {
             for (_, d) in i.parse()?.as_map()? {

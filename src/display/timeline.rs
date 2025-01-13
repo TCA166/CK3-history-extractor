@@ -8,15 +8,10 @@ use super::{
         structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
         types::{Shared, Wrapper, WrapperMut},
     },
-    graph::Grapher,
+    graph::{create_timeline_graph, Grapher},
     renderer::{Cullable, Renderable},
     RenderableType,
 };
-
-//const CREATED_STR:&str = "Created";
-const DESTROYED_STR: &str = "destroyed";
-const USURPED_STR: &str = "usurped";
-const CONQUERED_START_STR: &str = "conq"; //this should match both 'conquered' and 'conquest holy war'
 
 /// An enum representing the difference in faith or culture between two realms, really just a wrapper around DerivedRef
 pub enum RealmDifference {
@@ -87,121 +82,17 @@ pub struct Timeline {
 
 impl Timeline {
     /// Creates a new timeline from the game state
-    pub fn new(game_state: &GameState) -> Self {
-        let mut lifespans = Vec::new();
-        let mut latest_event = 0;
-        let mut event_checkout = Vec::new();
-        for (_, title) in game_state.get_title_iter() {
-            //first we handle the empires and collect titles that might be relevant for events
-            let t = title.get_internal();
-            let hist = t.get_history_iter();
-            if hist.len() == 0 {
-                continue;
-            }
-            if let Some(k) = t.get_key() {
-                //if the key is there
-                let kingdom = k.as_ref().starts_with("k_");
-                if kingdom {
-                    event_checkout.push(title.clone());
-                    //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
-                    continue;
-                }
-                let empire = k.as_ref().starts_with("e_");
-                if !empire {
-                    continue;
-                }
-                event_checkout.push(title.clone());
-                event_checkout.push(title.get_internal().get_capital().unwrap().clone());
-                let mut item = (title.clone(), Vec::new());
-                let mut empty = true;
-                let mut start = 0;
-                for entry in hist {
-                    let yr = entry.0.split_once('.').unwrap().0.parse().unwrap();
-                    if yr > latest_event {
-                        latest_event = yr;
-                    }
-                    let event = entry.2.as_str();
-                    if event == DESTROYED_STR {
-                        //if it was destroyed we mark the end of the lifespan
-                        item.1.push((start, yr));
-                        empty = true;
-                    } else if empty {
-                        //else if we are not in a lifespan we start a new one
-                        start = yr;
-                        empty = false;
-                    }
-                }
-                if empire {
-                    if !empty {
-                        item.1.push((start, 0));
-                    }
-                    //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
-                    lifespans.push(item);
-                }
-            }
-        }
-        let mut events: Vec<(
+    pub fn new(
+        lifespans: Vec<(Shared<Title>, Vec<(u32, u32)>)>,
+        latest_event: u32,
+        events: Vec<(
             u32,
             Shared<Character>,
             Shared<Title>,
             GameString,
             RealmDifference,
-        )> = Vec::new();
-        for title in event_checkout {
-            let tit = title.get_internal();
-            //find the first event that has a character attached
-            let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
-            let next = hist.next();
-            if next.is_none() {
-                continue;
-            }
-            let first_char = next.unwrap().1.as_ref().unwrap().get_internal();
-            let mut faith = first_char.get_faith().unwrap().get_internal().get_id();
-            let mut culture = first_char.get_culture().unwrap().get_internal().get_id();
-            for entry in hist {
-                let char = entry.1.as_ref();
-                if char.is_none() {
-                    continue;
-                }
-                let char = char.unwrap();
-                let event = entry.2.as_str();
-                let ch = char.get_internal();
-                let char_faith = ch.get_faith();
-                let ch_faith = char_faith.as_ref().unwrap().get_internal();
-                let char_culture = ch.get_culture();
-                let ch_culture = char_culture.as_ref().unwrap().get_internal();
-                if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
-                    let year: u32 = entry.0.split_once('.').unwrap().0.parse().unwrap();
-                    if ch_faith.get_id() != faith {
-                        events.push((
-                            year,
-                            char.clone(),
-                            title.clone(),
-                            GameString::wrap("faith".to_owned()),
-                            RealmDifference::Faith(char_faith.as_ref().unwrap().clone()),
-                        ));
-                        faith = ch_faith.get_id();
-                    } else if ch_culture.get_id() != culture {
-                        events.push((
-                            year,
-                            char.clone(),
-                            title.clone(),
-                            GameString::wrap("people".to_owned()),
-                            RealmDifference::Culture(char_culture.as_ref().unwrap().clone()),
-                        ));
-                        culture = ch_culture.get_id();
-                    }
-                } else {
-                    if ch_faith.get_id() != faith {
-                        faith = ch_faith.get_id();
-                    }
-                    if ch_culture.get_id() != culture {
-                        culture = ch_culture.get_id();
-                    }
-                }
-            }
-        }
-        events.sort_by(|a, b| a.0.cmp(&b.0));
+        )>,
+    ) -> Self {
         Self {
             lifespans,
             latest_event,
@@ -314,7 +205,7 @@ impl Renderable for Timeline {
     fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: Option<&GameMap>) {
         if grapher.is_some() {
             let path = format!("{}/timeline.svg", path);
-            Grapher::create_timeline_graph(&self.lifespans, self.latest_event, &path)
+            create_timeline_graph(&self.lifespans, self.latest_event, &path)
         }
     }
 

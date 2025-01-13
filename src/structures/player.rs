@@ -8,7 +8,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameMap, Localizable, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
         types::Wrapper,
@@ -16,10 +16,7 @@ use super::{
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
 };
 
-use std::{
-    collections::{HashMap, HashSet},
-    fs::File,
-};
+use std::{collections::HashSet, fs::File};
 
 const TARGET_COLOR: [u8; 3] = [70, 255, 70];
 const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
@@ -128,53 +125,6 @@ impl Renderable for Player {
                 gif_encoder.encode_frame(frame).unwrap();
             }
             gif_encoder.set_repeat(Repeat::Infinite).unwrap();
-            // genetic similarity gradient rendering
-            let last = self.lineage.last().unwrap().get_character();
-            let title_iter = game_state.get_title_iter();
-            let mut sim = HashMap::new();
-            for (_, title) in title_iter {
-                let title = title.get_internal();
-                let key = title.get_key();
-                if key.is_none() {
-                    continue;
-                }
-                let key = key.unwrap();
-                if !(key.starts_with("c_") || key.starts_with("b_")) {
-                    continue;
-                }
-                let similarity = if let Some(ruler) = title.get_holder() {
-                    let ruler = ruler.get_internal();
-                    ruler.dna_similarity(last.clone())
-                } else {
-                    0.0
-                };
-                for barony in title.get_de_jure_barony_keys() {
-                    if sim.contains_key(barony.as_ref())
-                        && similarity < *sim.get(barony.as_ref()).unwrap()
-                    {
-                        continue;
-                    }
-                    sim.insert(barony.as_ref().clone(), similarity);
-                }
-            }
-            map.create_map_graph(
-                |key: &String| {
-                    if let Some(sim) = sim.get(key) {
-                        return [
-                            BASE_COLOR[0],
-                            BASE_COLOR[1],
-                            (BASE_COLOR[2] as f32 * (1.0 - sim)) as u8,
-                        ];
-                    } else {
-                        return BASE_COLOR;
-                    }
-                },
-                &format!("{}/sim.png", path),
-                vec![
-                    ("0%".to_string(), BASE_COLOR),
-                    ("100%".to_string(), [BASE_COLOR[0], BASE_COLOR[1], 0]),
-                ],
-            );
             let mut direct_titles = HashSet::new();
             let mut descendant_title = HashSet::new();
             let first = self.lineage.first().unwrap().get_character();

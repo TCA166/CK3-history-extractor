@@ -263,27 +263,6 @@ impl Character {
         return provinces;
     }
 
-    /// Gets the DNA similarity of the character with another character
-    pub fn dna_similarity(&self, other: Shared<Character>) -> f32 {
-        if let Some(dna) = &self.dna {
-            // Ok so I did discover that dna string lengths are always multiple of 4, which does imply that they are encoded ints or shorts
-            // but that seems to be just a coincidence? experimenting with comparing multiples of 4 characters doesn't seem to give any meaningful results
-            // so single char comparison it is, the metric is still far from perfect, but until we know more about the encoding, it's the best we can do
-            let mut dna_chars = dna.chars();
-            let other = other.get_internal();
-            let mut other_chars = other.dna.as_ref().unwrap().chars();
-            let mut similarity = 0;
-            while let (Some(d), Some(o)) = (dna_chars.next(), other_chars.next()) {
-                if d == o {
-                    similarity += 1;
-                }
-            }
-            return similarity as f32 / dna.len() as f32;
-        } else {
-            return 0.0;
-        }
-    }
-
     /// Gets the descendants of the character
     pub fn get_descendants(&self) -> Vec<Shared<Character>> {
         let mut res = Vec::new();

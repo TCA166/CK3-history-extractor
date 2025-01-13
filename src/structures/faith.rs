@@ -3,12 +3,12 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameMap, Localizable, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
-        types::{Wrapper, WrapperMut},
+        types::{RefOrRaw, Wrapper, WrapperMut},
     },
-    serialize_ref, Character, DummyInit, GameObjectDerived, Shared,
+    serialize_ref, Character, DummyInit, GameObjectDerived, Shared, Title,
 };
 
 /// A struct representing a faith in the game
@@ -96,21 +96,19 @@ impl Renderable for Faith {
             grapher.create_faith_graph(self.id, &path);
         }
         if let Some(map) = map {
-            let mut keys = Vec::new();
-            for entry in game_state.get_title_iter() {
-                let title = entry.1.get_internal();
+            let filter = |title: &RefOrRaw<Title>| {
                 let key = title.get_key();
                 if key.is_none() {
-                    continue;
+                    return false;
                 }
-                if !key.as_ref().unwrap().starts_with("c_") {
-                    continue;
+                if key.as_ref().unwrap().starts_with("c_") {
+                    if let Some(c_faith) = title.get_faith() {
+                        return c_faith.get_internal().id == self.id;
+                    }
                 }
-                let c_faith = title.get_faith().unwrap();
-                if c_faith.get_internal().id == self.id {
-                    keys.append(&mut title.get_barony_keys());
-                }
-            }
+                return false;
+            };
+            let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
                 let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
                 map.create_map_file(

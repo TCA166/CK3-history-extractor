@@ -6,7 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameMap, Localizable, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameId, GameObjectMap, GameState, GameString, ParsingError, SaveFileObject,
@@ -107,7 +107,7 @@ impl Title {
 
     /// Returns an iterator over the history of the title
     pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)> {
-        self.history.iter()
+        self.history.iter() // FIXME bad anti-pattern
     }
 
     /// Returns the capital of the title

@@ -29,7 +29,7 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{Cullable, Grapher, Renderable, Renderer, Timeline};
+use display::{Cullable, Renderable, Renderer};
 
 mod game_data;
 use game_data::{GameDataLoader, Localizable};
@@ -124,8 +124,8 @@ fn main() -> Result<(), UserError> {
         progress_bar.set_style(bar_style.clone());
         // "items" in this case are huge, 8s on my ssd, so we enable the steady tick
         progress_bar.enable_steady_tick(INTERVAL);
-        progress_bar.set_message(include_paths.last().unwrap().to_owned());
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
+            progress_bar.set_message(path.to_owned());
             loader.process_path(path).unwrap();
         }
         progress_bar.finish_with_message("Game files loaded");
@@ -151,14 +151,14 @@ fn main() -> Result<(), UserError> {
     game_state.localize(&mut data);
     let grapher;
     if !args.no_vis {
-        grapher = Some(Grapher::new(&game_state));
+        grapher = Some(game_state.new_grapher());
     } else {
         grapher = None;
     }
     let env = create_env(args.use_internal, data.found_map(), args.no_vis);
     let timeline;
     if !args.no_vis {
-        let mut tm = Timeline::new(&game_state);
+        let mut tm = game_state.new_timeline();
         tm.set_depth(args.depth);
         timeline = Some(tm);
     } else {

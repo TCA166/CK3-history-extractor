@@ -3,12 +3,12 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameMap, Localizable, Localize},
+        game_data::{GameMap, Localizable, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
-        types::{OneOrMany, Wrapper, WrapperMut},
+        types::{OneOrMany, RefOrRaw, Wrapper, WrapperMut},
     },
-    serialize_array_ref, DummyInit, GameObjectDerived, Shared,
+    serialize_array_ref, DummyInit, GameObjectDerived, Shared, Title,
 };
 
 /// A struct representing a culture in the game
@@ -141,21 +141,19 @@ impl Renderable for Culture {
             grapher.create_culture_graph(self.id, &path);
         }
         if let Some(map) = map {
-            let mut keys = Vec::new();
-            for entry in game_state.get_title_iter() {
-                let title = entry.1.get_internal();
+            let filter = |title: &RefOrRaw<Title>| {
                 let key = title.get_key();
                 if key.is_none() {
-                    continue;
+                    return false;
                 }
-                if !key.as_ref().unwrap().starts_with("c_") {
-                    continue;
+                if key.as_ref().unwrap().starts_with("c_") {
+                    if let Some(c_culture) = title.get_culture() {
+                        return c_culture.get_internal().id == self.id;
+                    }
                 }
-                let c_culture = title.get_culture().unwrap();
-                if c_culture.get_internal().id == self.id {
-                    keys.append(&mut title.get_barony_keys());
-                }
-            }
+                return false;
+            };
+            let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
                 let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
                 map.create_map_file(

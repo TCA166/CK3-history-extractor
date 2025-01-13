@@ -119,6 +119,8 @@ impl<T> Clone for Shared<T> {
     }
 }
 
+// TODO Deref
+
 impl<T: GameObjectDerived> Serialize for Shared<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

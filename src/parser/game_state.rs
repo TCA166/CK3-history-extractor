@@ -1,10 +1,15 @@
+use std::collections::HashMap;
+
+use crate::structures::GameObjectDerived;
+
 use super::{
     super::{
+        display::{Grapher, RealmDifference, Timeline},
         game_data::{Localizable, Localize},
         structures::{
             Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
         },
-        types::{HashMap, HashMapIter, RefOrRaw, Shared, Wrapper, WrapperMut},
+        types::{RefOrRaw, Shared, Wrapper, WrapperMut},
     },
     game_object::{GameId, GameObjectMap, GameString},
     ParsingError,
@@ -222,85 +227,201 @@ impl GameState {
             .init(value, self)
     }
 
-    /// Creates a hashmap death year->number of deaths
-    pub fn get_total_yearly_deaths(&self) -> HashMap<u32, u32> {
-        let mut result = HashMap::default();
-        for (_, character) in &self.characters {
-            let char = character.get_internal();
-            let death_date = char.get_death_date();
-            if death_date.is_none() {
-                continue;
+    pub fn get_baronies_of_counties<F: Fn(&RefOrRaw<Title>) -> bool>(
+        &self,
+        filter: F,
+    ) -> Vec<GameString> {
+        let mut res = Vec::new();
+        for title in self.titles.values() {
+            let title = title.get_internal();
+            if filter(&title) {
+                res.append(&mut title.get_barony_keys());
             }
-            let death_date = death_date.unwrap();
-            let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            if let Some(offset) = self.offset_date {
-                if death_year < self.current_year.unwrap() - offset {
-                    continue;
-                }
-            }
-            let count = result.entry(death_year).or_insert(0);
-            *count += 1;
         }
-        return result;
+        res
     }
 
-    /// Returns a hashmap of classes of characters and their associated yearly death graphs
-    /// So for example if you provide a function that returns the dynasty of a character
-    /// you will get a hashmap of dynasties and their yearly death counts
-    pub fn get_yearly_deaths<F>(
-        &self,
-        associate: F,
-        total: &HashMap<u32, u32>,
-    ) -> HashMap<GameId, Vec<(u32, f64)>>
-    where
-        F: Fn(RefOrRaw<Character>) -> Option<GameId>,
-    {
-        let mut result = HashMap::default();
-        for (_, character) in &self.characters {
-            let char = character.get_internal();
-            let death_date = char.get_death_date();
-            if death_date.is_none() {
-                continue;
-            }
-            let key = associate(char);
+    pub fn add_county_data(
+        &mut self,
+        county_data: HashMap<&str, (Shared<Faith>, Shared<Culture>)>,
+    ) {
+        for title in self.titles.values() {
+            let key = title.get_internal().get_key();
             if key.is_none() {
                 continue;
             }
-            let death_date = death_date.unwrap();
-            let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-            if let Some(offset) = self.offset_date {
-                if death_year < self.current_year.unwrap() - offset {
-                    continue;
-                }
+            let assoc = county_data.get(key.unwrap().as_str());
+            if assoc.is_none() {
+                continue;
             }
-            let entry = result.entry(key.unwrap()).or_insert(HashMap::default());
-            let count = entry.entry(death_year).or_insert(0);
-            *count += 1;
+            let (faith, culture) = assoc.unwrap();
+            title
+                .get_internal_mut()
+                .add_county_data(culture.clone(), faith.clone())
         }
-        // convert the internal hashmaps to vectors
-        let mut res = HashMap::default();
-        for (id, data) in result {
-            let mut v = Vec::new();
-            for (year, count) in &data {
-                v.push((*year, *count as f64 / *total.get(year).unwrap() as f64));
-            }
-            let max_yr = data.keys().max().unwrap();
-            for yr in 0..=*max_yr {
-                if !data.contains_key(&yr)
-                    && ((yr != 0 && data.contains_key(&(yr - 1))) || data.contains_key(&(yr + 1)))
-                {
-                    v.push((yr, 0.0));
-                }
-            }
-            v.sort_by(|a, b| a.0.cmp(&b.0));
-            res.insert(id, v);
-        }
-        return res;
     }
 
-    /// Returns a iterator over the titles
-    pub fn get_title_iter(&self) -> HashMapIter<GameId, Shared<Title>> {
-        self.titles.iter()
+    pub fn new_grapher(&self) -> Grapher {
+        let mut total_yearly_deaths: HashMap<u32, i32> = HashMap::default();
+        let mut faith_yearly_deaths = HashMap::default();
+        let mut culture_yearly_deaths = HashMap::default();
+        for character in self.characters.values() {
+            let char = character.get_internal();
+            if let Some(death_date) = char.get_death_date() {
+                let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
+                let count = total_yearly_deaths.entry(death_year).or_insert(0);
+                *count += 1;
+                if let Some(faith) = char.get_faith() {
+                    let entry = faith_yearly_deaths
+                        .entry(faith.get_internal().get_id())
+                        .or_insert(HashMap::default());
+                    let count = entry.entry(death_year).or_insert(0.);
+                    *count += 1.;
+                }
+                if let Some(culture) = char.get_culture() {
+                    let entry = culture_yearly_deaths
+                        .entry(culture.get_internal().get_id())
+                        .or_insert(HashMap::default());
+                    let count = entry.entry(death_year).or_insert(0.);
+                    *count += 1.;
+                }
+            }
+        }
+        for (year, tot) in total_yearly_deaths {
+            for data in faith_yearly_deaths.values_mut() {
+                if let Some(count) = data.get_mut(&year) {
+                    *count /= tot as f64;
+                }
+            }
+            for data in culture_yearly_deaths.values_mut() {
+                if let Some(count) = data.get_mut(&year) {
+                    *count /= tot as f64;
+                }
+            }
+        }
+        Grapher::new(faith_yearly_deaths, culture_yearly_deaths)
+    }
+
+    pub fn new_timeline(&self) -> Timeline {
+        const DESTROYED_STR: &str = "destroyed";
+        const USURPED_STR: &str = "usurped";
+        const CONQUERED_START_STR: &str = "conq"; //this should match both 'conquered' and 'conquest holy war'
+
+        let mut lifespans = Vec::new();
+        let mut latest_event = 0;
+        let mut event_checkout = Vec::new();
+        for title in self.titles.values() {
+            //first we handle the empires and collect titles that might be relevant for events
+            let t = title.get_internal();
+            let hist = t.get_history_iter();
+            if hist.len() == 0 {
+                continue;
+            }
+            if let Some(k) = t.get_key() {
+                //if the key is there
+                let kingdom = k.as_ref().starts_with("k_");
+                if kingdom {
+                    event_checkout.push(title.clone());
+                    //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
+                    continue;
+                }
+                let empire = k.as_ref().starts_with("e_");
+                if !empire {
+                    continue;
+                }
+                event_checkout.push(title.clone());
+                event_checkout.push(title.get_internal().get_capital().unwrap().clone());
+                let mut item = (title.clone(), Vec::new());
+                let mut empty = true;
+                let mut start = 0;
+                for entry in hist {
+                    let yr = entry.0.split_once('.').unwrap().0.parse().unwrap();
+                    if yr > latest_event {
+                        latest_event = yr;
+                    }
+                    let event = entry.2.as_str();
+                    if event == DESTROYED_STR {
+                        //if it was destroyed we mark the end of the lifespan
+                        item.1.push((start, yr));
+                        empty = true;
+                    } else if empty {
+                        //else if we are not in a lifespan we start a new one
+                        start = yr;
+                        empty = false;
+                    }
+                }
+                if empire {
+                    if !empty {
+                        item.1.push((start, 0));
+                    }
+                    //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
+                    lifespans.push(item);
+                }
+            }
+        }
+        let mut events: Vec<(
+            u32,
+            Shared<Character>,
+            Shared<Title>,
+            GameString,
+            RealmDifference,
+        )> = Vec::new();
+        for title in event_checkout {
+            let tit = title.get_internal();
+            //find the first event that has a character attached
+            let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
+            let next = hist.next();
+            if next.is_none() {
+                continue;
+            }
+            let first_char = next.unwrap().1.as_ref().unwrap().get_internal();
+            let mut faith = first_char.get_faith().unwrap().get_internal().get_id();
+            let mut culture = first_char.get_culture().unwrap().get_internal().get_id();
+            for entry in hist {
+                let char = entry.1.as_ref();
+                if char.is_none() {
+                    continue;
+                }
+                let char = char.unwrap();
+                let event = entry.2.as_str();
+                let ch = char.get_internal();
+                let char_faith = ch.get_faith();
+                let ch_faith = char_faith.as_ref().unwrap().get_internal();
+                let char_culture = ch.get_culture();
+                let ch_culture = char_culture.as_ref().unwrap().get_internal();
+                if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
+                    let year: u32 = entry.0.split_once('.').unwrap().0.parse().unwrap();
+                    if ch_faith.get_id() != faith {
+                        events.push((
+                            year,
+                            char.clone(),
+                            title.clone(),
+                            GameString::wrap("faith".to_owned()),
+                            RealmDifference::Faith(char_faith.as_ref().unwrap().clone()),
+                        ));
+                        faith = ch_faith.get_id();
+                    } else if ch_culture.get_id() != culture {
+                        events.push((
+                            year,
+                            char.clone(),
+                            title.clone(),
+                            GameString::wrap("people".to_owned()),
+                            RealmDifference::Culture(char_culture.as_ref().unwrap().clone()),
+                        ));
+                        culture = ch_culture.get_id();
+                    }
+                } else {
+                    if ch_faith.get_id() != faith {
+                        faith = ch_faith.get_id();
+                    }
+                    if ch_culture.get_id() != culture {
+                        culture = ch_culture.get_id();
+                    }
+                }
+            }
+        }
+        events.sort_by(|a, b| a.0.cmp(&b.0));
+        return Timeline::new(lifespans, self.current_year.unwrap(), events);
     }
 }
 

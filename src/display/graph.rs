@@ -10,10 +10,12 @@ use plotters::{
 use tidy_tree::TidyTree;
 
 use super::super::{
-    parser::{GameId, GameState, GameString},
+    parser::{GameId, GameString},
     structures::{Character, Dynasty, GameObjectDerived, Title},
     types::{HashMap, OneOrMany, Shared, Wrapper},
 };
+
+use std::path::Path;
 
 /// Common graph size in pixels
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
@@ -154,28 +156,24 @@ pub struct Grapher {
 }
 
 impl Grapher {
-    pub fn new(game_state: &GameState) -> Self {
+    pub fn new(
+        faith_death_data: HashMap<GameId, HashMap<u32, f64>>,
+        culture_death_data: HashMap<GameId, HashMap<u32, f64>>,
+    ) -> Self {
+        let process = |(id, data): (&GameId, &HashMap<u32, f64>)| {
+            let mut vec = Vec::new();
+            for (date, deaths) in data {
+                vec.push((*date, *deaths));
+            }
+            vec.sort_by(|a, b| a.0.cmp(&b.0));
+            (*id, vec)
+        };
         //the idea is to get all the data we may need in one go, chances are all of it is gonna be needed anywho
-        let total = game_state.get_total_yearly_deaths();
+        let faith_processed = faith_death_data.iter().map(process).collect();
+        let culture_processed = culture_death_data.iter().map(process).collect();
         Grapher {
-            faith_graph_complete: game_state.get_yearly_deaths(
-                |c| {
-                    if let Some(faith) = c.get_faith() {
-                        return Some(faith.get_internal().get_id());
-                    }
-                    None
-                },
-                &total,
-            ),
-            culture_graph_complete: game_state.get_yearly_deaths(
-                |c| {
-                    if let Some(culture) = c.get_culture() {
-                        return Some(culture.get_internal().get_id());
-                    }
-                    None
-                },
-                &total,
-            ),
+            faith_graph_complete: faith_processed,
+            culture_graph_complete: culture_processed,
         }
     }
 
@@ -376,98 +374,96 @@ impl Grapher {
         self.create_tree_graph::<Character>(founder, false, output_path)
     }
 
-    /// Creates a death graph for a culture
     pub fn create_culture_graph(&self, culture_id: GameId, output_path: &str) {
         if let Some(data) = self.culture_graph_complete.get(&culture_id) {
             create_graph(data, output_path, Some(Y_LABEL), None)
         }
     }
 
-    /// Creates a death graph for a faith
     pub fn create_faith_graph(&self, faith_id: GameId, output_path: &str) {
         if let Some(data) = self.faith_graph_complete.get(&faith_id) {
             create_graph(data, output_path, Some(Y_LABEL), None)
         }
     }
+}
 
-    pub fn create_timeline_graph(
-        timespans: &Vec<(Shared<Title>, Vec<(u32, u32)>)>,
-        max_date: u32,
-        output_path: &str,
-    ) {
-        let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
+pub fn create_timeline_graph<P: AsRef<Path>>(
+    timespans: &Vec<(Shared<Title>, Vec<(u32, u32)>)>,
+    max_date: u32,
+    output_path: P,
+) {
+    let root = SVGBackend::new(&output_path, GRAPH_SIZE).into_drawing_area();
 
-        root.fill(&WHITE).unwrap();
+    root.fill(&WHITE).unwrap();
 
-        let t_len = timespans.len() as i32;
-        let fnt = ("sans-serif", 10.0).into_font();
-        let lifespan_y = fnt.box_size("L").unwrap().1 as i32;
-        const MARGIN: i32 = 3;
-        let height = lifespan_y * t_len + MARGIN;
+    let t_len = timespans.len() as i32;
+    let fnt = ("sans-serif", 10.0).into_font();
+    let lifespan_y = fnt.box_size("L").unwrap().1 as i32;
+    const MARGIN: i32 = 3;
+    let height = lifespan_y * t_len + MARGIN;
 
-        let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
-            0..max_date,
-            -height..MARGIN * 3,
-            (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
-        ));
+    let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
+        0..max_date,
+        -height..MARGIN * 3,
+        (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
+    ));
 
+    root.draw(&PathElement::new(
+        [(0, 0), (max_date, 0)],
+        Into::<ShapeStyle>::into(&BLACK).filled(),
+    ))
+    .unwrap();
+    const YEAR_INTERVAL: u32 = 25;
+    //draw the tick
+    for i in 0..max_date / YEAR_INTERVAL {
         root.draw(&PathElement::new(
-            [(0, 0), (max_date, 0)],
+            [
+                (i * YEAR_INTERVAL + 1, -height),
+                (i * YEAR_INTERVAL, MARGIN),
+            ],
             Into::<ShapeStyle>::into(&BLACK).filled(),
         ))
         .unwrap();
-        const YEAR_INTERVAL: u32 = 25;
-        //draw the tick
-        for i in 0..max_date / YEAR_INTERVAL {
-            root.draw(&PathElement::new(
-                [
-                    (i * YEAR_INTERVAL + 1, -height),
-                    (i * YEAR_INTERVAL, MARGIN),
-                ],
-                Into::<ShapeStyle>::into(&BLACK).filled(),
-            ))
-            .unwrap();
-        }
-        //draw the century labels
-        for i in 1..(max_date / 100) + 1 {
-            let txt = (i * 100).to_string();
-            let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
-            root.draw(&Text::new(
-                txt,
-                (i * 100 - (txt_x / 2), MARGIN),
-                fnt.clone(),
-            ))
-            .unwrap();
-        }
-        //draw the empire lifespans
-        for (i, (title, data)) in timespans.iter().enumerate() {
-            let mut txt_x = 0;
-            for (start, end) in data {
-                if *start < txt_x || txt_x == 0 {
-                    txt_x = *start;
-                }
-                let real_end;
-                if *end == 0 {
-                    real_end = max_date;
-                } else {
-                    real_end = *end;
-                }
-                root.draw(&Rectangle::new(
-                    [
-                        (*start, -lifespan_y * i as i32 - MARGIN),
-                        (real_end, -lifespan_y * (i + 1) as i32 - MARGIN),
-                    ],
-                    Into::<ShapeStyle>::into(&GREEN).filled(),
-                ))
-                .unwrap();
-            }
-            root.draw(&Text::new(
-                title.get_internal().get_name().to_string(),
-                (txt_x, -lifespan_y * (i + 1) as i32),
-                fnt.clone(),
-            ))
-            .unwrap();
-        }
-        root.present().unwrap();
     }
+    //draw the century labels
+    for i in 1..(max_date / 100) + 1 {
+        let txt = (i * 100).to_string();
+        let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
+        root.draw(&Text::new(
+            txt,
+            (i * 100 - (txt_x / 2), MARGIN),
+            fnt.clone(),
+        ))
+        .unwrap();
+    }
+    //draw the empire lifespans
+    for (i, (title, data)) in timespans.iter().enumerate() {
+        let mut txt_x = 0;
+        for (start, end) in data {
+            if *start < txt_x || txt_x == 0 {
+                txt_x = *start;
+            }
+            let real_end;
+            if *end == 0 {
+                real_end = max_date;
+            } else {
+                real_end = *end;
+            }
+            root.draw(&Rectangle::new(
+                [
+                    (*start, -lifespan_y * i as i32 - MARGIN),
+                    (real_end, -lifespan_y * (i + 1) as i32 - MARGIN),
+                ],
+                Into::<ShapeStyle>::into(&GREEN).filled(),
+            ))
+            .unwrap();
+        }
+        root.draw(&Text::new(
+            title.get_internal().get_name().to_string(),
+            (txt_x, -lifespan_y * (i + 1) as i32),
+            fnt.clone(),
+        ))
+        .unwrap();
+    }
+    root.present().unwrap();
 }
