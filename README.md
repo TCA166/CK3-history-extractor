@@ -26,7 +26,7 @@ There are three potential versions of the program:
     cp target/release/ck3_history_extractor ./ck3_history_extractor
     ```
 
-- **Legacy** - a Python based script developed way back with no support, but you can access it [here](https://github.com/TCA166/CK3-history-extractor/releases/tag/v1)
+- **Legacy** - a Python based script developed way back with no support, but you can access it [here](https://github.com/TCA166/CK3-history-extractor/releases/tag/v1.0.0)
 
 After making your choice go find your save file in the format the program accepts.
 
