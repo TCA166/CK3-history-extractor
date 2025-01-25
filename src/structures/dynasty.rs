@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -283,10 +285,11 @@ impl Renderable for Dynasty {
         "dynasties"
     }
 
-    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
+    fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if let Some(grapher) = grapher {
-            let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
-            grapher.create_dynasty_graph(self, &path);
+            let mut buf = path.join(Self::get_subdir());
+            buf.push(format!("{}.svg", self.id));
+            grapher.create_dynasty_graph(self, &buf);
         }
     }
 

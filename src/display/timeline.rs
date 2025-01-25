@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -194,18 +196,21 @@ impl Renderable for Timeline {
         "."
     }
 
-    fn get_path(&self, path: &str) -> String {
-        format!("{}/timeline.html", path)
+    fn get_path(&self, path: &Path) -> PathBuf {
+        path.join("timeline.html")
     }
 
     fn get_template() -> &'static str {
         TIMELINE_TEMPLATE_NAME
     }
 
-    fn render(&self, path: &str, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
+    fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if grapher.is_some() {
-            let path = format!("{}/timeline.svg", path);
-            create_timeline_graph(&self.lifespans, self.latest_event, &path)
+            create_timeline_graph(
+                &self.lifespans,
+                self.latest_event,
+                path.join("timeline.svg"),
+            );
         }
     }
 

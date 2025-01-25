@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::Serialize;
 
 use super::{
@@ -86,14 +88,15 @@ impl Renderable for Faith {
 
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,
     ) {
         if let Some(grapher) = grapher {
-            let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
-            grapher.create_faith_graph(self.id, &path);
+            let mut buf = path.join(Self::get_subdir());
+            buf.push(format!("{}.svg", self.id));
+            grapher.create_faith_graph(self.id, &buf);
         }
         if let Some(map) = data.get_map() {
             let filter = |title: &RefOrRaw<Title>| {
@@ -110,11 +113,12 @@ impl Renderable for Faith {
             };
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
-                let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
+                let mut buf = path.join(Self::get_subdir());
+                buf.push(format!("{}.png", self.id));
                 map.create_map_file(
                     keys,
                     &[70, 255, 70],
-                    &path,
+                    &buf,
                     &format!("Map of the {} faith", &self.name.as_ref().unwrap()),
                 );
             }

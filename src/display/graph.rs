@@ -97,9 +97,9 @@ pub trait TreeNode: GameObjectDerived + Sized {
 
 /// Creates a graph from a given data set
 /// Assumes that the data is sorted by the x value, and that the y value is a percentage
-fn create_graph(
+fn create_graph<P: AsRef<Path>>(
     data: &Vec<(u32, f64)>,
-    output_path: &str,
+    output_path: &P,
     ylabel: Option<&str>,
     xlabel: Option<&str>,
 ) {
@@ -179,11 +179,11 @@ impl Grapher {
 
     /// Creates a tree graph from a given node
     /// The reverse parameter determines if the tree is drawn from the parent to the children or the other way around
-    pub fn create_tree_graph<T: TreeNode>(
+    pub fn create_tree_graph<T: TreeNode, P: AsRef<Path>>(
         &self,
         start: Shared<T>, // the root node that is a TreeNode
         reverse: bool,
-        output_path: &str,
+        output_path: &P,
     ) {
         let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
         //tree nodes don't have any data attached to them, so we need to store the data separately
@@ -368,19 +368,19 @@ impl Grapher {
     }
 
     /// Creates a dynasty graph, meaning the family tree graph
-    pub fn create_dynasty_graph(&self, dynasty: &Dynasty, output_path: &str) {
+    pub fn create_dynasty_graph<P: AsRef<Path>>(&self, dynasty: &Dynasty, output_path: &P) {
         //we get the founder and use it as root
         let founder = dynasty.get_founder();
-        self.create_tree_graph::<Character>(founder, false, output_path)
+        self.create_tree_graph::<Character, P>(founder, false, output_path)
     }
 
-    pub fn create_culture_graph(&self, culture_id: GameId, output_path: &str) {
+    pub fn create_culture_graph<P: AsRef<Path>>(&self, culture_id: GameId, output_path: &P) {
         if let Some(data) = self.culture_graph_complete.get(&culture_id) {
             create_graph(data, output_path, Some(Y_LABEL), None)
         }
     }
 
-    pub fn create_faith_graph(&self, faith_id: GameId, output_path: &str) {
+    pub fn create_faith_graph<P: AsRef<Path>>(&self, faith_id: GameId, output_path: &P) {
         if let Some(data) = self.faith_graph_complete.get(&faith_id) {
             create_graph(data, output_path, Some(Y_LABEL), None)
         }

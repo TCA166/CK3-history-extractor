@@ -16,7 +16,11 @@ use super::{
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
 };
 
-use std::{collections::HashSet, fs::File};
+use std::{
+    collections::HashSet,
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 const TARGET_COLOR: [u8; 3] = [70, 255, 70];
 const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
@@ -73,8 +77,8 @@ impl Renderable for Player {
         "."
     }
 
-    fn get_path(&self, path: &str) -> String {
-        format!("{}/index.html", path)
+    fn get_path(&self, path: &Path) -> PathBuf {
+        path.join("index.html")
     }
 
     fn get_template() -> &'static str {
@@ -89,14 +93,14 @@ impl Renderable for Player {
 
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,
     ) {
         if let Some(map) = data.get_map() {
             //timelapse rendering
-            let mut file = File::create(path.to_owned() + "/timelapse.gif").unwrap();
+            let mut file = File::create(path.join("timelapse.gif")).unwrap();
             let mut gif_encoder = GifEncoder::new(&mut file);
             for char in self.lineage.iter() {
                 /* Note on timelapse:
@@ -159,7 +163,7 @@ impl Renderable for Player {
                         return BASE_COLOR;
                     }
                 },
-                &format!("{}/dynastyMap.png", path),
+                path.join("dynastyMap.png"),
                 vec![
                     ("Dynastic titles".to_string(), TARGET_COLOR),
                     ("Descendant titles".to_string(), SECONDARY_COLOR),
@@ -168,7 +172,7 @@ impl Renderable for Player {
         }
         if let Some(grapher) = grapher {
             let last = self.lineage.last().unwrap().get_character();
-            grapher.create_tree_graph::<Character>(last, true, &format!("{}/line.svg", path));
+            grapher.create_tree_graph::<Character, PathBuf>(last, true, &path.join("line.svg"));
         }
     }
 }

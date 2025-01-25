@@ -1,4 +1,7 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    ops::{Deref, DerefMut},
+    path::{Path, PathBuf},
+};
 
 use serde::{
     ser::{SerializeSeq, SerializeStruct},
@@ -140,7 +143,7 @@ impl<T> Renderable for DerivedRef<T>
 where
     T: Renderable,
 {
-    fn get_path(&self, path: &str) -> String {
+    fn get_path(&self, path: &Path) -> PathBuf {
         self.obj.as_ref().unwrap().get_internal().get_path(path)
     }
 
@@ -158,7 +161,7 @@ where
 
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,

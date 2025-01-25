@@ -7,7 +7,7 @@ use std::{
     fmt::{self, Debug, Formatter},
     fs,
     io::{stdin, stdout, IsTerminal},
-    path::Path,
+    path::PathBuf,
     time::Duration,
 };
 
@@ -104,8 +104,7 @@ fn main() -> Result<(), UserError> {
         Args::parse()
     };
     // arguments passed
-    let p = Path::new(&args.filename);
-    if !p.exists() || !p.is_file() {
+    if !args.filename.exists() || !args.filename.is_file() {
         return Err(UserError::FileDoesNotExist);
     }
     let bar_style = ProgressStyle::default_bar()
@@ -125,14 +124,14 @@ fn main() -> Result<(), UserError> {
         // "items" in this case are huge, 8s on my ssd, so we enable the steady tick
         progress_bar.enable_steady_tick(INTERVAL);
         for path in progress_bar.wrap_iter(include_paths.iter().rev()) {
-            progress_bar.set_message(path.to_owned());
+            progress_bar.set_message(path.to_str().unwrap().to_owned());
             loader.process_path(path).unwrap();
         }
         progress_bar.finish_with_message("Game files loaded");
     }
     let mut data = loader.finalize();
     //initialize the save file
-    let save = SaveFile::open(args.filename.as_str())?;
+    let save = SaveFile::open(args.filename)?;
     let tape = save.tape().unwrap();
     let reader = SectionReader::new(&tape);
     // this is sort of like the first round of filtering where we store the objects we care about
@@ -176,23 +175,20 @@ fn main() -> Result<(), UserError> {
     for player in player_progress.wrap_iter(players.iter_mut()) {
         player.localize(&mut data);
         //render each player
-        let mut folder_name = player.name.to_string() + "'s history";
+        let folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
-        if let Some(output_path) = &args.output {
-            folder_name = output_path.clone() + "/" + folder_name.as_str();
-        }
+        let path = if let Some(output_path) = &args.output {
+            output_path.join(folder_name)
+        } else {
+            PathBuf::from(folder_name)
+        };
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
         cull_spinner.enable_steady_tick(INTERVAL);
         player.set_depth(args.depth);
         cull_spinner.finish_with_message("Tree traversed");
-        let mut renderer = Renderer::new(
-            &env,
-            folder_name.clone(),
-            &game_state,
-            &data,
-            grapher.as_ref(),
-        );
+        let mut renderer =
+            Renderer::new(&env, path.as_path(), &game_state, &data, grapher.as_ref());
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         render_spinner.set_style(spinner_style.clone());
         render_spinner.enable_steady_tick(INTERVAL);
@@ -202,7 +198,10 @@ fn main() -> Result<(), UserError> {
         render_spinner.inc(renderer.render_all(player));
         render_spinner.finish_with_message("Rendering complete");
         if stdin().is_terminal() && stdout().is_terminal() && !args.no_interaction {
-            open::that(player.get_path(&folder_name)).unwrap();
+            // no need to error out here, its just a convenience feature
+            if let Err(e) = open::that(player.get_path(path.as_path())) {
+                eprintln!("Error opening browser: {}", e);
+            }
         }
         rendering_progress_bar.remove(&cull_spinner);
         rendering_progress_bar.remove(&render_spinner);

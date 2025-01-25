@@ -1,5 +1,5 @@
-use std::cmp::Ordering;
 use std::slice::Iter;
+use std::{cmp::Ordering, path::Path};
 
 use serde::{ser::SerializeStruct, Serialize};
 
@@ -409,18 +409,19 @@ impl Renderable for Title {
         }
     }
 
-    fn render(&self, path: &str, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
+    fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
         if let Some(map) = data.get_map() {
             if self.de_facto_vassals.len() == 0 {
                 return;
             }
-            let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
+            let mut buf = path.join(Self::get_subdir());
+            buf.push(format!("{}.png", self.id));
             let label = format!(
                 "{} at {}",
                 self.name.as_ref().unwrap(),
                 game_state.get_current_date().unwrap()
             );
-            map.create_map_file(self.get_barony_keys(), &self.color, &path, &label);
+            map.create_map_file(self.get_barony_keys(), &self.color, &buf, &label);
         }
     }
 }

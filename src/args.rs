@@ -5,7 +5,7 @@ use std::{
     error,
     fmt::{self, Debug, Display},
     fs,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use super::steam::{get_ck3_path, SteamError, CK3_PATH};
@@ -148,7 +148,7 @@ fn parse_path_arg(input: &str) -> Result<String, &'static str> {
 pub struct Args {
     /// The name of the save file to parse.
     #[arg(help="The name of the save file to parse.", value_parser = parse_path_arg)]
-    pub filename: String,
+    pub filename: PathBuf,
     #[arg(
         short,
         long,
@@ -162,13 +162,13 @@ pub struct Args {
     pub language: &'static str,
     #[arg(short, long, default_value = None, help="The path to the game files.", value_parser = parse_path_arg)]
     /// The path to the game files.
-    pub game_path: Option<String>,
+    pub game_path: Option<PathBuf>,
     #[arg(short, long, help = "The paths to include in the rendering.", value_parser = parse_path_arg)]
     /// The paths to include in the rendering.
-    pub include: Vec<String>,
+    pub include: Vec<PathBuf>,
     #[arg(short, long, default_value = None, help="The output path for the rendered files.", value_parser = parse_path_arg)]
     /// The output path for the rendered files.
-    pub output: Option<String>,
+    pub output: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
@@ -207,13 +207,15 @@ impl Args {
         println!("Welcome to CK3 save parser!\nUse tab to autocomplete file paths.");
         //console interface only if we are in a terminal
         let completion = SaveFileNameCompletion::default();
-        let filename = Input::<String>::new()
-            .with_prompt("Enter the save file path")
-            .validate_with(validate_file_path)
-            .with_initial_text(completion.save_files.get(0).unwrap_or(&"".to_string()))
-            .completion_with(&completion)
-            .interact_text()
-            .unwrap();
+        let filename = PathBuf::from(
+            Input::<String>::new()
+                .with_prompt("Enter the save file path")
+                .validate_with(validate_file_path)
+                .with_initial_text(completion.save_files.get(0).unwrap_or(&"".to_string()))
+                .completion_with(&completion)
+                .interact_text()
+                .unwrap(),
+        );
         let ck3_path = match get_ck3_path() {
             Ok(p) => p,
             Err(e) => {
@@ -241,7 +243,13 @@ impl Args {
             .validate_with(validate_dir_path)
             .with_initial_text(ck3_path)
             .interact_text()
-            .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
+            .map_or(None, |x| {
+                if x.is_empty() {
+                    None
+                } else {
+                    Some(PathBuf::from(x))
+                }
+            });
         let depth = Input::<usize>::new()
             .with_prompt("Enter the rendering depth")
             .default(3)
@@ -257,7 +265,7 @@ impl Args {
         if !include_input.is_empty() {
             include_paths = include_input
                 .split(',')
-                .map(|x| x.trim().to_string())
+                .map(|x| PathBuf::from(x.trim()))
                 .collect();
         }
         let mut language = LANGUAGES[0];
@@ -277,7 +285,13 @@ impl Args {
             .allow_empty(true)
             .validate_with(validate_dir_path)
             .interact()
-            .map_or(None, |x| if x.is_empty() { None } else { Some(x) });
+            .map_or(None, |x| {
+                if x.is_empty() {
+                    None
+                } else {
+                    Some(PathBuf::from(x))
+                }
+            });
         Args {
             filename,
             depth,

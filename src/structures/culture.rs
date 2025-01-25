@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::Serialize;
 
 use super::{
@@ -131,13 +133,14 @@ impl Renderable for Culture {
 
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,
     ) {
         if let Some(grapher) = grapher {
-            let path = format!("{}/{}/{}.svg", path, Self::get_subdir(), self.id);
+            let mut path = path.join(Self::get_subdir());
+            path.push(format!("{}.svg", self.id));
             grapher.create_culture_graph(self.id, &path);
         }
         if let Some(map) = data.get_map() {
@@ -155,7 +158,8 @@ impl Renderable for Culture {
             };
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
-                let path = format!("{}/{}/{}.png", path, Self::get_subdir(), self.id);
+                let mut path = path.join(Self::get_subdir());
+                path.push(format!("{}.png", self.id));
                 map.create_map_file(
                     keys,
                     &[70, 255, 70],

@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -91,7 +93,7 @@ impl Renderable for Vassal {
 
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,

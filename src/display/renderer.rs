@@ -1,4 +1,8 @@
-use std::{fs, thread};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    thread,
+};
 
 use minijinja::{Environment, Value};
 
@@ -17,7 +21,7 @@ use super::{
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
-fn create_dir_maybe(name: &str) {
+fn create_dir_maybe<P: AsRef<Path>>(name: P) {
     if let Err(err) = fs::create_dir_all(name) {
         if err.kind() != std::io::ErrorKind::AlreadyExists {
             println!("Failed to create folder: {}", err);
@@ -36,7 +40,7 @@ pub struct Renderer<'a> {
     rendered: HashMap<&'static str, HashSet<GameId>>,
     /// The path where the objects will be rendered to.
     /// This usually takes the form of './{username}'s history/'.
-    path: String,
+    path: &'a Path,
     /// The loaded game data object.
     data: &'a GameData,
     /// The grapher object, if it exists.
@@ -64,17 +68,17 @@ impl<'a> Renderer<'a> {
     /// A new Renderer object.
     pub fn new(
         env: &'a Environment<'a>,
-        path: String,
+        path: &'a Path,
         state: &'a GameState,
         data: &'a GameData,
         grapher: Option<&'a Grapher>,
     ) -> Self {
-        create_dir_maybe(&path);
-        create_dir_maybe(format!("{path}/{}", Character::get_subdir()).as_str());
-        create_dir_maybe(format!("{path}/{}", Dynasty::get_subdir()).as_str());
-        create_dir_maybe(format!("{path}/{}", Title::get_subdir()).as_str());
-        create_dir_maybe(format!("{path}/{}", Faith::get_subdir()).as_str());
-        create_dir_maybe(format!("{path}/{}", Culture::get_subdir()).as_str());
+        create_dir_maybe(path);
+        create_dir_maybe(path.join(Character::get_subdir()));
+        create_dir_maybe(path.join(Dynasty::get_subdir()));
+        create_dir_maybe(path.join(Title::get_subdir()));
+        create_dir_maybe(path.join(Faith::get_subdir()));
+        create_dir_maybe(path.join(Culture::get_subdir()));
         Renderer {
             env,
             rendered: HashMap::default(),
@@ -105,7 +109,7 @@ impl<'a> Renderer<'a> {
         if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok() {
             return false;
         }
-        let path = obj.get_path(&self.path);
+        let path = obj.get_path(self.path);
         let ctx = Value::from_serialize(&obj);
         let template = self.env.get_template(T::get_template()).unwrap();
         let contents = template.render(ctx).unwrap();
@@ -206,8 +210,10 @@ pub trait Renderable: Serialize + Cullable {
     /// # Returns
     ///
     /// The full path where the object should be written to.
-    fn get_path(&self, path: &str) -> String {
-        format!("{}/{}/{}.html", path, Self::get_subdir(), self.get_id())
+    fn get_path(&self, path: &Path) -> PathBuf {
+        let mut buf = path.join(Self::get_subdir());
+        buf.push(format!("{}.html", self.get_id()));
+        buf
     }
 
     /// Renders all the objects that are related to this object.
@@ -227,7 +233,7 @@ pub trait Renderable: Serialize + Cullable {
     #[allow(unused_variables)]
     fn render(
         &self,
-        path: &str,
+        path: &Path,
         game_state: &GameState,
         grapher: Option<&Grapher>,
         data: &GameData,

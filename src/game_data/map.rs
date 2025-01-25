@@ -301,19 +301,19 @@ pub trait MapGenerator {
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>>;
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    fn create_map_file(
+    fn create_map_file<P: AsRef<Path>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
-        output_path: &str,
+        output_path: P,
         label: &str,
     );
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    fn create_map_graph<F: Fn(&String) -> [u8; 3]>(
+    fn create_map_graph<F: Fn(&String) -> [u8; 3], P: AsRef<Path>>(
         &self,
         assoc: F,
-        output_path: &str,
+        output_path: P,
         legend: Vec<(String, [u8; 3])>,
     );
 }
@@ -382,17 +382,17 @@ impl MapGenerator for GameMap {
         ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
     }
 
-    fn create_map_file(
+    fn create_map_file<P: AsRef<Path>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
-        output_path: &str,
+        output_path: P,
         label: &str,
     ) {
         let mut new_map = self.create_map(key_list, |_: &String| *target_color);
         let width = self.width;
         let height = self.height;
-        let output_path = output_path.to_owned();
+        let path = output_path.as_ref().to_owned();
         let label = label.to_owned();
         //we move the writing process out into a thread because it's an IO heavy operation
         thread::spawn(move || {
@@ -400,7 +400,7 @@ impl MapGenerator for GameMap {
                 draw_text(&mut new_map, width, height, &label);
             }
             save_buffer(
-                output_path,
+                path,
                 &new_map,
                 width,
                 height,
@@ -410,10 +410,10 @@ impl MapGenerator for GameMap {
         });
     }
 
-    fn create_map_graph<F: Fn(&String) -> [u8; 3]>(
+    fn create_map_graph<F: Fn(&String) -> [u8; 3], P: AsRef<Path>>(
         &self,
         assoc: F,
-        output_path: &str,
+        output_path: P,
         legend: Vec<(String, [u8; 3])>,
     ) {
         let mut new_map = self.create_map(
@@ -425,12 +425,12 @@ impl MapGenerator for GameMap {
         );
         let width = self.width;
         let height = self.height;
-        let output_path = output_path.to_owned();
+        let path = output_path.as_ref().to_owned();
         //we move the writing process out into a thread because it's an IO heavy operation
         thread::spawn(move || {
             draw_legend(&mut new_map, width, height, legend);
             save_buffer(
-                output_path,
+                path,
                 &new_map,
                 width,
                 height,
