@@ -7,7 +7,6 @@ use std::{
     fmt::{self, Debug, Formatter},
     fs,
     io::{stdin, stdout, IsTerminal},
-    path::PathBuf,
     time::Duration,
 };
 
@@ -177,11 +176,7 @@ fn main() -> Result<(), UserError> {
         //render each player
         let folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
-        let path = if let Some(output_path) = &args.output {
-            output_path.join(folder_name)
-        } else {
-            PathBuf::from(folder_name)
-        };
+        let path = args.output.join(folder_name);
         let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         cull_spinner.set_style(spinner_style.clone());
         cull_spinner.enable_steady_tick(INTERVAL);

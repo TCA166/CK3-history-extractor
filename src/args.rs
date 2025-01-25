@@ -134,10 +134,10 @@ fn parse_lang_arg(input: &str) -> Result<&'static str, &'static str> {
 }
 
 /// A function to parse the path argument.
-fn parse_path_arg(input: &str) -> Result<String, &'static str> {
-    let p = Path::new(input);
+fn parse_path_arg(input: &str) -> Result<PathBuf, &'static str> {
+    let p = PathBuf::from(input);
     if p.exists() {
-        Ok(input.to_string())
+        Ok(p)
     } else {
         Err("Invalid path")
     }
@@ -146,8 +146,8 @@ fn parse_path_arg(input: &str) -> Result<String, &'static str> {
 /// The arguments to the program.
 #[derive(Parser)]
 pub struct Args {
-    /// The name of the save file to parse.
-    #[arg(help="The name of the save file to parse.", value_parser = parse_path_arg)]
+    /// The path to the save file.
+    #[arg(help="The path to the save file.", value_parser = parse_path_arg)]
     pub filename: PathBuf,
     #[arg(
         short,
@@ -166,9 +166,9 @@ pub struct Args {
     #[arg(short, long, help = "The paths to include in the rendering.", value_parser = parse_path_arg)]
     /// The paths to include in the rendering.
     pub include: Vec<PathBuf>,
-    #[arg(short, long, default_value = None, help="The output path for the rendered files.", value_parser = parse_path_arg)]
+    #[arg(short, long, default_value = ".", help="The output path for the rendered files.", value_parser = parse_path_arg)]
     /// The output path for the rendered files.
-    pub output: Option<PathBuf>,
+    pub output: PathBuf,
     #[arg(
         long,
         default_value_t = false,
@@ -285,13 +285,14 @@ impl Args {
             .allow_empty(true)
             .validate_with(validate_dir_path)
             .interact()
-            .map_or(None, |x| {
+            .map(|x| {
                 if x.is_empty() {
-                    None
+                    PathBuf::from(".")
                 } else {
-                    Some(PathBuf::from(x))
+                    PathBuf::from(x)
                 }
-            });
+            })
+            .unwrap();
         Args {
             filename,
             depth,
