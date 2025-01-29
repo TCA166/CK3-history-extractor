@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 
 use plotters::{
     coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32},
@@ -256,12 +256,12 @@ impl Grapher {
                 if let Some(class) = class {
                     // group resolving
                     if !groups.contains_key(class.as_str()) {
-                        let mut rng = thread_rng();
+                        let mut rng = rng();
                         let base: u8 = 85;
                         let mut color = RGBColor(base, base, base);
                         //pick a random color and make it dominant
-                        let index = rng.gen_range(0..3);
-                        let add = rng.gen_range(160 - base..255 - base);
+                        let index = rng.random_range(0..3);
+                        let add = rng.random_range(160 - base..255 - base);
                         match index {
                             0 => {
                                 color.0 += add;
