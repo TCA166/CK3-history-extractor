@@ -101,8 +101,7 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
     }
     let mut library_path = None;
     let vdf_contents = read_to_string(&vdf_path).unwrap();
-    let vdf = Vdf::parse(&vdf_contents);
-    match vdf {
+    match Vdf::parse(&vdf_contents) {
         Ok(vdf) => {
             // vdf was parsed successfully
             if let Value::Obj(folders) = vdf.value {
@@ -119,7 +118,7 @@ pub fn get_ck3_path() -> Result<String, SteamError> {
                                     // foreach value in the "apps" object
                                     if let Value::Obj(app) = app {
                                         // if the value is an object
-                                        if app.keys().find(|k| *k == CK3_ID).is_some() {
+                                        if app.keys().any(|k| k == CK3_ID) {
                                             // if the object has a key with the CK3 ID
                                             if let Some(path) = folder.get("path") {
                                                 let path = path.get(0).unwrap();

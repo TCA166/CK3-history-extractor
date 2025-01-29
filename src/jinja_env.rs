@@ -92,15 +92,23 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
         }
     } else {
         let template_dir = fs::read_dir(template_path).unwrap();
-        for entry in template_dir {
-            let entry = entry.unwrap();
-            let file_name = entry.file_name();
-            //get the name of the file without the extension
-            let name = file_name.to_str().unwrap().splitn(2, '.').next().unwrap();
-            //it needs to be a template file
-            if let Some(i) = TEMPLATE_NAMES.iter().position(|&x| x == name) {
-                let template = fs::read_to_string(entry.path()).unwrap();
-                env.add_template_owned(TEMPLATE_NAMES[i], template).unwrap();
+        for read_result in template_dir {
+            match read_result {
+                Ok(entry) => {
+                    //it needs to be a template file
+                    let path = entry.path();
+                    if !path.is_file() {
+                        continue;
+                    }
+                    let name = TEMPLATE_NAMES
+                        .iter()
+                        .find(|&x| x == &path.file_stem().unwrap());
+                    if let Some(name) = name {
+                        let template = fs::read_to_string(path).unwrap();
+                        env.add_template_owned(*name, template).unwrap();
+                    }
+                }
+                Err(e) => eprintln!("Error reading template directory: {}", e),
             }
         }
     }

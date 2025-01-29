@@ -171,11 +171,11 @@ pub struct Args {
     pub output: PathBuf,
     #[arg(
         long,
-        default_value_t = false,
-        help = "A flag that tells the program to dump the game state to a json file."
+        default_value = None,
+        help = "A path to a file to dump the game state to."
     )]
     /// A flag that tells the program to dump the game state to a json file.
-    pub dump: bool,
+    pub dump: Option<PathBuf>,
     #[arg(
         long,
         default_value_t = false,
@@ -300,7 +300,7 @@ impl Args {
             game_path,
             include: include_paths,
             output: output_path,
-            dump: false,
+            dump: None,
             no_vis: false,
             no_interaction: false,
             use_internal: false,

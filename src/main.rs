@@ -40,9 +40,6 @@ use args::Args;
 /// A submodule for handling Steam integration
 mod steam;
 
-/// The name of the file to dump the game state to.
-const DUMP_FILE: &str = "game_state.json";
-
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
@@ -202,9 +199,9 @@ fn main() -> Result<(), UserError> {
         rendering_progress_bar.remove(&render_spinner);
     }
     player_progress.finish_with_message("Players rendered");
-    if args.dump {
+    if let Some(dump_path) = args.dump {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
-        fs::write(DUMP_FILE, json).unwrap();
+        fs::write(dump_path, json).unwrap();
     }
     return Ok(());
 }
