@@ -10,3 +10,4 @@ target*
 *.data
 *.old
 *.json
+tokens_1.tok

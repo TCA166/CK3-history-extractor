@@ -246,6 +246,7 @@ impl SaveFileValue {
 
     /// Get the value as a date
     pub fn as_date(&self) -> Result<Date, ConversionError> {
+        // TODO paradox somehow stores dates as integers, HOW?
         match self {
             SaveFileValue::Date(date) => Ok(*date),
             _ => Err(ConversionError::InvalidType(

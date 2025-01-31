@@ -1,11 +1,12 @@
 use jomini::{
-    binary::{ReaderError as BinaryReaderError, Token as BinaryToken},
+    binary::{ReaderError as BinaryReaderError, Token as BinaryToken, TokenResolver},
     text::{Operator, ReaderError as TextReaderError, Token as TextToken},
     Scalar, ScalarError,
 };
 
 use super::{
     game_object::ConversionError,
+    tokens::TOKENS_RESOLVER,
     types::{Tape, TapeError},
     SaveFileObject, SaveFileValue,
 };
@@ -98,14 +99,6 @@ impl error::Error for SectionError {
 
 /// The headers preceding color values. To be ignored
 const COLOR_HEADERS: [&[u8]; 2] = [b"rgb", b"hsv"];
-
-/// Resolve a token into a string.
-fn token_resolver(token: &u16) -> Option<&'static str> {
-    match token {
-        // TODO
-        _ => None,
-    }
-}
 
 /// A stack entry for the section parser.
 /// It serves two very important functions. First: it stores the name it should
@@ -390,7 +383,8 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 add_value(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::Id(token) => {
-                                let str = token_resolver(&token)
+                                let str = TOKENS_RESOLVER
+                                    .resolve(token)
                                     .ok_or(SectionError::UnknownToken(token))?;
                                 key = Some(str.to_string());
                             }
