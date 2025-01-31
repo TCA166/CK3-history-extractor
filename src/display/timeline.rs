@@ -71,10 +71,10 @@ impl Cullable for RealmDifference {
 
 /// A struct representing the timeline of the game
 pub struct Timeline {
-    lifespans: Vec<(Shared<Title>, Vec<(u32, u32)>)>,
-    latest_event: u32,
+    lifespans: Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+    latest_event: i16,
     events: Vec<(
-        u32,
+        i16,
         Shared<Character>,
         Shared<Title>,
         GameString,
@@ -85,10 +85,10 @@ pub struct Timeline {
 impl Timeline {
     /// Creates a new timeline from the game state
     pub fn new(
-        lifespans: Vec<(Shared<Title>, Vec<(u32, u32)>)>,
-        latest_event: u32,
+        lifespans: Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+        latest_event: i16,
         events: Vec<(
-            u32,
+            i16,
             Shared<Character>,
             Shared<Title>,
             GameString,
@@ -126,7 +126,7 @@ impl Serialize for Timeline {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("Timeline", 3)?;
-        let ref_lifespans: Vec<(DerivedRef<Title>, Vec<(u32, u32)>)> = self
+        let ref_lifespans: Vec<(DerivedRef<Title>, Vec<(i16, i16)>)> = self
             .lifespans
             .iter()
             .map(|(t, v)| (DerivedRef::from(t.clone()), v.clone()))

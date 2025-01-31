@@ -75,10 +75,8 @@ impl From<jomini::Error> for ParsingError {
 }
 
 impl From<ParseIntError> for ParsingError {
-    fn from(_: ParseIntError) -> Self {
-        ParsingError::StructureError(SaveObjectError::ConversionError(
-            ConversionError::InvalidValue,
-        ))
+    fn from(err: ParseIntError) -> Self {
+        ParsingError::StructureError(SaveObjectError::ConversionError(err.into()))
     }
 }
 
@@ -129,8 +127,8 @@ pub fn process_section(
         "meta_data" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            game_state.set_current_date(map.get_string("meta_date")?);
-            game_state.set_offset_date(map.get_string("meta_real_date")?);
+            game_state.set_current_date(map.get_date("meta_date")?);
+            game_state.set_offset_date(map.get_date("meta_real_date")?);
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {
@@ -312,8 +310,7 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_map()?;
-        let test3 = test2.get("test3").unwrap().as_string()?;
-        assert_eq!(*(test3), "1".to_string());
+        assert_eq!(test2.get("test3").unwrap().as_integer()?, 1);
         return Ok(());
     }
 
@@ -336,14 +333,14 @@ mod tests {
         let object = section.parse().unwrap();
         let test2 = object.as_map()?.get("test2").unwrap().as_object()?;
         let test2_val = test2.as_array()?;
-        assert_eq!(*(test2_val.get_index(0)?.as_string()?), "1".to_string());
-        assert_eq!(*(test2_val.get_index(1)?.as_string()?), "2".to_string());
-        assert_eq!(*(test2_val.get_index(2)?.as_string()?), "3".to_string());
+        assert_eq!(test2_val.get_index(0)?.as_integer()?, 1);
+        assert_eq!(test2_val.get_index(1)?.as_integer()?, 2);
+        assert_eq!(test2_val.get_index(2)?.as_integer()?, 3);
         let test3 = object.as_map()?.get("test3").unwrap().as_object()?;
         let test3_val = test3.as_array()?;
-        assert_eq!(*(test3_val.get_index(0)?.as_string()?), "1".to_string());
-        assert_eq!(*(test3_val.get_index(1)?.as_string()?), "2".to_string());
-        assert_eq!(*(test3_val.get_index(2)?.as_string()?), "3".to_string());
+        assert_eq!(test3_val.get_index(0)?.as_integer()?, 1);
+        assert_eq!(test3_val.get_index(1)?.as_integer()?, 2);
+        assert_eq!(test3_val.get_index(2)?.as_integer()?, 3);
         Ok(())
     }
 
@@ -371,8 +368,8 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_map()?;
-        assert_eq!(*(test2.get("1").unwrap().as_string()?), "2".to_string());
-        assert_eq!(*(test2.get("3").unwrap().as_string()?), "4".to_string());
+        assert_eq!(test2.get("1").unwrap().as_integer()?, 2);
+        assert_eq!(test2.get("3").unwrap().as_integer()?, 4);
         Ok(())
     }
 
@@ -395,9 +392,9 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_array()?;
-        assert_eq!(*(test2.get_index(0)?.as_string()?), "1".to_string());
-        assert_eq!(*(test2.get_index(1)?.as_string()?), "2".to_string());
-        assert_eq!(*(test2.get_index(2)?.as_string()?), "3".to_string());
+        assert_eq!(test2.get_index(0)?.as_integer()?, 1);
+        assert_eq!(test2.get_index(1)?.as_integer()?, 2);
+        assert_eq!(test2.get_index(2)?.as_integer()?, 3);
         assert_eq!(test2.len(), 3);
         Ok(())
     }
@@ -488,17 +485,11 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_array()?;
-        assert_eq!(*(historical.get_index(0)?.as_string()?), "4440".to_string());
-        assert_eq!(*(historical.get_index(1)?.as_string()?), "5398".to_string());
-        assert_eq!(*(historical.get_index(2)?.as_string()?), "6726".to_string());
-        assert_eq!(
-            *(historical.get_index(3)?.as_string()?),
-            "10021".to_string()
-        );
-        assert_eq!(
-            *(historical.get_index(4)?.as_string()?),
-            "33554966".to_string()
-        );
+        assert_eq!(historical.get_index(0)?.as_integer()?, 4440);
+        assert_eq!(historical.get_index(1)?.as_integer()?, 5398);
+        assert_eq!(historical.get_index(2)?.as_integer()?, 6726);
+        assert_eq!(historical.get_index(3)?.as_integer()?, 10021);
+        assert_eq!(historical.get_index(4)?.as_integer()?, 33554966);
         assert_eq!(historical.len(), 12);
         Ok(())
     }
@@ -525,8 +516,7 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_map()?;
-        let test3 = test2.get("test3").unwrap().as_string()?;
-        assert_eq!(*(test3), "1".to_string());
+        assert_eq!(test2.get("test3").unwrap().as_integer()?, 1);
         let test4 = object.as_map()?.get("test4").unwrap().as_object()?;
         let test4_val = test4.as_array()?;
         assert_eq!(*(test4_val.get_index(0)?.as_string()?), "a".to_string());
@@ -584,30 +574,21 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_map()?;
-        assert_eq!(
-            *(b_derby.get("province").unwrap().as_string()?),
-            "1621".to_string()
-        );
+        assert_eq!(b_derby.get("province").unwrap().as_integer()?, 1621);
         let b_chesterfield = object
             .as_map()?
             .get("b_chesterfield")
             .unwrap()
             .as_object()?
             .as_map()?;
-        assert_eq!(
-            *(b_chesterfield.get("province").unwrap().as_string()?),
-            "1622".to_string()
-        );
+        assert_eq!(b_chesterfield.get("province").unwrap().as_integer()?, 1622);
         let b_castleton = object
             .as_map()?
             .get("b_castleton")
             .unwrap()
             .as_object()?
             .as_map()?;
-        assert_eq!(
-            *(b_castleton.get("province").unwrap().as_string()?),
-            "1623".to_string()
-        );
+        assert_eq!(b_castleton.get("province").unwrap().as_integer()?, 1623);
         Ok(())
     }
 
@@ -633,8 +614,7 @@ mod tests {
             .unwrap()
             .as_object()?
             .as_map()?;
-        let test3 = test2.get("test3").unwrap().as_string()?;
-        assert_eq!(*(test3), "1".to_string());
+        assert_eq!(test2.get("test3").unwrap().as_integer()?, 1);
         Ok(())
     }
 

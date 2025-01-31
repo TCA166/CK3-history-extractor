@@ -3,6 +3,7 @@ use image::{
     Delay, Frame,
 };
 
+use jomini::common::PdsDate;
 use serde::Serialize;
 
 use super::{
@@ -116,11 +117,15 @@ impl Renderable for Player {
                 //This is the closes approximation we can get of changes in the map that are 100% accurate
                 let death_date = char.get_death_date();
                 let date = if let Some(death_date) = &death_date {
-                    death_date.as_str()
+                    death_date.iso_8601()
                 } else {
-                    game_state.get_current_date().unwrap()
+                    game_state.get_current_date().unwrap().iso_8601()
                 };
-                let fbytes = map.create_map_buffer(char.get_barony_keys(true), &TARGET_COLOR, date);
+                let fbytes = map.create_map_buffer(
+                    char.get_barony_keys(true),
+                    &TARGET_COLOR,
+                    Some(date.to_string()),
+                );
                 //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();

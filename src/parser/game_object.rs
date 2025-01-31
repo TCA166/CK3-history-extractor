@@ -4,8 +4,10 @@ use std::{
     fmt::{self, Debug, Display},
     num::{ParseFloatError, ParseIntError},
     rc::Rc,
-    str::ParseBoolError,
+    str::{FromStr, ParseBoolError},
 };
+
+use jomini::common::Date;
 
 use super::super::types::{HashMap, RefOrRaw, Wrapper};
 
@@ -34,24 +36,24 @@ pub enum ConversionError {
     /// The value is not of the expected type.
     InvalidType(SaveFileValue, &'static str),
     /// The value is not a valid value.
-    InvalidValue,
+    InvalidValue(&'static str),
 }
 
 impl From<ParseIntError> for ConversionError {
     fn from(_: ParseIntError) -> Self {
-        ConversionError::InvalidValue
+        ConversionError::InvalidValue("integer")
     }
 }
 
 impl From<ParseFloatError> for ConversionError {
     fn from(_: ParseFloatError) -> Self {
-        ConversionError::InvalidValue
+        ConversionError::InvalidValue("float")
     }
 }
 
 impl From<ParseBoolError> for ConversionError {
     fn from(_: ParseBoolError) -> Self {
-        ConversionError::InvalidValue
+        ConversionError::InvalidValue("bool")
     }
 }
 
@@ -59,7 +61,7 @@ impl Display for ConversionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidType(t1, t2) => write!(f, "failed converting {:?} to {}", t1, t2),
-            Self::InvalidValue => write!(f, "the value is invalid for conversion"),
+            Self::InvalidValue(desc) => write!(f, "the value is invalid for conversion {}", desc),
         }
     }
 }
@@ -69,6 +71,9 @@ impl error::Error for ConversionError {
         None
     }
 }
+
+const BOOL_TRUE: &str = "yes";
+const BOOL_FALSE: &str = "no";
 
 /// A value that comes from a save file.
 /// Matching against this enum is a bad idea, because [SaveFileValue::String] may actually contain any type.
@@ -85,6 +90,46 @@ pub enum SaveFileValue {
     Integer(i64),
     /// A boolean
     Boolean(bool),
+    Date(Date),
+}
+
+impl FromStr for SaveFileValue {
+    type Err = ConversionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let dot_count = s.chars().filter(|&c| c == '.').count();
+        if dot_count == 2 {
+            let mut parts = s.split('.');
+            if let Ok(year) = parts.next().unwrap().parse() {
+                if let Ok(month) = parts.next().unwrap().parse() {
+                    if let Ok(day) = parts.next().unwrap().parse() {
+                        return Ok(Date::from_ymd_opt(year, month, day)
+                            .ok_or(ConversionError::InvalidValue("invalid date components"))?
+                            .into());
+                    }
+                }
+            }
+        } else if dot_count == 1 {
+            if let Ok(f) = s.parse() {
+                return Ok(SaveFileValue::Real(f));
+            }
+        } else if dot_count == 0 {
+            if s == BOOL_TRUE {
+                return Ok(SaveFileValue::Boolean(true));
+            } else if s == BOOL_FALSE {
+                return Ok(SaveFileValue::Boolean(false));
+            } else if let Ok(int) = s.parse() {
+                return Ok(SaveFileValue::Integer(int));
+            }
+        }
+        Ok(SaveFileValue::String(Rc::new(s.to_owned())))
+    }
+}
+
+impl From<String> for SaveFileValue {
+    fn from(value: String) -> Self {
+        SaveFileValue::String(Rc::new(value))
+    }
 }
 
 impl From<i64> for SaveFileValue {
@@ -123,6 +168,24 @@ impl From<SaveFileObject> for SaveFileValue {
     }
 }
 
+impl From<[u8; 4]> for SaveFileValue {
+    fn from(value: [u8; 4]) -> Self {
+        SaveFileValue::Real(f32::from_le_bytes(value) as f64)
+    }
+}
+
+impl From<[u8; 8]> for SaveFileValue {
+    fn from(value: [u8; 8]) -> Self {
+        SaveFileValue::Real(f64::from_le_bytes(value))
+    }
+}
+
+impl From<Date> for SaveFileValue {
+    fn from(value: Date) -> Self {
+        SaveFileValue::Date(value)
+    }
+}
+
 impl SaveFileValue {
     // this API allows for easy error collection using the ? operator.
     /// Get the value as a string
@@ -155,7 +218,7 @@ impl SaveFileValue {
     pub fn as_integer(&self) -> Result<i64, ConversionError> {
         match self {
             SaveFileValue::Integer(i) => Ok(*i),
-            SaveFileValue::String(s) => Ok(s.parse::<i64>()?),
+            SaveFileValue::Real(r) => Ok(*r as i64),
             _ => Err(ConversionError::InvalidType(
                 self.clone(),
                 type_name::<i64>(),
@@ -166,7 +229,7 @@ impl SaveFileValue {
     pub fn as_real(&self) -> Result<f64, ConversionError> {
         match self {
             SaveFileValue::Real(r) => Ok(*r),
-            SaveFileValue::String(s) => Ok(s.parse::<f64>()?),
+            SaveFileValue::Integer(i) => Ok(*i as f64),
             _ => Err(ConversionError::InvalidType(
                 self.clone(),
                 type_name::<f64>(),
@@ -174,12 +237,19 @@ impl SaveFileValue {
         }
     }
 
-    #[allow(dead_code)]
+    pub fn as_date(&self) -> Result<Date, ConversionError> {
+        match self {
+            SaveFileValue::Date(date) => Ok(*date),
+            _ => Err(ConversionError::InvalidType(
+                self.clone(),
+                type_name::<(i16, u8, u8)>(),
+            )),
+        }
+    }
+
     pub fn as_boolean(&self) -> Result<bool, ConversionError> {
         match self {
             SaveFileValue::Boolean(b) => Ok(*b),
-            SaveFileValue::Integer(i) => Ok(*i != 0),
-            SaveFileValue::String(s) => Ok(s.parse::<bool>()?),
             _ => Err(ConversionError::InvalidType(
                 self.clone(),
                 type_name::<bool>(),
@@ -255,6 +325,7 @@ pub trait GameObjectMapping {
     fn get_integer(&self, key: &str) -> Result<i64, SaveObjectError>;
     fn get_real(&self, key: &str) -> Result<f64, SaveObjectError>;
     fn get_game_id(&self, key: &str) -> Result<GameId, SaveObjectError>;
+    fn get_date(&self, key: &str) -> Result<Date, SaveObjectError>;
 }
 
 impl GameObjectMapping for GameObjectMap {
@@ -285,6 +356,10 @@ impl GameObjectMapping for GameObjectMap {
     /// Get the value of a key as a GameId.
     fn get_game_id(&self, key: &str) -> Result<GameId, SaveObjectError> {
         Ok(self.get_err(key)?.as_id()?)
+    }
+
+    fn get_date(&self, key: &str) -> Result<Date, SaveObjectError> {
+        Ok(self.get_err(key)?.as_date()?)
     }
 }
 

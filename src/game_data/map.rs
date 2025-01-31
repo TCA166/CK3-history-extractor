@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     error,
     fmt::{self, Display},
     io,
@@ -106,7 +107,7 @@ fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, MapError> {
 }
 
 /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
-fn draw_text(img: &mut [u8], width: u32, height: u32, text: &str) {
+fn draw_text<T: Borrow<str>>(img: &mut [u8], width: u32, height: u32, text: T) {
     let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
     let text_height = height / 20;
     let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);
@@ -293,20 +294,20 @@ pub trait MapGenerator {
 
     /// Creates a province map with the colors of the provinces in id_list changed to target_color
     /// Returns a [ImageBuffer] of RGBA bytes representing the new map
-    fn create_map_buffer(
+    fn create_map_buffer<T: AsRef<str>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
-        label: &str,
+        label: Option<T>,
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>>;
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    fn create_map_file<P: AsRef<Path>>(
+    fn create_map_file<P: AsRef<Path>, T: AsRef<str>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
         output_path: P,
-        label: &str,
+        label: Option<T>,
     );
 
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
@@ -361,16 +362,16 @@ impl MapGenerator for GameMap {
         return new_map;
     }
 
-    fn create_map_buffer(
+    fn create_map_buffer<T: AsRef<str>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
-        label: &str,
+        label: Option<T>,
     ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         //we need to convert the vec of bytes to a vec of rgba bytes
         let mut new_map = self.create_map(key_list, |_: &String| *target_color);
-        if !label.is_empty() {
-            draw_text(&mut new_map, self.width, self.height, label);
+        if let Some(label) = label {
+            draw_text(&mut new_map, self.width, self.height, label.as_ref());
         }
         let mut rgba = Vec::with_capacity(new_map.len() * 4 / 3);
         for i in 0..new_map.len() {
@@ -382,22 +383,22 @@ impl MapGenerator for GameMap {
         ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
     }
 
-    fn create_map_file<P: AsRef<Path>>(
+    fn create_map_file<P: AsRef<Path>, T: AsRef<str>>(
         &self,
         key_list: Vec<GameString>,
         target_color: &[u8; 3],
         output_path: P,
-        label: &str,
+        label: Option<T>,
     ) {
         let mut new_map = self.create_map(key_list, |_: &String| *target_color);
         let width = self.width;
         let height = self.height;
         let path = output_path.as_ref().to_owned();
-        let label = label.to_owned();
+        let label = label.map(|x| x.as_ref().to_string());
         //we move the writing process out into a thread because it's an IO heavy operation
         thread::spawn(move || {
-            if !label.is_empty() {
-                draw_text(&mut new_map, width, height, &label);
+            if let Some(label) = label {
+                draw_text(&mut new_map, width, height, label);
             }
             save_buffer(
                 path,

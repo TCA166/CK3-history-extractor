@@ -119,7 +119,7 @@ impl Renderable for Faith {
                     keys,
                     &[70, 255, 70],
                     &buf,
-                    &format!("Map of the {} faith", &self.name.as_ref().unwrap()),
+                    Some(format!("Map of the {} faith", &self.name.as_ref().unwrap())),
                 );
             }
         }

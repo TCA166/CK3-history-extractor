@@ -1,3 +1,4 @@
+use jomini::common::Date;
 use serde::Serialize;
 
 use super::{
@@ -16,7 +17,7 @@ use super::{
 #[derive(Serialize)]
 pub struct LineageNode {
     character: Option<Shared<Character>>,
-    date: Option<GameString>,
+    date: Option<Date>,
     score: i32,
     prestige: i32,
     piety: i32,
@@ -52,7 +53,7 @@ impl FromGameObject for LineageNode {
         }
         Ok(LineageNode {
             character: Some(char),
-            date: Some(base.get_string("date")?),
+            date: Some(base.get_date("date")?),
             score: if let Some(score_node) = base.get("score") {
                 score_node.as_integer()? as i32
             } else {

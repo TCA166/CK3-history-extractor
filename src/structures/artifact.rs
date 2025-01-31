@@ -1,3 +1,4 @@
+use jomini::common::Date;
 use serde::{ser::SerializeSeq, Serialize, Serializer};
 
 use super::{
@@ -13,7 +14,7 @@ use super::{
 fn serialize_history<S: Serializer>(
     val: &Vec<(
         GameString,
-        GameString,
+        Date,
         Option<Shared<Character>>,
         Option<Shared<Character>>,
     )>,
@@ -50,7 +51,7 @@ pub struct Artifact {
     #[serde(serialize_with = "serialize_history")]
     history: Vec<(
         GameString,
-        GameString,
+        Date,
         Option<Shared<Character>>,
         Option<Shared<Character>>,
     )>,
@@ -97,7 +98,7 @@ impl DummyInit for Artifact {
                 for h in entries_node.as_object()?.as_array()? {
                     let h = h.as_object()?.as_map()?;
                     let r#type = h.get_string("type")?;
-                    let date = h.get_string("date")?;
+                    let date = h.get_date("date")?;
                     let actor = if let Some(actor_node) = h.get("actor") {
                         Some(game_state.get_character(&actor_node.as_id()?))
                     } else {

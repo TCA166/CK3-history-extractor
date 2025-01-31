@@ -15,6 +15,8 @@ use super::{
     ParsingError,
 };
 
+use jomini::common::{Date, PdsDate};
+
 use serde::Serialize;
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
@@ -56,11 +58,11 @@ pub struct GameState {
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
     /// The current date from the meta section
-    current_date: Option<GameString>,
+    current_date: Option<Date>,
     /// The isolated year from the meta section
-    current_year: Option<u32>,
+    current_year: Option<i16>,
     /// The date from which data should be considered
-    offset_date: Option<u32>,
+    offset_date: Option<i16>,
 }
 
 impl GameState {
@@ -93,23 +95,19 @@ impl GameState {
     }
 
     /// Set the current date
-    pub fn set_current_date(&mut self, date: GameString) {
-        self.current_date = Some(date.clone());
-        self.current_year = Some(date.as_str().split_once('.').unwrap().0.parse().unwrap());
+    pub fn set_current_date(&mut self, date: Date) {
+        self.current_date = Some(date);
+        self.current_year = Some(date.year());
     }
 
     /// Set the number of years that has passed since game start
-    pub fn set_offset_date(&mut self, date: GameString) {
-        self.offset_date = Some(date.split_once('.').unwrap().0.parse().unwrap());
+    pub fn set_offset_date(&mut self, date: Date) {
+        self.offset_date = Some(date.year());
     }
 
     /// Get the current date
-    pub fn get_current_date(&self) -> Option<&str> {
-        if self.current_date.is_none() {
-            return None;
-        } else {
-            return Some(self.current_date.as_ref().unwrap().as_str());
-        }
+    pub fn get_current_date(&self) -> Option<Date> {
+        return self.current_date;
     }
 
     /// Get a character by key
@@ -261,27 +259,26 @@ impl GameState {
     }
 
     pub fn new_grapher(&self) -> Grapher {
-        let mut total_yearly_deaths: HashMap<u32, i32> = HashMap::default();
+        let mut total_yearly_deaths: HashMap<i16, i32> = HashMap::default();
         let mut faith_yearly_deaths = HashMap::default();
         let mut culture_yearly_deaths = HashMap::default();
         for character in self.characters.values() {
             let char = character.get_internal();
             if let Some(death_date) = char.get_death_date() {
-                let death_year: u32 = death_date.split_once('.').unwrap().0.parse().unwrap();
-                let count = total_yearly_deaths.entry(death_year).or_insert(0);
+                let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
                 *count += 1;
                 if let Some(faith) = char.get_faith() {
                     let entry = faith_yearly_deaths
                         .entry(faith.get_internal().get_id())
                         .or_insert(HashMap::default());
-                    let count = entry.entry(death_year).or_insert(0.);
+                    let count = entry.entry(death_date.year()).or_insert(0.);
                     *count += 1.;
                 }
                 if let Some(culture) = char.get_culture() {
                     let entry = culture_yearly_deaths
                         .entry(culture.get_internal().get_id())
                         .or_insert(HashMap::default());
-                    let count = entry.entry(death_year).or_insert(0.);
+                    let count = entry.entry(death_date.year()).or_insert(0.);
                     *count += 1.;
                 }
             }
@@ -359,7 +356,7 @@ impl GameState {
             }
         }
         let mut events: Vec<(
-            u32,
+            i16,
             Shared<Character>,
             Shared<Title>,
             GameString,
@@ -389,7 +386,7 @@ impl GameState {
                 let char_culture = ch.get_culture();
                 let ch_culture = char_culture.as_ref().unwrap().get_internal();
                 if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
-                    let year: u32 = entry.0.split_once('.').unwrap().0.parse().unwrap();
+                    let year: i16 = entry.0.split_once('.').unwrap().0.parse().unwrap();
                     if ch_faith.get_id() != faith {
                         events.push((
                             year,

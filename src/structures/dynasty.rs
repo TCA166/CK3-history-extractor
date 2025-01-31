@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use jomini::common::Date;
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -26,7 +27,7 @@ pub struct Dynasty {
     prestige: f32,
     perks: Vec<(GameString, u8)>,
     leaders: Vec<Shared<Character>>,
-    found_date: Option<GameString>,
+    found_date: Option<Date>,
     motto: Option<(GameString, Vec<GameString>)>,
     depth: usize,
 }
@@ -196,7 +197,7 @@ impl DummyInit for Dynasty {
             }
         }
         if let Some(date) = base.get("found_date") {
-            self.found_date = Some(date.as_string()?);
+            self.found_date = Some(date.as_date()?);
         }
         if let Some(motto_node) = base.get("motto") {
             if let SaveFileValue::Object(obj) = motto_node {

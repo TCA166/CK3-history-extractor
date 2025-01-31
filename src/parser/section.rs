@@ -15,6 +15,7 @@ use std::{
     error,
     fmt::{self, Debug, Display},
     num::ParseIntError,
+    string::FromUtf8Error,
 };
 
 /// An error that occured while processing a specific section
@@ -27,16 +28,21 @@ pub enum SectionError {
     /// An unknown token was encountered
     UnknownToken(u16),
     TapeError(TapeError),
+    DecodingError(FromUtf8Error),
 }
 
 impl Display for SectionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ConversionError(err) => Display::fmt(err, f),
-            Self::ScalarError(err) => Display::fmt(err, f),
             Self::UnknownToken(tok) => write!(f, "unknown token {}", tok),
-            Self::TapeError(err) => Display::fmt(err, f),
+            err => Display::fmt(err, f),
         }
+    }
+}
+
+impl From<FromUtf8Error> for SectionError {
+    fn from(value: FromUtf8Error) -> Self {
+        Self::DecodingError(value)
     }
 }
 
@@ -82,10 +88,13 @@ impl error::Error for SectionError {
             Self::ConversionError(err) => Some(err),
             Self::ScalarError(err) => Some(err),
             Self::TapeError(err) => Some(err),
+            Self::DecodingError(err) => Some(err),
             _ => None,
         }
     }
 }
+
+const COLOR_HEADERS: [&[u8]; 2] = [b"rgb", b"hsv"];
 
 fn token_resolver(token: &u16) -> Option<&'static str> {
     match token {
@@ -172,27 +181,14 @@ fn stack_entry_into_object<'a>(entry: &mut StackEntry) -> SaveFileObject {
     }
 }
 
-// here's how we handle utf8 strings:
-impl From<Scalar<'_>> for SaveFileValue {
-    fn from(value: Scalar) -> Self {
-        let str = if value.is_ascii() {
-            value.to_string()
-        } else {
-            std::str::from_utf8(value.as_bytes()).unwrap().to_string()
-        };
-        SaveFileValue::String(str.into())
-    }
-}
-
-impl From<[u8; 4]> for SaveFileValue {
-    fn from(value: [u8; 4]) -> Self {
-        SaveFileValue::Real(f32::from_le_bytes(value) as f64)
-    }
-}
-
-impl From<[u8; 8]> for SaveFileValue {
-    fn from(value: [u8; 8]) -> Self {
-        SaveFileValue::Real(f64::from_le_bytes(value))
+/// Process a scalar into a string.
+/// The [ToString] implementation of [Scalar] will be used if the scalar is ASCII.
+/// This implementation is weird overall because it will not handle non-ASCII characters correctly.
+fn scalar_to_string(scalar: Scalar) -> Result<String, SectionError> {
+    if scalar.is_ascii() {
+        Ok(scalar.to_string())
+    } else {
+        Ok(String::from_utf8(scalar.as_bytes().to_vec())?)
     }
 }
 
@@ -246,7 +242,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             TextToken::Close => {
                                 let mut last = stack.pop().unwrap();
                                 if key.is_some() {
-                                    last.push(SaveFileValue::String(key.take().unwrap().into()));
+                                    last.push(key.take().unwrap().parse::<SaveFileValue>()?);
                                 }
                                 let name = last.name.take();
                                 let value = stack_entry_into_object(&mut last);
@@ -268,34 +264,39 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 }
                             }
                             TextToken::Quoted(token) => {
+                                let string = scalar_to_string(token)?.into();
                                 if past_eq {
                                     stack
                                         .last_mut()
                                         .unwrap()
-                                        .insert(key.take().unwrap(), token.into());
+                                        .insert(key.take().unwrap(), string);
                                     past_eq = false;
                                 } else {
-                                    stack.last_mut().unwrap().push(token.into());
+                                    stack.last_mut().unwrap().push(string);
                                 }
                             }
                             TextToken::Unquoted(token) => {
-                                if ["rgb", "hsv"].contains(&token.to_string().as_str()) {
-                                    continue;
+                                // zero cost operation
+                                if COLOR_HEADERS.contains(&token.as_bytes()) {
+                                    continue; // we want to skip an unquoted token in situations like this: `color=rgb { 255 255 255 }`
                                 }
                                 if past_eq {
-                                    stack
-                                        .last_mut()
-                                        .unwrap()
-                                        .insert(key.take().unwrap(), token.into());
+                                    // we have an unquoted value clearly
+                                    let val = if !token.is_ascii() {
+                                        scalar_to_string(token)?.into()
+                                    } else {
+                                        token.to_string().parse::<SaveFileValue>()?
+                                    };
+                                    stack.last_mut().unwrap().insert(key.take().unwrap(), val);
                                     past_eq = false;
                                 } else {
-                                    if let Some(key) = key {
+                                    // we add the previous key, and replace it
+                                    if let Some(key) = key.replace(token.to_string()) {
                                         stack
                                             .last_mut()
                                             .unwrap()
-                                            .push(SaveFileValue::String(key.into()));
+                                            .push(key.parse::<SaveFileValue>()?);
                                     }
-                                    key = Some(token.to_string());
                                 }
                             }
                         },
@@ -347,10 +348,20 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 past_eq = true;
                             }
                             BinaryToken::Quoted(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value(
+                                    &mut stack,
+                                    &mut key,
+                                    &mut past_eq,
+                                    scalar_to_string(token)?,
+                                );
                             }
                             BinaryToken::Unquoted(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                let val = if token.is_ascii() {
+                                    token.to_string().parse::<SaveFileValue>()?
+                                } else {
+                                    scalar_to_string(token)?.into()
+                                };
+                                add_value(&mut stack, &mut key, &mut past_eq, val);
                             }
                             BinaryToken::Bool(token) => {
                                 add_value(&mut stack, &mut key, &mut past_eq, token);

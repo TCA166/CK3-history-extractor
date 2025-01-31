@@ -1,6 +1,7 @@
 use std::slice::Iter;
 use std::{cmp::Ordering, path::Path};
 
+use jomini::common::PdsDate;
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -419,9 +420,9 @@ impl Renderable for Title {
             let label = format!(
                 "{} at {}",
                 self.name.as_ref().unwrap(),
-                game_state.get_current_date().unwrap()
+                game_state.get_current_date().unwrap().iso_8601()
             );
-            map.create_map_file(self.get_barony_keys(), &self.color, &buf, &label);
+            map.create_map_file(self.get_barony_keys(), &self.color, &buf, Some(label));
         }
     }
 }

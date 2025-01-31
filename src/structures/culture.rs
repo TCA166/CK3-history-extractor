@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use jomini::common::Date;
 use serde::Serialize;
 
 use super::{
@@ -21,7 +22,7 @@ pub struct Culture {
     ethos: Option<GameString>,
     heritage: Option<GameString>,
     martial: Option<GameString>,
-    date: Option<GameString>,
+    date: Option<Date>,
     #[serde(serialize_with = "serialize_array_ref")]
     children: Vec<Shared<Culture>>,
     #[serde(serialize_with = "serialize_array_ref")]
@@ -75,7 +76,7 @@ impl DummyInit for Culture {
         self.heritage = Some(base.get_string("heritage")?);
         self.martial = Some(base.get_string("martial_custom")?);
         if let Some(node) = base.get("created") {
-            self.date = Some(node.as_string()?);
+            self.date = Some(node.as_date()?);
         }
         self.language = Some(base.get_string("language")?);
         Ok(())
@@ -164,7 +165,10 @@ impl Renderable for Culture {
                     keys,
                     &[70, 255, 70],
                     &path,
-                    &format!("Map of the {} culture", &self.name.as_ref().unwrap()),
+                    Some(format!(
+                        "Map of the {} culture",
+                        &self.name.as_ref().unwrap()
+                    )),
                 );
             }
         }

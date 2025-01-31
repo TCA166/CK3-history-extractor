@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use jomini::common::Date;
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -126,16 +127,15 @@ pub struct Character {
     id: GameId,
     name: Option<GameString>,
     nick: Option<GameString>,
-    birth: Option<GameString>,
+    birth: Option<Date>,
     dead: bool,
-    date: Option<GameString>,
+    date: Option<Date>,
     reason: Option<GameString>,
     faith: Option<Shared<Faith>>,
     culture: Option<Shared<Culture>>,
     house: Option<Shared<Dynasty>>,
     skills: Vec<i8>,
     traits: Vec<GameString>,
-    recessive: Vec<GameString>,
     spouses: Vec<Shared<Character>>,
     former: Vec<Shared<Character>>,
     children: Vec<Shared<Character>>,
@@ -216,7 +216,7 @@ impl Character {
     }
 
     /// Gets the death date string of the character
-    pub fn get_death_date(&self) -> Option<GameString> {
+    pub fn get_death_date(&self) -> Option<Date> {
         self.date.clone()
     }
 
@@ -310,7 +310,6 @@ impl DummyInit for Character {
             house: None,
             skills: Vec::new(),
             traits: Vec::new(),
-            recessive: Vec::new(),
             spouses: Vec::new(),
             former: Vec::new(),
             children: Vec::new(),
@@ -340,7 +339,7 @@ impl DummyInit for Character {
         game_state: &mut GameState,
     ) -> Result<(), ParsingError> {
         if let Some(female) = base.get("female") {
-            self.female = female.as_string()?.as_str() == "yes";
+            self.female = female.as_boolean()?;
         }
         if let Some(dead_data) = base.get("dead_data") {
             self.dead = true;
@@ -353,7 +352,7 @@ impl DummyInit for Character {
                     self.titles.push(game_state.get_title(&t.as_id()?));
                 }
             }
-            self.date = Some(o.get_string("date")?);
+            self.date = Some(o.get_date("date")?);
             if let Some(liege_node) = o.get("liege") {
                 let id = liege_node.as_id()?;
                 if id != self.id {
@@ -368,12 +367,6 @@ impl DummyInit for Character {
         //find skills
         for s in base.get_object("skill")?.as_array()?.into_iter() {
             self.skills.push(s.as_integer()? as i8);
-        }
-        //find recessive traits
-        if let Some(rec_t) = base.get("recessive_traits") {
-            for r in rec_t.as_object()?.as_array()? {
-                self.recessive.push(r.as_string()?);
-            }
         }
         if let Some(family_data) = base.get("family_data") {
             let f = family_data.as_object()?;
@@ -513,7 +506,7 @@ impl DummyInit for Character {
         if let Some(text) = base.get("nickname_text").or(base.get("nickname")) {
             self.nick = Some(text.as_string()?);
         }
-        self.birth = Some(base.get_string("birth")?);
+        self.birth = Some(base.get_date("birth")?);
         if let Some(dynasty_id) = base.get("dynasty_house") {
             let d = game_state.get_dynasty(&dynasty_id.as_id()?);
             d.get_internal_mut()
@@ -572,7 +565,7 @@ impl Serialize for Character {
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("Character", 30)?;
+        let mut state = serializer.serialize_struct("Character", 29)?;
         state.serialize_field("name", &self.get_name())?;
         state.serialize_field("nick", &self.nick)?;
         state.serialize_field("birth", &self.birth)?;
@@ -595,7 +588,6 @@ impl Serialize for Character {
         }
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
-        state.serialize_field("recessive", &self.recessive)?;
         //serialize spouses as DerivedRef
         let spouses = into_ref_array::<Character>(&self.spouses);
         state.serialize_field("spouses", &spouses)?;

@@ -1,7 +1,7 @@
 use rand::{rng, Rng};
 
 use plotters::{
-    coord::types::{RangedCoordf64, RangedCoordi32, RangedCoordu32},
+    coord::types::{RangedCoordf64, RangedCoordi32},
     prelude::*,
 };
 
@@ -98,13 +98,13 @@ pub trait TreeNode: GameObjectDerived + Sized {
 /// Creates a graph from a given data set
 /// Assumes that the data is sorted by the x value, and that the y value is a percentage
 fn create_graph<P: AsRef<Path>>(
-    data: &Vec<(u32, f64)>,
+    data: &Vec<(i16, f64)>,
     output_path: &P,
     ylabel: Option<&str>,
     xlabel: Option<&str>,
 ) {
-    let mut min_x: u32 = 0;
-    let mut max_x: u32 = 0;
+    let mut min_x: i16 = 0;
+    let mut max_x: i16 = 0;
     let mut min_y = 0.0;
     for (x, y) in data {
         if *x < min_x || min_x == 0 {
@@ -125,7 +125,7 @@ fn create_graph<P: AsRef<Path>>(
         .margin(MARGIN)
         .x_label_area_size(MARGIN * 10)
         .y_label_area_size(MARGIN * 10)
-        .build_cartesian_2d(min_x..max_x, min_y..MAX_Y)
+        .build_cartesian_2d(min_x as f64..max_x as f64, min_y..MAX_Y)
         .unwrap();
 
     let mut mesh = chart.configure_mesh();
@@ -142,7 +142,7 @@ fn create_graph<P: AsRef<Path>>(
 
     chart
         .draw_series(LineSeries::new(
-            data.iter().map(|(x, y)| (*x, *y * MAX_Y)),
+            data.iter().map(|(x, y)| (*x as f64, *y * MAX_Y)),
             &RED,
         ))
         .unwrap();
@@ -151,16 +151,16 @@ fn create_graph<P: AsRef<Path>>(
 /// An object that can create graphs from the game state
 pub struct Grapher {
     /// Stored graph data for all faiths, certainly less memory efficient but the speed is worth it
-    faith_graph_complete: HashMap<GameId, Vec<(u32, f64)>>,
-    culture_graph_complete: HashMap<GameId, Vec<(u32, f64)>>,
+    faith_graph_complete: HashMap<GameId, Vec<(i16, f64)>>,
+    culture_graph_complete: HashMap<GameId, Vec<(i16, f64)>>,
 }
 
 impl Grapher {
     pub fn new(
-        faith_death_data: HashMap<GameId, HashMap<u32, f64>>,
-        culture_death_data: HashMap<GameId, HashMap<u32, f64>>,
+        faith_death_data: HashMap<GameId, HashMap<i16, f64>>,
+        culture_death_data: HashMap<GameId, HashMap<i16, f64>>,
     ) -> Self {
-        let process = |(id, data): (&GameId, &HashMap<u32, f64>)| {
+        let process = |(id, data): (&GameId, &HashMap<i16, f64>)| {
             let mut vec = Vec::new();
             for (date, deaths) in data {
                 vec.push((*date, *deaths));
@@ -388,8 +388,8 @@ impl Grapher {
 }
 
 pub fn create_timeline_graph<P: AsRef<Path>>(
-    timespans: &Vec<(Shared<Title>, Vec<(u32, u32)>)>,
-    max_date: u32,
+    timespans: &Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+    max_date: i16,
     output_path: P,
 ) {
     let root = SVGBackend::new(&output_path, GRAPH_SIZE).into_drawing_area();
@@ -402,20 +402,20 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
     const MARGIN: i32 = 3;
     let height = lifespan_y * t_len + MARGIN;
 
-    let root = root.apply_coord_spec(Cartesian2d::<RangedCoordu32, RangedCoordi32>::new(
-        0..max_date,
+    let root = root.apply_coord_spec(Cartesian2d::<RangedCoordi32, RangedCoordi32>::new(
+        0..max_date as i32,
         -height..MARGIN * 3,
         (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
     ));
 
     root.draw(&PathElement::new(
-        [(0, 0), (max_date, 0)],
+        [(0, 0), (max_date as i32, 0)],
         Into::<ShapeStyle>::into(&BLACK).filled(),
     ))
     .unwrap();
-    const YEAR_INTERVAL: u32 = 25;
+    const YEAR_INTERVAL: i32 = 25;
     //draw the tick
-    for i in 0..max_date / YEAR_INTERVAL {
+    for i in 0..max_date as i32 / YEAR_INTERVAL {
         root.draw(&PathElement::new(
             [
                 (i * YEAR_INTERVAL + 1, -height),
@@ -426,9 +426,9 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
         .unwrap();
     }
     //draw the century labels
-    for i in 1..(max_date / 100) + 1 {
+    for i in 1..(max_date as i32 / 100) + 1 {
         let txt = (i * 100).to_string();
-        let txt_x = fnt.box_size(&txt).unwrap().0 as u32;
+        let txt_x = fnt.box_size(&txt).unwrap().0 as i32;
         root.draw(&Text::new(
             txt,
             (i * 100 - (txt_x / 2), MARGIN),
@@ -445,13 +445,13 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
             }
             let real_end;
             if *end == 0 {
-                real_end = max_date;
+                real_end = max_date as i32;
             } else {
-                real_end = *end;
+                real_end = *end as i32;
             }
             root.draw(&Rectangle::new(
                 [
-                    (*start, -lifespan_y * i as i32 - MARGIN),
+                    (*start as i32, -lifespan_y * i as i32 - MARGIN),
                     (real_end, -lifespan_y * (i + 1) as i32 - MARGIN),
                 ],
                 Into::<ShapeStyle>::into(&GREEN).filled(),
@@ -460,7 +460,7 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
         }
         root.draw(&Text::new(
             title.get_internal().get_name().to_string(),
-            (txt_x, -lifespan_y * (i + 1) as i32),
+            (txt_x as i32, -lifespan_y * (i + 1) as i32),
             fnt.clone(),
         ))
         .unwrap();

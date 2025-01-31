@@ -1,3 +1,4 @@
+use jomini::common::Date;
 use serde::{ser::SerializeSeq, Serialize};
 
 use super::{
@@ -26,7 +27,7 @@ fn serialize_participants<S: serde::Serializer>(
 #[derive(Serialize)]
 pub struct Memory {
     id: GameId,
-    date: Option<GameString>,
+    date: Option<Date>,
     r#type: Option<GameString>,
     #[serde(serialize_with = "serialize_participants")]
     participants: Vec<(String, Shared<Character>)>,
@@ -49,7 +50,7 @@ impl DummyInit for Memory {
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<(), ParsingError> {
-        self.date = Some(base.get_string("creation_date")?);
+        self.date = Some(base.get_date("creation_date")?);
         if let Some(tp) = base.get("type") {
             self.r#type = Some(tp.as_string()?);
         }
