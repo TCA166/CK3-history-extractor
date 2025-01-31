@@ -1,14 +1,15 @@
 /// A submodule that provides [jomini] abstractions
 mod types;
 
-/// A submodule that provides the intermediate parsing interface for the save file.
-/// The parser uses [GameObject](crate::parser::game_object::GameObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
-mod game_object;
 use std::{
     error,
     fmt::{self, Debug, Display},
     num::ParseIntError,
 };
+
+/// A submodule that provides the intermediate parsing interface for the save file.
+/// The parser uses [GameObject](crate::parser::game_object::SaveFileObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
+mod game_object;
 
 pub use game_object::{
     ConversionError, GameId, GameObjectCollection, GameObjectMap, GameObjectMapping, GameString,

@@ -194,7 +194,7 @@ pub fn yield_section<'tape, 'data: 'tape>(
                         }
                         BinaryToken::Close => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
-                                binary.position(),
+                                tape.position(),
                                 BinaryToken::Close.into(),
                                 "unexpected close token",
                             )))

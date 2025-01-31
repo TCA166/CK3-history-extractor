@@ -61,7 +61,6 @@ impl<'a> Tape<'a> {
         Ok(())
     }
 
-    #[allow(dead_code)]
     pub fn position(&self) -> usize {
         match self {
             Self::Text(tape) => tape.position(),

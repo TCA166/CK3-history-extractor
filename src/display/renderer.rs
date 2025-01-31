@@ -31,7 +31,7 @@ fn create_dir_maybe<P: AsRef<Path>>(name: P) {
 
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
-/// Additionally holds references to the [GameMap] and [Grapher] objects, should they exist of course.
+/// Additionally holds references to the GameMap and [Grapher] objects, should they exist of course.
 /// It is meant to be used as a worker object that renders objects into html pages.
 pub struct Renderer<'a> {
     /// The [minijinja] environment object that is used to render the templates.

@@ -13,7 +13,7 @@ check: src/*.rs src/structures/*.rs
 
 doc: src/*.rs src/structures/*.rs
 	@echo "Building documentation..."
-	cargo doc --document-private-items --bin ck3_history_extractor
+	cargo doc --document-private-items --no-deps --bin ck3_history_extractor
 
 dependencies:
 	@echo "Installing dependencies..."
