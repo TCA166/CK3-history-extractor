@@ -4,7 +4,7 @@ use super::{
     super::{
         display::{Cullable, RenderableType},
         game_data::{Localizable, Localize},
-        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
+        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::WrapperMut,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,

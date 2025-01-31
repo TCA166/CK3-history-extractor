@@ -7,7 +7,9 @@ use super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
-        parser::{GameObjectMap, GameState, GameString, ParsingError, SaveFileValue},
+        parser::{
+            GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
+        },
         types::{Wrapper, WrapperMut},
     },
     into_ref_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,

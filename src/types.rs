@@ -13,8 +13,6 @@ use serde::Serialize;
 pub type HashMap<K, V> = std::collections::HashMap<K, V>;
 /// A type alias for a hash set.
 pub type HashSet<T> = std::collections::HashSet<T>;
-/// A type alias for a hash map iterator.
-pub type HashMapIter<'a, K, V> = std::collections::hash_map::Iter<'a, K, V>;
 
 /// A reference or a raw value. I have no clue why this isn't a standard library type.
 /// A [Ref] and a raw reference are both dereferencable to the same type.

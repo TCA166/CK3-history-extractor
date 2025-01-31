@@ -9,8 +9,8 @@ use super::{
         game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
-            GameId, GameObjectMap, GameState, GameString, ParsingError, SaveFileObject,
-            SaveFileValue,
+            GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError,
+            SaveFileObject, SaveFileValue,
         },
         types::{OneOrMany, Wrapper, WrapperMut},
     },

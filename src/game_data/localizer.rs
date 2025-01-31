@@ -42,14 +42,14 @@ fn demangle_generic(input: &str) -> String {
             break;
         }
     }
-    if s.len() > 4 && &s[1..2] == "p" && &s[3..4] == "_" {
-        s = s.split_at(4).1;
-    }
     let mut s = s.replace("_", " ");
     if s.is_empty() {
         return s;
     }
-    s[0..1].make_ascii_uppercase();
+    let first = s.chars().nth(0).unwrap();
+    if first.is_ascii_alphabetic() {
+        s[0..1].make_ascii_uppercase();
+    }
     s
 }
 

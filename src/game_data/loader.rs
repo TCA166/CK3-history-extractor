@@ -8,7 +8,8 @@ use std::{
 
 use super::{
     super::parser::{
-        yield_section, GameId, ParsingError, SaveFile, SaveFileError, SaveFileObject, SaveFileValue,
+        yield_section, GameId, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
+        SaveFileObject, SaveFileValue,
     },
     map::MapError,
     GameData, GameMap, Localizer,
@@ -75,29 +76,27 @@ fn create_title_province_map(file: &SaveFile) -> Result<HashMap<GameId, String>,
     let mut tape = file.tape();
     let mut map = HashMap::default();
     while let Some(res) = yield_section(&mut tape) {
-        let title_object = res?.parse()?;
+        let mut section = res?;
+        let title_object = section.parse()?;
         //DFS in the structure
-        let mut stack = vec![title_object.as_map()?];
-        while let Some(o) = stack.pop() {
-            if let Some(pro) = o.get("province") {
+        let mut stack = vec![(title_object.as_map()?, section.get_name().to_string())];
+        while let Some(entry) = stack.pop() {
+            if let Some(pro) = entry.0.get("province") {
                 match pro {
                     // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
                     SaveFileValue::Object(o) => {
-                        map.insert(
-                            o.as_array()?.get_index(0)?.as_id()?,
-                            o.get_name()?.to_owned(),
-                        );
+                        map.insert(o.as_array()?.get_index(0)?.as_id()?, entry.1);
                     }
                     s => {
-                        map.insert(s.as_id()?, o.get_name()?.to_owned());
+                        map.insert(s.as_id()?, entry.1);
                     }
                 }
             }
-            for (_key, val) in o {
+            for (key, val) in entry.0 {
                 match val {
                     SaveFileValue::Object(val) => match val {
                         SaveFileObject::Map(val) => {
-                            stack.push(val);
+                            stack.push((val, key.to_owned()));
                         }
                         _ => {}
                     },

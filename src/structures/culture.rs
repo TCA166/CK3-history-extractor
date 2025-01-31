@@ -7,7 +7,7 @@ use super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
         game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
+        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::{OneOrMany, RefOrRaw, Wrapper, WrapperMut},
     },
     serialize_array_ref, DummyInit, GameObjectDerived, Shared, Title,

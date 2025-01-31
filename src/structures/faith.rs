@@ -7,7 +7,7 @@ use super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
+        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::{RefOrRaw, Wrapper, WrapperMut},
     },
     serialize_ref, Character, DummyInit, GameObjectDerived, Shared, Title,

@@ -31,15 +31,6 @@ fn get_or_insert_dummy<T: DummyInit>(
     }
 }
 
-/// Just like [get_or_insert_dummy], but takes a [GameObjectMap] as input and uses the name field as the key.
-fn get_or_insert_dummy_from_value<T: DummyInit>(
-    map: &mut HashMap<GameId, Shared<T>>,
-    value: &GameObjectMap,
-) -> Shared<T> {
-    let key = value.get_name().unwrap().parse::<GameId>().unwrap();
-    return get_or_insert_dummy(map, &key);
-}
-
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
@@ -179,50 +170,58 @@ impl GameState {
         get_or_insert_dummy(&mut self.artifacts, key)
     }
 
-    pub fn add_artifact(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.artifacts, value)
+    pub fn add_artifact(
+        &mut self,
+        key: &GameId,
+        value: &GameObjectMap,
+    ) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.artifacts, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a character to the game state    
-    pub fn add_character(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.characters, value)
+    pub fn add_character(
+        &mut self,
+        key: &GameId,
+        value: &GameObjectMap,
+    ) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.characters, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a title to the game state
-    pub fn add_title(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.titles, value)
+    pub fn add_title(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.titles, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a faith to the game state
-    pub fn add_faith(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.faiths, value)
+    pub fn add_faith(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.faiths, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a culture to the game state
-    pub fn add_culture(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.cultures, value)
+    pub fn add_culture(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.cultures, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a dynasty to the game state
-    pub fn add_dynasty(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.dynasties, value)
+    pub fn add_dynasty(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.dynasties, key)
             .get_internal_mut()
             .init(value, self)
     }
 
     /// Add a memory to the game state
-    pub fn add_memory(&mut self, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy_from_value(&mut self.memories, value)
+    pub fn add_memory(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        get_or_insert_dummy(&mut self.memories, key)
             .get_internal_mut()
             .init(value, self)
     }
@@ -462,17 +461,6 @@ mod tests {
         let mut map = HashMap::default();
         let key = 1;
         let val = get_or_insert_dummy::<Artifact>(&mut map, &key);
-        assert_eq!(val.get_internal().get_id(), key);
-        let val2 = get_or_insert_dummy(&mut map, &key);
-        assert_eq!(val.get_internal().get_id(), val2.get_internal().get_id());
-    }
-
-    #[test]
-    fn test_get_or_insert_dummy_from_value() {
-        let mut map = HashMap::default();
-        let key = 1;
-        let value = GameObjectMap::from_name(Some(key.to_string()));
-        let val = get_or_insert_dummy_from_value::<Artifact>(&mut map, &value);
         assert_eq!(val.get_internal().get_id(), key);
         let val2 = get_or_insert_dummy(&mut map, &key);
         assert_eq!(val.get_internal().get_id(), val2.get_internal().get_id());

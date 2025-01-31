@@ -10,7 +10,7 @@ use super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
+        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
     Character, FromGameObject, GameObjectDerived, LineageNode, Shared,

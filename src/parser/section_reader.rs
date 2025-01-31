@@ -245,20 +245,24 @@ mod tests {
     #[test]
     fn test_single_section_messy() {
         let mut tape = Tape::Text(TokenReader::from_slice(b" \t\r   test={a=1}   \t\r "));
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
+        section.skip().unwrap();
         assert!(yield_section(&mut tape).is_none());
     }
 
     #[test]
     fn test_multiple_sections() {
         let mut tape = Tape::Text(TokenReader::from_slice(b"test={a=1}test2={b=2}test3={c=3}"));
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        section.skip().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test2");
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        section.skip().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test3");
+        section.skip().unwrap();
         assert!(yield_section(&mut tape).is_none());
     }
 
@@ -274,11 +278,14 @@ mod tests {
         let mut tape = Tape::Text(TokenReader::from_slice(
             b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}",
         ));
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        section.skip().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test2");
-        let section = yield_section(&mut tape).unwrap().unwrap();
+        section.skip().unwrap();
+        let mut section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test3");
+        section.skip().unwrap();
     }
 }

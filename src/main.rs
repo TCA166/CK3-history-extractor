@@ -137,12 +137,14 @@ fn main() -> Result<(), UserError> {
     let mut players: Vec<Player> = Vec::new();
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(spinner_style.clone());
+    progress_bar.enable_steady_tick(INTERVAL);
     let mut tape = save.tape();
     while let Some(res) = yield_section(&mut tape) {
         let mut section = res.unwrap();
         progress_bar.set_message(section.get_name().to_owned());
         // if an error occured somewhere here, there's nothing we can do
         process_section(&mut section, &mut game_state, &mut players).unwrap();
+        progress_bar.inc(1);
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
