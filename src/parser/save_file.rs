@@ -1,4 +1,6 @@
-use jomini::{self, BinaryTape, TextTape};
+use jomini::{
+    self, binary::TokenReader as BinaryTokenReader, text::TokenReader as TextTokenReader,
+};
 use std::{
     error,
     fmt::{self, Debug, Display},
@@ -147,11 +149,11 @@ impl<'a> SaveFile {
     }
 
     /// Get the tape from the save file.
-    pub fn tape(&'a self) -> Result<Tape<'a>, jomini::Error> {
+    pub fn tape(&'a self) -> Tape<'a> {
         if self.binary {
-            Ok(Tape::Binary(BinaryTape::from_slice(&self.contents)?))
+            Tape::Binary(BinaryTokenReader::new(&self.contents))
         } else {
-            Ok(Tape::Text(TextTape::from_slice(&self.contents)?))
+            Tape::Text(TextTokenReader::new(&self.contents))
         }
     }
 }
@@ -197,16 +199,9 @@ mod tests {
     fn test_tape() {
         let mut file = Cursor::new(b"test=a");
         let save = SaveFile::read(&mut file, None).unwrap();
-        let tape = save.tape().unwrap();
+        let tape = save.tape();
         if let Tape::Binary(_) = tape {
             panic!("Expected text tape, got binary tape");
         }
-    }
-
-    #[test]
-    fn test_tape_invalid() {
-        let mut file = Cursor::new(b"test");
-        let save = SaveFile::read(&mut file, None).unwrap();
-        assert!(save.tape().is_err());
     }
 }

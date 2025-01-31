@@ -89,6 +89,12 @@ pub enum SaveFileValue {
     Boolean(bool),
 }
 
+impl From<String> for SaveFileValue {
+    fn from(value: String) -> Self {
+        SaveFileValue::String(GameString::wrap(value))
+    }
+}
+
 impl SaveFileValue {
     // this API allows for easy error collection using the ? operator.
     /// Get the value as a string
@@ -169,7 +175,7 @@ pub enum SaveFileObject {
 
 impl SaveFileObject {
     /// Get the name of the object
-    pub fn get_name(&self) -> &str {
+    pub fn get_name(&self) -> Result<&str, SaveObjectError> {
         match self {
             SaveFileObject::Map(m) => m.get_name(),
             SaveFileObject::Array(a) => a.get_name(),
@@ -236,14 +242,6 @@ impl SaveFileObject {
         }
     }
 
-    /// Rename the object
-    pub fn rename(&mut self, name: String) {
-        match self {
-            SaveFileObject::Map(m) => m.rename(name),
-            SaveFileObject::Array(a) => a.rename(name),
-        }
-    }
-
     /// Check if the object is empty
     pub fn is_empty(&self) -> bool {
         match self {
@@ -256,8 +254,8 @@ impl SaveFileObject {
 impl Debug for SaveFileObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SaveFileObject::Map(o) => write!(f, "Map({},{:?})", o.name, o.inner),
-            SaveFileObject::Array(o) => write!(f, "Array({},{:?})", o.name, o.inner),
+            SaveFileObject::Map(o) => write!(f, "Map({:?},{:?})", o.name, o.inner),
+            SaveFileObject::Array(o) => write!(f, "Array({:?},{:?})", o.name, o.inner),
         }
     }
 }
@@ -299,12 +297,12 @@ impl<T: Debug> GameObjectCollection for Vec<T> {
 #[derive(PartialEq, Clone)]
 pub struct GameObject<T: GameObjectCollection> {
     inner: T,
-    name: String,
+    name: Option<String>,
 }
 
 impl<T: GameObjectCollection> GameObject<T> {
     /// Create a new GameObject from a name
-    pub fn from_name(name: String) -> Self {
+    pub fn from_name(name: Option<String>) -> Self {
         GameObject {
             inner: T::new(),
             name: name,
@@ -312,21 +310,16 @@ impl<T: GameObjectCollection> GameObject<T> {
     }
 
     /// Create a new empty GameObject
-    pub fn new() -> Self {
+    pub fn new(name: Option<String>, inner: T) -> Self {
         GameObject {
-            inner: T::new(),
-            name: String::new(),
+            inner: inner,
+            name: name,
         }
     }
 
-    /// Rename the GameObject
-    pub fn rename(&mut self, name: String) {
-        self.name = name;
-    }
-
     /// Get the name of the GameObject
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn get_name(&self) -> Result<&str, SaveObjectError> {
+        self.name.as_deref().ok_or(SaveObjectError::MissingName)
     }
 
     /// Check if the GameObject is empty
@@ -339,6 +332,7 @@ impl<T: GameObjectCollection> GameObject<T> {
 pub enum SaveObjectError {
     ConversionError(ConversionError),
     KeyError(KeyError),
+    MissingName,
 }
 
 impl fmt::Display for SaveObjectError {
@@ -346,6 +340,7 @@ impl fmt::Display for SaveObjectError {
         match self {
             Self::ConversionError(e) => write!(f, "conversion error: {}", e),
             Self::KeyError(e) => write!(f, "key error: {}", e),
+            Self::MissingName => write!(f, "missing object name"),
         }
     }
 }
@@ -355,6 +350,7 @@ impl error::Error for SaveObjectError {
         match self {
             Self::ConversionError(e) => Some(e),
             Self::KeyError(e) => Some(e),
+            _ => None,
         }
     }
 }
@@ -442,7 +438,7 @@ impl GameObject<HashMap<String, SaveFileValue>> {
                     arr.push(value);
                 }
                 _ => {
-                    let mut arr = GameObjectArray::from_name(key.clone());
+                    let mut arr = GameObjectArray::from_name(Some(key.clone()));
                     arr.push(val.clone());
                     arr.push(value);
                     self.inner
@@ -466,7 +462,7 @@ impl GameObject<HashMap<String, SaveFileValue>> {
             .map(|k| usize::from_str_radix(k, 10))
             .collect::<Result<Vec<_>, _>>()?;
         keys.sort();
-        let mut arr = GameObjectArray::from_name(self.name.clone());
+        let mut arr = GameObjectArray::from_name(self.name.as_ref().and_then(|s| Some(s.clone())));
         for key in keys {
             arr.push(self.inner[&key.to_string()].clone());
         }
@@ -538,7 +534,11 @@ impl<'a> IntoIterator for &'a GameObject<Vec<SaveFileValue>> {
 
 impl<T: GameObjectCollection> Debug for GameObject<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "GameObject({},{:?})", self.name, self.inner)
+        write!(f, "GameObject(")?;
+        if let Some(name) = &self.name {
+            write!(f, "{},", name)?;
+        }
+        write!(f, "{:?})", self.inner)
     }
 }
 
@@ -548,7 +548,7 @@ mod tests {
 
     #[test]
     fn test_insert() {
-        let mut obj = GameObjectMap::from_name("test".to_owned());
+        let mut obj = GameObjectMap::from_name(Some("test".to_owned()));
         let val = GameString::wrap("value".to_owned());
         obj.insert("key".to_owned(), SaveFileValue::String(val.clone()));
         assert_eq!(obj.get("key").unwrap().as_string().unwrap(), val.clone());

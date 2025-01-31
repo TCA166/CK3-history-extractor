@@ -36,7 +36,7 @@ fn get_or_insert_dummy_from_value<T: DummyInit>(
     map: &mut HashMap<GameId, Shared<T>>,
     value: &GameObjectMap,
 ) -> Shared<T> {
-    let key = value.get_name().parse::<GameId>().unwrap();
+    let key = value.get_name().unwrap().parse::<GameId>().unwrap();
     return get_or_insert_dummy(map, &key);
 }
 
@@ -471,8 +471,7 @@ mod tests {
     fn test_get_or_insert_dummy_from_value() {
         let mut map = HashMap::default();
         let key = 1;
-        let mut value = GameObjectMap::new();
-        value.rename("1".to_owned());
+        let value = GameObjectMap::from_name(Some(key.to_string()));
         let val = get_or_insert_dummy_from_value::<Artifact>(&mut map, &value);
         assert_eq!(val.get_internal().get_id(), key);
         let val2 = get_or_insert_dummy(&mut map, &key);

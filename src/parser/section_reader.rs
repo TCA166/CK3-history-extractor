@@ -3,11 +3,14 @@ use std::{
     fmt::{self, Debug, Display},
 };
 
-use jomini::{BinaryToken, TextToken};
+use jomini::{
+    binary::{ReaderError as BinaryReaderError, Token as BinaryToken},
+    text::{Operator, ReaderError as TextReaderError, Token as TextToken},
+};
 
 use super::{
     section::Section,
-    types::{Tape, Token, Tokens},
+    types::{Tape, Token},
 };
 
 /// An error that occurred while reading sections from a tape.
@@ -17,6 +20,20 @@ pub enum SectionReaderError<'err> {
     UnexpectedToken(usize, Token<'err>, &'static str),
     /// An unknown token was encountered.
     UnknownToken(u16),
+    TextReaderError(TextReaderError),
+    BinaryReaderError(BinaryReaderError),
+}
+
+impl From<TextReaderError> for SectionReaderError<'_> {
+    fn from(e: TextReaderError) -> Self {
+        Self::TextReaderError(e)
+    }
+}
+
+impl From<BinaryReaderError> for SectionReaderError<'_> {
+    fn from(e: BinaryReaderError) -> Self {
+        Self::BinaryReaderError(e)
+    }
 }
 
 impl<'err> Display for SectionReaderError<'err> {
@@ -32,19 +49,29 @@ impl<'err> Display for SectionReaderError<'err> {
             Self::UnknownToken(token) => {
                 write!(f, "reader encountered an unknown token {}", token)
             }
+            Self::TextReaderError(e) => {
+                write!(f, "text reader encountered an error: {}", e)
+            }
+            Self::BinaryReaderError(e) => {
+                write!(f, "binary reader encountered an error: {}", e)
+            }
         }
     }
 }
 
 impl<'err> error::Error for SectionReaderError<'err> {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
+        match self {
+            Self::TextReaderError(e) => Some(e),
+            Self::BinaryReaderError(e) => Some(e),
+            _ => None,
+        }
     }
 }
 
 /// Resolve a token to a section name.
-fn token_resolver(token: &u16) -> Result<&'static str, SectionReaderError> {
-    Ok(match token {
+fn token_resolver(token: &u16) -> Option<&'static str> {
+    Some(match token {
         12629 => "meta_data",
         1365 => "variables",
         13665 => "traits_lookup",
@@ -99,233 +126,159 @@ fn token_resolver(token: &u16) -> Result<&'static str, SectionReaderError> {
         14084 => "tax_slot_manager",
         14807 => "epidemics",
         14939 => "legends",
-        _ => return Err(SectionReaderError::UnknownToken(*token)),
+        _ => return None,
     })
 }
 
-/// A reader for sections in a tape.
-/// This reader will iterate over the tape and return sections, which are
-/// largest [Objects](super::SaveFileObject) in the save file.
-/// Yielded sections can (do not have to) be parsed using [Section::parse].
-pub struct SectionReader<'tape, 'data> {
-    /// The tape to read from.
-    tape: Tokens<'tape, 'data>,
-    /// The current offset in the tape.
-    offset: usize,
-    /// The length of the tape.
-    length: usize,
-}
-
-impl<'tape, 'data> SectionReader<'tape, 'data> {
-    /// Create a new section reader from a tape.
-    pub fn new(tape: &'data Tape<'data>) -> Self {
-        let tape = tape.tokens();
-        let length = tape.len();
-        SectionReader {
-            tape,
-            offset: 0,
-            length,
-        }
-    }
-
-    /// Get the number of sections in the tape.
-    pub fn len(&self) -> u32 {
-        let mut offset = 0;
-        let mut result = 0;
-        match self.tape {
-            Tokens::Text(text) => {
-                while offset < self.length {
-                    match &text[offset] {
-                        TextToken::Object { end, mixed: _ }
-                        | TextToken::Array { end, mixed: _ } => {
-                            offset = *end;
-                            result += 1;
-                        }
-                        _ => {
-                            offset += 1;
-                        }
+/// Essentially an iterator over sections in a tape.
+/// Previously a struct, but this is simpler, and makes the borrow checker happy.
+/// Returns None if there are no more sections. Otherwise, returns the next section, or reports an error.
+pub fn yield_section<'tape, 'data: 'tape>(
+    tape: &'tape mut Tape<'data>,
+) -> Option<Result<Section<'tape, 'data>, SectionReaderError<'data>>> {
+    let mut potential_key = None;
+    let mut past_eq = false;
+    match tape {
+        Tape::Text(text) => {
+            while let Some(res) = text.next().transpose() {
+                match res {
+                    Err(e) => {
+                        return Some(Err(e.into()));
                     }
-                }
-            }
-            Tokens::Binary(binary) => {
-                while offset < self.length {
-                    match &binary[offset] {
-                        BinaryToken::Object(end) | BinaryToken::Array(end) => {
-                            offset = *end;
-                            result += 1;
+                    Ok(tok) => match tok {
+                        TextToken::Open => {
+                            if past_eq {
+                                if let Some(key) = potential_key {
+                                    return Some(Ok(Section::new(tape, key)));
+                                }
+                            }
                         }
-                        _ => {
-                            offset += 1;
-                        }
-                    }
-                }
-            }
-        }
-        return result;
-    }
-}
-
-impl<'data, 'tape: 'data> Iterator for SectionReader<'tape, 'data> {
-    type Item = Result<Section<'tape, 'data>, SectionReaderError<'data>>;
-
-    fn next(&mut self) -> Option<Result<Section<'tape, 'data>, SectionReaderError<'data>>> {
-        let mut mixed = false; // mixed is local to the section, so the tokenizer sets it once every section
-        match self.tape {
-            Tokens::Text(text) => {
-                while self.offset < self.length {
-                    let tok = &text[self.offset];
-                    match tok {
-                        TextToken::Object { end, mixed: _ }
-                        | TextToken::Array { end, mixed: _ } => {
-                            // if we are in a mixed container, the key is two tokens back because = is inserted
-                            let key_offset = if mixed { 2 } else { 1 };
-                            let key = if let TextToken::Unquoted(scalar) =
-                                &text[self.offset - key_offset]
-                            {
-                                scalar.to_string()
-                            } else {
-                                return Some(Err(SectionReaderError::UnexpectedToken(
-                                    self.offset - key_offset,
-                                    Token::from_text(&text[self.offset - key_offset]),
-                                    "non-scalar key encountered",
-                                )));
-                            };
-                            let section = Section::new(Tokens::Text(&text), key, self.offset, *end);
-                            self.offset = *end + 1;
-                            return Some(Ok(section));
-                        }
-                        TextToken::MixedContainer => {
-                            mixed = true;
-                            self.offset += 1;
-                        }
-                        TextToken::End(_)
-                        | TextToken::Header(_)
-                        | TextToken::UndefinedParameter(_)
-                        | TextToken::Parameter(_) => {
+                        TextToken::Close => {
                             return Some(Err(SectionReaderError::UnexpectedToken(
-                                self.offset,
-                                Token::from_text(tok),
-                                "weird token in between sections",
+                                text.position(),
+                                TextToken::Close.into(),
+                                "unexpected close token",
                             )))
                         }
-                        _ => {
-                            // any token that may exist in the spaces between sections
-                            // skip here, we aren't looking for un-sectioned key-value pairs
-                            self.offset += 1;
+                        TextToken::Operator(op) => {
+                            if op == Operator::Equal {
+                                past_eq = true;
+                            } else {
+                                past_eq = false;
+                            }
                         }
-                    }
-                }
-            }
-            Tokens::Binary(binary) => {
-                while self.offset < self.length {
-                    let tok = &binary[self.offset];
-                    match tok {
-                        BinaryToken::Object(end) | BinaryToken::Array(end) => {
-                            let key_offset = if mixed { 2 } else { 1 };
-                            let key = match &binary[self.offset - key_offset] {
-                                BinaryToken::Unquoted(scalar) => scalar.to_string(),
-                                BinaryToken::Token(token) => match token_resolver(token) {
-                                    Ok(s) => s.to_string(),
-                                    Err(e) => {
-                                        return Some(Err(e));
-                                    }
-                                },
-                                _ => {
-                                    return Some(Err(SectionReaderError::UnexpectedToken(
-                                        self.offset - key_offset,
-                                        Token::from_binary(&binary[self.offset - key_offset]),
-                                        "Non-ascii key encountered",
-                                    )));
-                                }
-                            };
-                            let section =
-                                Section::new(Tokens::Binary(&binary), key, self.offset, *end);
-                            self.offset = *end + 1;
-                            return Some(Ok(section));
-                        }
-                        BinaryToken::MixedContainer => {
-                            mixed = true;
-                            self.offset += 1;
-                        }
-                        BinaryToken::End(_) => {
-                            return Some(Err(SectionReaderError::UnexpectedToken(
-                                self.offset,
-                                Token::from_binary(tok),
-                                "Weird token in between sections",
-                            )));
+                        TextToken::Unquoted(scalar) => {
+                            potential_key = Some(scalar.to_string());
                         }
                         _ => {
-                            self.offset += 1;
+                            past_eq = false;
+                            potential_key = None;
                         }
-                    }
+                    },
                 }
             }
         }
-        return None;
+        Tape::Binary(binary) => {
+            while let Some(res) = binary.next().transpose() {
+                match res {
+                    Err(e) => {
+                        return Some(Err(e.into()));
+                    }
+                    Ok(tok) => match tok {
+                        BinaryToken::Open => {
+                            if past_eq {
+                                if let Some(key) = potential_key {
+                                    return Some(Ok(Section::new(tape, key)));
+                                }
+                            }
+                        }
+                        BinaryToken::Close => {
+                            return Some(Err(SectionReaderError::UnexpectedToken(
+                                binary.position(),
+                                BinaryToken::Close.into(),
+                                "unexpected close token",
+                            )))
+                        }
+                        BinaryToken::Unquoted(token) => potential_key = Some(token.to_string()),
+                        BinaryToken::Id(token) => match token_resolver(&token) {
+                            Some(key) => {
+                                potential_key = Some(key.to_string());
+                            }
+                            None => {
+                                return Some(Err(SectionReaderError::UnknownToken(token)));
+                            }
+                        },
+                        BinaryToken::Equal => {
+                            past_eq = true;
+                        }
+                        _ => {
+                            past_eq = false;
+                            potential_key = None;
+                        }
+                    },
+                }
+            }
+        }
     }
+    return None;
 }
 
 #[cfg(test)]
 mod tests {
-    use jomini::TextTape;
+    use jomini::text::TokenReader;
 
     use super::*;
 
     #[test]
     fn test_empty() {
-        let tape = Tape::Text(TextTape::from_slice(b"").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        assert!(reader.next().is_none());
+        let mut tape = Tape::Text(TokenReader::from_slice(b""));
+        assert!(yield_section(&mut tape).is_none());
     }
 
     #[test]
     fn test_single_section() {
-        let tape = Tape::Text(TextTape::from_slice(b"test={a=1}").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        let section = reader.next().unwrap().unwrap();
+        let mut tape = Tape::Text(TokenReader::from_slice(b"test={a=1}"));
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
     }
 
     #[test]
     fn test_single_section_messy() {
-        let tape = Tape::Text(TextTape::from_slice(b" \t\r   test={a=1}   \t\r ").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        let section = reader.next().unwrap().unwrap();
+        let mut tape = Tape::Text(TokenReader::from_slice(b" \t\r   test={a=1}   \t\r "));
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
-        assert!(reader.next().is_none());
+        assert!(yield_section(&mut tape).is_none());
     }
 
     #[test]
     fn test_multiple_sections() {
-        let tape = Tape::Text(TextTape::from_slice(b"test={a=1}test2={b=2}test3={c=3}").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        let section = reader.next().unwrap().unwrap();
+        let mut tape = Tape::Text(TokenReader::from_slice(b"test={a=1}test2={b=2}test3={c=3}"));
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
-        let section = reader.next().unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test2");
-        let section = reader.next().unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test3");
-        assert!(reader.next().is_none());
+        assert!(yield_section(&mut tape).is_none());
     }
 
     #[test]
     fn test_non_ascii_key() {
-        let tape = Tape::Text(TextTape::from_slice(b"test={\x80=1}").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        let section = reader.next().unwrap().unwrap();
+        let mut tape = Tape::Text(TokenReader::from_slice(b"test={\x80=1}"));
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
     }
 
     #[test]
     fn test_mixed() {
-        let tape =
-            Tape::Text(TextTape::from_slice(b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}").unwrap());
-        let mut reader = SectionReader::new(&tape);
-        let section = reader.next().unwrap().unwrap();
+        let mut tape = Tape::Text(TokenReader::from_slice(
+            b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}",
+        ));
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
-        let section = reader.next().unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test2");
-        let section = reader.next().unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test3");
     }
 }

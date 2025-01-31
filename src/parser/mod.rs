@@ -22,7 +22,7 @@ mod section;
 pub use section::{Section, SectionError};
 
 mod section_reader;
-pub use section_reader::SectionReader;
+pub use section_reader::yield_section;
 
 /// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
 /// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
@@ -159,7 +159,7 @@ pub fn process_section(
         "dynasties" => {
             for (_, d) in i.parse()?.as_map()? {
                 if let SaveFileObject::Map(o) = d.as_object()? {
-                    if o.get_name() == "dynasty_house" || o.get_name() == "dynasties" {
+                    if o.get_name()? == "dynasty_house" || o.get_name()? == "dynasties" {
                         for (_, h) in o {
                             match h {
                                 SaveFileValue::Object(o) => {
@@ -270,19 +270,17 @@ pub fn process_section(
 #[cfg(test)]
 mod tests {
 
-    use jomini::{self, TextTape};
+    use jomini::{self, text::TokenReader};
 
-    use crate::parser::types::Tape;
-
-    use super::*;
+    use super::{types::Tape, *};
 
     fn get_test_obj(contents: &str) -> Result<Tape, jomini::Error> {
-        Ok(Tape::Text(TextTape::from_slice(contents.as_bytes())?))
+        Ok(Tape::Text(TokenReader::from_slice(contents.as_bytes())))
     }
 
     #[test]
     fn test_save_file() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             test={
                 test2={
@@ -291,9 +289,8 @@ mod tests {
             }
         ",
         )?;
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()?
             .get("test2")
@@ -307,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_save_file_array() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             test={
                 test2={
@@ -319,9 +316,8 @@ mod tests {
             }
         ",
         )?;
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()
             .unwrap()
@@ -343,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_weird_syntax() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             test={
                 test2={1=2
@@ -356,9 +352,8 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()?
             .get("test2")
@@ -372,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_array_syntax() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             test={
                 test2={ 1 2 3 }
@@ -380,9 +375,8 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()?
             .get("test2")
@@ -398,7 +392,7 @@ mod tests {
 
     #[test]
     fn test_unnamed_obj() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         3623={
             name=\"dynn_Sao\"
@@ -422,8 +416,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
         let variables = object
             .as_map()?
             .get("variables")
@@ -437,7 +430,7 @@ mod tests {
 
     #[test]
     fn test_example_1() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj("
+        let mut tape = get_test_obj("
         3623={
             name=\"dynn_Sao\"
             variables={
@@ -470,9 +463,8 @@ mod tests {
             }
             artifact_claims={ 83888519 }
         }").unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "3623".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "3623".to_string());
         assert_eq!(
             *(object.as_map()?.get("name").unwrap().as_string()?),
             "dynn_Sao".to_string()
@@ -500,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_space() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         test = {
             test2 = {
@@ -511,9 +503,8 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()?
             .get("test2")
@@ -532,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_landed() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         c_derby = {
             color = { 255 50 20 }
@@ -570,9 +561,8 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "c_derby".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "c_derby".to_string());
         let b_derby = object
             .as_map()?
             .get("b_derby")
@@ -608,7 +598,7 @@ mod tests {
 
     #[test]
     fn test_invalid_line() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             nonsense=idk
             test={
@@ -619,9 +609,8 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
         let test2 = object
             .as_map()?
             .get("test2")
@@ -635,29 +624,27 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             test={
             }
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "test".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "test".to_string());
     }
 
     #[test]
     fn test_arr_index() {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
             duration={ 2 0=7548 1=2096 }
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
-        assert_eq!(object.get_name(), "duration".to_string());
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
+        assert_eq!(object.get_name().unwrap(), "duration".to_string());
         let arr = object.as_array().unwrap();
         assert_eq!(arr.len(), 3);
         assert_eq!(arr[0].as_id().unwrap(), 7548);
@@ -665,7 +652,7 @@ mod tests {
 
     #[test]
     fn test_multi_key() -> Result<(), Box<dyn std::error::Error>> {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         test={
             a=hello
@@ -674,8 +661,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap().unwrap().parse().unwrap();
+        let object = yield_section(&mut tape).unwrap().unwrap().parse().unwrap();
         let arr = object.as_map()?.get("a").unwrap().as_object()?.as_array()?;
         assert_eq!(arr.len(), 2);
         Ok(())
@@ -683,7 +669,7 @@ mod tests {
 
     #[test]
     fn test_invalid_syntax_1() {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         test={
             a=hello
@@ -692,14 +678,13 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap();
+        let object = yield_section(&mut tape).unwrap();
         assert!(object.unwrap().parse().is_ok())
     }
 
     #[test]
     fn test_invalid_syntax_2() {
-        let tape = get_test_obj(
+        let mut tape = get_test_obj(
             "
         test={
             b
@@ -708,8 +693,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut reader = SectionReader::new(&tape);
-        let object = reader.next().unwrap();
+        let object = yield_section(&mut tape).unwrap();
         assert!(object.unwrap().parse().is_err())
     }
     #[test]

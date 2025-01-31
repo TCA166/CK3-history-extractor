@@ -15,7 +15,7 @@ mod types;
 
 /// A submodule that handles save file parsing
 mod parser;
-use parser::{process_section, GameState, SaveFile, SaveFileError, SectionReader};
+use parser::{process_section, yield_section, GameState, SaveFile, SaveFileError};
 
 /// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
@@ -107,6 +107,10 @@ fn main() -> Result<(), UserError> {
         .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
         .unwrap()
         .progress_chars("#>-");
+    let spinner_style = ProgressStyle::default_spinner()
+        .template("[{elapsed_precise}] {spinner} {msg}")
+        .unwrap()
+        .tick_chars("|/-\\ ");
     let mut include_paths = args.include;
     //even though we don't need these for parsing, we load them here to error out early
     if let Some(game_path) = args.game_path {
@@ -128,15 +132,14 @@ fn main() -> Result<(), UserError> {
     let mut data = loader.finalize();
     //initialize the save file
     let save = SaveFile::open(args.filename)?;
-    let tape = save.tape().unwrap();
-    let reader = SectionReader::new(&tape);
     // this is sort of like the first round of filtering where we store the objects we care about
     let mut game_state: GameState = GameState::new();
     let mut players: Vec<Player> = Vec::new();
-    let progress_bar = ProgressBar::new(reader.len() as u64);
-    progress_bar.set_style(bar_style.clone());
-    for i in progress_bar.wrap_iter(reader.into_iter()) {
-        let mut section = i.unwrap();
+    let progress_bar = ProgressBar::new_spinner();
+    progress_bar.set_style(spinner_style.clone());
+    let mut tape = save.tape();
+    while let Some(res) = yield_section(&mut tape) {
+        let mut section = res.unwrap();
         progress_bar.set_message(section.get_name().to_owned());
         // if an error occured somewhere here, there's nothing we can do
         process_section(&mut section, &mut game_state, &mut players).unwrap();
@@ -164,10 +167,6 @@ fn main() -> Result<(), UserError> {
     let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));
     player_progress.set_style(bar_style);
     player_progress.enable_steady_tick(INTERVAL);
-    let spinner_style = ProgressStyle::default_spinner()
-        .template("[{elapsed_precise}] {spinner} {msg}")
-        .unwrap()
-        .tick_chars("|/-\\ ");
     for player in player_progress.wrap_iter(players.iter_mut()) {
         player.localize(&mut data);
         //render each player

@@ -8,7 +8,7 @@ use std::{
 
 use super::{
     super::parser::{
-        GameId, ParsingError, SaveFile, SaveFileError, SaveFileObject, SaveFileValue, SectionReader,
+        yield_section, GameId, ParsingError, SaveFile, SaveFileError, SaveFileObject, SaveFileValue,
     },
     map::MapError,
     GameData, GameMap, Localizer,
@@ -72,12 +72,10 @@ impl error::Error for GameDataError {
 
 /// Creates a mapping from province ids to their barony title keys
 fn create_title_province_map(file: &SaveFile) -> Result<HashMap<GameId, String>, ParsingError> {
-    let tape = file.tape()?;
-    let reader = SectionReader::new(&tape);
+    let mut tape = file.tape();
     let mut map = HashMap::default();
-    for title in reader {
-        let section = title?;
-        let title_object = section.parse()?;
+    while let Some(res) = yield_section(&mut tape) {
+        let title_object = res?.parse()?;
         //DFS in the structure
         let mut stack = vec![title_object.as_map()?];
         while let Some(o) = stack.pop() {
@@ -87,11 +85,11 @@ fn create_title_province_map(file: &SaveFile) -> Result<HashMap<GameId, String>,
                     SaveFileValue::Object(o) => {
                         map.insert(
                             o.as_array()?.get_index(0)?.as_id()?,
-                            o.get_name().to_owned(),
+                            o.get_name()?.to_owned(),
                         );
                     }
                     s => {
-                        map.insert(s.as_id()?, o.get_name().to_owned());
+                        map.insert(s.as_id()?, o.get_name()?.to_owned());
                     }
                 }
             }
