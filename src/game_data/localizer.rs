@@ -181,12 +181,10 @@ impl Localizer {
         let path = path.as_ref();
         if path.is_dir() {
             // a stack to keep track of the directories
-            let mut stack: Vec<PathBuf> = Vec::new();
-            stack.push(PathBuf::from(path));
+            let mut stack: Vec<PathBuf> = vec![PathBuf::from(path)];
             // a vector to keep track of all the files
             let mut all_files: Vec<PathBuf> = Vec::new();
-            while !stack.is_empty() {
-                let entry = stack.pop().unwrap();
+            while let Some(entry) = stack.pop() {
                 if let Ok(entries) = fs::read_dir(entry) {
                     for entry in entries {
                         if let Ok(entry) = entry {
@@ -236,6 +234,7 @@ impl Localizer {
                             .trim_start_matches("trait_")
                             .trim_end_matches("_name")
                             .to_string();
+                        eprintln!("Added key: {} {}", key, value);
                         self.data
                             .insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
                     } else {
@@ -262,6 +261,10 @@ impl Localizer {
             }
         }
     }
+
+    //TODO localization overall needs to be improved. The current implementation is too simplistic and doesn't handle the more complex cases
+    // resolve needs to go, it's a bad idea, all invocations need to be resolved on the fly
+    // also arguments need to be passed in during localization.
 
     /// Resolves the special localisation invocations.
     pub fn resolve(&mut self) {

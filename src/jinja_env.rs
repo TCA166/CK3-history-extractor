@@ -1,6 +1,10 @@
 use std::{fs, path::Path};
 
-use minijinja::{AutoEscape, Environment, Value};
+use minijinja::{AutoEscape, Environment, UndefinedBehavior, Value};
+
+use crate::game_data::Localize;
+
+const LOCALIZATION_SUFFIX: &str = "_l";
 
 #[cfg(feature = "internal")]
 mod internal_templates {
@@ -40,8 +44,6 @@ const TEMPLATE_NAMES: [&str; 8] = [
 /// If the internal flag is set to true, it will use the internal templates, otherwise it will use the templates in the templates folder.
 /// If the templates folder does not exist, it will attempt use the internal templates regardless of the setting.
 ///
-/// **This function leaks memory.**
-///
 /// ## Env specifics
 ///
 /// The environment will have no html escaping.
@@ -57,7 +59,16 @@ const TEMPLATE_NAMES: [&str; 8] = [
 /// The environment will have the following globals:
 /// - map_present - whether the map is present
 /// - no_vis - whether the visualizations are disabled
-pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environment<'static> {
+///
+/// ### Localization
+///
+/// All variables in the templates that end with '_l' will be interpreted as localization keys and will be localized using the provided localizer.
+pub fn create_env<'a, L: Localize>(
+    internal: bool,
+    map_present: bool,
+    no_vis: bool,
+    localizer: &mut L,
+) -> Environment<'a> {
     let mut env = Environment::new();
     env.set_lstrip_blocks(true);
     env.set_trim_blocks(true);
@@ -66,6 +77,7 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
     env.add_global("map_present", map_present);
     env.add_global("no_vis", no_vis);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
+    env.set_undefined_behavior(UndefinedBehavior::Strict);
     let template_path = Path::new("./templates");
     if internal || !template_path.exists() {
         #[cfg(feature = "internal")]
@@ -104,13 +116,29 @@ pub fn create_env(internal: bool, map_present: bool, no_vis: bool) -> Environmen
                         .iter()
                         .find(|&x| x == &path.file_stem().unwrap());
                     if let Some(name) = name {
-                        let template = fs::read_to_string(path).unwrap();
-                        env.add_template_owned(*name, template).unwrap();
+                        env.add_template_owned(*name, fs::read_to_string(path).unwrap())
+                            .unwrap();
                     }
                 }
                 Err(e) => eprintln!("Error reading template directory: {}", e),
             }
         }
+    }
+    let mut vars_to_localize = Vec::new();
+    for (_, template) in env.templates() {
+        let vars = template.undeclared_variables(true);
+        for var in vars
+            .iter()
+            .filter_map(|x| x.strip_suffix(LOCALIZATION_SUFFIX))
+        {
+            vars_to_localize.push(var.to_owned());
+        }
+    }
+    for var in vars_to_localize {
+        env.add_global(
+            var.clone(),
+            Value::from_safe_string(localizer.localize(var.as_str()).to_string()),
+        );
     }
     env
 }

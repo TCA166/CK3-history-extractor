@@ -3,11 +3,11 @@
 <!--TODO common phrase localization-->
 
 {% block title %}
-{{name}} {{nick if nick != none}}
+{{name}} {{nick if nick is defined}}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{{name}} {{nick if nick != none}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{{name}} {{nick if nick is defined}}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 
@@ -52,12 +52,9 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td>{{skills[0]}}</td>
-                                <td>{{skills[1]}}</td>
-                                <td>{{skills[2]}}</td>
-                                <td>{{skills[3]}}</td>
-                                <td>{{skills[4]}}</td>
-                                <td>{{skills[5]}}</td>
+                                {%for skill in skills%}
+                                <td>{{skill}}</td>
+                                {%endfor%}
                             </tr>
                         </tbody>
                     </table>

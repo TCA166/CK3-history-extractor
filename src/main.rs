@@ -155,7 +155,12 @@ fn main() -> Result<(), UserError> {
     } else {
         grapher = None;
     }
-    let env = create_env(args.use_internal, data.get_map().is_some(), args.no_vis);
+    let env = create_env(
+        args.use_internal,
+        data.get_map().is_some(),
+        args.no_vis,
+        &mut data,
+    );
     let timeline;
     if !args.no_vis {
         let mut tm = game_state.new_timeline();

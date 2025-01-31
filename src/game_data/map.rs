@@ -45,8 +45,6 @@ const IMG_HEIGHT: u32 = 4096;
 /// The scale factor for the input map image
 const SCALE: u32 = 4;
 
-// TODO add error handling
-
 #[derive(Debug)]
 pub enum MapError {
     IoError(io::Error),
