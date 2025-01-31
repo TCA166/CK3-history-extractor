@@ -1,4 +1,8 @@
-/// A submodule that provides [jomini] abstractions
+/// A submodule that provides [jomini] abstractions.
+/// This allows us to create an intermediate parsing interface with objects like
+/// [SaveFile] and [Section] that hold these abstractions, however hiding if the
+/// save file is binary or text. Thanks to this a user doesn't have to write
+/// boilerplate code to handle both types of save files.
 mod types;
 
 use std::{
@@ -7,27 +11,40 @@ use std::{
     num::ParseIntError,
 };
 
-/// A submodule that provides the intermediate parsing interface for the save file.
-/// The parser uses [GameObject](crate::parser::game_object::SaveFileObject) to store the parsed data and structures in [structures](crate::structures) are initialized from these objects.
+/// A submodule that provides the parser output objects.
+/// The parser uses [GameObject](crate::parser::game_object::SaveFileObject) to
+/// store the parsed data and structures in [structures](crate::structures) are
+/// initialized from these objects. This is our workaround for the lack of
+/// reflection in Rust, and it puts one more layer of abstraction between the
+/// parser and the structures. Jomini style would be to have the structures
+/// directly initialized from the token tape, but that wouldn't play well with
+/// the way we store everything in a central [GameState] object.
 mod game_object;
-
 pub use game_object::{
     ConversionError, GameId, GameObjectCollection, GameObjectMap, GameObjectMapping, GameString,
     KeyError, SaveFileObject, SaveFileValue, SaveObjectError,
 };
 
-/// A submodule that provides the [SaveFile] object, which is used to store the entire save file.
+/// A submodule that provides the [SaveFile] object, which is used to store the
+/// entire save file. This is essentially the front-end of the parser, handling
+/// the IO and the such.
 mod save_file;
 pub use save_file::{SaveFile, SaveFileError};
 
+/// A submodule that provides the [Section] object, which allows the user to
+/// choose which sections should be parsed.
 mod section;
 pub use section::{Section, SectionError};
 
+/// A submodule that provides the [yield_section] function, which is used to
+/// iterate over the save file and return the next section.
 mod section_reader;
 pub use section_reader::yield_section;
 
-/// A submodule that provides the [GameState] object, which is used as a sort of a dictionary.
-/// CK3 save files have a myriad of different objects that reference each other, and in order to allow for centralized storage and easy access, the [GameState] object is used.
+/// A submodule that provides the [GameState] object, which is used as a sort of
+/// a dictionary. CK3 save files have a myriad of different objects that
+/// reference each other, and in order to allow for centralized storage and easy
+/// access, the [GameState] object is used.
 mod game_state;
 pub use game_state::GameState;
 use section_reader::SectionReaderError;
@@ -117,8 +134,11 @@ use super::{
 };
 
 /// A function that processes a section of the save file.
-/// Based on the given section, it will update the [GameState] object and the [Player] vector.
-/// The [GameState] object is used to store all the data from the save file, while the [Player] vector is used to store the player data.
+/// Based on the given section, it will update the [GameState] object and the
+/// [Player] vector. The [GameState] object is used to store all the data from
+/// the save file, while the [Player] vector is used to store the player data.
+/// Essentially the fasade of the parser, that makes the choices on which
+/// sections to parse and how to parse them.
 pub fn process_section(
     i: &mut Section,
     game_state: &mut GameState,

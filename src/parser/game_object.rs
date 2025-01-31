@@ -72,7 +72,9 @@ impl error::Error for ConversionError {
     }
 }
 
+/// A string that represents a boolean true value.
 const BOOL_TRUE: &str = "yes";
+/// A string that represents a boolean false value.
 const BOOL_FALSE: &str = "no";
 
 /// A value that comes from a save file.
@@ -90,6 +92,7 @@ pub enum SaveFileValue {
     Integer(i64),
     /// A boolean
     Boolean(bool),
+    /// A date
     Date(Date),
 }
 
@@ -215,6 +218,8 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as an integer. If the value is a real number, it will be
+    /// truncated.
     pub fn as_integer(&self) -> Result<i64, ConversionError> {
         match self {
             SaveFileValue::Integer(i) => Ok(*i),
@@ -226,6 +231,8 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as a real number. If the value is an integer, it will be
+    /// converted to a real number.
     pub fn as_real(&self) -> Result<f64, ConversionError> {
         match self {
             SaveFileValue::Real(r) => Ok(*r),
@@ -237,6 +244,7 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as a date
     pub fn as_date(&self) -> Result<Date, ConversionError> {
         match self {
             SaveFileValue::Date(date) => Ok(*date),
@@ -247,6 +255,7 @@ impl SaveFileValue {
         }
     }
 
+    /// Get the value as a boolean
     pub fn as_boolean(&self) -> Result<bool, ConversionError> {
         match self {
             SaveFileValue::Boolean(b) => Ok(*b),
@@ -319,12 +328,22 @@ pub enum SaveObjectError {
 }
 
 pub trait GameObjectMapping {
+    /// Get the value of a key, or return an error if the key is missing.
+    /// Essentially a different flavor of [HashMap::get].
+    /// The error is lazily initialized, so performance if the key is present is
+    /// not affected.
     fn get_err(&self, key: &str) -> Result<&SaveFileValue, KeyError>;
+    /// Get the value of a key as a string.
     fn get_string(&self, key: &str) -> Result<GameString, SaveObjectError>;
+    /// Get the value of a key as an object.
     fn get_object(&self, key: &str) -> Result<&SaveFileObject, SaveObjectError>;
+    /// Get the value of a key as an integer.
     fn get_integer(&self, key: &str) -> Result<i64, SaveObjectError>;
+    /// Get the value of a key as a real number.
     fn get_real(&self, key: &str) -> Result<f64, SaveObjectError>;
+    /// Get the value of a key as a GameId.
     fn get_game_id(&self, key: &str) -> Result<GameId, SaveObjectError>;
+    /// Get the value of a key as a date.
     fn get_date(&self, key: &str) -> Result<Date, SaveObjectError>;
 }
 
@@ -338,22 +357,18 @@ impl GameObjectMapping for GameObjectMap {
         Ok(self.get_err(key)?.as_string()?)
     }
 
-    /// Get the value of a key as a boolean.
     fn get_object(&self, key: &str) -> Result<&SaveFileObject, SaveObjectError> {
         Ok(self.get_err(key)?.as_object()?)
     }
 
-    /// Get the value of a key as an integer.
     fn get_integer(&self, key: &str) -> Result<i64, SaveObjectError> {
         Ok(self.get_err(key)?.as_integer()?)
     }
 
-    /// Get the value of a key as a real number.
     fn get_real(&self, key: &str) -> Result<f64, SaveObjectError> {
         Ok(self.get_err(key)?.as_real()?)
     }
 
-    /// Get the value of a key as a GameId.
     fn get_game_id(&self, key: &str) -> Result<GameId, SaveObjectError> {
         Ok(self.get_err(key)?.as_id()?)
     }

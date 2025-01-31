@@ -10,6 +10,7 @@ use jomini::{
     text::{ReaderError as TextReaderError, Token as TextToken, TokenReader as TextTokenReader},
 };
 
+/// An error that can occur when reading from a tape.
 #[derive(Debug)]
 pub enum TapeError {
     Text(TextReaderError),
@@ -53,6 +54,7 @@ pub enum Tape<'a> {
 }
 
 impl<'a> Tape<'a> {
+    /// Skips all the tokens until it encounters the end of the current container.
     pub fn skip_container(&mut self) -> Result<(), TapeError> {
         match self {
             Self::Text(tape) => tape.skip_container()?,
@@ -61,6 +63,7 @@ impl<'a> Tape<'a> {
         Ok(())
     }
 
+    /// Gets the position in tape in bytes.
     pub fn position(&self) -> usize {
         match self {
             Self::Text(tape) => tape.position(),
@@ -68,6 +71,11 @@ impl<'a> Tape<'a> {
         }
     }
 }
+
+/* We only have this rather opaque abstraction, not a generalization of tokens
+because a generalization would discard too much context. Most notably, the
+information regarding whether a string was quoted or not. As such, we only
+have this abstraction, used exclusively in error handling. */
 
 /// An abstraction over [jomini] tokens: [jomini::TextToken] and [jomini::BinaryToken]
 pub enum Token<'a> {

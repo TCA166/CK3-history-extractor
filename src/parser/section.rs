@@ -27,7 +27,9 @@ pub enum SectionError {
     ScalarError(ScalarError),
     /// An unknown token was encountered
     UnknownToken(u16),
+    /// An error occured while reading from the tape
     TapeError(TapeError),
+    /// An error occured while decoding bytes
     DecodingError(FromUtf8Error),
 }
 
@@ -94,8 +96,10 @@ impl error::Error for SectionError {
     }
 }
 
+/// The headers preceding color values. To be ignored
 const COLOR_HEADERS: [&[u8]; 2] = [b"rgb", b"hsv"];
 
+/// Resolve a token into a string.
 fn token_resolver(token: &u16) -> Option<&'static str> {
     match token {
         // TODO
@@ -103,6 +107,13 @@ fn token_resolver(token: &u16) -> Option<&'static str> {
     }
 }
 
+/// A stack entry for the section parser.
+/// It serves two very important functions. First: it stores the name it should
+/// be saved under, or 'None' if it should be saved in parent as if the parent
+/// was an array. Second: it stores the values that are being parsed,
+/// as if the object was simultaneously an array and a map. This is then
+/// lazily evaluated into a homogeneous object. The object internals are lazily
+/// evaluated so performance cost for homogenous objects should be minimal
 #[derive(Debug, Clone)]
 struct StackEntry {
     name: Option<String>,
@@ -111,6 +122,7 @@ struct StackEntry {
 }
 
 impl StackEntry {
+    /// Create a new stack entry with an optional name.
     fn new(name: Option<String>) -> Self {
         StackEntry {
             name,
@@ -119,6 +131,7 @@ impl StackEntry {
         }
     }
 
+    /// Push a value into the stack entry.
     fn push(&mut self, value: SaveFileValue) {
         if self.array.is_none() {
             self.array = Some(Vec::new());
@@ -126,6 +139,7 @@ impl StackEntry {
         self.array.as_mut().unwrap().push(value);
     }
 
+    /// Insert a key-value pair into the stack entry.
     fn insert(&mut self, key: String, value: SaveFileValue) {
         if self.map.is_none() {
             self.map = Some(HashMap::new());
@@ -194,6 +208,7 @@ fn scalar_to_string(scalar: Scalar) -> Result<String, SectionError> {
 
 /// A section of the save file.
 /// It directly maps to a [SaveFileObject] and is the largest unit of data in the save file.
+/// Since [Tape] holds state, it must be mutable for the section to be parsable.
 pub struct Section<'tape, 'data> {
     tape: &'tape mut Tape<'data>,
     name: String,
@@ -213,16 +228,12 @@ impl<'tape, 'data> Section<'tape, 'data> {
         &self.name
     }
 
+    /// Skip the section. This must be called if the section is not going to be parsed.
     pub fn skip(&mut self) -> Result<(), SectionError> {
         Ok(self.tape.skip_container()?)
     }
 
-    /* Looking at this parser, you can quite easily see an opportunity for an
-    abstraction based on an enum. This would allow us to have a single parser
-    that can handle both text and binary tokens. The problem with that approach
-    is that it would abstract too much. */
-
-    /// Parse the section into a [SaveFileObject].
+    /// Parse the section into a [SaveFileObject]. This will consume the section.
     pub fn parse(&mut self) -> Result<SaveFileObject, SectionError> {
         let mut stack: Vec<StackEntry> = vec![StackEntry::new(Some(self.name.clone()))];
         let mut key = None;
