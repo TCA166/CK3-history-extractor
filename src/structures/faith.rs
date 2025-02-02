@@ -115,12 +115,9 @@ impl Renderable for Faith {
             if !keys.is_empty() {
                 let mut buf = path.join(Self::get_subdir());
                 buf.push(format!("{}.png", self.id));
-                map.create_map_file(
-                    keys,
-                    &[70, 255, 70],
-                    &buf,
-                    Some(format!("Map of the {} faith", &self.name.as_ref().unwrap())),
-                );
+                let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
+                faith_map.draw_text(format!("Map of the {} faith", &self.name.as_ref().unwrap()));
+                faith_map.save(&buf);
             }
         }
     }

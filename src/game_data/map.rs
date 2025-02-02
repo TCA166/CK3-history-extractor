@@ -100,69 +100,109 @@ impl error::Error for MapError {
 }
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
-fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, MapError> {
-    Ok(ImageReader::open(path)?.decode()?.to_rgb8().into_raw())
+fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Box<[u8]>, MapError> {
+    Ok(ImageReader::open(path)?
+        .decode()?
+        .to_rgb8()
+        .into_raw()
+        .into_boxed_slice())
 }
 
-/// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
-fn draw_text<T: Borrow<str>>(img: &mut [u8], width: u32, height: u32, text: T) {
-    let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
-    let text_height = height / 20;
-    let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);
-    back.draw(&Text::new(
-        text,
-        (10, height as i32 - text_height as i32),
-        style,
-    ))
-    .unwrap();
-    back.present().unwrap();
+pub struct Map {
+    height: u32,
+    width: u32,
+    bytes: Box<[u8]>,
 }
 
-/// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
-fn draw_legend(img: &mut [u8], width: u32, height: u32, legend: Vec<(String, [u8; 3])>) {
-    let back = BitMapBackend::with_buffer(img, (width, height)).into_drawing_area();
-    let text_height = (height / 30) as i32;
-    let style = ("sans-serif", text_height).into_font();
-    let mut x = (width / 50) as i32;
-    for (label, color) in legend {
-        let text_size = style.box_size(&label).unwrap();
-        let margin = text_height / 3;
-        back.draw(
-            &(EmptyElement::at((x, height as i32 - (text_height * 2)))
-                + Rectangle::new(
-                    [(0, 0), (text_height, text_height)],
-                    ShapeStyle {
-                        color: RGBAColor(color[0], color[1], color[2], 1.0),
-                        filled: true,
-                        stroke_width: 1,
-                    },
-                )
-                + Rectangle::new(
-                    [(0, 0), (text_height, text_height)],
-                    ShapeStyle {
-                        color: BLACK.to_rgba(),
-                        filled: false,
-                        stroke_width: 1,
-                    },
-                )
-                + Text::new(
-                    label,
-                    (text_height + margin, (text_height - text_size.1 as i32)),
-                    style.clone(),
-                )),
-        )
+impl Map {
+    /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
+    pub fn draw_text<T: Borrow<str>>(&mut self, text: T) {
+        let back = BitMapBackend::with_buffer(&mut self.bytes, (self.width, self.height))
+            .into_drawing_area();
+        let text_height = self.height / 20;
+        let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);
+        back.draw(&Text::new(
+            text,
+            (10, self.height as i32 - text_height as i32),
+            style,
+        ))
         .unwrap();
-        x += text_height + text_size.0 as i32 + (margin * 2);
+        back.present().unwrap();
     }
-    back.present().unwrap();
+
+    /// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
+    pub fn draw_legend(&mut self, legend: Vec<(String, [u8; 3])>) {
+        let back = BitMapBackend::with_buffer(&mut self.bytes, (self.width, self.height))
+            .into_drawing_area();
+        let text_height = (self.height / 30) as i32;
+        let style = ("sans-serif", text_height).into_font();
+        let mut x = (self.width / 50) as i32;
+        for (label, color) in legend {
+            let text_size = style.box_size(&label).unwrap();
+            let margin = text_height / 3;
+            back.draw(
+                &(EmptyElement::at((x, self.height as i32 - (text_height * 2)))
+                    + Rectangle::new(
+                        [(0, 0), (text_height, text_height)],
+                        ShapeStyle {
+                            color: RGBAColor(color[0], color[1], color[2], 1.0),
+                            filled: true,
+                            stroke_width: 1,
+                        },
+                    )
+                    + Rectangle::new(
+                        [(0, 0), (text_height, text_height)],
+                        ShapeStyle {
+                            color: BLACK.to_rgba(),
+                            filled: false,
+                            stroke_width: 1,
+                        },
+                    )
+                    + Text::new(
+                        label,
+                        (text_height + margin, (text_height - text_size.1 as i32)),
+                        style.clone(),
+                    )),
+            )
+            .unwrap();
+            x += text_height + text_size.0 as i32 + (margin * 2);
+        }
+        back.present().unwrap();
+    }
+
+    pub fn save<P: AsRef<Path>>(self, path: P) {
+        let path = path.as_ref().to_owned();
+        thread::spawn(move || {
+            save_buffer(
+                path,
+                &self.bytes,
+                self.width,
+                self.height,
+                image::ExtendedColorType::Rgb8,
+            )
+            .unwrap();
+        });
+    }
+}
+
+impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Map {
+    fn into(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+        let mut rgba = Vec::with_capacity(self.bytes.len() * 4 / 3);
+        for i in 0..self.bytes.len() {
+            rgba.push(self.bytes[i]);
+            if (i + 1) % 3 == 0 {
+                rgba.push(255);
+            }
+        }
+        ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
+    }
 }
 
 /// A struct representing a game map, from which we can create [crate::structures::Title] maps
 pub struct GameMap {
     height: u32,
     width: u32,
-    byte_sz: usize,
-    province_map: Vec<u8>,
+    province_map: Box<[u8]>,
     title_color_map: HashMap<String, [u8; 3]>,
 }
 
@@ -207,7 +247,7 @@ impl GameMap {
         //scale the image down to 1/4 of the size
         let mut x = 0;
         let mut y = 0;
-        let mut new_bytes = Vec::new();
+        let mut new_bytes = Vec::with_capacity(provinces_bytes.len() / (SCALE * SCALE) as usize);
         while y < IMG_HEIGHT {
             x = 0;
             while x < max_x {
@@ -277,8 +317,7 @@ impl GameMap {
         Ok(GameMap {
             height: height,
             width: width,
-            byte_sz: new_bytes.len(),
-            province_map: new_bytes,
+            province_map: new_bytes.into_boxed_slice(),
             title_color_map: key_colors,
         })
     }
@@ -287,53 +326,44 @@ impl GameMap {
 pub trait MapGenerator {
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
     /// Returns a vector of RGB bytes representing the new map
-    fn create_map<F: Fn(&String) -> [u8; 3]>(&self, key_list: Vec<GameString>, assoc: F)
-        -> Vec<u8>;
-
-    /// Creates a province map with the colors of the provinces in id_list changed to target_color
-    /// Returns a [ImageBuffer] of RGBA bytes representing the new map
-    fn create_map_buffer<T: AsRef<str>>(
-        &self,
-        key_list: Vec<GameString>,
-        target_color: &[u8; 3],
-        label: Option<T>,
-    ) -> ImageBuffer<Rgba<u8>, Vec<u8>>;
-
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to target_color
-    fn create_map_file<P: AsRef<Path>, T: AsRef<str>>(
-        &self,
-        key_list: Vec<GameString>,
-        target_color: &[u8; 3],
-        output_path: P,
-        label: Option<T>,
-    );
-
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    fn create_map_graph<F: Fn(&String) -> [u8; 3], P: AsRef<Path>>(
+    fn create_map<F: Fn(&String) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,
-        output_path: P,
-        legend: Vec<(String, [u8; 3])>,
-    );
+        key_list: Option<I>,
+    ) -> Map;
+
+    fn create_map_flat<I: IntoIterator<Item = GameString>>(
+        &self,
+        key_list: I,
+        target_color: [u8; 3],
+    ) -> Map {
+        self.create_map(|_| target_color, Some(key_list))
+    }
 }
 
 impl MapGenerator for GameMap {
-    fn create_map<F: Fn(&String) -> [u8; 3]>(
+    fn create_map<F: Fn(&String) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
-        key_list: Vec<GameString>,
         assoc: F,
-    ) -> Vec<u8> {
+        key_list: Option<I>,
+    ) -> Map {
         let mut new_map = Vec::with_capacity(self.province_map.len());
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::default();
-        for k in key_list.iter() {
-            if let Some(color) = self.title_color_map.get(k.as_str()) {
-                colors.insert(color, assoc(k));
-            } else {
-                // huh? this is weird
+        if let Some(key_list) = key_list {
+            for k in key_list {
+                if let Some(color) = self.title_color_map.get(k.as_str()) {
+                    colors.insert(color, assoc(&k));
+                } else {
+                    // huh? this is weird
+                }
+            }
+        } else {
+            for (k, v) in self.title_color_map.iter() {
+                colors.insert(v, assoc(k));
             }
         }
         let mut x = 0;
-        while x < self.byte_sz {
+        while x < self.province_map.len() {
             let mut z = x + 3; // overkill, but saves us an arithmetic operation
             let pixel: &[u8] = &self.province_map[x..z];
             let clr;
@@ -351,91 +381,16 @@ impl MapGenerator for GameMap {
             x = z;
             z = x + 3;
             //this ending is a loop to minimize the number of times the checks above are done
-            while x < self.byte_sz && self.province_map[x..z] == *pixel {
+            while x < self.province_map.len() && self.province_map[x..z] == *pixel {
                 new_map.extend_from_slice(clr);
                 x = z;
                 z = x + 3;
             }
         }
-        return new_map;
-    }
-
-    fn create_map_buffer<T: AsRef<str>>(
-        &self,
-        key_list: Vec<GameString>,
-        target_color: &[u8; 3],
-        label: Option<T>,
-    ) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        //we need to convert the vec of bytes to a vec of rgba bytes
-        let mut new_map = self.create_map(key_list, |_: &String| *target_color);
-        if let Some(label) = label {
-            draw_text(&mut new_map, self.width, self.height, label.as_ref());
-        }
-        let mut rgba = Vec::with_capacity(new_map.len() * 4 / 3);
-        for i in 0..new_map.len() {
-            rgba.push(new_map[i]);
-            if (i + 1) % 3 == 0 {
-                rgba.push(255);
-            }
-        }
-        ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
-    }
-
-    fn create_map_file<P: AsRef<Path>, T: AsRef<str>>(
-        &self,
-        key_list: Vec<GameString>,
-        target_color: &[u8; 3],
-        output_path: P,
-        label: Option<T>,
-    ) {
-        let mut new_map = self.create_map(key_list, |_: &String| *target_color);
-        let width = self.width;
-        let height = self.height;
-        let path = output_path.as_ref().to_owned();
-        let label = label.map(|x| x.as_ref().to_string());
-        //we move the writing process out into a thread because it's an IO heavy operation
-        thread::spawn(move || {
-            if let Some(label) = label {
-                draw_text(&mut new_map, width, height, label);
-            }
-            save_buffer(
-                path,
-                &new_map,
-                width,
-                height,
-                image::ExtendedColorType::Rgb8,
-            )
-            .unwrap();
-        });
-    }
-
-    fn create_map_graph<F: Fn(&String) -> [u8; 3], P: AsRef<Path>>(
-        &self,
-        assoc: F,
-        output_path: P,
-        legend: Vec<(String, [u8; 3])>,
-    ) {
-        let mut new_map = self.create_map(
-            self.title_color_map
-                .keys()
-                .map(|x| GameString::new(x.to_owned()))
-                .collect(),
-            assoc,
-        );
-        let width = self.width;
-        let height = self.height;
-        let path = output_path.as_ref().to_owned();
-        //we move the writing process out into a thread because it's an IO heavy operation
-        thread::spawn(move || {
-            draw_legend(&mut new_map, width, height, legend);
-            save_buffer(
-                path,
-                &new_map,
-                width,
-                height,
-                image::ExtendedColorType::Rgb8,
-            )
-            .unwrap();
-        });
+        return Map {
+            height: self.height,
+            width: self.width,
+            bytes: new_map.into_boxed_slice(),
+        };
     }
 }

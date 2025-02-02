@@ -173,7 +173,7 @@ impl GameDataLoader {
 
     /// Finalize the game data processing
     pub fn finalize(&mut self) -> GameData {
-        self.localizer.resolve();
+        self.localizer.remove_formatting();
         GameData {
             map: self.map.take(),
             localizer: mem::take(&mut self.localizer),

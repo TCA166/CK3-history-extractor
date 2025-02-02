@@ -6,6 +6,14 @@ use super::super::{
     types::{HashMap, Wrapper},
 };
 
+/* This is an imperfect localization parser. Unfortunately, the localization
+files are far too complex to be parsed without also implementing a whole
+game around it. This is a simple parser that will handle the most common
+cases WE will encounter.
+https://ck3.paradoxwikis.com/Localization - very important page.
+we do want to handle $$ syntax, and [] function args, but the formatting? idk probably not
+*/
+
 /// A function that demangles a generic name.
 /// It will replace underscores with spaces and capitalize the first letter.
 fn demangle_generic(input: &str) -> String {
@@ -63,7 +71,6 @@ fn handle_stack(
     result: &mut String,
 ) {
     //TODO add more handling, will improve the accuracy of localization, especially for memories
-    //println!("{:?}", stack);
     match stack.len() {
         2 => {
             if stack[0].0 == "GetTrait" && stack[1].0 == "GetName" {
@@ -85,7 +92,7 @@ fn handle_stack(
             *end = start;
         }
     } // TODO add a catch for the CHARACTER.Custom('FR_E') and other stuff
-      // MAYBE json input for easy customisation?
+      // MAYBE json input for easy customisation? dump_data_types can dump game types. Is that useful info?
 }
 
 /// A function that resolves the special localisation invocations.
@@ -156,8 +163,6 @@ fn resolve_stack(str: &GameString) -> GameString {
     return GameString::wrap(value);
 }
 
-// TODO add common phrase localization
-
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
 /// After the data is added, the [Localizer::resolve] function should be called to resolve the special localization invocations.
@@ -227,14 +232,13 @@ impl Localizer {
                 }
                 '\n' => {
                     if past && !quotes && !value.is_empty() {
+                        // MAYBE change this?
                         //Removing trait_? good idea because the localization isn't consistent enough with trait names
                         //Removing _name though... controversial. Possibly a bad idea
-                        //MAYBE only do this in certain files, but how to determine which are important? Pdx can change the format at any time
                         key = key
                             .trim_start_matches("trait_")
                             .trim_end_matches("_name")
                             .to_string();
-                        eprintln!("Added key: {} {}", key, value);
                         self.data
                             .insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
                     } else {
@@ -262,51 +266,103 @@ impl Localizer {
         }
     }
 
-    //TODO localization overall needs to be improved. The current implementation is too simplistic and doesn't handle the more complex cases
-    // resolve needs to go, it's a bad idea, all invocations need to be resolved on the fly
-    // also arguments need to be passed in during localization.
+    /*
+    From what I can gather there are three types of special localisation invocations:
+    - $key$ - use that key instead of the key that was used to look up the string
+    - [function(arg).function(arg)...] handling this one is going to be a nightmare
+    - # #! - these are formatting instructions
+    */
 
-    /// Resolves the special localisation invocations.
-    pub fn resolve(&mut self) {
-        /*
-        From what I can gather there are two types of special localisation invocations:
-        - $key$ - use that key instead of the key that was used to look up the string
-        - [function(arg).function(arg)...] handling this one is going to be a nightmare
-        */
-        for (key, value) in self.data.clone() {
-            // unfortunate clone, but we need to iterate over the data while modifying it
-            // resolve the borrowed keys
-            let mut new_value = String::new();
-            let mut foreign_key = String::new();
-            let mut in_key = false;
-            for c in value.chars() {
-                if c == '$' {
-                    if in_key {
-                        if let Some(localized) = self.data.get(&mem::take(&mut foreign_key)) {
-                            new_value.push_str(localized.as_str());
+    pub fn remove_formatting(&mut self) {
+        for (_, value) in self.data.iter_mut() {
+            let mut new = String::with_capacity(value.len());
+            let mut iter = value.chars();
+            let mut open = false;
+            while let Some(c) = iter.next() {
+                match c {
+                    '#' => {
+                        if open {
+                            open = false;
+                            iter.next(); // we skip the ! in #!
+                        } else {
+                            open = true;
+                            // skip to space
+                            while let Some(c) = iter.next() {
+                                if c == ' ' {
+                                    break;
+                                }
+                            }
                         }
                     }
-                    in_key = !in_key;
-                } else {
-                    if in_key {
-                        foreign_key.push(c);
-                    } else {
-                        new_value.push(c);
+                    _ => {
+                        new.push(c);
                     }
                 }
             }
-            self.data.insert(key.clone(), GameString::wrap(new_value));
+            *value = GameString::wrap(new);
         }
     }
 }
 
 pub trait Localize {
-    fn localize(&mut self, key: &str) -> GameString;
+    fn localize(&mut self, key: &str) -> GameString {
+        self.localize_query(key, |query| panic!("Unexpected query {}", query))
+    }
+
+    fn localize_value(&mut self, key: &str, value: &str) -> GameString {
+        let query = |q: &str| {
+            if q == "VALUE" {
+                value.to_string()
+            } else {
+                panic!("Invalid query: {}", q);
+            }
+        };
+        self.localize_query(key, query)
+    }
+
+    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString;
 }
 
 impl Localize for Localizer {
-    fn localize(&mut self, key: &str) -> GameString {
+    // TODO change query arg type, will probably need to have a special general type like a stack of function name and arguments
+    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString {
         if let Some(d) = self.data.get(key) {
+            // we have A template localization string, now we have to resolve it
+            let mut collect = false;
+            let mut collection = String::with_capacity(d.len());
+            let mut arg = String::new();
+            for c in d.chars() {
+                match c {
+                    '$' => {
+                        collect = !collect;
+                        if !collect {
+                            collection.push_str(&query(mem::take(&mut arg).as_str()).as_str());
+                        }
+                    }
+                    '[' => {
+                        if collect {
+                            arg.push('[');
+                        } else {
+                            collect = true;
+                        }
+                    }
+                    ']' => {
+                        if collect {
+                            collect = false;
+                            collection.push_str(&query(mem::take(&mut arg).as_str()).as_str());
+                        } else {
+                            collection.push(']');
+                        }
+                    }
+                    _ => {
+                        if collect {
+                            arg.push(c);
+                        } else {
+                            collection.push(c);
+                        }
+                    }
+                }
+            }
             //if the string contains []
             if d.contains('[') && d.contains(']') {
                 //handle the special function syntax
@@ -355,7 +411,6 @@ mod tests {
             "test3".to_string(),
             GameString::wrap(" $key$ $key$ ".to_owned()),
         );
-        localizer.resolve();
         assert_eq!(localizer.data.get("test").unwrap().as_str(), "value");
         assert_eq!(localizer.data.get("test2").unwrap().as_str(), " value ");
         assert_eq!(
@@ -383,7 +438,6 @@ mod tests {
             "test4".to_string(),
             GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()),
         );
-        localizer.resolve();
         assert_eq!(localizer.localize("test").as_str(), "Trait test");
         assert_eq!(localizer.localize("test2").as_str(), "   Trait test  ");
         assert_eq!(

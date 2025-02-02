@@ -1,6 +1,6 @@
 use image::{
     codecs::gif::{GifEncoder, Repeat},
-    Delay, Frame,
+    Delay, Frame, ImageBuffer,
 };
 
 use jomini::common::PdsDate;
@@ -121,11 +121,9 @@ impl Renderable for Player {
                 } else {
                     game_state.get_current_date().unwrap().iso_8601()
                 };
-                let fbytes = map.create_map_buffer(
-                    char.get_barony_keys(true),
-                    &TARGET_COLOR,
-                    Some(date.to_string()),
-                );
+                let mut barony_map = map.create_map_flat(char.get_barony_keys(true), TARGET_COLOR);
+                barony_map.draw_text(date.to_string());
+                let fbytes: ImageBuffer<_, _> = barony_map.into();
                 //these variables cuz fbytes is moved
                 let width = fbytes.width();
                 let height = fbytes.height();
@@ -158,7 +156,7 @@ impl Renderable for Player {
                     target.insert(title.clone());
                 }
             }
-            map.create_map_graph(
+            let mut dynasty_map = map.create_map::<_, Vec<GameString>>(
                 |key: &String| {
                     if direct_titles.contains(key) {
                         return TARGET_COLOR;
@@ -168,12 +166,13 @@ impl Renderable for Player {
                         return BASE_COLOR;
                     }
                 },
-                path.join("dynastyMap.png"),
-                vec![
-                    ("Dynastic titles".to_string(), TARGET_COLOR),
-                    ("Descendant titles".to_string(), SECONDARY_COLOR),
-                ],
+                None,
             );
+            dynasty_map.draw_legend(vec![
+                ("Dynastic titles".to_string(), TARGET_COLOR),
+                ("Descendant titles".to_string(), SECONDARY_COLOR),
+            ]);
+            dynasty_map.save(path.join("dynastyMap.png"));
         }
         if let Some(grapher) = grapher {
             let last = self.lineage.last().unwrap().get_character();

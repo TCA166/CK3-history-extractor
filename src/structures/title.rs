@@ -108,7 +108,7 @@ impl Title {
 
     /// Returns an iterator over the history of the title
     pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)> {
-        self.history.iter() // FIXME bad anti-pattern
+        self.history.iter()
     }
 
     /// Returns the capital of the title
@@ -417,12 +417,13 @@ impl Renderable for Title {
             }
             let mut buf = path.join(Self::get_subdir());
             buf.push(format!("{}.png", self.id));
-            let label = format!(
+            let mut title_map = map.create_map_flat(self.get_barony_keys(), self.color);
+            title_map.draw_text(format!(
                 "{} at {}",
                 self.name.as_ref().unwrap(),
                 game_state.get_current_date().unwrap().iso_8601()
-            );
-            map.create_map_file(self.get_barony_keys(), &self.color, &buf, Some(label));
+            ));
+            title_map.save(&buf);
         }
     }
 }

@@ -147,6 +147,8 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
     AutoEscape::None
 }
 
+// TODO we need to somehow figure out how to give frontend access to the localization
+
 /// A function that renders a reference.
 /// May be used in the templates as filter(using [Environment::add_filter]) or function(using [Environment::add_function]) to render a reference to another object.
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.

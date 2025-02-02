@@ -16,8 +16,8 @@ pub struct GameData {
 }
 
 impl Localize for GameData {
-    fn localize(&mut self, key: &str) -> GameString {
-        self.localizer.localize(key)
+    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString {
+        self.localizer.localize_query(key, query)
     }
 }
 

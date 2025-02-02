@@ -348,6 +348,3 @@ impl Cullable for Dynasty {
         self.depth
     }
 }
-
-// TODO add test, especially for dynastic graphs with incest and multiple marriages
-// Probably the weirdest comment I've ever written

@@ -161,15 +161,12 @@ impl Renderable for Culture {
             if !keys.is_empty() {
                 let mut path = path.join(Self::get_subdir());
                 path.push(format!("{}.png", self.id));
-                map.create_map_file(
-                    keys,
-                    &[70, 255, 70],
-                    &path,
-                    Some(format!(
-                        "Map of the {} culture",
-                        &self.name.as_ref().unwrap()
-                    )),
-                );
+                let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
+                culture_map.draw_text(format!(
+                    "Map of the {} culture",
+                    &self.name.as_ref().unwrap()
+                ));
+                culture_map.save(&path);
             }
         }
     }
