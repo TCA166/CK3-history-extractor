@@ -151,8 +151,8 @@ pub fn process_section(
         "meta_data" => {
             let parsed = i.parse()?;
             let map = parsed.as_map()?;
-            game_state.set_current_date(map.get_date("meta_date")?);
-            game_state.set_offset_date(map.get_date("meta_real_date")?);
+            game_state
+                .set_current_date(map.get_date("meta_date")?, map.get_date("meta_real_date")?);
         }
         //the order is kept consistent with the order in the save file
         "traits_lookup" => {

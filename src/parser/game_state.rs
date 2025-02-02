@@ -58,10 +58,8 @@ pub struct GameState {
     contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
     /// The current date from the meta section
     current_date: Option<Date>,
-    /// The isolated year from the meta section
-    current_year: Option<i16>,
-    /// The date from which data should be considered
-    offset_date: Option<i16>,
+    /// The time Y.M.D from which the game started
+    offset_date: Option<Date>,
 }
 
 impl GameState {
@@ -78,7 +76,6 @@ impl GameState {
             traits_lookup: Vec::new(),
             contract_transform: HashMap::default(),
             current_date: None,
-            current_year: None,
             offset_date: None,
         }
     }
@@ -94,14 +91,9 @@ impl GameState {
     }
 
     /// Set the current date
-    pub fn set_current_date(&mut self, date: Date) {
+    pub fn set_current_date(&mut self, date: Date, offset: Date) {
         self.current_date = Some(date);
-        self.current_year = Some(date.year());
-    }
-
-    /// Set the number of years that has passed since game start
-    pub fn set_offset_date(&mut self, date: Date) {
-        self.offset_date = Some(date.year());
+        self.offset_date = Some(offset);
     }
 
     /// Get the current date
@@ -261,9 +253,13 @@ impl GameState {
         let mut total_yearly_deaths: HashMap<i16, i32> = HashMap::default();
         let mut faith_yearly_deaths = HashMap::default();
         let mut culture_yearly_deaths = HashMap::default();
+        let start_year = self.current_date.unwrap().year() - self.offset_date.unwrap().year();
         for character in self.characters.values() {
             let char = character.get_internal();
             if let Some(death_date) = char.get_death_date() {
+                if death_date.year() < start_year {
+                    continue;
+                }
                 let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
                 *count += 1;
                 if let Some(faith) = char.get_faith() {
@@ -416,7 +412,7 @@ impl GameState {
             }
         }
         events.sort_by(|a, b| a.0.cmp(&b.0));
-        return Timeline::new(lifespans, self.current_year.unwrap(), events);
+        return Timeline::new(lifespans, self.current_date.unwrap().year(), events);
     }
 }
 
