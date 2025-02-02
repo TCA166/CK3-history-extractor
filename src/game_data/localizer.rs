@@ -543,7 +543,7 @@ mod tests {
         assert_eq!(result[0].0, "Select_CString");
         assert_eq!(result[0].1.len(), 3);
         assert_eq!(result[0].1[0], "CHARACTER.IsFemale");
-        assert_eq!(result[0].1[1], "'brûlé'");
+        assert_eq!(result[0].1[1], "brûlé");
         assert_eq!(result[0].1[2], "'vif'");
     }
 }
