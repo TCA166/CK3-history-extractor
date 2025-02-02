@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
-use crate::structures::GameObjectDerived;
-
 use super::{
     super::{
         display::{Grapher, RealmDifference, Timeline},
-        game_data::{Localizable, Localize},
+        game_data::{Localizable, LocalizationError, Localize},
         structures::{
-            Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, Memory, Title,
+            Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived,
+            Memory, Title,
         },
         types::{RefOrRaw, Shared, Wrapper, WrapperMut},
     },
@@ -422,28 +421,29 @@ impl GameState {
 }
 
 impl Localizable for GameState {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         for (_, character) in &mut self.characters {
-            character.get_internal_mut().localize(localization);
+            character.get_internal_mut().localize(localization)?;
         }
         for (_, title) in &mut self.titles {
-            title.get_internal_mut().localize(localization);
+            title.get_internal_mut().localize(localization)?;
         }
         for (_, faith) in &mut self.faiths {
-            faith.get_internal_mut().localize(localization);
+            faith.get_internal_mut().localize(localization)?;
         }
         for (_, culture) in &mut self.cultures {
-            culture.get_internal_mut().localize(localization);
+            culture.get_internal_mut().localize(localization)?;
         }
         for (_, dynasty) in &mut self.dynasties {
-            dynasty.get_internal_mut().localize(localization);
+            dynasty.get_internal_mut().localize(localization)?;
         }
         for (_, memory) in &mut self.memories {
-            memory.get_internal_mut().localize(localization);
+            memory.get_internal_mut().localize(localization)?;
         }
         for (_, artifact) in &mut self.artifacts {
-            artifact.get_internal_mut().localize(localization);
+            artifact.get_internal_mut().localize(localization)?;
         }
+        Ok(())
     }
 }
 

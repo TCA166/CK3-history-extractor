@@ -24,6 +24,7 @@ publish = false
 
 [features]
 internal = []
+permissive = []
 
 [dependencies]
 minijinja = { version = "2.7.0", features = ["loader"] }

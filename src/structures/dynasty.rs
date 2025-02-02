@@ -6,7 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType},
-        game_data::{GameData, Localizable, Localize},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
@@ -307,21 +307,22 @@ impl Renderable for Dynasty {
 }
 
 impl Localizable for Dynasty {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
-            self.name = Some(localization.localize(name.as_str()));
+            self.name = Some(localization.localize(name.as_str())?);
         } else {
-            return;
+            return Ok(());
         }
         for perk in self.perks.iter_mut() {
-            perk.0 = localization.localize(perk.0.as_str());
+            perk.0 = localization.localize(perk.0.as_str())?;
         }
         if let Some(motto) = &mut self.motto {
-            motto.0 = localization.localize(motto.0.as_str());
+            motto.0 = localization.localize(motto.0.as_str())?;
             for v in motto.1.iter_mut() {
-                *v = localization.localize(v.as_str());
+                *v = localization.localize(v.as_str())?;
             }
         }
+        Ok(())
     }
 }
 

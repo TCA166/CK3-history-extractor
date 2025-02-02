@@ -6,7 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameData, Localizable, Localize},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
@@ -694,24 +694,47 @@ impl Renderable for Character {
 }
 
 impl Localizable for Character {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if self.name.is_none() {
-            return;
+            return Ok(());
         } else {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
+            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str())?);
         }
         if let Some(nick) = &self.nick {
-            self.nick = Some(localization.localize(nick.as_str()));
+            self.nick = Some(localization.localize(nick.as_str())?);
         }
         if let Some(reason) = &self.reason {
-            self.reason = Some(localization.localize(reason.as_str()));
+            self.reason = Some(localization.localize_query(reason.as_str(), |stack| {
+                if stack.len() == 2 {
+                    if stack[0].0 == "GetTrait" {
+                        return localization
+                            .localize(&stack[0].1[0])
+                            .ok()
+                            .and_then(|v| Some(v.to_string()));
+                    } else if stack[1].0 == "GetHerHis" {
+                        if self.female {
+                            return Some("her".to_string());
+                        } else {
+                            return Some("his".to_string());
+                        }
+                    } else if stack[1].0 == "GetHerselfHimself" {
+                        if self.female {
+                            return Some("herself".to_string());
+                        } else {
+                            return Some("himself".to_string());
+                        }
+                    }
+                }
+                None
+            })?);
         }
         for t in self.traits.iter_mut() {
-            *t = localization.localize(t.as_str());
+            *t = localization.localize(t.as_str())?;
         }
         for t in self.languages.iter_mut() {
-            *t = localization.localize(t.as_str());
+            *t = localization.localize(t.as_str())?;
         }
+        Ok(())
     }
 }
 

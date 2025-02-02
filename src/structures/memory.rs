@@ -4,7 +4,7 @@ use serde::{ser::SerializeSeq, Serialize};
 use super::{
     super::{
         display::{Cullable, RenderableType},
-        game_data::{Localizable, Localize},
+        game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::WrapperMut,
     },
@@ -77,11 +77,12 @@ impl GameObjectDerived for Memory {
 }
 
 impl Localizable for Memory {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
-        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap()));
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap().as_str())?);
         for part in self.participants.iter_mut() {
-            part.0 = localization.localize(&part.0).to_string();
+            part.0 = localization.localize(&part.0)?.to_string();
         }
+        Ok(())
     }
 }
 

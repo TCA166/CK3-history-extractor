@@ -3,7 +3,7 @@ pub use map::{GameMap, MapGenerator};
 
 mod localizer;
 use localizer::Localizer;
-pub use localizer::{Localizable, Localize};
+pub use localizer::{Localizable, LocalizationError, LocalizationStack, Localize};
 
 mod loader;
 pub use loader::GameDataLoader;
@@ -16,7 +16,11 @@ pub struct GameData {
 }
 
 impl Localize for GameData {
-    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString {
+    fn localize_query<K: AsRef<str>, S: AsRef<str>, F: Fn(&LocalizationStack) -> Option<S>>(
+        &self,
+        key: K,
+        query: F,
+    ) -> Result<GameString, LocalizationError> {
         self.localizer.localize_query(key, query)
     }
 }

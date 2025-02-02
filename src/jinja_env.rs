@@ -137,7 +137,7 @@ pub fn create_env<'a, L: Localize>(
     for var in vars_to_localize {
         env.add_global(
             var.clone(),
-            Value::from_safe_string(localizer.localize(var.as_str()).to_string()),
+            Value::from_safe_string(localizer.localize(var.as_str()).unwrap().to_string()),
         );
     }
     env

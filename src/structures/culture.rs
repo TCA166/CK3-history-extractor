@@ -6,7 +6,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameData, Localizable, Localize, MapGenerator},
+        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::{OneOrMany, RefOrRaw, Wrapper, WrapperMut},
@@ -182,15 +182,16 @@ impl Renderable for Culture {
 }
 
 impl Localizable for Culture {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
-        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str()));
-        self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str()));
-        self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str()));
-        self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str()));
-        self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str()));
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str())?);
+        self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str())?);
+        self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str())?);
+        self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str())?);
+        self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str())?);
         for t in &mut self.traditions {
-            *t = localization.localize(t.as_str());
+            *t = localization.localize(t.as_str())?;
         }
+        Ok(())
     }
 }
 

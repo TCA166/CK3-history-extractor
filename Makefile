@@ -1,7 +1,7 @@
 
 cargo: src/*.rs src/structures/*.rs
 	@echo "Building with cargo and including templates in executable..."
-	RUSTFLAGS="" cargo build --release --features internal
+	RUSTFLAGS="" cargo build --release --features internal,permissive
 
 debug: src/*.rs src/structures/*.rs
 	@echo "Building with cargo in debug mode..."
@@ -26,7 +26,7 @@ crosscompile:
 
 windows: src/*.rs src/structures/*.rs
 	@echo "Building for Windows..."
-	RUSTFLAGS="" cargo build --target x86_64-pc-windows-gnu --release --features internal
+	RUSTFLAGS="" cargo build --target x86_64-pc-windows-gnu --release --features internal,permissive
 
 clean:
 	@echo "Cleaning up..."

@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::{fs, mem};
+use std::{fmt, fs, mem};
 
 use super::super::{
     parser::GameString,
@@ -59,108 +59,6 @@ fn demangle_generic(input: &str) -> String {
         s[0..1].make_ascii_uppercase();
     }
     s
-}
-
-/// A function that handles the stack of function calls.
-/// It will replace characters from start to end in result according to the functions and arguments in the stack.
-#[inline(always)]
-fn handle_stack(
-    stack: Vec<(String, Vec<String>)>,
-    start: usize,
-    end: &mut usize,
-    result: &mut String,
-) {
-    //TODO add more handling, will improve the accuracy of localization, especially for memories
-    match stack.len() {
-        2 => {
-            if stack[0].0 == "GetTrait" && stack[1].0 == "GetName" {
-                let l = stack[0].1[0].chars().count();
-                let replace = demangle_generic(stack[0].1[0].as_str().trim_matches('\''));
-                result.replace_range(start..*end, &replace);
-                // move end to the end of the string
-                *end = start + l;
-            }
-        }
-        _ => {
-            let replace: &str;
-            if stack.len() > 0 && stack[0].1.len() > 0 {
-                replace = stack[0].1[0].as_str();
-            } else {
-                replace = "";
-            }
-            result.replace_range(start..*end, replace);
-            *end = start;
-        }
-    } // TODO add a catch for the CHARACTER.Custom('FR_E') and other stuff
-      // MAYBE json input for easy customisation? dump_data_types can dump game types. Is that useful info?
-}
-
-/// A function that resolves the special localisation invocations.
-fn resolve_stack(str: &GameString) -> GameString {
-    let mut value = str.to_string();
-    let mut start = 0;
-    let mut stack: Vec<(String, Vec<String>)> = Vec::new();
-    {
-        //create a call stack
-        let mut call = String::new();
-        let mut args: Vec<String> = Vec::new();
-        let mut arg = String::new();
-        let mut collect = false;
-        let mut collect_args = false;
-        let mut ind: usize = 1;
-        for c in str.chars() {
-            match c {
-                '[' => {
-                    collect = true;
-                    start = ind - 1;
-                }
-                ']' => {
-                    collect = false;
-                    collect_args = false;
-                    if !call.is_empty() {
-                        stack.push((mem::take(&mut call), mem::take(&mut args)));
-                    }
-                    handle_stack(mem::take(&mut stack), start, &mut ind, &mut value)
-                }
-                '(' => {
-                    if collect {
-                        collect_args = true;
-                    }
-                }
-                ')' => {
-                    if collect_args {
-                        collect_args = false;
-                        if !arg.is_empty() {
-                            args.push(mem::take(&mut arg));
-                        }
-                    }
-                }
-                ',' => {
-                    if collect_args {
-                        args.push(mem::take(&mut arg));
-                    }
-                }
-                '.' => {
-                    if collect {
-                        if collect_args {
-                            arg.push(c);
-                        } else {
-                            stack.push((mem::take(&mut call), mem::take(&mut args)));
-                        }
-                    }
-                }
-                _ => {
-                    if collect_args {
-                        arg.push(c);
-                    } else if collect {
-                        call.push(c);
-                    }
-                }
-            }
-            ind += c.len_utf8();
-        }
-    }
-    return GameString::wrap(value);
 }
 
 /// An object that localizes strings.
@@ -232,13 +130,6 @@ impl Localizer {
                 }
                 '\n' => {
                     if past && !quotes && !value.is_empty() {
-                        // MAYBE change this?
-                        //Removing trait_? good idea because the localization isn't consistent enough with trait names
-                        //Removing _name though... controversial. Possibly a bad idea
-                        key = key
-                            .trim_start_matches("trait_")
-                            .trim_end_matches("_name")
-                            .to_string();
                         self.data
                             .insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
                     } else {
@@ -270,7 +161,7 @@ impl Localizer {
     From what I can gather there are three types of special localisation invocations:
     - $key$ - use that key instead of the key that was used to look up the string
     - [function(arg).function(arg)...] handling this one is going to be a nightmare
-    - # #! - these are formatting instructions
+    - # #! - these are formatting instructions, can be nested
     */
 
     pub fn remove_formatting(&mut self) {
@@ -278,12 +169,18 @@ impl Localizer {
             let mut new = String::with_capacity(value.len());
             let mut iter = value.chars();
             let mut open = false;
+            let mut func_open = false;
             while let Some(c) = iter.next() {
                 match c {
                     '#' => {
                         if open {
                             open = false;
-                            iter.next(); // we skip the ! in #!
+                            if let Some(next) = iter.next() {
+                                // we skip the ! in #!
+                                if next != '!' {
+                                    new.push(next);
+                                }
+                            }
                         } else {
                             open = true;
                             // skip to space
@@ -292,6 +189,26 @@ impl Localizer {
                                     break;
                                 }
                             }
+                        }
+                    }
+                    '[' => {
+                        func_open = true;
+                        new.push(c);
+                    }
+                    ']' => {
+                        func_open = false;
+                        new.push(c);
+                    }
+                    '|' => {
+                        if func_open {
+                            while let Some(c) = iter.next() {
+                                if c == ']' {
+                                    new.push(c);
+                                    break;
+                                }
+                            }
+                        } else {
+                            new.push(c);
                         }
                     }
                     _ => {
@@ -304,44 +221,168 @@ impl Localizer {
     }
 }
 
+/// A localization query. A function name and a list of arguments.
+pub type LocalizationQuery = (String, Vec<String>);
+
+/// A stack of localization queries.
+pub type LocalizationStack = Vec<LocalizationQuery>;
+
+/// An error that occurs when localizing a string.
+#[derive(Debug)]
+pub enum LocalizationError {
+    InvalidQuery(GameString, LocalizationStack),
+    LocalizationSyntaxError(&'static str),
+}
+
+fn create_localization_stack(input: String) -> Result<LocalizationStack, LocalizationError> {
+    // MAYBE in future resolve recursively the arguments? as of right now theoretically the arguments may themselves be functions and we don't handle that
+    let mut stack: LocalizationStack = Vec::new();
+    let mut call = String::new();
+    let mut args: Vec<String> = Vec::new();
+    let mut arg = String::new();
+    let mut collect_args = false;
+    for char in input.chars() {
+        match char {
+            '(' => {
+                collect_args = true;
+            }
+            ')' => {
+                collect_args = false;
+                if !arg.is_empty() {
+                    args.push(mem::take(&mut arg));
+                }
+            }
+            ',' => {
+                if collect_args {
+                    args.push(mem::take(&mut arg));
+                }
+            }
+            '.' => {
+                if collect_args {
+                    arg.push(char);
+                } else {
+                    stack.push((mem::take(&mut call), mem::take(&mut args)));
+                }
+            }
+            ']' => {
+                Err(LocalizationError::LocalizationSyntaxError(
+                    "unexpected ']' character",
+                ))?;
+            }
+            '\'' => {} // ignore
+            _ => {
+                if collect_args {
+                    arg.push(char);
+                } else {
+                    call.push(char);
+                }
+            }
+        }
+    }
+    stack.push((call, args));
+    Ok(stack)
+}
+
+impl fmt::Display for LocalizationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LocalizationError::InvalidQuery(val, stack) => {
+                write!(f, "a query: {:?} in {} is in some way invalid.", stack, val)
+            }
+            LocalizationError::LocalizationSyntaxError(s) => {
+                write!(f, "localization syntax error: {}", s)
+            }
+        }
+    }
+}
+
+impl std::error::Error for LocalizationError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
 pub trait Localize {
-    fn localize(&mut self, key: &str) -> GameString {
-        self.localize_query(key, |query| panic!("Unexpected query {}", query))
+    /// A simple localization function that will return the localized string.
+    /// It assumes that the key is not complex and does not require any special handling.
+    fn localize<K: AsRef<str>>(&self, key: K) -> Result<GameString, LocalizationError> {
+        self.localize_query(key, |_| -> Option<&str> { None })
     }
 
-    fn localize_value(&mut self, key: &str, value: &str) -> GameString {
-        let query = |q: &str| {
-            if q == "VALUE" {
-                value.to_string()
+    /// A localization function that will return the localized string.
+    /// It assumes a more complex key, resolving $provider$ into the value.
+    /// More complex keys will not be resolved.
+    fn localize_provider<K: AsRef<str>>(
+        &self,
+        key: K,
+        provider: &str,
+        value: &str,
+    ) -> Result<GameString, LocalizationError> {
+        let query = |q: &LocalizationStack| {
+            if q.len() == 1 && q.first().unwrap().0 == provider {
+                Some(value)
             } else {
-                panic!("Invalid query: {}", q);
+                None
             }
         };
         self.localize_query(key, query)
     }
 
-    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString;
+    /// A localization function that will return the localized string.
+    /// It allows for complete control over the complex key resolution.
+    /// Every time a $key$ or [function(arg)] is encountered, the query function will be called.
+    /// The query function should return the value in accordance to the provided stack, or None if the value is not found.
+    /// Whether None causes an error or not is up to the implementation.
+    fn localize_query<K: AsRef<str>, S: AsRef<str>, F: Fn(&LocalizationStack) -> Option<S>>(
+        &self,
+        key: K,
+        query: F,
+    ) -> Result<GameString, LocalizationError>;
 }
 
 impl Localize for Localizer {
-    // TODO change query arg type, will probably need to have a special general type like a stack of function name and arguments
-    fn localize_query<F: Fn(&str) -> String>(&mut self, key: &str, query: F) -> GameString {
-        if let Some(d) = self.data.get(key) {
+    fn localize_query<K: AsRef<str>, S: AsRef<str>, F: Fn(&LocalizationStack) -> Option<S>>(
+        &self,
+        key: K,
+        query: F,
+    ) -> Result<GameString, LocalizationError> {
+        if let Some(d) = self.data.get(key.as_ref()) {
             // we have A template localization string, now we have to resolve it
             let mut collect = false;
             let mut collection = String::with_capacity(d.len());
             let mut arg = String::new();
+            // this is technically a less efficient way of doing it, but it's easier to read
             for c in d.chars() {
                 match c {
                     '$' => {
                         collect = !collect;
                         if !collect {
-                            collection.push_str(&query(mem::take(&mut arg).as_str()).as_str());
+                            if let Some(val) = self.data.get(&arg) {
+                                collection.push_str(val.as_str());
+                                arg.clear();
+                            } else {
+                                let stack = vec![(mem::take(&mut arg), Vec::new())];
+                                if let Some(val) = query(&stack) {
+                                    collection.push_str(val.as_ref());
+                                } else {
+                                    if cfg!(feature = "permissive") {
+                                        collection
+                                            .push_str(demangle_generic(arg.as_ref()).as_str());
+                                    } else {
+                                        return Err(LocalizationError::InvalidQuery(
+                                            d.clone(),
+                                            stack,
+                                        ));
+                                    }
+                                }
+                            }
                         }
                     }
                     '[' => {
                         if collect {
-                            arg.push('[');
+                            return Err(LocalizationError::LocalizationSyntaxError(
+                                "unexpected '[' character",
+                            ));
                         } else {
                             collect = true;
                         }
@@ -349,9 +390,18 @@ impl Localize for Localizer {
                     ']' => {
                         if collect {
                             collect = false;
-                            collection.push_str(&query(mem::take(&mut arg).as_str()).as_str());
+                            let stack = create_localization_stack(mem::take(&mut arg))?;
+                            if let Some(val) = query(&stack) {
+                                collection.push_str(val.as_ref());
+                            } else {
+                                if !cfg!(feature = "permissive") {
+                                    return Err(LocalizationError::InvalidQuery(d.clone(), stack));
+                                }
+                            }
                         } else {
-                            collection.push(']');
+                            return Err(LocalizationError::LocalizationSyntaxError(
+                                "unexpected ']' character",
+                            ));
                         }
                     }
                     _ => {
@@ -363,25 +413,20 @@ impl Localize for Localizer {
                     }
                 }
             }
-            //if the string contains []
-            if d.contains('[') && d.contains(']') {
-                //handle the special function syntax
-                return resolve_stack(d);
-            } else {
-                return d.clone();
-            }
+            return Ok(GameString::wrap(collection));
         } else {
-            let res = GameString::wrap(demangle_generic(key));
-            self.data.insert(key.to_string(), res.clone());
-            return res;
+            let res = GameString::wrap(demangle_generic(key.as_ref()));
+            //self.data.insert(key.to_string(), res.clone());
+            return Ok(res);
         }
     }
 }
 
 /// A trait that allows an object to be localized.
 pub trait Localizable {
+    // TODO improve the accuracy of the localization
     /// Localizes the object.
-    fn localize<L: Localize>(&mut self, localization: &mut L);
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError>; // TODO different error that includes file and line
 }
 
 #[cfg(test)]
@@ -411,11 +456,30 @@ mod tests {
             "test3".to_string(),
             GameString::wrap(" $key$ $key$ ".to_owned()),
         );
-        assert_eq!(localizer.data.get("test").unwrap().as_str(), "value");
-        assert_eq!(localizer.data.get("test2").unwrap().as_str(), " value ");
+        assert_eq!(localizer.localize("test").unwrap().as_str(), "value");
+        assert_eq!(localizer.localize("test2").unwrap().as_str(), " value ");
         assert_eq!(
-            localizer.data.get("test3").unwrap().as_str(),
+            localizer.localize("test3").unwrap().as_str(),
             " value value "
+        );
+    }
+
+    #[test]
+    fn test_remove_formatting() {
+        let mut localizer = Localizer::default();
+        localizer.data.insert(
+            "test".to_string(),
+            GameString::wrap("#P value#! # #!".to_owned()),
+        );
+        localizer.data.insert(
+            "test2".to_string(),
+            GameString::wrap("[test|U] [test|idk]".to_owned()),
+        );
+        localizer.remove_formatting();
+        assert_eq!(localizer.localize("test").unwrap().as_str(), "value ");
+        assert_eq!(
+            localizer.data.get("test2").unwrap().as_str(),
+            "[test] [test]"
         );
     }
 
@@ -438,41 +502,48 @@ mod tests {
             "test4".to_string(),
             GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()),
         );
-        assert_eq!(localizer.localize("test").as_str(), "Trait test");
-        assert_eq!(localizer.localize("test2").as_str(), "   Trait test  ");
+        let query = |stack: &LocalizationStack| -> Option<String> {
+            Some(localizer.localize(&stack[0].1[0]).unwrap().to_string())
+        };
         assert_eq!(
-            localizer.localize("test3").as_str(),
+            localizer.localize_query("test", query).unwrap().as_str(),
+            "Trait test"
+        );
+        assert_eq!(
+            localizer.localize_query("test2", query).unwrap().as_str(),
+            "   Trait test  "
+        );
+        assert_eq!(
+            localizer.localize_query("test3", query).unwrap().as_str(),
             " hello( Trait test ) "
         );
         assert_eq!(
-            localizer.localize("test4").as_str(),
+            localizer.localize_query("test4", query).unwrap().as_str(),
             " hello,.(., Trait test ) "
         );
     }
 
     #[test]
-    fn test_handle_stack() {
-        let mut stack: Vec<(String, Vec<String>)> = Vec::new();
-        stack.push(("GetTrait".to_owned(), vec!["trait_test".to_owned()]));
-        stack.push(("GetName".to_owned(), vec![]));
-        let mut result = "trait_test".to_owned();
-        let start = 0;
-        let mut end = 10;
-        handle_stack(stack, start, &mut end, &mut result);
-        assert_eq!(result, "Trait test");
-    }
-
-    #[test]
     fn test_really_nasty() {
-        let input = "[GetTrait(trait_test).GetName()]";
-        let result = resolve_stack(&GameString::wrap(input.to_owned()));
-        assert_eq!(result.as_str(), "Trait test");
+        let result =
+            create_localization_stack("GetTrait(trait_test).GetName()".to_owned()).unwrap();
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].0, "GetTrait");
+        assert_eq!(result[0].1.len(), 1);
+        assert_eq!(result[0].1[0], "trait_test");
+        assert_eq!(result[1].0, "GetName");
+        assert_eq!(result[1].1.len(), 0);
     }
 
     #[test]
     fn test_french() {
-        let input =
-            "a brûlé [Select_CString(CHARACTER.IsFemale,'vive','vif')] dans un feu de forêt";
-        resolve_stack(&GameString::wrap(input.to_owned()));
+        let input = "Select_CString(CHARACTER.IsFemale,'brûlé','vif')";
+        let result = create_localization_stack(input.to_owned()).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, "Select_CString");
+        assert_eq!(result[0].1.len(), 3);
+        assert_eq!(result[0].1[0], "CHARACTER.IsFemale");
+        assert_eq!(result[0].1[1], "'brûlé'");
+        assert_eq!(result[0].1[2], "'vif'");
     }
 }

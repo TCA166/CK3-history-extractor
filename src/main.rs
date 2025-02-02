@@ -148,7 +148,7 @@ fn main() -> Result<(), UserError> {
     }
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
-    game_state.localize(&mut data);
+    game_state.localize(&mut data).unwrap();
     let grapher;
     if !args.no_vis {
         grapher = Some(game_state.new_grapher());
@@ -175,7 +175,7 @@ fn main() -> Result<(), UserError> {
     player_progress.set_style(bar_style);
     player_progress.enable_steady_tick(INTERVAL);
     for player in player_progress.wrap_iter(players.iter_mut()) {
-        player.localize(&mut data);
+        player.localize(&mut data).unwrap();
         //render each player
         let folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));

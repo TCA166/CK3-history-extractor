@@ -4,7 +4,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::Cullable,
-        game_data::{Localizable, Localize},
+        game_data::{Localizable, LocalizationError, Localize},
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
         },
@@ -96,13 +96,14 @@ impl GameObjectDerived for LineageNode {
 }
 
 impl Localizable for LineageNode {
-    fn localize<L: Localize>(&mut self, localization: &mut L) {
+    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if let Some(lifestyle) = &self.lifestyle {
-            self.lifestyle = Some(localization.localize(&lifestyle.as_str()));
+            self.lifestyle = Some(localization.localize(&lifestyle.as_str())?);
         }
         for perk in self.perks.iter_mut() {
-            *perk = localization.localize(perk.as_str());
+            *perk = localization.localize(perk.as_str())?;
         }
+        Ok(())
     }
 }
 
