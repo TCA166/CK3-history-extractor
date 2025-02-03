@@ -73,7 +73,6 @@ pub fn create_env<'a, L: Localize>(
     env.set_lstrip_blocks(true);
     env.set_trim_blocks(true);
     env.add_filter("render_ref", render_ref);
-    env.add_filter("handle_tooltips", handle_tooltips);
     env.add_global("map_present", map_present);
     env.add_global("no_vis", no_vis);
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
@@ -186,48 +185,4 @@ fn render_ref(reference: Value, root: Option<bool>) -> String {
             )
         }
     }
-}
-
-/// A function that handles tooltips.
-/// Removes the tooltips from the text and returns the text without the tooltips.
-fn handle_tooltips(text: Value) -> String {
-    let text = text.as_str().unwrap();
-    let mut result = String::new();
-    let mut in_tooltip = false;
-    let mut in_tooltip_text = false;
-    let mut tooltip_text = String::new();
-    for c in text.chars() {
-        match c {
-            '\x15' => {
-                // NAK character precedes a tooltip
-                in_tooltip = true;
-                in_tooltip_text = false;
-                tooltip_text.clear();
-            }
-            ' ' => {
-                if in_tooltip && !in_tooltip_text {
-                    in_tooltip_text = true;
-                } else {
-                    result.push(c);
-                }
-            }
-            '!' => {
-                // NAK! character ends a tooltip? I think?
-                if in_tooltip {
-                    in_tooltip = false;
-                    in_tooltip_text = false;
-                } else {
-                    result.push(c);
-                }
-            }
-            _ => {
-                if in_tooltip && !in_tooltip_text {
-                    tooltip_text.push(c);
-                } else {
-                    result.push(c);
-                }
-            }
-        }
-    }
-    return result;
 }

@@ -326,7 +326,7 @@ impl GameMap {
 pub trait MapGenerator {
     /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
     /// Returns a vector of RGB bytes representing the new map
-    fn create_map<F: Fn(&String) -> [u8; 3], I: IntoIterator<Item = GameString>>(
+    fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,
         key_list: Option<I>,
@@ -342,7 +342,7 @@ pub trait MapGenerator {
 }
 
 impl MapGenerator for GameMap {
-    fn create_map<F: Fn(&String) -> [u8; 3], I: IntoIterator<Item = GameString>>(
+    fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,
         key_list: Option<I>,
@@ -351,8 +351,8 @@ impl MapGenerator for GameMap {
         let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::default();
         if let Some(key_list) = key_list {
             for k in key_list {
-                if let Some(color) = self.title_color_map.get(k.as_str()) {
-                    colors.insert(color, assoc(&k));
+                if let Some(color) = self.title_color_map.get(k.as_ref()) {
+                    colors.insert(color, assoc(k.as_ref()));
                 } else {
                     // huh? this is weird
                 }

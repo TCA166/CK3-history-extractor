@@ -163,7 +163,7 @@ impl GameObjectDerived for Timeline {
     }
 
     fn get_name(&self) -> GameString {
-        GameString::wrap("Timeline".to_string())
+        GameString::from("Timeline")
     }
 }
 

@@ -176,6 +176,11 @@ fn process_currency(currency_node: Option<&SaveFileValue>) -> Result<f32, Parsin
 }
 
 impl Character {
+    /// Gets whether the character is female
+    pub fn get_female(&self) -> bool {
+        self.female
+    }
+
     /// Gets the faith of the character
     pub fn get_faith(&self) -> Option<Shared<Faith>> {
         if let Some(faith) = &self.faith {
@@ -529,10 +534,11 @@ impl GameObjectDerived for Character {
     }
 
     fn get_name(&self) -> GameString {
-        if self.name.is_none() {
-            return GameString::wrap("Unknown".to_string());
+        if let Some(name) = &self.name {
+            return name.clone();
+        } else {
+            return GameString::from("Unknown".to_string());
         }
-        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -698,30 +704,29 @@ impl Localizable for Character {
         if self.name.is_none() {
             return Ok(());
         } else {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str())?);
+            self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
         }
         if let Some(nick) = &self.nick {
-            self.nick = Some(localization.localize(nick.as_str())?);
+            self.nick = Some(localization.localize(nick)?);
         }
         if let Some(reason) = &self.reason {
-            self.reason = Some(localization.localize_query(reason.as_str(), |stack| {
+            self.reason = Some(localization.localize_query(reason, |stack| {
                 if stack.len() == 2 {
                     if stack[0].0 == "GetTrait" {
                         return localization
-                            .localize(&stack[0].1[0])
-                            .ok()
-                            .and_then(|v| Some(v.to_string()));
+                            .localize("trait_".to_string() + &stack[0].1[0])
+                            .ok();
                     } else if stack[1].0 == "GetHerHis" {
                         if self.female {
-                            return Some("her".to_string());
+                            return Some("her".into());
                         } else {
-                            return Some("his".to_string());
+                            return Some("his".into());
                         }
                     } else if stack[1].0 == "GetHerselfHimself" {
                         if self.female {
-                            return Some("herself".to_string());
+                            return Some("herself".into());
                         } else {
-                            return Some("himself".to_string());
+                            return Some("himself".into());
                         }
                     }
                 }
@@ -729,10 +734,33 @@ impl Localizable for Character {
             })?);
         }
         for t in self.traits.iter_mut() {
-            *t = localization.localize(t.as_str())?;
+            let key = if t.starts_with("child_of_concubine") {
+                "trait_child_of_concubine".to_string()
+            } else if t.ends_with("hajjaj") {
+                if self.female {
+                    "trait_hajjah".to_string()
+                } else {
+                    "trait_hajji".to_string()
+                }
+            } else if t.as_ref() == "lifestyle_traveler" {
+                // TODO this should reflect the traveler level? i think
+                "trait_traveler_1".to_string()
+            } else if t.starts_with("viking") {
+                // TODO viking should be displayed if the culture has longships (trait_viking_has_longships)
+                "trait_viking_fallback".to_string()
+            } else if t.starts_with("shieldmaiden") {
+                if self.female {
+                    "trait_shieldmaiden_female".to_string()
+                } else {
+                    "trait_shieldmaiden_male".to_string()
+                }
+            } else {
+                "trait_".to_string() + t
+            };
+            *t = localization.localize(key)?;
         }
         for t in self.languages.iter_mut() {
-            *t = localization.localize(t.as_str())?;
+            *t = localization.localize(t.to_string() + "_name")?;
         }
         Ok(())
     }

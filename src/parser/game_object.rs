@@ -9,7 +9,7 @@ use std::{
 
 use jomini::common::Date;
 
-use super::super::types::{HashMap, RefOrRaw, Wrapper};
+use super::super::types::HashMap;
 
 /// A type alias for a game object id.
 pub type GameId = u32;
@@ -18,17 +18,9 @@ pub type GameId = u32;
 
 /// A type alias for a game string.
 /// Roughly meant to represent a raw string from a save file, reference counted so that it exists once in memory.
-pub type GameString = Rc<String>;
-
-impl Wrapper<String> for GameString {
-    fn wrap(t: String) -> Self {
-        Rc::new(t)
-    }
-
-    fn get_internal(&self) -> RefOrRaw<String> {
-        RefOrRaw::Raw(self.as_ref())
-    }
-}
+/// Actually a [Rc] around a [str].
+/// Comparisons might not work because compiler shenanigans, try [Rc::as_ref] when in doubt
+pub type GameString = Rc<str>;
 
 /// An error that can occur when converting a value from a save file.
 #[derive(Debug)]
@@ -125,13 +117,13 @@ impl FromStr for SaveFileValue {
                 return Ok(SaveFileValue::Integer(int));
             }
         }
-        Ok(SaveFileValue::String(Rc::new(s.to_owned())))
+        Ok(SaveFileValue::String(Rc::from(s)))
     }
 }
 
 impl From<String> for SaveFileValue {
     fn from(value: String) -> Self {
-        SaveFileValue::String(Rc::new(value))
+        SaveFileValue::String(Rc::from(value))
     }
 }
 

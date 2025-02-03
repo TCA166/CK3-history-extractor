@@ -7,10 +7,13 @@ pub use localizer::{Localizable, LocalizationError, LocalizationStack, Localize}
 
 mod loader;
 pub use loader::GameDataLoader;
+use serde::Serialize;
 
 use super::parser::GameString;
 
+#[derive(Serialize)]
 pub struct GameData {
+    #[serde(skip)]
     map: Option<GameMap>,
     localizer: Localizer,
 }

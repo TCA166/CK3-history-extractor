@@ -30,6 +30,7 @@ pub struct Culture {
     traditions: Vec<GameString>,
     language: Option<GameString>,
     depth: usize,
+    // TODO innovations
 }
 
 impl DummyInit for Culture {
@@ -183,13 +184,21 @@ impl Renderable for Culture {
 
 impl Localizable for Culture {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
-        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str())?);
-        self.ethos = Some(localization.localize(self.ethos.as_ref().unwrap().as_str())?);
-        self.heritage = Some(localization.localize(self.heritage.as_ref().unwrap().as_str())?);
-        self.martial = Some(localization.localize(self.martial.as_ref().unwrap().as_str())?);
-        self.language = Some(localization.localize(self.language.as_ref().unwrap().as_str())?);
+        self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
+        if let Some(eth) = &self.ethos {
+            self.ethos = Some(localization.localize(eth.to_string() + "_name")?);
+        }
+        if let Some(heritage) = &self.heritage {
+            self.heritage = Some(localization.localize(heritage.to_string() + "_name")?);
+        }
+        if let Some(martial) = &self.martial {
+            self.martial = Some(localization.localize(martial.to_string() + "_name")?);
+        }
+        if let Some(language) = &self.language {
+            self.language = Some(localization.localize(language.to_string() + "_name")?);
+        }
         for t in &mut self.traditions {
-            *t = localization.localize(t.as_str())?;
+            *t = localization.localize(t.to_string() + "_name")?;
         }
         Ok(())
     }

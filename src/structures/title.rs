@@ -235,12 +235,12 @@ impl DummyInit for Title {
                                         loc_character = None;
                                     }
                                 } else {
-                                    loc_action = GameString::wrap("Inherited".to_owned());
+                                    loc_action = GameString::from("Inherited");
                                     loc_character =
                                         Some(game_state.get_character(&entry.as_id()?).clone());
                                 }
                                 self.history.push((
-                                    GameString::wrap(h.to_string()),
+                                    GameString::from(h.to_owned()),
                                     loc_character,
                                     loc_action,
                                 ))
@@ -261,16 +261,15 @@ impl DummyInit for Title {
                         }
                     }
                 } else {
-                    action = GameString::wrap("Inherited".to_owned());
+                    action = GameString::from("Inherited");
                     character = Some(game_state.get_character(&val.as_id()?).clone());
                 }
                 self.history
-                    .push((GameString::wrap(h.to_string()), character, action));
+                    .push((GameString::from(h.to_owned()), character, action));
             }
         }
         //sort history by the first element of the tuple (the date) in descending order
-        self.history
-            .sort_by(|a, b| date_string_cmp(a.0.as_str(), b.0.as_str()));
+        self.history.sort_by(|a, b| date_string_cmp(&a.0, &b.0));
         Ok(())
     }
 }
@@ -284,7 +283,7 @@ impl GameObjectDerived for Title {
         if let Some(name) = &self.name {
             return name.clone();
         } else {
-            return GameString::wrap("Unnamed".to_owned());
+            return GameString::from("Unnamed");
         }
     }
 }
@@ -301,22 +300,22 @@ impl TreeNode for Title {
         if self.key.is_none() {
             return None;
         }
-        let first_char = self.key.as_ref().unwrap().as_str().chars().next().unwrap();
+        let first_char = self.key.as_ref().unwrap().chars().next().unwrap();
         match first_char {
             'e' => {
-                return Some(GameString::wrap("Empire".to_owned()));
+                return Some(GameString::from("Empire"));
             }
             'k' => {
-                return Some(GameString::wrap("Kingdom".to_owned()));
+                return Some(GameString::from("Kingdom"));
             }
             'd' => {
-                return Some(GameString::wrap("Duchy".to_owned()));
+                return Some(GameString::from("Duchy"));
             }
             'c' => {
-                return Some(GameString::wrap("County".to_owned()));
+                return Some(GameString::from("County"));
             }
             'b' => {
-                return Some(GameString::wrap("Barony".to_owned()));
+                return Some(GameString::from("Barony"));
             }
             _ => {
                 return None;
@@ -434,7 +433,7 @@ impl Localizable for Title {
             return Ok(());
         }
         if self.name == self.key {
-            self.name = Some(localization.localize(self.key.as_ref().unwrap().as_str())?);
+            self.name = Some(localization.localize(self.key.as_ref().unwrap())?);
         }
         //for o in self.history.iter_mut() {
         //    o.2 = localization.localize(o.2.as_str());

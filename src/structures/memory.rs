@@ -78,10 +78,13 @@ impl GameObjectDerived for Memory {
 
 impl Localizable for Memory {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
-        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap().as_str())?);
+        self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap())?);
+        // there are no worthy localization keys for the relation names, so we don't localize them
+        /*
         for part in self.participants.iter_mut() {
             part.0 = localization.localize(&part.0)?.to_string();
         }
+        */
         Ok(())
     }
 }

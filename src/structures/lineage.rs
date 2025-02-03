@@ -98,10 +98,20 @@ impl GameObjectDerived for LineageNode {
 impl Localizable for LineageNode {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if let Some(lifestyle) = &self.lifestyle {
-            self.lifestyle = Some(localization.localize(&lifestyle.as_str())?);
+            self.lifestyle = Some(localization.localize(lifestyle.to_string() + "_name")?);
         }
         for perk in self.perks.iter_mut() {
-            *perk = localization.localize(perk.as_str())?;
+            let mut perk_key = perk.to_string();
+            if perk_key == "family_man_perk" {
+                perk_key += if self.character.as_ref().unwrap().get_internal().get_female() {
+                    "_female_name"
+                } else {
+                    "_male_name"
+                }
+            } else {
+                perk_key += "_name";
+            }
+            *perk = localization.localize(perk_key)?;
         }
         Ok(())
     }

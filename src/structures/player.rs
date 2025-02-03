@@ -157,7 +157,7 @@ impl Renderable for Player {
                 }
             }
             let mut dynasty_map = map.create_map::<_, Vec<GameString>>(
-                |key: &String| {
+                |key: &str| {
                     if direct_titles.contains(key) {
                         return TARGET_COLOR;
                     } else if descendant_title.contains(key) {

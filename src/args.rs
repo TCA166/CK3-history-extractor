@@ -146,57 +146,37 @@ fn parse_path_arg(input: &str) -> Result<PathBuf, &'static str> {
 /// The arguments to the program.
 #[derive(Parser)]
 pub struct Args {
+    #[arg(value_parser = parse_path_arg)]
     /// The path to the save file.
-    #[arg(help="The path to the save file.", value_parser = parse_path_arg)]
     pub filename: PathBuf,
-    #[arg(
-        short,
-        long,
-        default_value_t = 3,
-        help = "The depth to render the player's history."
-    )]
+    #[arg(short, long, default_value_t = 3)]
     /// The depth to render the player's history.
     pub depth: usize,
-    #[arg(short, long, default_value_t = LANGUAGES[0], value_parser = parse_lang_arg, help="The language to use for localization.")]
+    #[arg(short, long, default_value_t = LANGUAGES[0], value_parser = parse_lang_arg)]
     /// The language to use for localization.
     pub language: &'static str,
-    #[arg(short, long, default_value = None, help="The path to the game files.", value_parser = parse_path_arg)]
+    #[arg(short, long, default_value = None, value_parser = parse_path_arg)]
     /// The path to the game files.
     pub game_path: Option<PathBuf>,
-    #[arg(short, long, help = "The paths to include in the rendering.", value_parser = parse_path_arg)]
+    #[arg(short, long, value_parser = parse_path_arg)]
     /// The paths to include in the rendering.
     pub include: Vec<PathBuf>,
-    #[arg(short, long, default_value = ".", help="The output path for the rendered files.", value_parser = parse_path_arg)]
+    #[arg(short, long, default_value = ".", value_parser = parse_path_arg)]
     /// The output path for the rendered files.
     pub output: PathBuf,
-    #[arg(
-        long,
-        default_value = None,
-        help = "A path to a file to dump the game state to."
-    )]
+    #[arg(long, default_value = None,)]
     /// A flag that tells the program to dump the game state to a json file.
     pub dump: Option<PathBuf>,
-    #[arg(
-        long,
-        default_value_t = false,
-        help = "A flag that tells the program not to render any images."
-    )]
+    #[arg(long,default_value = None,)]
+    /// A path to a file to dump the game data to.
+    pub dump_data: Option<PathBuf>,
+    #[arg(long, default_value_t = false)]
     /// A flag that tells the program not to render any images.
     pub no_vis: bool,
-    #[arg(
-        short,
-        long,
-        default_value_t = false,
-        help = "A flag that tells the program not to interact with the user."
-    )]
+    #[arg(short, long, default_value_t = false)]
     /// A flag that tells the program not to interact with the user.
     pub no_interaction: bool,
-    #[arg(
-        short,
-        long,
-        default_value_t = false,
-        help = "A flag that tells the program to use the internal templates instead of the templates in the `templates` folder."
-    )]
+    #[arg(short, long, default_value_t = false)]
     /// A flag that tells the program to use the internal templates instead of the templates in the `templates` folder.
     pub use_internal: bool,
 }
@@ -301,6 +281,7 @@ impl Args {
             include: include_paths,
             output: output_path,
             dump: None,
+            dump_data: None,
             no_vis: false,
             no_interaction: false,
             use_internal: false,

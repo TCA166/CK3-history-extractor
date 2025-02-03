@@ -131,12 +131,12 @@ impl Renderable for Faith {
 
 impl Localizable for Faith {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
-        self.name = Some(localization.localize(self.name.as_ref().unwrap().as_str())?);
+        self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
         for tenet in self.tenets.iter_mut() {
-            *tenet = localization.localize(tenet.as_str())?;
+            *tenet = localization.localize(tenet.to_string() + "_name")?;
         }
         for doctrine in self.doctrines.iter_mut() {
-            *doctrine = localization.localize(doctrine.as_str())?;
+            *doctrine = localization.localize(doctrine.to_string() + "_name")?;
         }
         Ok(())
     }

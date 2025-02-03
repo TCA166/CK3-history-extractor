@@ -238,7 +238,7 @@ impl GameState {
             if key.is_none() {
                 continue;
             }
-            let assoc = county_data.get(key.unwrap().as_str());
+            let assoc = county_data.get(key.unwrap().as_ref());
             if assoc.is_none() {
                 continue;
             }
@@ -330,7 +330,7 @@ impl GameState {
                     if yr > latest_event {
                         latest_event = yr;
                     }
-                    let event = entry.2.as_str();
+                    let event = entry.2.as_ref();
                     if event == DESTROYED_STR {
                         //if it was destroyed we mark the end of the lifespan
                         item.1.push((start, yr));
@@ -374,7 +374,7 @@ impl GameState {
                     continue;
                 }
                 let char = char.unwrap();
-                let event = entry.2.as_str();
+                let event = entry.2.as_ref();
                 let ch = char.get_internal();
                 let char_faith = ch.get_faith();
                 let ch_faith = char_faith.as_ref().unwrap().get_internal();
@@ -387,7 +387,7 @@ impl GameState {
                             year,
                             char.clone(),
                             title.clone(),
-                            GameString::wrap("faith".to_owned()),
+                            GameString::from("faith"),
                             RealmDifference::Faith(char_faith.as_ref().unwrap().clone()),
                         ));
                         faith = ch_faith.get_id();
@@ -396,7 +396,7 @@ impl GameState {
                             year,
                             char.clone(),
                             title.clone(),
-                            GameString::wrap("people".to_owned()),
+                            GameString::from("people"),
                             RealmDifference::Culture(char_culture.as_ref().unwrap().clone()),
                         ));
                         culture = ch_culture.get_id();

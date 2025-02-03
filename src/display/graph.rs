@@ -58,7 +58,7 @@ fn handle_node<T: TreeNode>(
     let id = ch.get_id() as usize;
     let name = ch.get_name().clone();
     //we use sz, which is the rough size of a character, to calculate the size of the node
-    let txt_size = fnt.box_size(name.as_str()).unwrap();
+    let txt_size = fnt.box_size(&name).unwrap();
     let node_width = txt_size.0 as f64 * TREE_SCALE;
     let node_height = txt_size.1 as f64 * TREE_SCALE;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
@@ -164,6 +164,12 @@ impl Grapher {
             let mut vec = Vec::new();
             for (date, deaths) in data {
                 vec.push((*date, *deaths));
+                if !data.contains_key(&(date + 1)) {
+                    vec.push((date + 1, 0.));
+                }
+                if !data.contains_key(&(date - 1)) {
+                    vec.push((date - 1, 0.));
+                }
             }
             vec.sort_by(|a, b| a.0.cmp(&b.0));
             (*id, vec)
@@ -255,7 +261,7 @@ impl Grapher {
                 let (_, _, (node_width, node_height), _, class) = storage.get(&id).unwrap();
                 if let Some(class) = class {
                     // group resolving
-                    if !groups.contains_key(class.as_str()) {
+                    if !groups.contains_key(class.as_ref()) {
                         let mut rng = rng();
                         let base: u8 = 85;
                         let mut color = RGBColor(base, base, base);
@@ -274,7 +280,7 @@ impl Grapher {
                             }
                             _ => unreachable!(),
                         }
-                        groups.insert(class.as_str(), color);
+                        groups.insert(class.as_ref(), color);
                     }
                 }
                 // canvas size resolving
@@ -341,7 +347,7 @@ impl Grapher {
             let (_, node_name, (node_width, node_height), txt_point, class) =
                 storage.get(id).unwrap();
             let color = if let Some(class) = class {
-                groups.get(class.as_str()).unwrap()
+                groups.get(class.as_ref()).unwrap()
             } else {
                 &WHITE
             };
@@ -357,7 +363,7 @@ impl Grapher {
                     Into::<ShapeStyle>::into(color.mix(0.9)).filled(),
                 //we add the text to the node, the text is drawn at the point we calculated earlier
                 ) + Text::new(
-                    node_name.as_str().to_owned(),
+                    node_name.clone(),
                     *txt_point,
                     fnt.clone(),
             )),

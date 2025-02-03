@@ -132,15 +132,57 @@ impl DummyInit for Artifact {
     }
 }
 
+fn handle_tooltips(text: &GameString) -> String {
+    let mut result = String::new();
+    let mut in_tooltip = false;
+    let mut in_tooltip_text = false;
+    for c in text.chars() {
+        match c {
+            '\x15' => {
+                // NAK character precedes a tooltip
+                in_tooltip = true;
+                in_tooltip_text = false;
+            }
+            ' ' => {
+                if in_tooltip && !in_tooltip_text {
+                    in_tooltip_text = true;
+                } else {
+                    result.push(c);
+                }
+            }
+            '!' => {
+                // NAK! character ends a tooltip? I think?
+                if in_tooltip {
+                    in_tooltip = false;
+                    in_tooltip_text = false;
+                } else {
+                    result.push(c);
+                }
+            }
+            _ => {
+                if !in_tooltip || in_tooltip_text {
+                    result.push(c);
+                }
+            }
+        }
+    }
+    return result;
+}
+
 impl Localizable for Artifact {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if let Some(rarity) = &self.rarity {
-            self.rarity = Some(localization.localize(rarity.as_str())?);
+            self.rarity = Some(localization.localize(rarity)?);
         }
         if let Some(r#type) = &self.r#type {
-            self.r#type = Some(localization.localize(r#type.as_str())?);
+            self.r#type = Some(localization.localize("artifact_".to_string() + r#type)?);
         }
-        // TODO handle description here?
+        if let Some(desc) = &self.description {
+            self.description = Some(handle_tooltips(desc).into());
+        }
+        if let Some(name) = &self.name {
+            self.name = Some(handle_tooltips(name).into());
+        }
         Ok(())
     }
 }

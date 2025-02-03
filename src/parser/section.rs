@@ -518,6 +518,6 @@ mod tests {
             .unwrap()
             .as_string()
             .unwrap();
-        assert_eq!(utf8.as_str(), "Malik al-Muazzam Styrkár");
+        assert_eq!(utf8.as_ref(), "Malik al-Muazzam Styrkár");
     }
 }

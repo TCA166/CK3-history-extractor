@@ -1,10 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, mem};
 
-use super::super::{
-    parser::GameString,
-    types::{HashMap, Wrapper},
-};
+use serde::Serialize;
+
+use super::super::{parser::GameString, types::HashMap};
 
 /* This is an imperfect localization parser. Unfortunately, the localization
 files are far too complex to be parsed without also implementing a whole
@@ -63,15 +62,18 @@ fn demangle_generic(input: &str) -> String {
 
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
-/// After the data is added, the [Localizer::resolve] function should be called to resolve the special localization invocations.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
+#[derive(Serialize)]
 pub struct Localizer {
+    /// Whether at least a single file has been loaded
+    initialized: bool,
     data: HashMap<String, GameString>,
 }
 
 impl Default for Localizer {
     fn default() -> Self {
         Localizer {
+            initialized: false,
             data: HashMap::new(),
         }
     }
@@ -113,6 +115,7 @@ impl Localizer {
     }
 
     pub fn add_localization_file(&mut self, contents: &str) {
+        self.initialized = true;
         //The thing here is that these 'yaml' files are... peculiar. rust_yaml doesn't seem to be able to parse them correctly
         //so we doing the thing ourselves :)
 
@@ -131,7 +134,7 @@ impl Localizer {
                 '\n' => {
                     if past && !quotes && !value.is_empty() {
                         self.data
-                            .insert(mem::take(&mut key), GameString::wrap(mem::take(&mut value)));
+                            .insert(mem::take(&mut key), GameString::from(mem::take(&mut value)));
                     } else {
                         key.clear()
                     }
@@ -216,7 +219,7 @@ impl Localizer {
                     }
                 }
             }
-            *value = GameString::wrap(new);
+            *value = GameString::from(new);
         }
     }
 }
@@ -358,7 +361,7 @@ impl Localize for Localizer {
                         collect = !collect;
                         if !collect {
                             if let Some(val) = self.data.get(&arg) {
-                                collection.push_str(val.as_str());
+                                collection.push_str(val);
                                 arg.clear();
                             } else {
                                 let stack = vec![(mem::take(&mut arg), Vec::new())];
@@ -413,9 +416,12 @@ impl Localize for Localizer {
                     }
                 }
             }
-            return Ok(GameString::wrap(collection));
+            return Ok(GameString::from(collection));
         } else {
-            let res = GameString::wrap(demangle_generic(key.as_ref()));
+            if self.initialized && !key.as_ref().is_empty() && !cfg!(feature = "permissive") {
+                eprintln!("Warning: key {} not found", key.as_ref());
+            }
+            let res = GameString::from(demangle_generic(key.as_ref()));
             //self.data.insert(key.to_string(), res.clone());
             return Ok(res);
         }
@@ -445,21 +451,20 @@ mod tests {
         let mut localizer = Localizer::default();
         localizer
             .data
-            .insert("key".to_string(), GameString::wrap("value".to_owned()));
+            .insert("key".to_string(), GameString::from("value"));
         localizer
             .data
-            .insert("test".to_string(), GameString::wrap("$key$".to_owned()));
+            .insert("test".to_string(), GameString::from("$key$"));
         localizer
             .data
-            .insert("test2".to_string(), GameString::wrap(" $key$ ".to_owned()));
-        localizer.data.insert(
-            "test3".to_string(),
-            GameString::wrap(" $key$ $key$ ".to_owned()),
-        );
-        assert_eq!(localizer.localize("test").unwrap().as_str(), "value");
-        assert_eq!(localizer.localize("test2").unwrap().as_str(), " value ");
+            .insert("test2".to_string(), GameString::from(" $key$ "));
+        localizer
+            .data
+            .insert("test3".to_string(), GameString::from(" $key$ $key$ "));
+        assert_eq!(localizer.localize("test").unwrap().as_ref(), "value");
+        assert_eq!(localizer.localize("test2").unwrap().as_ref(), " value ");
         assert_eq!(
-            localizer.localize("test3").unwrap().as_str(),
+            localizer.localize("test3").unwrap().as_ref(),
             " value value "
         );
     }
@@ -467,18 +472,16 @@ mod tests {
     #[test]
     fn test_remove_formatting() {
         let mut localizer = Localizer::default();
-        localizer.data.insert(
-            "test".to_string(),
-            GameString::wrap("#P value#! # #!".to_owned()),
-        );
-        localizer.data.insert(
-            "test2".to_string(),
-            GameString::wrap("[test|U] [test|idk]".to_owned()),
-        );
+        localizer
+            .data
+            .insert("test".to_string(), GameString::from("#P value#! # #!"));
+        localizer
+            .data
+            .insert("test2".to_string(), GameString::from("[test|U] [test|idk]"));
         localizer.remove_formatting();
-        assert_eq!(localizer.localize("test").unwrap().as_str(), "value ");
+        assert_eq!(localizer.localize("test").unwrap().as_ref(), "value ");
         assert_eq!(
-            localizer.data.get("test2").unwrap().as_str(),
+            localizer.data.get("test2").unwrap().as_ref(),
             "[test] [test]"
         );
     }
@@ -488,37 +491,35 @@ mod tests {
         let mut localizer = Localizer::default();
         localizer.data.insert(
             "test".to_string(),
-            GameString::wrap("[GetTrait(trait_test).GetName()]".to_owned()),
+            GameString::from("[GetTrait(trait_test).GetName()]"),
         );
         localizer.data.insert(
             "test2".to_string(),
-            GameString::wrap("   [GetTrait(trait_test).GetName()]  ".to_owned()),
+            GameString::from("   [GetTrait(trait_test).GetName()]  "),
         );
         localizer.data.insert(
             "test3".to_string(),
-            GameString::wrap(" hello( [GetTrait(trait_test).GetName()] ) ".to_owned()),
+            GameString::from(" hello( [GetTrait(trait_test).GetName()] ) "),
         );
         localizer.data.insert(
             "test4".to_string(),
-            GameString::wrap(" hello,.(., [GetTrait(trait_test).GetName()] ) ".to_owned()),
+            GameString::from(" hello,.(., [GetTrait(trait_test).GetName()] ) "),
         );
-        let query = |stack: &LocalizationStack| -> Option<String> {
-            Some(localizer.localize(&stack[0].1[0]).unwrap().to_string())
-        };
+        let query = |stack: &LocalizationStack| Some(localizer.localize(&stack[0].1[0]).unwrap());
         assert_eq!(
-            localizer.localize_query("test", query).unwrap().as_str(),
+            localizer.localize_query("test", query).unwrap().as_ref(),
             "Trait test"
         );
         assert_eq!(
-            localizer.localize_query("test2", query).unwrap().as_str(),
+            localizer.localize_query("test2", query).unwrap().as_ref(),
             "   Trait test  "
         );
         assert_eq!(
-            localizer.localize_query("test3", query).unwrap().as_str(),
+            localizer.localize_query("test3", query).unwrap().as_ref(),
             " hello( Trait test ) "
         );
         assert_eq!(
-            localizer.localize_query("test4", query).unwrap().as_str(),
+            localizer.localize_query("test4", query).unwrap().as_ref(),
             " hello,.(., Trait test ) "
         );
     }

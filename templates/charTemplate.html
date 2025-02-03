@@ -115,9 +115,9 @@
                         <ul class='list-group list-group-flush'>
                             <li class='list-group-item'>{{artifact.type}}</li>
                             <li class='list-group-item'>{{artifact.rarity}}</li>
-                            <li class='list-group-item'>{{artifact.description|handle_tooltips|escape}}</li>
+                            <li class='list-group-item'>{{artifact.description|escape}}</li>
                         </ul>">
-                        {{artifact.name|handle_tooltips}}
+                        {{artifact.name}}
                         </div>
                         {%endfor%}
                     </div>
@@ -135,7 +135,7 @@
                         {{memory.date}}:{%if memory.type is defined%}{{memory.type}}{%endif%}<br>
                         {%if memory.participants is defined%}
                         {%for key, value in memory.participants%}
-                            {{key}}:{{value|render_ref}}
+                            {{value|render_ref}}
                         {%endfor%}
                         {%endif%}
                     </li>

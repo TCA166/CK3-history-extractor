@@ -68,18 +68,7 @@ For users familiar with console environments here are details on that interface:
 ./ck3_history_extractor <save file path> <arg1> <arg2> ...
 ```
 
-And here are the arguments that the utility accepts as of right now:
-
-1. ```--internal``` forces the utility to use the internal templates.
-2. ```--depth %d``` sets the maximum depth of the data to retrieve in the save file. The characters you played have depth=0, their relatives have depth=1 and so on.
-3. ```--game-path %s``` shows the program where to find your ck3 localization data so that the pages can be completely accurate. Assuming you have the game installed via Steam you can do the following ```--game-path "*YOUR STEAM PATH*/steamapps/common/Crusader Kings III/game"```.
-4. ```--no-vis``` disables all forms of visualization within the output
-5. ```--language %s``` toggles which localization files shall be used if the game path is provided
-6. ```--output %s``` changes where the output folder will be located
-7. ```--include %s``` provides the program with a list of mod directories that the program should retrieve data from. These have higher priority than the game path
-8. ```--dump``` makes the tool dump all the extracted data into a json file
-9. ```--no-interaction``` disables automatic output opening and exit prompt
-10. ```--help``` provides a detailed breakdown of the CLI interface
+You can use the ```--help``` argument to view all the options.
 **Save File paths need to point to a specific files, not your save folder**
 
 ## Mod support

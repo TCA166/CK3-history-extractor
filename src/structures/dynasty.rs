@@ -125,7 +125,7 @@ impl DummyInit for Dynasty {
                 let mut added = false;
                 // TODO why not hashmap?
                 for perk in self.perks.iter_mut() {
-                    if perk.0.as_str() == key.unwrap() {
+                    if perk.0.as_ref() == key.unwrap() {
                         if perk.1 < val {
                             perk.1 = val;
                         }
@@ -137,8 +137,7 @@ impl DummyInit for Dynasty {
                     continue;
                 }
                 //if the perk is not found, add it
-                self.perks
-                    .push((GameString::wrap(key.unwrap().to_owned()), val));
+                self.perks.push((GameString::from(key.unwrap()), val));
             }
         }
         if let Some(leaders_obj) = base.get("historical") {
@@ -227,7 +226,7 @@ impl GameObjectDerived for Dynasty {
         } else if let Some(parent) = &self.parent {
             return parent.get_internal().get_name();
         } else {
-            return GameString::wrap("Unknown".to_owned());
+            return GameString::from("Unknown");
         }
     }
 }
@@ -262,7 +261,7 @@ impl Serialize for Dynasty {
                 let mut j = 0;
                 for part in motto {
                     if part.is_empty() || part == "," {
-                        rebuilt.push(motto_raw.1[j].as_str());
+                        rebuilt.push(motto_raw.1[j].as_ref());
                         j += 1;
                         if j >= var_len {
                             j = 0; //TODO why can this happen? `(" Through ", ["Safety"])`
@@ -271,7 +270,7 @@ impl Serialize for Dynasty {
                         rebuilt.push(part);
                     }
                 }
-                GameString::wrap(rebuilt.join(" "))
+                GameString::from(rebuilt.join(" "))
             };
             state.serialize_field("motto", &rebuilt)?;
         }
@@ -309,17 +308,17 @@ impl Renderable for Dynasty {
 impl Localizable for Dynasty {
     fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
-            self.name = Some(localization.localize(name.as_str())?);
+            self.name = Some(localization.localize(name)?);
         } else {
             return Ok(());
         }
         for perk in self.perks.iter_mut() {
-            perk.0 = localization.localize(perk.0.as_str())?;
+            perk.0 = localization.localize(perk.0.to_string() + "_track_name")?;
         }
         if let Some(motto) = &mut self.motto {
-            motto.0 = localization.localize(motto.0.as_str())?;
+            motto.0 = localization.localize(&motto.0)?;
             for v in motto.1.iter_mut() {
-                *v = localization.localize(v.as_str())?;
+                *v = localization.localize(&v)?;
             }
         }
         Ok(())

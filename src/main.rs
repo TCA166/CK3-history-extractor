@@ -209,5 +209,9 @@ fn main() -> Result<(), UserError> {
         let json = serde_json::to_string_pretty(&game_state).unwrap();
         fs::write(dump_path, json).unwrap();
     }
+    if let Some(dump_path) = args.dump_data {
+        let json = serde_json::to_string_pretty(&data).unwrap();
+        fs::write(dump_path, json).unwrap();
+    }
     return Ok(());
 }
