@@ -130,7 +130,10 @@ impl Renderable for Faith {
 }
 
 impl Localizable for Faith {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
         for tenet in self.tenets.iter_mut() {
             *tenet = localization.localize(tenet.to_string() + "_name")?;

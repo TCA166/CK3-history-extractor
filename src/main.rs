@@ -133,7 +133,7 @@ fn main() -> Result<(), UserError> {
     //initialize the save file
     let save = SaveFile::open(args.filename)?;
     // this is sort of like the first round of filtering where we store the objects we care about
-    let mut game_state: GameState = GameState::new();
+    let mut game_state: GameState = GameState::default();
     let mut players: Vec<Player> = Vec::new();
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(spinner_style.clone());
@@ -159,7 +159,7 @@ fn main() -> Result<(), UserError> {
         args.use_internal,
         data.get_map().is_some(),
         args.no_vis,
-        &mut data,
+        &data,
     );
     let timeline;
     if !args.no_vis {

@@ -1,10 +1,8 @@
 use std::{fs, path::Path};
 
-use minijinja::{AutoEscape, Environment, UndefinedBehavior, Value};
+use minijinja::{AutoEscape, Environment, State, UndefinedBehavior, Value};
 
-use crate::game_data::Localize;
-
-const LOCALIZATION_SUFFIX: &str = "_l";
+use super::game_data::{GameData, Localize};
 
 #[cfg(feature = "internal")]
 mod internal_templates {
@@ -38,6 +36,21 @@ const TEMPLATE_NAMES: [&str; 8] = [
     BASE_TEMPLATE_NAME,
 ];
 
+const LOCALIZATION_GLOBAL: &str = "localization";
+const LOCALIZATION_FUNC_NAME: &str = "localize";
+
+// MAYBE there's a better way of providing localization, however, I have yet to find it
+
+/* What we do here, is allow for all Value objects to act as localizer, and
+then embed the localizer in the environment. This is sort of bad. Performance
+wise and design wise. */
+
+impl Localize<String> for Value {
+    fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
+        self.get_attr(key.as_ref()).map(|x| x.into()).ok()
+    }
+}
+
 /// # Environment creation
 ///
 /// Create a new [Environment] with the filters and templates needed for the project.
@@ -52,7 +65,6 @@ const TEMPLATE_NAMES: [&str; 8] = [
 ///
 /// The environment will have the following filters:
 /// - [render_ref] - renders a reference to another object
-/// - [handle_tooltips] - removes tooltips from the text
 ///
 /// ### Globals
 ///
@@ -63,18 +75,24 @@ const TEMPLATE_NAMES: [&str; 8] = [
 /// ### Localization
 ///
 /// All variables in the templates that end with '_l' will be interpreted as localization keys and will be localized using the provided localizer.
-pub fn create_env<'a, L: Localize>(
+pub fn create_env<'a>(
     internal: bool,
     map_present: bool,
     no_vis: bool,
-    localizer: &mut L,
+    data: &GameData,
 ) -> Environment<'a> {
     let mut env = Environment::new();
     env.set_lstrip_blocks(true);
     env.set_trim_blocks(true);
     env.add_filter("render_ref", render_ref);
+    env.add_filter(LOCALIZATION_FUNC_NAME, localize);
+    env.add_function(LOCALIZATION_FUNC_NAME, localize);
     env.add_global("map_present", map_present);
     env.add_global("no_vis", no_vis);
+    env.add_global(
+        LOCALIZATION_GLOBAL,
+        Value::from_serialize(data.get_localizer()),
+    );
     env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
     env.set_undefined_behavior(UndefinedBehavior::Strict);
     let template_path = Path::new("./templates");
@@ -123,30 +141,12 @@ pub fn create_env<'a, L: Localize>(
             }
         }
     }
-    let mut vars_to_localize = Vec::new();
-    for (_, template) in env.templates() {
-        let vars = template.undeclared_variables(true);
-        for var in vars
-            .iter()
-            .filter_map(|x| x.strip_suffix(LOCALIZATION_SUFFIX))
-        {
-            vars_to_localize.push(var.to_owned());
-        }
-    }
-    for var in vars_to_localize {
-        env.add_global(
-            var.clone(),
-            Value::from_safe_string(localizer.localize(var.as_str()).unwrap().to_string()),
-        );
-    }
     env
 }
 
 fn determine_auto_escape(_value: &str) -> AutoEscape {
     AutoEscape::None
 }
-
-// TODO we need to somehow figure out how to give frontend access to the localization
 
 /// A function that renders a reference.
 /// May be used in the templates as filter(using [Environment::add_filter]) or function(using [Environment::add_function]) to render a reference to another object.
@@ -184,5 +184,16 @@ fn render_ref(reference: Value, root: Option<bool>) -> String {
                 name
             )
         }
+    }
+}
+
+fn localize(state: &State, key: &str, value: Option<&str>) -> String {
+    let localizer = state.lookup(LOCALIZATION_GLOBAL).unwrap();
+    if let Some(value) = value {
+        localizer
+            .localize_query(key, |_| Some(value.to_string()))
+            .unwrap()
+    } else {
+        localizer.localize(key).unwrap()
     }
 }

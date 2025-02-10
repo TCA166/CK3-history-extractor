@@ -700,7 +700,10 @@ impl Renderable for Character {
 }
 
 impl Localizable for Character {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         if self.name.is_none() {
             return Ok(());
         } else {

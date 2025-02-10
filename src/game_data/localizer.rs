@@ -63,7 +63,6 @@ fn demangle_generic(input: &str) -> String {
 /// An object that localizes strings.
 /// It reads localization data from a directory and provides localized strings.
 /// If the localization data is not found, it will demangle the key using an algorithm that tries to approximate the intended text
-#[derive(Serialize)]
 pub struct Localizer {
     /// Whether at least a single file has been loaded
     initialized: bool,
@@ -74,8 +73,17 @@ impl Default for Localizer {
     fn default() -> Self {
         Localizer {
             initialized: false,
-            data: HashMap::new(),
+            data: HashMap::default(),
         }
+    }
+}
+
+impl Serialize for Localizer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data.serialize(serializer)
     }
 }
 
@@ -305,10 +313,13 @@ impl std::error::Error for LocalizationError {
     }
 }
 
-pub trait Localize {
+pub trait Localize<T: AsRef<str> + From<String>> {
+    /// A simple function that looks up raw value associated with the given localization key
+    fn lookup<K: AsRef<str>>(&self, key: K) -> Option<T>;
+
     /// A simple localization function that will return the localized string.
     /// It assumes that the key is not complex and does not require any special handling.
-    fn localize<K: AsRef<str>>(&self, key: K) -> Result<GameString, LocalizationError> {
+    fn localize<K: AsRef<str>>(&self, key: K) -> Result<T, LocalizationError> {
         self.localize_query(key, |_| -> Option<&str> { None })
     }
 
@@ -320,7 +331,7 @@ pub trait Localize {
         key: K,
         provider: &str,
         value: &str,
-    ) -> Result<GameString, LocalizationError> {
+    ) -> Result<T, LocalizationError> {
         let query = |q: &LocalizationStack| {
             if q.len() == 1 && q.first().unwrap().0 == provider {
                 Some(value)
@@ -340,28 +351,21 @@ pub trait Localize {
         &self,
         key: K,
         query: F,
-    ) -> Result<GameString, LocalizationError>;
-}
-
-impl Localize for Localizer {
-    fn localize_query<K: AsRef<str>, S: AsRef<str>, F: Fn(&LocalizationStack) -> Option<S>>(
-        &self,
-        key: K,
-        query: F,
-    ) -> Result<GameString, LocalizationError> {
-        if let Some(d) = self.data.get(key.as_ref()) {
+    ) -> Result<T, LocalizationError> {
+        if let Some(d) = self.lookup(key.as_ref()) {
+            let value = d.as_ref();
             // we have A template localization string, now we have to resolve it
             let mut collect = false;
-            let mut collection = String::with_capacity(d.len());
+            let mut collection = String::with_capacity(value.len());
             let mut arg = String::new();
             // this is technically a less efficient way of doing it, but it's easier to read
-            for c in d.chars() {
+            for c in value.chars() {
                 match c {
                     '$' => {
                         collect = !collect;
                         if !collect {
-                            if let Some(val) = self.data.get(&arg) {
-                                collection.push_str(val);
+                            if let Some(val) = self.lookup(&arg) {
+                                collection.push_str(val.as_ref());
                                 arg.clear();
                             } else {
                                 let stack = vec![(mem::take(&mut arg), Vec::new())];
@@ -373,7 +377,7 @@ impl Localize for Localizer {
                                             .push_str(demangle_generic(arg.as_ref()).as_str());
                                     } else {
                                         return Err(LocalizationError::InvalidQuery(
-                                            d.clone(),
+                                            value.into(),
                                             stack,
                                         ));
                                     }
@@ -398,7 +402,10 @@ impl Localize for Localizer {
                                 collection.push_str(val.as_ref());
                             } else {
                                 if !cfg!(feature = "permissive") {
-                                    return Err(LocalizationError::InvalidQuery(d.clone(), stack));
+                                    return Err(LocalizationError::InvalidQuery(
+                                        value.into(),
+                                        stack,
+                                    ));
                                 }
                             }
                         } else {
@@ -416,15 +423,19 @@ impl Localize for Localizer {
                     }
                 }
             }
-            return Ok(GameString::from(collection));
+            return Ok(collection.into());
         } else {
-            if self.initialized && !key.as_ref().is_empty() && !cfg!(feature = "permissive") {
+            if !key.as_ref().is_empty() && !cfg!(feature = "permissive") {
                 eprintln!("Warning: key {} not found", key.as_ref());
             }
-            let res = GameString::from(demangle_generic(key.as_ref()));
-            //self.data.insert(key.to_string(), res.clone());
-            return Ok(res);
+            return Ok(demangle_generic(key.as_ref()).into());
         }
+    }
+}
+
+impl Localize<GameString> for Localizer {
+    fn lookup<K: AsRef<str>>(&self, key: K) -> Option<GameString> {
+        self.data.get(key.as_ref()).cloned()
     }
 }
 
@@ -432,7 +443,10 @@ impl Localize for Localizer {
 pub trait Localizable {
     // TODO improve the accuracy of the localization
     /// Localizes the object.
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError>; // TODO different error that includes file and line
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError>; // TODO different error that includes file and line
 }
 
 #[cfg(test)]
@@ -461,6 +475,7 @@ mod tests {
         localizer
             .data
             .insert("test3".to_string(), GameString::from(" $key$ $key$ "));
+        assert_eq!(localizer.localize("key").unwrap().as_ref(), "value");
         assert_eq!(localizer.localize("test").unwrap().as_ref(), "value");
         assert_eq!(localizer.localize("test2").unwrap().as_ref(), " value ");
         assert_eq!(
@@ -489,6 +504,9 @@ mod tests {
     #[test]
     fn test_stack() {
         let mut localizer = Localizer::default();
+        localizer
+            .data
+            .insert("trait_test".to_string(), GameString::from("Trait test"));
         localizer.data.insert(
             "test".to_string(),
             GameString::from("[GetTrait(trait_test).GetName()]"),

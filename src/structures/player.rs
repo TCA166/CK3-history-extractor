@@ -182,7 +182,10 @@ impl Renderable for Player {
 }
 
 impl Localizable for Player {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         for node in self.lineage.iter_mut() {
             node.localize(localization)?;
         }

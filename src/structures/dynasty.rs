@@ -306,7 +306,10 @@ impl Renderable for Dynasty {
 }
 
 impl Localizable for Dynasty {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
             self.name = Some(localization.localize(name)?);
         } else {

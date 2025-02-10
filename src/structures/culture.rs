@@ -183,7 +183,10 @@ impl Renderable for Culture {
 }
 
 impl Localizable for Culture {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
         if let Some(eth) = &self.ethos {
             self.ethos = Some(localization.localize(eth.to_string() + "_name")?);

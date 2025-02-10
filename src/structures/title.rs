@@ -428,7 +428,10 @@ impl Renderable for Title {
 }
 
 impl Localizable for Title {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         if self.key.is_none() {
             return Ok(());
         }

@@ -77,7 +77,10 @@ impl GameObjectDerived for Memory {
 }
 
 impl Localizable for Memory {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         self.r#type = Some(localization.localize(&self.r#type.as_ref().unwrap())?);
         // there are no worthy localization keys for the relation names, so we don't localize them
         /*

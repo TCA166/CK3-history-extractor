@@ -62,9 +62,8 @@ pub struct GameState {
     offset_date: Option<Date>,
 }
 
-impl GameState {
-    /// Create a new GameState
-    pub fn new() -> GameState {
+impl Default for GameState {
+    fn default() -> Self {
         GameState {
             characters: HashMap::default(),
             titles: HashMap::default(),
@@ -79,7 +78,9 @@ impl GameState {
             offset_date: None,
         }
     }
+}
 
+impl GameState {
     /// Add a lookup table for traits
     pub fn add_lookup(&mut self, array: Vec<GameString>) {
         self.traits_lookup = array;
@@ -417,7 +418,10 @@ impl GameState {
 }
 
 impl Localizable for GameState {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         for (_, character) in &mut self.characters {
             character.get_internal_mut().localize(localization)?;
         }

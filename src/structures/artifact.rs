@@ -170,7 +170,10 @@ fn handle_tooltips(text: &GameString) -> String {
 }
 
 impl Localizable for Artifact {
-    fn localize<L: Localize>(&mut self, localization: &mut L) -> Result<(), LocalizationError> {
+    fn localize<L: Localize<GameString>>(
+        &mut self,
+        localization: &mut L,
+    ) -> Result<(), LocalizationError> {
         if let Some(rarity) = &self.rarity {
             self.rarity = Some(localization.localize(rarity)?);
         }
