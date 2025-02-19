@@ -153,37 +153,35 @@ impl StackEntry {
     }
 }
 
-/// Convert a stack entry into a [SaveFileObject].
-/// This function will consume the stack entry.
-/// If the stack entry contains both an array and a map, the map will be treated as an array index.
-/// [StackEntry] doesn't implement [Into]<[SaveFileObject]> because it would be a partial conversion.
-fn stack_entry_into_object<'a>(entry: &mut StackEntry) -> SaveFileObject {
-    if entry.map.is_none() {
-        return SaveFileObject::Array(entry.array.take().unwrap_or(Vec::new()));
-    } else if entry.array.is_none() {
-        return SaveFileObject::Map(entry.map.take().unwrap());
-    } else {
-        let mut map = entry.map.take().unwrap();
-        let mut array = entry.array.take().unwrap();
-        // now we have to somehow combine universally a hashmap and an array
-        if map.keys().all(|k| k.chars().all(|k| k.is_digit(10))) {
-            // the map keys are all numerical, means probably we want to treat them as indices into the array
-            let mut keys = map
-                .keys()
-                .map(|k| (k.parse::<usize>().unwrap(), k.clone()))
-                .collect::<Vec<_>>();
-            keys.sort();
-            for (index, key) in keys {
-                let value = map.remove(&key).unwrap();
-                if index > array.len() {
-                    array.push(value);
-                } else {
-                    array.insert(index, value);
-                }
-            }
-            return SaveFileObject::Array(array);
+impl Into<SaveFileObject> for StackEntry {
+    fn into(self) -> SaveFileObject {
+        if self.map.is_none() {
+            return SaveFileObject::Array(self.array.unwrap_or(Vec::new()));
+        } else if self.array.is_none() {
+            return SaveFileObject::Map(self.map.unwrap());
         } else {
-            unimplemented!("combining a hashmap and an array is not yet implemented");
+            let mut map = self.map.unwrap();
+            let mut array = self.array.unwrap();
+            // now we have to somehow combine universally a hashmap and an array
+            if map.keys().all(|k| k.chars().all(|k| k.is_digit(10))) {
+                // the map keys are all numerical, means probably we want to treat them as indices into the array
+                let mut keys = map
+                    .keys()
+                    .map(|k| (k.parse::<usize>().unwrap(), k.clone()))
+                    .collect::<Vec<_>>();
+                keys.sort();
+                for (index, key) in keys {
+                    let value = map.remove(&key).unwrap();
+                    if index > array.len() {
+                        array.push(value);
+                    } else {
+                        array.insert(index, value);
+                    }
+                }
+                return SaveFileObject::Array(array);
+            } else {
+                unimplemented!("combining a hashmap and an array is not yet implemented");
+            }
         }
     }
 }
@@ -249,7 +247,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                     last.push(key.take().unwrap().parse::<SaveFileValue>()?);
                                 }
                                 let name = last.name.take();
-                                let value = stack_entry_into_object(&mut last);
+                                let value: SaveFileObject = last.into();
                                 if let Some(entry) = stack.last_mut() {
                                     if name.is_some() {
                                         entry.insert(name.unwrap(), value.into());
@@ -337,7 +335,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             BinaryToken::Close => {
                                 let mut last = stack.pop().unwrap();
                                 let name = last.name.take();
-                                let value = stack_entry_into_object(&mut last);
+                                let value: SaveFileObject = last.into();
                                 if let Some(entry) = stack.last_mut() {
                                     if name.is_some() {
                                         entry.insert(name.unwrap(), value.into());
@@ -383,10 +381,12 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 add_value(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::Id(token) => {
-                                let str = TOKENS_RESOLVER
-                                    .resolve(token)
-                                    .ok_or(SectionError::UnknownToken(token))?;
-                                key = Some(str.to_string());
+                                key = Some(
+                                    TOKENS_RESOLVER
+                                        .resolve(token)
+                                        .ok_or(SectionError::UnknownToken(token))?
+                                        .to_string(),
+                                );
                             }
                             BinaryToken::Rgb(token) => {
                                 let value = SaveFileObject::Array(vec![
@@ -407,7 +407,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                 }
             }
         }
-        return Ok(stack_entry_into_object(&mut stack.pop().unwrap()));
+        return Ok(stack.pop().unwrap().into());
     }
 }
 

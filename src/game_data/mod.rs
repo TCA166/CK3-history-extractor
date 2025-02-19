@@ -13,7 +13,6 @@ use super::parser::GameString;
 
 #[derive(Serialize)]
 pub struct GameData {
-    #[serde(skip)]
     map: Option<GameMap>,
     localizer: Localizer,
 }

@@ -121,6 +121,8 @@ impl Renderable for Vassal {
     }
 }
 
+// MAYBE enum for dead and alive character?
+
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
 pub struct Character {

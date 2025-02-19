@@ -18,13 +18,9 @@ There are three potential versions of the program:
 - **Release** - Every now and then I release a new GitHub release that has compiled binaries attached.
     You can simply download those binaries and use them.
     For those unfamiliar with GitHub **[go here](https://github.com/TCA166/CK3-history-extractor/releases/latest)** and this is the version you should honestly use.
-- **Dev** - You can also just compile the program from source on your machine of choice. If you have no clue how the rust compilation system works just try running:
-
-    ```sh
-    make dependencies
-    make cargo
-    cp target/release/ck3_history_extractor ./ck3_history_extractor
-    ```
+- **Dev** - You can also just compile the program from source on your machine ofchoice.
+Here's the [rust installation guide](https://doc.rust-lang.org/book/ch01-01-installation.html) and once you have rust installed [this section](https://doc.rust-lang.org/book/ch01-03-hello-cargo.html#building-and-running-a-cargo-project) explains how to compile a rust program.
+Additionally you can also have a look at how I compile the program in the [makefile](./Makefile).
 
 - **Legacy** - a Python based script developed way back with no support, but you can access it [here](https://github.com/TCA166/CK3-history-extractor/releases/tag/v1.0.0)
 

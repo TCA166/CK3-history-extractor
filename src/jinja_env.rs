@@ -43,7 +43,7 @@ const LOCALIZATION_FUNC_NAME: &str = "localize";
 
 /* What we do here, is allow for all Value objects to act as localizer, and
 then embed the localizer in the environment. This is sort of bad. Performance
-wise and design wise. */
+wise at least */
 
 impl Localize<String> for Value {
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
@@ -59,12 +59,13 @@ impl Localize<String> for Value {
 ///
 /// ## Env specifics
 ///
-/// The environment will have no html escaping.
+/// The environment will have no html escaping, and will not permit undefined chicanery.
 ///
 /// ### Filters
 ///
 /// The environment will have the following filters:
 /// - [render_ref] - renders a reference to another object
+/// - [localize] - localizes the provided string
 ///
 /// ### Globals
 ///
@@ -72,9 +73,6 @@ impl Localize<String> for Value {
 /// - map_present - whether the map is present
 /// - no_vis - whether the visualizations are disabled
 ///
-/// ### Localization
-///
-/// All variables in the templates that end with '_l' will be interpreted as localization keys and will be localized using the provided localizer.
 pub fn create_env<'a>(
     internal: bool,
     map_present: bool,
@@ -187,12 +185,16 @@ fn render_ref(reference: Value, root: Option<bool>) -> String {
     }
 }
 
-fn localize(state: &State, key: &str, value: Option<&str>) -> String {
+fn localize(state: &State, key: &str, value: Option<&str>, provider: Option<&str>) -> String {
     let localizer = state.lookup(LOCALIZATION_GLOBAL).unwrap();
     if let Some(value) = value {
-        localizer
-            .localize_query(key, |_| Some(value.to_string()))
-            .unwrap()
+        if let Some(provider) = provider {
+            localizer.localize_provider(key, provider, value).unwrap()
+        } else {
+            localizer
+                .localize_query(key, |_| Some(value.to_string()))
+                .unwrap()
+        }
     } else {
         localizer.localize(key).unwrap()
     }

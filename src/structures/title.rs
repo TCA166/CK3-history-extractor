@@ -1,7 +1,7 @@
 use std::slice::Iter;
-use std::{cmp::Ordering, path::Path};
+use std::{path::Path, str::FromStr};
 
-use jomini::common::PdsDate;
+use jomini::common::{Date, PdsDate};
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -28,7 +28,7 @@ pub struct Title {
     de_facto: Option<Shared<Title>>,
     de_jure_vassals: Vec<Shared<Title>>,
     de_facto_vassals: Vec<Shared<Title>>,
-    history: Vec<(GameString, Option<Shared<Character>>, GameString)>,
+    history: Vec<(Date, Option<Shared<Character>>, GameString)>,
     claims: Vec<Shared<Character>>,
     depth: usize,
     capital: Option<Shared<Title>>,
@@ -39,33 +39,7 @@ pub struct Title {
     color: [u8; 3],
 }
 
-/// Compares two date strings in the format "YYYY.MM.DD" and returns the ordering
-fn date_string_cmp(a: &str, b: &str) -> Ordering {
-    let a_split: Vec<&str> = a.split('.').collect();
-    let b_split: Vec<&str> = b.split('.').collect();
-    let a_year = a_split[0].parse::<u16>().unwrap();
-    let b_year = b_split[0].parse::<u16>().unwrap();
-    if a_year < b_year {
-        return Ordering::Less;
-    } else if a_year > b_year {
-        return Ordering::Greater;
-    }
-    let a_month = a_split[1].parse::<u8>().unwrap();
-    let b_month = b_split[1].parse::<u8>().unwrap();
-    if a_month < b_month {
-        return Ordering::Less;
-    } else if a_month > b_month {
-        return Ordering::Greater;
-    }
-    let a_day = a_split[2].parse::<u8>().unwrap();
-    let b_day = b_split[2].parse::<u8>().unwrap();
-    if a_day < b_day {
-        return Ordering::Less;
-    } else if a_day > b_day {
-        return Ordering::Greater;
-    }
-    Ordering::Equal
-}
+// TODO enum called Title, that split off county title and higher tiers
 
 impl Title {
     /// Adds a de jure vassal to the title
@@ -107,7 +81,7 @@ impl Title {
     }
 
     /// Returns an iterator over the history of the title
-    pub fn get_history_iter(&self) -> Iter<(GameString, Option<Shared<Character>>, GameString)> {
+    pub fn get_history_iter(&self) -> Iter<(Date, Option<Shared<Character>>, GameString)> {
         self.history.iter()
     }
 
@@ -159,10 +133,10 @@ impl DummyInit for Title {
             name: None,
             de_jure: None,
             de_facto: None,
-            de_jure_vassals: Vec::new(),
-            de_facto_vassals: Vec::new(),
-            history: Vec::new(),
-            claims: Vec::new(),
+            de_jure_vassals: Vec::default(),
+            de_facto_vassals: Vec::default(),
+            history: Vec::default(),
+            claims: Vec::default(),
             id: id,
             depth: 0,
             color: [70, 255, 70],
@@ -214,8 +188,7 @@ impl DummyInit for Title {
         }
         self.name = Some(base.get_string("name")?);
         if let Some(hist) = base.get("history") {
-            let hist_obj = hist.as_object()?.as_map()?;
-            for (h, val) in hist_obj {
+            for (h, val) in hist.as_object()?.as_map()? {
                 let character;
                 let action: GameString;
                 if let SaveFileValue::Object(o) = val {
@@ -239,18 +212,14 @@ impl DummyInit for Title {
                                     loc_character =
                                         Some(game_state.get_character(&entry.as_id()?).clone());
                                 }
-                                self.history.push((
-                                    GameString::from(h.to_owned()),
-                                    loc_character,
-                                    loc_action,
-                                ))
+                                self.history
+                                    .push((Date::from_str(h)?, loc_character, loc_action))
                             }
                             continue; //if it's an array we handled all the adding already in the loop above
                         }
                         SaveFileObject::Map(o) => {
                             action = o.get_string("type")?;
-                            let holder = o.get("holder");
-                            match holder {
+                            match o.get("holder") {
                                 Some(h) => {
                                     character = Some(game_state.get_character(&h.as_id()?).clone());
                                 }
@@ -264,12 +233,11 @@ impl DummyInit for Title {
                     action = GameString::from("Inherited");
                     character = Some(game_state.get_character(&val.as_id()?).clone());
                 }
-                self.history
-                    .push((GameString::from(h.to_owned()), character, action));
+                self.history.push((Date::from_str(h)?, character, action));
             }
         }
         //sort history by the first element of the tuple (the date) in descending order
-        self.history.sort_by(|a, b| date_string_cmp(&a.0, &b.0));
+        self.history.sort_by(|a, b| a.0.cmp(&b.0));
         Ok(())
     }
 }

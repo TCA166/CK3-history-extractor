@@ -29,6 +29,7 @@ pub use game_object::{
 /// entire save file. This is essentially the front-end of the parser, handling
 /// the IO and the such.
 mod save_file;
+use jomini::common::DateError;
 pub use save_file::{SaveFile, SaveFileError};
 
 /// A submodule that provides the [Section] object, which allows the user to
@@ -98,6 +99,14 @@ impl From<jomini::Error> for ParsingError {
 impl From<ParseIntError> for ParsingError {
     fn from(err: ParseIntError) -> Self {
         ParsingError::StructureError(SaveObjectError::ConversionError(err.into()))
+    }
+}
+
+impl From<DateError> for ParsingError {
+    fn from(_: DateError) -> Self {
+        ParsingError::StructureError(SaveObjectError::ConversionError(
+            ConversionError::InvalidValue("Invalid date conversion"),
+        ))
     }
 }
 

@@ -19,6 +19,7 @@ use plotters::{
     prelude::{EmptyElement, Rectangle},
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
+use serde::Serialize;
 
 use super::super::{
     parser::{GameId, GameString},
@@ -108,6 +109,7 @@ fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Box<[u8]>, MapError> {
         .into_boxed_slice())
 }
 
+/// An instance of an image, that depicts a map.
 pub struct Map {
     height: u32,
     width: u32,
@@ -131,7 +133,7 @@ impl Map {
     }
 
     /// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
-    pub fn draw_legend(&mut self, legend: Vec<(String, [u8; 3])>) {
+    pub fn draw_legend<I: IntoIterator<Item = (String, [u8; 3])>>(&mut self, legend: I) {
         let back = BitMapBackend::with_buffer(&mut self.bytes, (self.width, self.height))
             .into_drawing_area();
         let text_height = (self.height / 30) as i32;
@@ -198,7 +200,8 @@ impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Map {
     }
 }
 
-/// A struct representing a game map, from which we can create [crate::structures::Title] maps
+/// A struct representing a game map, from which we can create [Map] instances
+#[derive(Serialize)]
 pub struct GameMap {
     height: u32,
     width: u32,
@@ -324,14 +327,14 @@ impl GameMap {
 }
 
 pub trait MapGenerator {
-    /// Creates a new map from the province map with the colors of the provinces in id_list changed to a color determined by assoc
-    /// Returns a vector of RGB bytes representing the new map
+    /// Creates a new instance of map, with pixels colored in accordance with assoc function. key_list acts as a whitelist of keys to use assoc on. If it's None then assoc is applied to all keys.
     fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,
         key_list: Option<I>,
     ) -> Map;
 
+    /// Creates a new instance of map, with all pixels corresponding to keys in the key_list colored same as the target_color
     fn create_map_flat<I: IntoIterator<Item = GameString>>(
         &self,
         key_list: I,

@@ -327,7 +327,7 @@ impl GameState {
                 let mut empty = true;
                 let mut start = 0;
                 for entry in hist {
-                    let yr = entry.0.split_once('.').unwrap().0.parse().unwrap();
+                    let yr = entry.0.year();
                     if yr > latest_event {
                         latest_event = yr;
                     }
@@ -382,7 +382,7 @@ impl GameState {
                 let char_culture = ch.get_culture();
                 let ch_culture = char_culture.as_ref().unwrap().get_internal();
                 if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
-                    let year: i16 = entry.0.split_once('.').unwrap().0.parse().unwrap();
+                    let year: i16 = entry.0.year();
                     if ch_faith.get_id() != faith {
                         events.push((
                             year,

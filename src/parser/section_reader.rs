@@ -4,12 +4,13 @@ use std::{
 };
 
 use jomini::{
-    binary::{ReaderError as BinaryReaderError, Token as BinaryToken},
+    binary::{ReaderError as BinaryReaderError, Token as BinaryToken, TokenResolver},
     text::{Operator, ReaderError as TextReaderError, Token as TextToken},
 };
 
 use super::{
     section::Section,
+    tokens::TOKENS_RESOLVER,
     types::{Tape, Token},
 };
 
@@ -67,67 +68,6 @@ impl<'err> error::Error for SectionReaderError<'err> {
             _ => None,
         }
     }
-}
-
-/// Resolve a token to a section name.
-fn token_resolver(token: &u16) -> Option<&'static str> {
-    Some(match token {
-        12629 => "meta_data",
-        1365 => "variables",
-        13665 => "traits_lookup",
-        1719 => "provinces",
-        10198 => "landed_titles",
-        10805 => "dynasties",
-        10133 => "character_lookup",
-        13582 => "deleted_characters",
-        11494 => "living",
-        11496 => "dead_unprunable",
-        1763 => "characters",
-        10232 => "units",
-        10268 => "triggered_event", // huge block of identical tokens
-        10219 => "played_character",
-        12748 => "currently_played_characters",
-        10603 => "armies",
-        14365 => "activity_manager",
-        10382 => "opinions",
-        10467 => "relations",
-        10507 => "schemes",
-        11164 => "stories",
-        10605 => "combats",
-        10412 => "pending_character_interactions",
-        10497 => "secrets",
-        12428 => "mercenary_company_manager",
-        10672 => "vassal_contracts",
-        10236 => "religion",
-        11070 => "wars",
-        11348 => "sieges",
-        11623 => "succession",
-        11650 => "holdings",
-        11719 => "county_manager",
-        11753 => "fleet_manager",
-        11800 => "council_task_manager",
-        11825 => "important_action_manager",
-        12002 => "faction_manager",
-        12178 => "culture_manager",
-        12450 => "holy_orders",
-        10975 => "ai",
-        1688 => "game_rules",
-        13214 => "raid",
-        13386 => "ironman_manager",
-        10137 => "coat_of_arms",
-        13715 => "artifacts",
-        13765 => "inspirations_manager",
-        13964 => "court_positions",
-        14164 => "struggle_manager",
-        13828 => "character_memory_manager",
-        14115 => "diarchies",
-        14263 => "travel_plans",
-        14020 => "accolades",
-        14084 => "tax_slot_manager",
-        14807 => "epidemics",
-        14939 => "legends",
-        _ => return None,
-    })
 }
 
 /// Essentially an iterator over sections in a tape.
@@ -200,8 +140,9 @@ pub fn yield_section<'tape, 'data: 'tape>(
                             )))
                         }
                         BinaryToken::Unquoted(token) => potential_key = Some(token.to_string()),
-                        BinaryToken::Id(token) => match token_resolver(&token) {
+                        BinaryToken::Id(token) => match TOKENS_RESOLVER.resolve(token) {
                             Some(key) => {
+                                // TODO support for non string keys?
                                 potential_key = Some(key.to_string());
                             }
                             None => {

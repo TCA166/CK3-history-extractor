@@ -168,7 +168,7 @@ impl Renderable for Player {
                 },
                 None,
             );
-            dynasty_map.draw_legend(vec![
+            dynasty_map.draw_legend([
                 ("Dynastic titles".to_string(), TARGET_COLOR),
                 ("Descendant titles".to_string(), SECONDARY_COLOR),
             ]);
