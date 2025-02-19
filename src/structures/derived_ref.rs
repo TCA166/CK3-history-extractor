@@ -102,7 +102,7 @@ where
         state.serialize_field("id", &self.id)?;
         let o = self.obj.as_ref().unwrap().get_internal();
         state.serialize_field("name", &o.get_name())?;
-        let shallow = o.get_depth() == 0;
+        let shallow = !o.is_ok();
         state.serialize_field("shallow", &shallow)?;
         state.serialize_field("subdir", T::get_subdir())?;
         state.end()

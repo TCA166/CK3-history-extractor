@@ -142,7 +142,6 @@ pub fn yield_section<'tape, 'data: 'tape>(
                         BinaryToken::Unquoted(token) => potential_key = Some(token.to_string()),
                         BinaryToken::Id(token) => match TOKENS_RESOLVER.resolve(token) {
                             Some(key) => {
-                                // TODO support for non string keys?
                                 potential_key = Some(key.to_string());
                             }
                             None => {

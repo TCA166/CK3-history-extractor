@@ -240,7 +240,6 @@ impl SaveFileValue {
     pub fn as_date(&self) -> Result<Date, ConversionError> {
         match self {
             SaveFileValue::Date(date) => Ok(*date),
-            // TODO does this work?
             SaveFileValue::Integer(int) => Date::from_binary(*int as i32)
                 .ok_or(ConversionError::InvalidValue("Binary date parsing failed")),
             _ => Err(ConversionError::InvalidType(

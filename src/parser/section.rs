@@ -323,6 +323,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                     }
                 }
                 while let Some(result) = binary.next().transpose() {
+                    // FIXME in the binary format non string tokens can be keys, which complicates everything a lot
                     match result {
                         Err(e) => return Err(e.into()),
                         Ok(tok) => match tok {

@@ -445,7 +445,7 @@ pub trait Localizable {
     fn localize<L: Localize<GameString>>(
         &mut self,
         localization: &mut L,
-    ) -> Result<(), LocalizationError>; // TODO different error that includes file and line
+    ) -> Result<(), LocalizationError>;
 }
 
 #[cfg(test)]

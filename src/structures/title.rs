@@ -248,11 +248,7 @@ impl GameObjectDerived for Title {
     }
 
     fn get_name(&self) -> GameString {
-        if let Some(name) = &self.name {
-            return name.clone();
-        } else {
-            return GameString::from("Unnamed");
-        }
+        self.name.as_ref().unwrap().clone()
     }
 }
 
@@ -468,5 +464,10 @@ impl Cullable for Title {
 
     fn get_depth(&self) -> usize {
         self.depth
+    }
+
+    fn is_ok(&self) -> bool {
+        // custom ok function that makes it so that baronies aren't rendered
+        self.get_depth() > 0 && !self.key.as_ref().is_some_and(|k| k.starts_with("b_"))
     }
 }

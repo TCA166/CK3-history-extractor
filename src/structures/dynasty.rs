@@ -11,7 +11,7 @@ use super::{
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
         },
-        types::{Wrapper, WrapperMut},
+        types::{HashMap, Wrapper, WrapperMut},
     },
     into_ref_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,
 };
@@ -25,7 +25,7 @@ pub struct Dynasty {
     houses: u32,
     prestige_tot: f32,
     prestige: f32,
-    perks: Vec<(GameString, u8)>,
+    perks: HashMap<GameString, u8>,
     leaders: Vec<Shared<Character>>,
     found_date: Option<Date>,
     motto: Option<(GameString, Vec<GameString>)>,
@@ -88,7 +88,7 @@ impl DummyInit for Dynasty {
             houses: 0,
             prestige_tot: 0.0,
             prestige: 0.0,
-            perks: Vec::new(),
+            perks: HashMap::new(),
             leaders: Vec::new(),
             found_date: None,
             id: id,
@@ -119,25 +119,12 @@ impl DummyInit for Dynasty {
                     }
                     i += 1;
                 }
-                if key.is_none() {
-                    continue;
-                }
-                let mut added = false;
-                // TODO why not hashmap?
-                for perk in self.perks.iter_mut() {
-                    if perk.0.as_ref() == key.unwrap() {
-                        if perk.1 < val {
-                            perk.1 = val;
-                        }
-                        added = true;
-                        break;
+                if let Some(key) = key {
+                    let key = GameString::from(key);
+                    if *self.perks.entry(key.clone()).or_default() < val {
+                        self.perks.insert(key, val);
                     }
                 }
-                if added {
-                    continue;
-                }
-                //if the perk is not found, add it
-                self.perks.push((GameString::from(key.unwrap()), val));
             }
         }
         if let Some(leaders_obj) = base.get("historical") {
@@ -247,32 +234,14 @@ impl Serialize for Dynasty {
         state.serialize_field("houses", &self.houses)?;
         state.serialize_field("prestige_tot", &self.prestige_tot)?;
         state.serialize_field("prestige", &self.prestige)?;
-        state.serialize_field("perks", &self.perks)?;
+        if !self.perks.is_empty() {
+            state.serialize_field("perks", &self.perks)?;
+        }
         let leaders = into_ref_array(&self.leaders);
         state.serialize_field("leaders", &leaders)?;
         state.serialize_field("found_date", &self.found_date)?;
         if let Some(motto_raw) = &self.motto {
-            let motto = motto_raw.0.split(' ').collect::<Vec<&str>>();
-            let var_len = motto_raw.1.len();
-            let rebuilt = if var_len == 0 {
-                motto_raw.0.clone()
-            } else {
-                let mut rebuilt = Vec::new();
-                let mut j = 0;
-                for part in motto {
-                    if part.is_empty() || part == "," {
-                        rebuilt.push(motto_raw.1[j].as_ref());
-                        j += 1;
-                        if j >= var_len {
-                            j = 0; //TODO why can this happen? `(" Through ", ["Safety"])`
-                        }
-                    } else {
-                        rebuilt.push(part);
-                    }
-                }
-                GameString::from(rebuilt.join(" "))
-            };
-            state.serialize_field("motto", &rebuilt)?;
+            state.serialize_field("motto", &motto_raw.0)?;
         }
         state.end()
     }
@@ -315,14 +284,31 @@ impl Localizable for Dynasty {
         } else {
             return Ok(());
         }
-        for perk in self.perks.iter_mut() {
-            perk.0 = localization.localize(perk.0.to_string() + "_track_name")?;
+        let drained_perks: Vec<_> = self.perks.drain().collect();
+        for (perk, level) in drained_perks {
+            self.perks.insert(
+                localization.localize(perk.to_string() + "_track_name")?,
+                level,
+            );
         }
         if let Some(motto) = &mut self.motto {
             motto.0 = localization.localize(&motto.0)?;
             for v in motto.1.iter_mut() {
                 *v = localization.localize(&v)?;
             }
+            // TODO localize the motto properly here
+            /*
+            ("motto_the_ancient_x_is_ours", ["motto_family"])
+            ("The Ancient  is Ours", ["Family"])
+            ("motto_unique_pool", ["motto_more_than_silver"])
+            ("", ["Trust From a  is Worth More than Silver"])
+            ("motto_through_x_mind_y", ["motto_an_honorable", "motto_respect"])
+            ("Through  Mind, ", ["an Honorable", "Respect"])
+            ("motto_x_is_y", ["motto_valor", "motto_boldness"])
+            (" is ", ["Valor", "Boldness"])
+            ("motto_single_noun", ["motto_labour"])
+            ("", ["Labor"])
+                         */
         }
         Ok(())
     }

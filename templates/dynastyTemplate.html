@@ -35,7 +35,7 @@
         {%if perks is defined%}
         Dynasty Legacies:
         <table class="table table-bordered w-auto">
-        {%for key, value in perks%}
+        {%for key, value in perks|items%}
         <tr>
             <td>{{key}}</td>
             {%for i in range(value)%}
