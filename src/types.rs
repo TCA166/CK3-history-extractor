@@ -117,7 +117,7 @@ impl<T> Clone for Shared<T> {
     }
 }
 
-impl<T: GameObjectDerived> Serialize for Shared<T> {
+impl<T: GameObjectDerived + Serialize> Serialize for Shared<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

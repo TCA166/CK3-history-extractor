@@ -49,6 +49,10 @@ impl Localize<String> for Value {
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
         self.get_attr(key.as_ref()).map(|x| x.into()).ok()
     }
+
+    fn is_empty(&self) -> bool {
+        false
+    }
 }
 
 /// # Environment creation

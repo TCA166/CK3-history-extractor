@@ -21,6 +21,10 @@ impl Localize<GameString> for GameData {
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<GameString> {
         self.localizer.lookup(key)
     }
+
+    fn is_empty(&self) -> bool {
+        self.localizer.is_empty()
+    }
 }
 
 impl GameData {

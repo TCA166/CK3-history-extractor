@@ -317,6 +317,8 @@ pub trait Localize<T: AsRef<str> + From<String>> {
     /// A simple function that looks up raw value associated with the given localization key
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<T>;
 
+    fn is_empty(&self) -> bool;
+
     /// A simple localization function that will return the localized string.
     /// It assumes that the key is not complex and does not require any special handling.
     fn localize<K: AsRef<str>>(&self, key: K) -> Result<T, LocalizationError> {
@@ -425,7 +427,7 @@ pub trait Localize<T: AsRef<str> + From<String>> {
             }
             return Ok(collection.into());
         } else {
-            if !key.as_ref().is_empty() && !cfg!(feature = "permissive") {
+            if !cfg!(feature = "permissive") && !self.is_empty() && !key.as_ref().is_empty() {
                 eprintln!("Warning: key {} not found", key.as_ref());
             }
             return Ok(demangle_generic(key.as_ref()).into());
@@ -436,6 +438,10 @@ pub trait Localize<T: AsRef<str> + From<String>> {
 impl Localize<GameString> for Localizer {
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<GameString> {
         self.data.get(key.as_ref()).cloned()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 }
 

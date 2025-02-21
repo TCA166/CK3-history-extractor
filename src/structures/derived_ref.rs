@@ -54,7 +54,7 @@ where
 /// Converts an array of GameObjectDerived to an array of DerivedRef
 pub fn into_ref_array<T>(array: &Vec<Shared<T>>) -> Vec<DerivedRef<T>>
 where
-    T: Renderable,
+    T: GameObjectDerived,
 {
     let mut res = Vec::new();
     for s in array.iter() {
@@ -64,7 +64,7 @@ where
 }
 
 /// Serialize a [Shared] object as a [DerivedRef].
-pub fn serialize_ref<S: Serializer, T: Renderable>(
+pub fn serialize_ref<S: Serializer, T: GameObjectDerived + Serialize>(
     value: &Option<Shared<T>>,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
@@ -78,7 +78,7 @@ pub fn serialize_ref<S: Serializer, T: Renderable>(
 }
 
 /// Serialize a [Vec] of [Shared] objects as a [Vec] of [DerivedRef] objects.
-pub fn serialize_array_ref<S: Serializer, T: Renderable>(
+pub fn serialize_array_ref<S: Serializer, T: GameObjectDerived + Serialize + Renderable>(
     value: &Vec<Shared<T>>,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
@@ -92,7 +92,7 @@ pub fn serialize_array_ref<S: Serializer, T: Renderable>(
 
 impl<T> Serialize for DerivedRef<T>
 where
-    T: Renderable,
+    T: GameObjectDerived + Serialize + Renderable,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -111,7 +111,7 @@ where
 
 impl<T> GameObjectDerived for DerivedRef<T>
 where
-    T: Renderable,
+    T: GameObjectDerived,
 {
     fn get_id(&self) -> GameId {
         self.id
@@ -124,7 +124,7 @@ where
 
 impl<T> Cullable for DerivedRef<T>
 where
-    T: Renderable,
+    T: Cullable + GameObjectDerived,
 {
     fn get_depth(&self) -> usize {
         self.obj.as_ref().unwrap().get_internal().get_depth()
@@ -141,7 +141,7 @@ where
 
 impl<T> Renderable for DerivedRef<T>
 where
-    T: Renderable,
+    T: Renderable + GameObjectDerived,
 {
     fn get_path(&self, path: &Path) -> PathBuf {
         self.obj.as_ref().unwrap().get_internal().get_path(path)

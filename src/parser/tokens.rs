@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 
 use jomini::binary::TokenResolver;
 
-#[cfg(feature = "internal")]
+#[cfg(feature = "tokens")]
 const TOKENS: &'static str = include_str!("../../tokens_1.tok");
 
 lazy_static! {
@@ -17,7 +17,7 @@ pub struct TokenTranslator<'a> {
 
 impl<'a> Default for TokenTranslator<'a> {
     fn default() -> Self {
-        #[cfg(feature = "internal")]
+        #[cfg(feature = "tokens")]
         {
             Self {
                 tokens: TOKENS
@@ -31,7 +31,7 @@ impl<'a> Default for TokenTranslator<'a> {
                     .collect(),
             }
         }
-        #[cfg(not(feature = "internal"))]
+        #[cfg(not(feature = "tokens"))]
         {
             Self {
                 tokens: HashMap::default(),

@@ -13,5 +13,3 @@ pub use timeline::{RealmDifference, Timeline};
 /// A submodule that provides the [RenderableType] enum.
 mod renderable_type;
 pub use renderable_type::RenderableType;
-
-// TODO shared style struct? const?

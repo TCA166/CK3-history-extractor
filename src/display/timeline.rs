@@ -35,7 +35,10 @@ impl Serialize for RealmDifference {
 
 impl GameObjectDerived for RealmDifference {
     fn get_id(&self) -> GameId {
-        0
+        match self {
+            RealmDifference::Faith(f) => f.get_internal().get_id(),
+            RealmDifference::Culture(c) => c.get_internal().get_id(),
+        }
     }
 
     fn get_name(&self) -> GameString {
@@ -157,16 +160,6 @@ impl Serialize for Timeline {
     }
 }
 
-impl GameObjectDerived for Timeline {
-    fn get_id(&self) -> GameId {
-        0
-    }
-
-    fn get_name(&self) -> GameString {
-        GameString::from("Timeline")
-    }
-}
-
 impl Cullable for Timeline {
     fn get_depth(&self) -> usize {
         0
@@ -188,6 +181,16 @@ impl Cullable for Timeline {
                 RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth),
             }
         }
+    }
+}
+
+impl GameObjectDerived for Timeline {
+    fn get_id(&self) -> GameId {
+        0
+    }
+
+    fn get_name(&self) -> GameString {
+        GameString::from("Timeline")
     }
 }
 

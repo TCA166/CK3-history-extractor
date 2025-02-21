@@ -20,14 +20,18 @@ use std::path::Path;
 /// Common graph size in pixels
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
 
-/// A multiplier for the tree graph size
-const TREE_SCALE: f64 = 1.5;
-
 /// A value indicating that the node has no parent
 const NO_PARENT: usize = usize::MAX;
 
-/// A common margin in pixels
-const MARGIN: i32 = 5;
+const GRAPH_MARGIN: u32 = 5;
+const GRAPH_LABEL_SPACE: u32 = GRAPH_MARGIN * 10;
+
+const TREE_MARGIN: u32 = 10;
+const TREE_NODE_SIZE_MULTIPLIER: f64 = 1.5;
+const PARENT_CHILD_MARGIN: f64 = 15.0;
+const PEER_MARGIN: f64 = 5.0;
+
+const TIMELINE_MARGIN: u32 = 3;
 
 /// The y label for the death graphs
 const Y_LABEL: &str = "Percentage of global deaths";
@@ -59,8 +63,8 @@ fn handle_node<T: TreeNode>(
     let name = ch.get_name().clone();
     //we use sz, which is the rough size of a character, to calculate the size of the node
     let txt_size = fnt.box_size(&name).unwrap();
-    let node_width = txt_size.0 as f64 * TREE_SCALE;
-    let node_height = txt_size.1 as f64 * TREE_SCALE;
+    let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
+    let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
     //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
     let txt_point = (
         -(node_width as i32 - txt_size.0 as i32),
@@ -122,9 +126,9 @@ fn create_graph<P: AsRef<Path>>(
     root.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&root)
         //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
-        .margin(MARGIN)
-        .x_label_area_size(MARGIN * 10)
-        .y_label_area_size(MARGIN * 10)
+        .margin(GRAPH_MARGIN)
+        .x_label_area_size(GRAPH_LABEL_SPACE)
+        .y_label_area_size(GRAPH_LABEL_SPACE)
         .build_cartesian_2d(min_x as f64..max_x as f64, min_y..MAX_Y)
         .unwrap();
 
@@ -191,10 +195,10 @@ impl Grapher {
         reverse: bool,
         output_path: &P,
     ) {
-        let mut tree = TidyTree::with_tidy_layout(TREE_SCALE * 15.0, TREE_SCALE * 5.0);
+        let mut tree = TidyTree::with_tidy_layout(PARENT_CHILD_MARGIN, PEER_MARGIN);
         //tree nodes don't have any data attached to them, so we need to store the data separately
         let mut storage = HashMap::default();
-        let fnt = ("sans-serif", 6.66 * TREE_SCALE).into_font();
+        let fnt = ("sans-serif", 6.66 * TREE_NODE_SIZE_MULTIPLIER).into_font();
         let mut stack = Vec::new(); //BFS stack
         handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
         while let Some(current) = stack.pop() {
@@ -303,8 +307,8 @@ impl Grapher {
                 }
             }
 
-            let x_size = (max_x - min_x + (MARGIN as f64 * 2.0)) as u32;
-            let y_size = (max_y - min_y + (MARGIN as f64 * 2.0)) as u32;
+            let x_size = (max_x - min_x + (TREE_MARGIN as f64 * 2.0)) as u32;
+            let y_size = (max_y - min_y + (TREE_MARGIN as f64 * 2.0)) as u32;
 
             /* NOTE on scaling
             I did try, and I mean TRY HARD to get the scaling to work properly, but Plotters doesn't allow me to properly square rectangles.
@@ -320,7 +324,7 @@ impl Grapher {
                 min_x..max_x,
                 min_y..max_y,
                 (
-                    MARGIN..x_size as i32 - MARGIN,
+                    TREE_MARGIN as i32..(x_size - TREE_MARGIN) as i32,
                     (y_size / 25) as i32..(y_size / 25 * 24) as i32,
                 ),
             ));
@@ -405,12 +409,11 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
     let t_len = timespans.len() as i32;
     let fnt = ("sans-serif", 10.0).into_font();
     let lifespan_y = fnt.box_size("L").unwrap().1 as i32;
-    const MARGIN: i32 = 3;
-    let height = lifespan_y * t_len + MARGIN;
+    let height = lifespan_y * t_len + TIMELINE_MARGIN as i32;
 
     let root = root.apply_coord_spec(Cartesian2d::<RangedCoordi32, RangedCoordi32>::new(
         0..max_date as i32,
-        -height..MARGIN * 3,
+        -height..TIMELINE_MARGIN as i32 * 3,
         (0..GRAPH_SIZE.0 as i32, 0..GRAPH_SIZE.1 as i32),
     ));
 
@@ -425,7 +428,7 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
         root.draw(&PathElement::new(
             [
                 (i * YEAR_INTERVAL + 1, -height),
-                (i * YEAR_INTERVAL, MARGIN),
+                (i * YEAR_INTERVAL, TIMELINE_MARGIN as i32),
             ],
             Into::<ShapeStyle>::into(&BLACK).filled(),
         ))
@@ -437,7 +440,7 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
         let txt_x = fnt.box_size(&txt).unwrap().0 as i32;
         root.draw(&Text::new(
             txt,
-            (i * 100 - (txt_x / 2), MARGIN),
+            (i * 100 - (txt_x / 2), TIMELINE_MARGIN as i32),
             fnt.clone(),
         ))
         .unwrap();
@@ -457,8 +460,14 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
             }
             root.draw(&Rectangle::new(
                 [
-                    (*start as i32, -lifespan_y * i as i32 - MARGIN),
-                    (real_end, -lifespan_y * (i + 1) as i32 - MARGIN),
+                    (
+                        *start as i32,
+                        -lifespan_y * i as i32 - TIMELINE_MARGIN as i32,
+                    ),
+                    (
+                        real_end,
+                        -lifespan_y * (i + 1) as i32 - TIMELINE_MARGIN as i32,
+                    ),
                 ],
                 Into::<ShapeStyle>::into(&GREEN).filled(),
             ))

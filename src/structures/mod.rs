@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use super::{
     parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
     types::{Shared, Wrapper},
@@ -49,7 +47,7 @@ pub use artifact::Artifact;
 /// A trait for objects that can be created from a [GameObjectMap].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
-pub trait GameObjectDerived: Serialize {
+pub trait GameObjectDerived {
     /// Get the id of the object.
     /// All CK3 objects have an id that is a number.
     /// Within a given section that number is unique.
