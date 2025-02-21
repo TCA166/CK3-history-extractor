@@ -1,3 +1,4 @@
+use derive_more::{Display, From};
 use jomini::{
     binary::{ReaderError as BinaryReaderError, Token as BinaryToken, TokenResolver},
     text::{Operator, ReaderError as TextReaderError, Token as TextToken},
@@ -14,13 +15,13 @@ use super::{
 use std::{
     collections::HashMap,
     error,
-    fmt::{self, Debug, Display},
+    fmt::{self, Debug},
     num::ParseIntError,
     string::FromUtf8Error,
 };
 
 /// An error that occured while processing a specific section
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 pub enum SectionError {
     /// An error occured while converting a value
     ConversionError(ConversionError),
@@ -32,21 +33,6 @@ pub enum SectionError {
     TapeError(TapeError),
     /// An error occured while decoding bytes
     DecodingError(FromUtf8Error),
-}
-
-impl Display for SectionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::UnknownToken(tok) => write!(f, "unknown token {}", tok),
-            err => Display::fmt(err, f),
-        }
-    }
-}
-
-impl From<FromUtf8Error> for SectionError {
-    fn from(value: FromUtf8Error) -> Self {
-        Self::DecodingError(value)
-    }
 }
 
 impl From<TextReaderError> for SectionError {
@@ -61,27 +47,9 @@ impl From<BinaryReaderError> for SectionError {
     }
 }
 
-impl From<TapeError> for SectionError {
-    fn from(value: TapeError) -> Self {
-        Self::TapeError(value)
-    }
-}
-
-impl From<ConversionError> for SectionError {
-    fn from(value: ConversionError) -> Self {
-        Self::ConversionError(value)
-    }
-}
-
 impl From<ParseIntError> for SectionError {
     fn from(value: ParseIntError) -> Self {
         Self::ConversionError(value.into())
-    }
-}
-
-impl From<ScalarError> for SectionError {
-    fn from(value: ScalarError) -> Self {
-        Self::ScalarError(value)
     }
 }
 
@@ -193,6 +161,7 @@ fn scalar_to_string(scalar: Scalar) -> Result<String, SectionError> {
     if scalar.is_ascii() {
         Ok(scalar.to_string())
     } else {
+        // TODO optimalization in which you can avoid parsing the string if the string is non ascii
         Ok(String::from_utf8(scalar.as_bytes().to_vec())?)
     }
 }
@@ -229,6 +198,42 @@ impl<'tape, 'data> Section<'tape, 'data> {
         let mut stack: Vec<StackEntry> = vec![StackEntry::new(Some(self.name.clone()))];
         let mut key = None;
         let mut past_eq = false;
+        /// Blanket implementation that handles a new token, assuming that the token cannot be a key
+        fn add_value_quoted<T: Into<SaveFileValue>>(
+            stack: &mut Vec<StackEntry>,
+            key: &mut Option<String>,
+            past_eq: &mut bool,
+            token: T,
+        ) {
+            if *past_eq {
+                stack
+                    .last_mut()
+                    .unwrap()
+                    .insert(key.take().unwrap(), token.into());
+                *past_eq = false;
+            } else {
+                stack.last_mut().unwrap().push(token.into());
+            }
+        }
+        /// Blanket implementation that handles a new token while making no assumptions
+        fn add_value_unquoted<T: Into<SaveFileValue> + ToString>(
+            stack: &mut Vec<StackEntry>,
+            key: &mut Option<String>,
+            past_eq: &mut bool,
+            token: T,
+        ) {
+            if *past_eq {
+                stack
+                    .last_mut()
+                    .unwrap()
+                    .insert(key.take().unwrap(), token.into());
+                *past_eq = false;
+            } else {
+                if let Some(key) = key.replace(token.to_string()) {
+                    stack.last_mut().unwrap().push(key.into());
+                }
+            }
+        }
         match self.tape {
             Tape::Text(text) => {
                 while let Some(result) = text.next().transpose() {
@@ -243,8 +248,8 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             }
                             TextToken::Close => {
                                 let mut last = stack.pop().unwrap();
-                                if key.is_some() {
-                                    last.push(key.take().unwrap().parse::<SaveFileValue>()?);
+                                if let Some(key) = key.take() {
+                                    last.push(key.into());
                                 }
                                 let name = last.name.take();
                                 let value: SaveFileObject = last.into();
@@ -266,64 +271,31 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 }
                             }
                             TextToken::Quoted(token) => {
-                                let string = scalar_to_string(token)?.into();
-                                if past_eq {
-                                    stack
-                                        .last_mut()
-                                        .unwrap()
-                                        .insert(key.take().unwrap(), string);
-                                    past_eq = false;
-                                } else {
-                                    stack.last_mut().unwrap().push(string);
-                                }
+                                add_value_quoted(
+                                    &mut stack,
+                                    &mut key,
+                                    &mut past_eq,
+                                    scalar_to_string(token)?,
+                                );
                             }
                             TextToken::Unquoted(token) => {
                                 // zero cost operation
                                 if COLOR_HEADERS.contains(&token.as_bytes()) {
                                     continue; // we want to skip an unquoted token in situations like this: `color=rgb { 255 255 255 }`
                                 }
-                                if past_eq {
-                                    // we have an unquoted value clearly
-                                    let val = if !token.is_ascii() {
-                                        scalar_to_string(token)?.into()
-                                    } else {
-                                        token.to_string().parse::<SaveFileValue>()?
-                                    };
-                                    stack.last_mut().unwrap().insert(key.take().unwrap(), val);
-                                    past_eq = false;
-                                } else {
-                                    // we add the previous key, and replace it
-                                    if let Some(key) = key.replace(token.to_string()) {
-                                        stack
-                                            .last_mut()
-                                            .unwrap()
-                                            .push(key.parse::<SaveFileValue>()?);
-                                    }
-                                }
+                                add_value_unquoted(
+                                    &mut stack,
+                                    &mut key,
+                                    &mut past_eq,
+                                    scalar_to_string(token)?,
+                                );
                             }
                         },
                     }
                 }
             }
             Tape::Binary(binary) => {
-                fn add_value<T: Into<SaveFileValue>>(
-                    stack: &mut Vec<StackEntry>,
-                    key: &mut Option<String>,
-                    past_eq: &mut bool,
-                    token: T,
-                ) {
-                    if *past_eq {
-                        stack
-                            .last_mut()
-                            .unwrap()
-                            .insert(key.take().unwrap(), token.into());
-                        *past_eq = false;
-                    } else {
-                        stack.last_mut().unwrap().push(token.into());
-                    }
-                }
                 while let Some(result) = binary.next().transpose() {
-                    // FIXME in the binary format non string tokens can be keys, which complicates everything a lot
                     match result {
                         Err(e) => return Err(e.into()),
                         Ok(tok) => match tok {
@@ -335,6 +307,9 @@ impl<'tape, 'data> Section<'tape, 'data> {
                             }
                             BinaryToken::Close => {
                                 let mut last = stack.pop().unwrap();
+                                if let Some(key) = key.take() {
+                                    last.push(key.into());
+                                }
                                 let name = last.name.take();
                                 let value: SaveFileObject = last.into();
                                 if let Some(entry) = stack.last_mut() {
@@ -351,7 +326,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 past_eq = true;
                             }
                             BinaryToken::Quoted(token) => {
-                                add_value(
+                                add_value_unquoted(
                                     &mut stack,
                                     &mut key,
                                     &mut past_eq,
@@ -359,35 +334,34 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 );
                             }
                             BinaryToken::Unquoted(token) => {
-                                let val = if token.is_ascii() {
-                                    token.to_string().parse::<SaveFileValue>()?
-                                } else {
-                                    scalar_to_string(token)?.into()
-                                };
-                                add_value(&mut stack, &mut key, &mut past_eq, val);
+                                add_value_unquoted(
+                                    &mut stack,
+                                    &mut key,
+                                    &mut past_eq,
+                                    scalar_to_string(token)?,
+                                );
                             }
                             BinaryToken::Bool(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::I32(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::I64(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::F32(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_quoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::F64(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_quoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::Id(token) => {
-                                key = Some(
-                                    TOKENS_RESOLVER
-                                        .resolve(token)
-                                        .ok_or(SectionError::UnknownToken(token))?
-                                        .to_string(),
-                                );
+                                let resolved = TOKENS_RESOLVER
+                                    .resolve(token)
+                                    .ok_or(SectionError::UnknownToken(token))?
+                                    .to_string();
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, resolved);
                             }
                             BinaryToken::Rgb(token) => {
                                 let value = SaveFileObject::Array(vec![
@@ -395,13 +369,13 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                     token.g.into(),
                                     token.b.into(),
                                 ]);
-                                add_value(&mut stack, &mut key, &mut past_eq, value);
+                                add_value_quoted(&mut stack, &mut key, &mut past_eq, value);
                             }
                             BinaryToken::U32(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::U64(token) => {
-                                add_value(&mut stack, &mut key, &mut past_eq, token);
+                                add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                         },
                     }

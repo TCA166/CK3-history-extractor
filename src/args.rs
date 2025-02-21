@@ -1,9 +1,10 @@
 use clap_derive::Parser;
+use derive_more::Display;
 use dialoguer::{Completion, Input, Select};
 
 use std::{
     error,
-    fmt::{self, Debug, Display},
+    fmt::Debug,
     fs,
     path::{Path, PathBuf},
 };
@@ -54,21 +55,14 @@ impl Completion for SaveFileNameCompletion {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 enum InvalidPath {
+    #[display("invalid path (does not exist)")]
     InvalidPath,
+    #[display("not a file")]
     NotAFile,
+    #[display("not a directory")]
     NotADir,
-}
-
-impl Display for InvalidPath {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InvalidPath => write!(f, "invalid path (does not exist)"),
-            Self::NotAFile => write!(f, "not a file"),
-            Self::NotADir => write!(f, "not a directory"),
-        }
-    }
 }
 
 impl error::Error for InvalidPath {

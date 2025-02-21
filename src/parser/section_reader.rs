@@ -3,6 +3,7 @@ use std::{
     fmt::{self, Debug, Display},
 };
 
+use derive_more::From;
 use jomini::{
     binary::{ReaderError as BinaryReaderError, Token as BinaryToken, TokenResolver},
     text::{Operator, ReaderError as TextReaderError, Token as TextToken},
@@ -15,7 +16,7 @@ use super::{
 };
 
 /// An error that occurred while reading sections from a tape.
-#[derive(Debug)]
+#[derive(Debug, From)]
 pub enum SectionReaderError<'err> {
     /// An unexpected token was encountered.
     UnexpectedToken(usize, Token<'err>, &'static str),
@@ -23,18 +24,6 @@ pub enum SectionReaderError<'err> {
     UnknownToken(u16),
     TextReaderError(TextReaderError),
     BinaryReaderError(BinaryReaderError),
-}
-
-impl From<TextReaderError> for SectionReaderError<'_> {
-    fn from(e: TextReaderError) -> Self {
-        Self::TextReaderError(e)
-    }
-}
-
-impl From<BinaryReaderError> for SectionReaderError<'_> {
-    fn from(e: BinaryReaderError) -> Self {
-        Self::BinaryReaderError(e)
-    }
 }
 
 impl<'err> Display for SectionReaderError<'err> {

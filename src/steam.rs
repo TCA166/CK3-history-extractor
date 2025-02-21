@@ -1,10 +1,11 @@
 use std::{
     env, error,
-    fmt::{self, Debug, Display},
+    fmt::Debug,
     fs::read_to_string,
     path::{Path, PathBuf},
 };
 
+use derive_more::Display;
 use keyvalues_parser::{Value, Vdf};
 
 /// The Steam ID for Crusader Kings III.
@@ -27,33 +28,26 @@ const DEFAULT_VDF_PATH: &str = "libraryfolders.vdf";
 /// The default path from the library to the CK3 directory.
 pub const CK3_PATH: &str = "steamapps/common/Crusader Kings III/game";
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum SteamError {
     /// The Steam directory was not found.
+    #[display("steam directory not found")]
     SteamDirNotFound,
     /// The VDF file was not found.
+    #[display("VDF file not found")]
     VdfNotFound,
     /// An error occurred while parsing the VDF file.
+    #[display("library error parsing VDF file: {_0}")]
     VdfParseError(keyvalues_parser::error::Error),
     /// An error occurred while processing the VDF file.
+    #[display("error processing VDF file: {_0}")]
     VdfProcessingError(&'static str),
     /// The CK3 directory was not found.
+    #[display("CK3 directory not found")]
     Ck3NotFound,
     /// CK3 is missing from the library.
+    #[display("CK3 missing from library")]
     CK3Missing,
-}
-
-impl Display for SteamError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SteamError::SteamDirNotFound => write!(f, "steam directory not found"),
-            SteamError::VdfNotFound => write!(f, "VDF file not found"),
-            SteamError::VdfParseError(e) => write!(f, "library error parsing VDF file: {}", e),
-            SteamError::VdfProcessingError(e) => write!(f, "error processing VDF file: {}", e),
-            SteamError::Ck3NotFound => write!(f, "CK3 directory pointed to not found"),
-            SteamError::CK3Missing => write!(f, "CK3 missing from library"),
-        }
-    }
 }
 
 impl error::Error for SteamError {

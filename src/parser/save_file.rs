@@ -1,9 +1,10 @@
+use derive_more::{Display, From};
 use jomini::{
     self, binary::TokenReader as BinaryTokenReader, text::TokenReader as TextTokenReader,
 };
 use std::{
     error,
-    fmt::{self, Debug, Display},
+    fmt::Debug,
     fs::File,
     io::{self, Cursor, Read},
     path::Path,
@@ -20,47 +21,17 @@ const BINARY_HEADER: &[u8; 4] = b"U1\x01\x00";
 
 /// An error that can occur when opening a save file.
 /// Generally things that are the fault of the user, however unintentional those may be
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 pub enum SaveFileError {
     /// Something went wrong with stdlib IO.
     IoError(io::Error),
     /// We found a problem
+    #[display("{}", _0)]
     ParseError(&'static str),
     /// Something went wrong with decompressing the save file.
     DecompressionError(ZipError),
     /// Decoding bytes failed
     DecodingError(FromUtf8Error),
-}
-
-impl From<ZipError> for SaveFileError {
-    fn from(value: ZipError) -> Self {
-        Self::DecompressionError(value)
-    }
-}
-
-impl From<io::Error> for SaveFileError {
-    fn from(value: io::Error) -> Self {
-        Self::IoError(value)
-    }
-}
-
-impl From<FromUtf8Error> for SaveFileError {
-    fn from(value: FromUtf8Error) -> Self {
-        Self::DecodingError(value)
-    }
-}
-
-impl Display for SaveFileError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DecompressionError(err) => write!(f, "failed to decompress file: {}", err),
-            Self::IoError(err) => {
-                write!(f, "during file handling an IO error occurred: {}", err)
-            }
-            Self::DecodingError(err) => write!(f, "failed to decode file bytes: {}", err),
-            Self::ParseError(err) => Display::fmt(err, f),
-        }
-    }
 }
 
 impl error::Error for SaveFileError {

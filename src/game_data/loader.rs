@@ -1,10 +1,6 @@
-use std::{
-    collections::HashMap,
-    error,
-    fmt::{self, Display},
-    mem,
-    path::Path,
-};
+use std::{collections::HashMap, error, mem, path::Path};
+
+use derive_more::{Display, From};
 
 use super::{
     super::parser::{
@@ -16,49 +12,17 @@ use super::{
 };
 
 /// An error that occurred while processing game data
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 pub enum GameDataError {
     /// A file is missing at the provided path
+    #[display("a file {_0} is missing")]
     MissingFile(String),
     /// The data is invalid in some way with description
+    #[display("the data is invalid: {_0}")]
     InvalidData(&'static str),
     ParsingError(ParsingError),
     IOError(SaveFileError),
     MapError(MapError),
-}
-
-impl From<SaveFileError> for GameDataError {
-    fn from(e: SaveFileError) -> Self {
-        GameDataError::IOError(e)
-    }
-}
-
-impl From<ParsingError> for GameDataError {
-    fn from(e: ParsingError) -> Self {
-        GameDataError::ParsingError(e)
-    }
-}
-
-impl From<MapError> for GameDataError {
-    fn from(e: MapError) -> Self {
-        GameDataError::MapError(e)
-    }
-}
-
-impl Display for GameDataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            GameDataError::MissingFile(path) => {
-                write!(f, "a file {} is missing", path)
-            }
-            GameDataError::InvalidData(reason) => Display::fmt(reason, f),
-            GameDataError::ParsingError(e) => Display::fmt(e, f),
-            GameDataError::IOError(e) => Display::fmt(e, f),
-            GameDataError::MapError(e) => {
-                write!(f, "error occurred while processing map data: {}", e)
-            }
-        }
-    }
 }
 
 impl error::Error for GameDataError {

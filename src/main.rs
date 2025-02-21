@@ -1,4 +1,5 @@
 use clap::Parser;
+use derive_more::From;
 use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
@@ -43,6 +44,7 @@ mod steam;
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
+#[derive(From)]
 enum UserError {
     NoTerminal,
     FileDoesNotExist,
@@ -58,12 +60,6 @@ impl Debug for UserError {
                 write!(f, "Error occurred during save file handling {:?}", e)
             }
         }
-    }
-}
-
-impl From<SaveFileError> for UserError {
-    fn from(value: SaveFileError) -> Self {
-        return UserError::FileError(value);
     }
 }
 

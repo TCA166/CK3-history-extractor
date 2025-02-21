@@ -1,15 +1,8 @@
-use std::{
-    borrow::Borrow,
-    error,
-    fmt::{self, Display},
-    io,
-    num::ParseIntError,
-    path::Path,
-    thread,
-};
+use std::{borrow::Borrow, error, io, num::ParseIntError, path::Path, thread};
 
 use csv::ReaderBuilder;
 
+use derive_more::{Display, From};
 use image::{save_buffer, ImageBuffer, ImageReader, Rgba};
 
 use plotters::{
@@ -46,47 +39,12 @@ const IMG_HEIGHT: u32 = 4096;
 /// The scale factor for the input map image
 const SCALE: u32 = 4;
 
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 pub enum MapError {
     IoError(io::Error),
     ImageError(image::ImageError),
     DefinitionError(csv::Error),
     ParsingError(ParseIntError),
-}
-
-impl From<io::Error> for MapError {
-    fn from(e: io::Error) -> Self {
-        MapError::IoError(e)
-    }
-}
-
-impl From<image::ImageError> for MapError {
-    fn from(e: image::ImageError) -> Self {
-        MapError::ImageError(e)
-    }
-}
-
-impl From<csv::Error> for MapError {
-    fn from(e: csv::Error) -> Self {
-        MapError::DefinitionError(e)
-    }
-}
-
-impl From<ParseIntError> for MapError {
-    fn from(e: ParseIntError) -> Self {
-        MapError::ParsingError(e)
-    }
-}
-
-impl Display for MapError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            MapError::IoError(e) => Display::fmt(e, f),
-            MapError::ImageError(e) => Display::fmt(e, f),
-            MapError::DefinitionError(e) => Display::fmt(e, f),
-            MapError::ParsingError(e) => Display::fmt(e, f),
-        }
-    }
 }
 
 impl error::Error for MapError {

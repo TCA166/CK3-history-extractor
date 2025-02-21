@@ -1,8 +1,9 @@
 use std::{
     error,
-    fmt::{self, Debug, Display},
+    fmt::{self, Debug},
 };
 
+use derive_more::{Display, From};
 use jomini::{
     binary::{
         ReaderError as BinaryReaderError, Token as BinaryToken, TokenReader as BinaryTokenReader,
@@ -11,31 +12,10 @@ use jomini::{
 };
 
 /// An error that can occur when reading from a tape.
-#[derive(Debug)]
+#[derive(Debug, From, Display)]
 pub enum TapeError {
     Text(TextReaderError),
     Binary(BinaryReaderError),
-}
-
-impl From<TextReaderError> for TapeError {
-    fn from(err: TextReaderError) -> Self {
-        Self::Text(err)
-    }
-}
-
-impl From<BinaryReaderError> for TapeError {
-    fn from(err: BinaryReaderError) -> Self {
-        Self::Binary(err)
-    }
-}
-
-impl Display for TapeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Text(err) => Display::fmt(err, f),
-            Self::Binary(err) => Display::fmt(err, f),
-        }
-    }
 }
 
 impl error::Error for TapeError {
