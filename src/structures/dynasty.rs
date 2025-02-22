@@ -5,7 +5,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{
@@ -29,7 +29,6 @@ pub struct Dynasty {
     leaders: Vec<Shared<Character>>,
     found_date: Option<Date>,
     motto: Option<(GameString, Vec<GameString>)>,
-    depth: usize,
 }
 
 impl Dynasty {
@@ -92,7 +91,6 @@ impl DummyInit for Dynasty {
             leaders: Vec::new(),
             found_date: None,
             id: id,
-            depth: 0,
             motto: None,
             member_list: Vec::new(),
         }
@@ -264,12 +262,12 @@ impl Renderable for Dynasty {
         }
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for leader in self.leaders.iter() {
-            stack.push(RenderableType::Character(leader.clone()));
+            stack.push((leader.clone().into(), depth));
         }
         if let Some(parent) = &self.parent {
-            stack.push(RenderableType::Dynasty(parent.clone()));
+            stack.push((parent.clone().into(), depth));
         }
     }
 }
@@ -311,29 +309,5 @@ impl Localizable for Dynasty {
                          */
         }
         Ok(())
-    }
-}
-
-impl Cullable for Dynasty {
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        let depth = depth - 1;
-        for leader in self.leaders.iter() {
-            if let Ok(mut o) = leader.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        if let Some(parent) = &self.parent {
-            if let Ok(mut o) = parent.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        self.depth
     }
 }

@@ -30,25 +30,7 @@ After making your choice go find your save file in the format the program accept
 
 In order to use any version of the program you are going to need a text based unzipped CK3 save file.
 You can find your save files in your documents directory in ```%USERPROFILE%\Documents\Paradox Interactive\Crusader Kings III\save games\```.
-If you are running the game with the default settings chances are the save file is compressed and if the save was for an iron-man run then the save file is saved in their internal binary format.
-You will need to convert the save file to the text format if that's the case.
-
-#### De-iron-manning your save file
-
-1. Backup your iron-man save file
-2. Run the game in [debug mode](https://ck3.paradoxwikis.com/Console_commands#Enabling_debug_mode) (add -debug_mode to launch options)
-3. Load the iron-man save file and let the game run for a month so that it saves the file in debug mode
-4. Congrats! your save file in the save file folder is now no longer binary encoded
-
-If you want to make sure that's actually the case, open the file in a text editor and see if you can see any gibberish or weird symbols.
-If the save file has no gibberish(non ASCII characters) that means that the save file is ready to go.
-
-#### Save file compression
-
-The save file *may* be compressed.
-This is no issue for the program however, it should automatically detect that and decompress the savefile.
-A problem however, might arise if the compressed save file was also then iron-man encoded.
-In such a case you will need to follow the steps laid out [in the previous section](#de-iron-manning-your-save-file).
+With the current tool version all save files are supported right out of the box.
 
 ### Running the program
 

@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
+        display::{Grapher, Renderable, RenderableType, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
@@ -29,7 +29,6 @@ pub struct Culture {
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
     language: Option<GameString>,
-    depth: usize,
     // TODO innovations
 }
 
@@ -46,7 +45,6 @@ impl DummyInit for Culture {
             traditions: Vec::new(),
             language: None,
             id: id,
-            depth: 0,
         }
     }
 
@@ -172,12 +170,12 @@ impl Renderable for Culture {
         }
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for p in &self.parents {
-            stack.push(RenderableType::Culture(p.clone()));
+            stack.push((p.clone().into(), depth));
         }
         for c in &self.children {
-            stack.push(RenderableType::Culture(c.clone()));
+            stack.push((c.clone().into(), depth));
         }
     }
 }
@@ -204,29 +202,5 @@ impl Localizable for Culture {
             *t = localization.localize(t.to_string() + "_name")?;
         }
         Ok(())
-    }
-}
-
-impl Cullable for Culture {
-    fn get_depth(&self) -> usize {
-        self.depth
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        let depth = depth - 1;
-        for p in &self.parents {
-            if let Ok(mut r) = p.try_get_internal_mut() {
-                r.set_depth(depth);
-            }
-        }
-        for c in &self.children {
-            if let Ok(mut r) = c.try_get_internal_mut() {
-                r.set_depth(depth);
-            }
-        }
     }
 }

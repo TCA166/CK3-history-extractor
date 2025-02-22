@@ -3,10 +3,10 @@ use serde::{ser::SerializeSeq, Serialize, Serializer};
 
 use super::{
     super::{
-        display::{Cullable, RenderableType},
+        display::RenderableType,
         game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{Shared, WrapperMut},
+        types::Shared,
     },
     serialize_ref, Character, DerivedRef, DummyInit, GameObjectDerived,
 };
@@ -55,7 +55,6 @@ pub struct Artifact {
         Option<Shared<Character>>,
         Option<Shared<Character>>,
     )>,
-    depth: usize,
 }
 
 impl GameObjectDerived for Artifact {
@@ -127,7 +126,6 @@ impl DummyInit for Artifact {
             wealth: 0,
             owner: None,
             history: Vec::new(),
-            depth: 0,
         }
     }
 }
@@ -190,46 +188,15 @@ impl Localizable for Artifact {
     }
 }
 
-impl Cullable for Artifact {
-    fn get_depth(&self) -> usize {
-        self.depth
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        let depth = depth - 1;
-        if let Some(owner) = &self.owner {
-            if let Ok(mut owner) = owner.try_get_internal_mut() {
-                owner.set_depth(depth);
-            }
-        }
-        for h in self.history.iter_mut() {
-            if let Some(actor) = &h.2 {
-                if let Ok(mut actor) = actor.try_get_internal_mut() {
-                    actor.set_depth(depth);
-                }
-            }
-            if let Some(recipient) = &h.3 {
-                if let Ok(mut recipient) = recipient.try_get_internal_mut() {
-                    recipient.set_depth(depth);
-                }
-            }
-        }
-    }
-}
-
 impl Artifact {
     /// Render the characters in the history of the artifact
-    pub fn add_ref(&self, stack: &mut Vec<RenderableType>) {
+    pub fn add_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for h in self.history.iter() {
             if let Some(actor) = &h.2 {
-                stack.push(RenderableType::Character(actor.clone()));
+                stack.push((actor.clone().into(), depth));
             }
             if let Some(recipient) = &h.3 {
-                stack.push(RenderableType::Character(recipient.clone()));
+                stack.push((recipient.clone().into(), depth));
             }
         }
     }

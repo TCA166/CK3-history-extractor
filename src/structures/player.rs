@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
@@ -86,9 +86,9 @@ impl Renderable for Player {
         H_TEMPLATE_NAME
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for char in self.lineage.iter() {
-            stack.push(RenderableType::Character(char.get_character()));
+            stack.push((char.get_character().into(), depth + 1));
         }
     }
 
@@ -190,21 +190,5 @@ impl Localizable for Player {
             node.localize(localization)?;
         }
         Ok(())
-    }
-}
-
-impl Cullable for Player {
-    fn set_depth(&mut self, depth: usize) {
-        for node in self.lineage.iter_mut() {
-            node.set_depth(depth);
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        0
-    }
-
-    fn is_ok(&self) -> bool {
-        true
     }
 }

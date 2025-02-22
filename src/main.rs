@@ -29,7 +29,7 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{Cullable, Renderable, Renderer};
+use display::{Renderable, Renderer};
 
 mod game_data;
 use game_data::{GameDataLoader, Localizable};
@@ -159,9 +159,7 @@ fn main() -> Result<(), UserError> {
     );
     let timeline;
     if !args.no_vis {
-        let mut tm = game_state.new_timeline();
-        tm.set_depth(args.depth);
-        timeline = Some(tm);
+        timeline = Some(game_state.new_timeline());
     } else {
         timeline = None;
     }
@@ -176,13 +174,14 @@ fn main() -> Result<(), UserError> {
         let folder_name = player.name.to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
         let path = args.output.join(folder_name);
-        let cull_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
-        cull_spinner.set_style(spinner_style.clone());
-        cull_spinner.enable_steady_tick(INTERVAL);
-        player.set_depth(args.depth);
-        cull_spinner.finish_with_message("Tree traversed");
-        let mut renderer =
-            Renderer::new(&env, path.as_path(), &game_state, &data, grapher.as_ref());
+        let mut renderer = Renderer::new(
+            &env,
+            path.as_path(),
+            &game_state,
+            &data,
+            grapher.as_ref(),
+            args.depth,
+        );
         let render_spinner = rendering_progress_bar.add(ProgressBar::new_spinner());
         render_spinner.set_style(spinner_style.clone());
         render_spinner.enable_steady_tick(INTERVAL);
@@ -197,7 +196,6 @@ fn main() -> Result<(), UserError> {
                 eprintln!("Error opening browser: {}", e);
             }
         }
-        rendering_progress_bar.remove(&cull_spinner);
         rendering_progress_bar.remove(&render_spinner);
     }
     player_progress.finish_with_message("Players rendered");

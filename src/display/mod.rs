@@ -1,6 +1,6 @@
-/// A submodule that provides [Renderable] and [Cullable] traits for objects that can be rendered.
+/// A submodule that provides [Renderable] trait for objects that can be rendered.
 mod renderer;
-pub use renderer::{Cullable, Renderable, Renderer};
+pub use renderer::{Renderable, Renderer};
 
 /// The graphing submodule that handles the creation of graphs from the game state.
 mod graph;

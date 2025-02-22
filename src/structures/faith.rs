@@ -4,11 +4,11 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable, RenderableType},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{RefOrRaw, Wrapper, WrapperMut},
+        types::{RefOrRaw, Wrapper},
     },
     serialize_ref, Character, DummyInit, GameObjectDerived, Shared, Title,
 };
@@ -23,7 +23,6 @@ pub struct Faith {
     head: Option<Shared<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
-    depth: usize,
 }
 
 impl DummyInit for Faith {
@@ -35,7 +34,6 @@ impl DummyInit for Faith {
             fervor: 0.0,
             doctrines: Vec::new(),
             id: id,
-            depth: 0,
         }
     }
 
@@ -122,9 +120,9 @@ impl Renderable for Faith {
         }
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         if let Some(head) = &self.head {
-            stack.push(RenderableType::Character(head.clone()));
+            stack.push((head.clone().into(), depth));
         }
     }
 }
@@ -142,23 +140,5 @@ impl Localizable for Faith {
             *doctrine = localization.localize(doctrine.to_string() + "_name")?;
         }
         Ok(())
-    }
-}
-
-impl Cullable for Faith {
-    fn get_depth(&self) -> usize {
-        self.depth
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        if let Some(head) = &self.head {
-            if let Ok(mut head) = head.try_get_internal_mut() {
-                head.set_depth(depth - 1);
-            }
-        }
     }
 }

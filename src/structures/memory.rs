@@ -3,10 +3,9 @@ use serde::{ser::SerializeSeq, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, RenderableType},
+        display::RenderableType,
         game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::WrapperMut,
     },
     Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
 };
@@ -31,7 +30,6 @@ pub struct Memory {
     r#type: Option<GameString>,
     #[serde(serialize_with = "serialize_participants")]
     participants: Vec<(String, Shared<Character>)>,
-    depth: usize,
 }
 
 impl DummyInit for Memory {
@@ -41,7 +39,6 @@ impl DummyInit for Memory {
             r#type: None,
             participants: Vec::new(),
             id: id,
-            depth: 0,
         }
     }
 
@@ -92,28 +89,10 @@ impl Localizable for Memory {
     }
 }
 
-impl Cullable for Memory {
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        for part in self.participants.iter_mut() {
-            if let Ok(mut part) = part.1.try_get_internal_mut() {
-                part.set_depth(depth - 1);
-            }
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        self.depth
-    }
-}
-
 impl Memory {
-    pub fn add_participants(&self, stack: &mut Vec<RenderableType>) {
+    pub fn add_participants(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for part in self.participants.iter() {
-            stack.push(RenderableType::Character(part.1.clone()));
+            stack.push((part.1.clone().into(), depth));
         }
     }
 }

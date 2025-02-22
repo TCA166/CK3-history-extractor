@@ -10,10 +10,9 @@ use serde::{
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable, RenderableType},
         game_data::GameData,
         parser::{GameState, GameString},
-        types::WrapperMut,
     },
     GameId, GameObjectDerived, Shared, Wrapper,
 };
@@ -98,12 +97,10 @@ where
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("DerivedRef", 4)?;
+        let mut state = serializer.serialize_struct("DerivedRef", 3)?;
         state.serialize_field("id", &self.id)?;
         let o = self.obj.as_ref().unwrap().get_internal();
         state.serialize_field("name", &o.get_name())?;
-        let shallow = !o.is_ok();
-        state.serialize_field("shallow", &shallow)?;
         state.serialize_field("subdir", T::get_subdir())?;
         state.end()
     }
@@ -119,23 +116,6 @@ where
 
     fn get_name(&self) -> GameString {
         self.obj.as_ref().unwrap().get_internal().get_name()
-    }
-}
-
-impl<T> Cullable for DerivedRef<T>
-where
-    T: Cullable + GameObjectDerived,
-{
-    fn get_depth(&self) -> usize {
-        self.obj.as_ref().unwrap().get_internal().get_depth()
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        self.obj
-            .as_ref()
-            .unwrap()
-            .get_internal_mut()
-            .set_depth(depth);
     }
 }
 
@@ -155,8 +135,15 @@ where
         T::get_template()
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
-        self.obj.as_ref().unwrap().get_internal().append_ref(stack);
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
+        if depth <= 0 {
+            return;
+        }
+        self.obj
+            .as_ref()
+            .unwrap()
+            .get_internal()
+            .append_ref(stack, depth);
     }
 
     fn render(

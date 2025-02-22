@@ -1,12 +1,10 @@
-use std::path::Path;
-
 use jomini::common::Date;
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
-        game_data::{GameData, Localizable, LocalizationError, Localize},
+        display::{Renderable, RenderableType, TreeNode},
+        game_data::{Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
@@ -24,101 +22,6 @@ use super::{
 enum Vassal {
     Character(Shared<Character>),
     Reference(Shared<DerivedRef<Character>>),
-}
-
-impl GameObjectDerived for Vassal {
-    fn get_id(&self) -> GameId {
-        match self {
-            Vassal::Character(c) => c.get_internal().get_id(),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_id(),
-        }
-    }
-
-    fn get_name(&self) -> GameString {
-        match self {
-            Vassal::Character(c) => c.get_internal().get_name(),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_name(),
-        }
-    }
-}
-
-impl Serialize for Vassal {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            Vassal::Character(c) => c.serialize(serializer),
-            Vassal::Reference(r) => r.serialize(serializer),
-        }
-    }
-}
-
-impl Cullable for Vassal {
-    fn is_ok(&self) -> bool {
-        match self {
-            Vassal::Character(c) => c.get_internal().is_ok(),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().is_ok(),
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        match self {
-            Vassal::Character(c) => c.get_internal().get_depth(),
-            Vassal::Reference(r) => r.get_internal().get_ref().get_internal().get_depth(),
-        }
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        match self {
-            Vassal::Character(c) => {
-                if let Ok(mut o) = c.try_get_internal_mut() {
-                    o.set_depth(depth);
-                }
-            }
-            Vassal::Reference(r) => {
-                if let Ok(mut o) = r.get_internal().get_ref().try_get_internal_mut() {
-                    o.set_depth(depth);
-                }
-            }
-        }
-    }
-}
-
-impl Renderable for Vassal {
-    fn get_template() -> &'static str {
-        Character::get_template()
-    }
-
-    fn get_subdir() -> &'static str {
-        Character::get_subdir()
-    }
-
-    fn render(
-        &self,
-        path: &Path,
-        game_state: &GameState,
-        grapher: Option<&Grapher>,
-        data: &GameData,
-    ) {
-        match self {
-            Vassal::Character(c) => c.get_internal().render(path, game_state, grapher, data),
-            Vassal::Reference(r) => r
-                .get_internal()
-                .get_ref()
-                .get_internal()
-                .render(path, game_state, grapher, data),
-        }
-    }
-
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
-        match self {
-            Vassal::Character(c) => stack.push(RenderableType::Character(c.clone())),
-            Vassal::Reference(r) => stack.push(RenderableType::Character(
-                r.get_internal().get_ref().clone(),
-            )),
-        }
-    }
 }
 
 // MAYBE enum for dead and alive character?
@@ -155,7 +58,6 @@ pub struct Character {
     vassals: Vec<Vassal>,
     liege: Option<DerivedRef<Character>>,
     female: bool,
-    depth: usize,
     artifacts: Vec<Shared<Artifact>>,
 }
 
@@ -335,7 +237,6 @@ impl DummyInit for Character {
             liege: None,
             female: false,
             id: id,
-            depth: 0,
             artifacts: Vec::new(),
         }
     }
@@ -580,8 +481,10 @@ impl Serialize for Character {
         state.serialize_field("dead", &self.dead)?;
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
+        eprintln!("test");
         let faith = self.get_faith();
         let culture = self.get_culture();
+        eprintln!("test2");
         if let Some(house) = &self.house {
             let rd = DerivedRef::from(house.clone());
             state.serialize_field("house", &rd)?;
@@ -653,50 +556,50 @@ impl Renderable for Character {
         "characters"
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         if let Some(faith) = &self.faith {
-            stack.push(RenderableType::Faith(faith.clone()));
+            stack.push((faith.clone().into(), depth));
         }
         if let Some(culture) = &self.culture {
-            stack.push(RenderableType::Culture(culture.clone()));
+            stack.push((culture.clone().into(), depth));
         }
         if let Some(house) = &self.house {
-            stack.push(RenderableType::Dynasty(house.clone()));
+            stack.push((house.clone().into(), depth));
         }
         if let Some(liege) = &self.liege {
-            stack.push(RenderableType::Character(liege.get_ref().clone()));
+            stack.push((liege.get_ref().clone().into(), depth));
         }
         for s in self.spouses.iter() {
-            stack.push(RenderableType::Character(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for s in self.former.iter() {
-            stack.push(RenderableType::Character(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for s in self.children.iter() {
-            stack.push(RenderableType::Character(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for s in self.parents.iter() {
-            stack.push(RenderableType::Character(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for s in self.kills.iter() {
-            stack.push(RenderableType::Character(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for s in self.vassals.iter() {
             match s {
-                Vassal::Character(c) => stack.push(RenderableType::Character(c.clone())),
-                Vassal::Reference(c) => stack.push(RenderableType::Character(
-                    c.get_internal().get_ref().clone(),
-                )),
+                Vassal::Character(c) => stack.push((c.clone().into(), depth)),
+                Vassal::Reference(c) => {
+                    stack.push((c.get_internal().get_ref().clone().into(), depth))
+                }
             }
         }
         for s in self.titles.iter() {
-            stack.push(RenderableType::Title(s.clone()));
+            stack.push((s.clone().into(), depth));
         }
         for m in self.memories.iter() {
-            m.get_internal().add_participants(stack);
+            m.get_internal().add_participants(stack, depth);
         }
         for a in self.artifacts.iter() {
-            a.get_internal().add_ref(stack);
+            a.get_internal().add_ref(stack, depth - 1);
         }
     }
 }
@@ -768,84 +671,5 @@ impl Localizable for Character {
             *t = localization.localize(t.to_string() + "_name")?;
         }
         Ok(())
-    }
-}
-
-impl Cullable for Character {
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        //cullable set
-        self.depth = depth;
-        let depth = depth - 1;
-        if let Some(liege) = &self.liege {
-            if let Ok(mut o) = liege.get_ref().try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.spouses.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.former.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.children.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.parents.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.kills.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.vassals.iter_mut() {
-            s.set_depth(depth);
-        }
-        if let Some(culture) = &self.culture {
-            if let Ok(mut o) = culture.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        if let Some(faith) = &self.faith {
-            if let Ok(mut o) = faith.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.titles.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        for s in self.memories.iter() {
-            s.get_internal_mut().set_depth(depth);
-        }
-        //sort so that most worthy artifacts are shown first
-        self.artifacts.sort();
-        self.artifacts.reverse();
-        for s in self.artifacts.iter() {
-            if let Ok(mut o) = s.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-        if let Some(house) = &self.house {
-            if let Ok(mut o) = house.try_get_internal_mut() {
-                o.set_depth(depth);
-            }
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        self.depth
     }
 }

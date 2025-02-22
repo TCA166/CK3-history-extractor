@@ -49,6 +49,7 @@ pub struct Renderer<'a> {
     /// The game state object.
     /// It is used to access the game state during rendering, especially for gathering of data for rendering of optional graphs.
     state: &'a GameState,
+    initial_depth: usize,
 }
 
 impl<'a> Renderer<'a> {
@@ -72,6 +73,7 @@ impl<'a> Renderer<'a> {
         state: &'a GameState,
         data: &'a GameData,
         grapher: Option<&'a Grapher>,
+        initial_depth: usize,
     ) -> Self {
         create_dir_maybe(path);
         create_dir_maybe(path.join(Character::get_subdir()));
@@ -86,56 +88,58 @@ impl<'a> Renderer<'a> {
             data,
             grapher,
             state,
+            initial_depth,
         }
-    }
-
-    /// Returns true if the object has already been rendered.
-    fn is_rendered<T: Renderable>(&self, id: GameId) -> bool {
-        if let Some(rendered) = self.rendered.get(T::get_subdir()) {
-            return rendered.contains(&id);
-        }
-        return false;
     }
 
     /// Renders the object and returns true if it was actually rendered.
     /// If the object is already rendered or is not ok to be rendered, then it returns false.
     /// If the object was rendered it calls the [Renderable::render] method on the object and [Renderable::append_ref] on the object.
-    fn render<T: Renderable + Cullable>(
+    fn render<T: Renderable>(
         &mut self,
         obj: RefOrRaw<T>,
-        stack: &mut Vec<RenderableType>,
+        depth: usize,
+        stack: &mut Vec<(RenderableType, usize)>,
     ) -> bool {
         //if it is rendered then return
-        if self.is_rendered::<T>(obj.get_id()) || !obj.is_ok() {
+        let rendered = self
+            .rendered
+            .entry(T::get_subdir())
+            .or_insert(HashSet::default());
+        if rendered.contains(&obj.get_id()) || depth <= 0 {
             return false;
+        } else {
+            rendered.insert(obj.get_id());
         }
-        let path = obj.get_path(self.path);
+        //render the object
+        eprintln!("Serializing: {} {}", obj.get_id(), T::get_template());
         let ctx = Value::from_serialize(&obj);
         let template = self.env.get_template(T::get_template()).unwrap();
         let contents = template.render(ctx).unwrap();
+        let path = obj.get_path(self.path);
         thread::spawn(move || {
             //IO heavy, so spawn a thread
             fs::write(path, contents).unwrap();
         });
         obj.render(&self.path, &self.state, self.grapher, self.data);
-        obj.append_ref(stack);
-        let rendered = self
-            .rendered
-            .entry(T::get_subdir())
-            .or_insert(HashSet::default());
-        rendered.insert(obj.get_id());
+        obj.append_ref(stack, depth - 1);
         return true;
     }
 
     /// Renders a renderable enum object.
     /// Calls [Renderer::render] on the object if it is not already rendered.
-    fn render_enum(&mut self, obj: &RenderableType, stack: &mut Vec<RenderableType>) -> bool {
+    fn render_enum(
+        &mut self,
+        obj: &RenderableType,
+        depth: usize,
+        stack: &mut Vec<(RenderableType, usize)>,
+    ) -> bool {
         match obj {
-            RenderableType::Character(obj) => self.render(obj.get_internal(), stack),
-            RenderableType::Dynasty(obj) => self.render(obj.get_internal(), stack),
-            RenderableType::Title(obj) => self.render(obj.get_internal(), stack),
-            RenderableType::Faith(obj) => self.render(obj.get_internal(), stack),
-            RenderableType::Culture(obj) => self.render(obj.get_internal(), stack),
+            RenderableType::Character(obj) => self.render(obj.get_internal(), depth, stack),
+            RenderableType::Dynasty(obj) => self.render(obj.get_internal(), depth, stack),
+            RenderableType::Title(obj) => self.render(obj.get_internal(), depth, stack),
+            RenderableType::Faith(obj) => self.render(obj.get_internal(), depth, stack),
+            RenderableType::Culture(obj) => self.render(obj.get_internal(), depth, stack),
         }
     }
 
@@ -168,17 +172,18 @@ impl<'a> Renderer<'a> {
     /// # Returns
     ///
     /// The number of objects that were rendered.
-    pub fn render_all<T: Renderable + Cullable>(&mut self, obj: &T) -> u64 {
-        let mut stack: Vec<RenderableType> = Vec::new();
-        if !self.render(RefOrRaw::Raw(obj), &mut stack) {
+    pub fn render_all<T: Renderable>(&mut self, obj: &T) -> u64 {
+        let mut stack: Vec<(RenderableType, usize)> = Vec::new();
+        if !self.render(RefOrRaw::Raw(obj), self.initial_depth, &mut stack) {
             return 0;
         }
         let mut counter = 1;
-        while let Some(obj) = stack.pop() {
-            if self.render_enum(&obj, &mut stack) {
+        while let Some((obj, depth)) = stack.pop() {
+            if self.render_enum(&obj, depth, &mut stack) {
                 counter += 1;
             }
         }
+        // TODO store which objects were rendered, pass it to the environment
         return counter;
     }
 }
@@ -186,7 +191,7 @@ impl<'a> Renderer<'a> {
 /// Trait for objects that can be rendered into a html page.
 /// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
-pub trait Renderable: Serialize + Cullable + GameObjectDerived {
+pub trait Renderable: Serialize + GameObjectDerived {
     /// Returns the template file name.
     /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
     fn get_template() -> &'static str;
@@ -244,24 +249,5 @@ pub trait Renderable: Serialize + Cullable + GameObjectDerived {
     /// This is used to ensure that all the related objects are rendered.
     /// If you have a reference to another object that should be rendered, then you should append it to the stack.
     /// Failure to do so will result in broken links in the rendered html pages.
-    fn append_ref(&self, stack: &mut Vec<RenderableType>);
-}
-
-/// Trait for objects that can be culled.
-/// This is used to limit object serialization to a certain depth.
-/// Not all [Renderable] objects need to implement this trait.
-pub trait Cullable {
-    /// Set the depth of the object and performs localization.
-    /// Ideally this should be called on the root object once and the depth should be propagated to all children.
-    /// Also ideally should do nothing if the depth is less than or equal to the current depth.
-    /// It is the responsibility of the implementation to ensure that the depth is propagated to all children.
-    fn set_depth(&mut self, depth: usize);
-
-    /// Get the depth of the object.
-    fn get_depth(&self) -> usize;
-
-    /// Returns true if the object is ok to be rendered / serialized.
-    fn is_ok(&self) -> bool {
-        self.get_depth() > 0
-    }
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize);
 }

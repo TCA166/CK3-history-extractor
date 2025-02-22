@@ -6,7 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
-        display::{Cullable, Grapher, Renderable, RenderableType, TreeNode},
+        display::{Grapher, Renderable, RenderableType, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
@@ -30,7 +30,7 @@ pub struct Title {
     de_facto_vassals: Vec<Shared<Title>>,
     history: Vec<(Date, Option<Shared<Character>>, GameString)>,
     claims: Vec<Shared<Character>>,
-    depth: usize,
+
     capital: Option<Shared<Title>>,
     /// Only used for counties
     culture: Option<Shared<Culture>>,
@@ -138,7 +138,6 @@ impl DummyInit for Title {
             history: Vec::default(),
             claims: Vec::default(),
             id: id,
-            depth: 0,
             color: [70, 255, 70],
             capital: None,
             culture: None,
@@ -353,23 +352,23 @@ impl Renderable for Title {
         "titles"
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         if let Some(de_jure) = &self.de_jure {
-            stack.push(RenderableType::Title(de_jure.clone()));
+            stack.push((de_jure.clone().into(), depth));
         }
         if let Some(de_facto) = &self.de_facto {
-            stack.push(RenderableType::Title(de_facto.clone()));
+            stack.push((de_facto.clone().into(), depth));
         }
         for v in &self.de_jure_vassals {
-            stack.push(RenderableType::Title(v.clone()));
+            stack.push((v.clone().into(), depth));
         }
         for o in &self.history {
             if let Some(character) = &o.1 {
-                stack.push(RenderableType::Character(character.clone()));
+                stack.push((character.clone().into(), depth));
             }
         }
         if let Some(capital) = &self.capital {
-            stack.push(RenderableType::Title(capital.clone()));
+            stack.push((capital.clone().into(), depth));
         }
     }
 
@@ -406,68 +405,5 @@ impl Localizable for Title {
         //    o.2 = localization.localize(o.2.as_str());
         //}
         Ok(())
-    }
-}
-
-impl Cullable for Title {
-    fn set_depth(&mut self, depth: usize) {
-        if depth <= self.depth {
-            return;
-        }
-        self.depth = depth;
-        let depth = depth - 1;
-        if let Some(de_jure) = &self.de_jure {
-            if let Ok(mut c) = de_jure.try_get_internal_mut() {
-                c.set_depth(depth);
-            }
-        }
-        if let Some(de_facto) = &self.de_facto {
-            if let Ok(mut c) = de_facto.try_get_internal_mut() {
-                c.set_depth(depth);
-            }
-        }
-        for v in &self.de_jure_vassals {
-            if let Ok(mut v) = v.try_get_internal_mut() {
-                v.set_depth(depth);
-            }
-        }
-        for v in &self.de_facto_vassals {
-            if let Ok(mut v) = v.try_get_internal_mut() {
-                v.set_depth(depth);
-            }
-        }
-        for o in self.history.iter_mut() {
-            if let Some(character) = &o.1 {
-                if let Ok(mut c) = character.try_get_internal_mut() {
-                    c.set_depth(depth);
-                }
-            }
-        }
-        if let Some(capital) = &self.capital {
-            if let Ok(mut c) = capital.try_get_internal_mut() {
-                if c.id != self.id {
-                    c.set_depth(depth);
-                }
-            }
-        }
-        if let Some(faith) = &self.faith {
-            if let Ok(mut f) = faith.try_get_internal_mut() {
-                f.set_depth(depth);
-            }
-        }
-        if let Some(culture) = &self.culture {
-            if let Ok(mut c) = culture.try_get_internal_mut() {
-                c.set_depth(depth);
-            }
-        }
-    }
-
-    fn get_depth(&self) -> usize {
-        self.depth
-    }
-
-    fn is_ok(&self) -> bool {
-        // custom ok function that makes it so that baronies aren't rendered
-        self.get_depth() > 0 && !self.key.as_ref().is_some_and(|k| k.starts_with("b_"))
     }
 }

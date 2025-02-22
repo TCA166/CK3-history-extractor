@@ -3,12 +3,11 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::Cullable,
         game_data::{Localizable, LocalizationError, Localize},
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
         },
-        types::{Wrapper, WrapperMut},
+        types::Wrapper,
     },
     Character, FromGameObject, GameId, GameObjectDerived, Shared,
 };
@@ -117,19 +116,5 @@ impl Localizable for LineageNode {
             *perk = localization.localize(perk_key)?;
         }
         Ok(())
-    }
-}
-
-impl Cullable for LineageNode {
-    fn get_depth(&self) -> usize {
-        self.character.as_ref().unwrap().get_internal().get_depth()
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        self.character
-            .as_ref()
-            .unwrap()
-            .get_internal_mut()
-            .set_depth(depth);
     }
 }

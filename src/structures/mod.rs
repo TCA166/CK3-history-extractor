@@ -58,6 +58,12 @@ pub trait GameObjectDerived {
     fn get_name(&self) -> GameString;
 }
 
+impl<T: GameObjectDerived> PartialEq for Shared<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_internal().get_id() == other.get_internal().get_id()
+    }
+}
+
 /// A trait for [GameObjectDerived] objects that can be created as a dummy object, only later to be initialized.
 pub trait DummyInit: GameObjectDerived {
     /// Create a dummy object that can be used as a placeholder

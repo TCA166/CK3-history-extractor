@@ -8,10 +8,10 @@ use super::{
         jinja_env::TIMELINE_TEMPLATE_NAME,
         parser::{GameId, GameState, GameString},
         structures::{Character, Culture, DerivedRef, Faith, GameObjectDerived, Title},
-        types::{Shared, Wrapper, WrapperMut},
+        types::{Shared, Wrapper},
     },
     graph::{create_timeline_graph, Grapher},
-    renderer::{Cullable, Renderable},
+    renderer::Renderable,
     RenderableType,
 };
 
@@ -45,29 +45,6 @@ impl GameObjectDerived for RealmDifference {
         match self {
             RealmDifference::Faith(f) => f.get_internal().get_name(),
             RealmDifference::Culture(c) => c.get_internal().get_name(),
-        }
-    }
-}
-
-impl Cullable for RealmDifference {
-    fn get_depth(&self) -> usize {
-        match self {
-            RealmDifference::Faith(f) => f.get_internal().get_depth(),
-            RealmDifference::Culture(c) => c.get_internal().get_depth(),
-        }
-    }
-
-    fn is_ok(&self) -> bool {
-        match self {
-            RealmDifference::Faith(f) => f.get_internal().is_ok(),
-            RealmDifference::Culture(c) => c.get_internal().is_ok(),
-        }
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        match self {
-            RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth),
-            RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth),
         }
     }
 }
@@ -160,30 +137,6 @@ impl Serialize for Timeline {
     }
 }
 
-impl Cullable for Timeline {
-    fn get_depth(&self) -> usize {
-        0
-    }
-
-    fn is_ok(&self) -> bool {
-        true
-    }
-
-    fn set_depth(&mut self, depth: usize) {
-        for (title, _) in self.lifespans.iter_mut() {
-            title.get_internal_mut().set_depth(depth);
-        }
-        for (_, char, title, _, difference) in self.events.iter_mut() {
-            char.get_internal_mut().set_depth(depth);
-            title.get_internal_mut().set_depth(depth);
-            match difference {
-                RealmDifference::Faith(f) => f.get_internal_mut().set_depth(depth),
-                RealmDifference::Culture(c) => c.get_internal_mut().set_depth(depth),
-            }
-        }
-    }
-}
-
 impl GameObjectDerived for Timeline {
     fn get_id(&self) -> GameId {
         0
@@ -217,16 +170,16 @@ impl Renderable for Timeline {
         }
     }
 
-    fn append_ref(&self, stack: &mut Vec<RenderableType>) {
+    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
         for (title, _) in &self.lifespans {
-            stack.push(RenderableType::Title(title.clone()));
+            stack.push((title.clone().into(), depth));
         }
 
         for (_, char, _, _, difference) in &self.events {
-            stack.push(RenderableType::Character(char.clone()));
+            stack.push((char.clone().into(), depth));
             match difference {
-                RealmDifference::Faith(f) => stack.push(RenderableType::Faith(f.clone())),
-                RealmDifference::Culture(c) => stack.push(RenderableType::Culture(c.clone())),
+                RealmDifference::Faith(f) => stack.push((f.clone().into(), depth)),
+                RealmDifference::Culture(c) => stack.push((c.clone().into(), depth)),
             }
         }
     }

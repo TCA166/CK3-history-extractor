@@ -82,7 +82,7 @@ pub trait WrapperMut<T> {
 ///
 /// let value:Ref<String> = obj.get_internal();
 /// ```
-#[derive(Debug, PartialEq, PartialOrd, Ord, Eq)]
+#[derive(Debug)]
 pub struct Shared<T> {
     inner: Rc<RefCell<T>>,
 }
