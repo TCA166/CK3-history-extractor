@@ -1,12 +1,16 @@
-use std::slice::Iter;
-use std::{path::Path, str::FromStr};
+use std::{
+    fmt::{self, Display, Formatter},
+    path::Path,
+    slice::Iter,
+    str::FromStr,
+};
 
 use jomini::common::{Date, PdsDate};
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, RenderableType, TreeNode},
+        display::{Grapher, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
@@ -15,14 +19,62 @@ use super::{
         },
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    derived_ref::into_ref_array,
-    Character, Culture, DerivedRef, DummyInit, Faith, GameObjectDerived, Shared,
+    Character, Culture, DummyInit, Faith, GameObjectDerived, GameObjectDerivedType, Shared,
 };
 
+#[derive(Serialize, Debug)]
+#[serde(untagged)]
+enum TitleType {
+    Empire,
+    Kingdom,
+    Duchy,
+    County,
+    Barony,
+    Other(Option<GameString>),
+}
+
+impl<S: AsRef<str>> From<S> for TitleType {
+    fn from(value: S) -> Self {
+        if let Some(c) = value.as_ref().chars().next() {
+            match c {
+                'e' => TitleType::Empire,
+                'k' => TitleType::Kingdom,
+                'd' => TitleType::Duchy,
+                'c' => TitleType::County,
+                'b' => TitleType::Barony,
+                _ => TitleType::Other(None),
+            }
+        } else {
+            TitleType::Other(None)
+        }
+    }
+}
+
+impl Display for TitleType {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            TitleType::Empire => write!(f, "Empire"),
+            TitleType::Kingdom => write!(f, "Kingdom"),
+            TitleType::Duchy => write!(f, "Duchy"),
+            TitleType::County => write!(f, "County"),
+            TitleType::Barony => write!(f, "Barony"),
+            TitleType::Other(opt) => write!(f, "{}", opt.as_ref().unwrap_or(&GameString::from(""))),
+        }
+    }
+}
+
+impl Default for TitleType {
+    fn default() -> Self {
+        TitleType::Other(None)
+    }
+}
+
 /// A struct representing a title in the game
+#[derive(Serialize, Debug)]
 pub struct Title {
     id: GameId,
     key: Option<GameString>,
+    tier: TitleType,
     name: Option<GameString>,
     de_jure: Option<Shared<Title>>,
     de_facto: Option<Shared<Title>>,
@@ -130,6 +182,7 @@ impl DummyInit for Title {
     fn dummy(id: GameId) -> Self {
         Title {
             key: None,
+            tier: TitleType::default(),
             name: None,
             de_jure: None,
             de_facto: None,
@@ -159,6 +212,7 @@ impl DummyInit for Title {
             ];
         }
         self.key = Some(base.get_string("key")?);
+        self.tier = TitleType::from(self.key.as_ref().unwrap());
         if let Some(de_jure_id) = base.get("de_jure_liege") {
             let o = game_state.get_title(&de_jure_id.as_id()?).clone();
             o.get_internal_mut()
@@ -249,6 +303,27 @@ impl GameObjectDerived for Title {
     fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        if let Some(de_jure) = &self.de_jure {
+            collection.extend([E::from(de_jure.clone().into())]);
+        }
+        if let Some(de_facto) = &self.de_facto {
+            collection.extend([E::from(de_facto.clone().into())]);
+        }
+        for v in &self.de_jure_vassals {
+            collection.extend([E::from(v.clone().into())]);
+        }
+        for v in &self.de_facto_vassals {
+            collection.extend([E::from(v.clone().into())]);
+        }
+        for c in &self.claims {
+            collection.extend([E::from(c.clone().into())]);
+        }
+        if let Some(capital) = &self.capital {
+            collection.extend([E::from(capital.clone().into())]);
+        }
+    }
 }
 
 impl TreeNode for Title {
@@ -260,29 +335,10 @@ impl TreeNode for Title {
     }
 
     fn get_class(&self) -> Option<GameString> {
-        if self.key.is_none() {
-            return None;
-        }
-        let first_char = self.key.as_ref().unwrap().chars().next().unwrap();
-        match first_char {
-            'e' => {
-                return Some(GameString::from("Empire"));
-            }
-            'k' => {
-                return Some(GameString::from("Kingdom"));
-            }
-            'd' => {
-                return Some(GameString::from("Duchy"));
-            }
-            'c' => {
-                return Some(GameString::from("County"));
-            }
-            'b' => {
-                return Some(GameString::from("Barony"));
-            }
-            _ => {
-                return None;
-            }
+        if let TitleType::Other(opt) = &self.tier {
+            return opt.clone();
+        } else {
+            return Some(GameString::from(self.tier.to_string()));
         }
     }
 
@@ -294,55 +350,6 @@ impl TreeNode for Title {
     }
 }
 
-impl Serialize for Title {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Title", 12)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        if let Some(tier) = self.get_class() {
-            state.serialize_field("tier", &tier)?;
-        } else {
-            state.serialize_field("tier", "")?;
-        }
-        if let Some(faith) = &self.faith {
-            let faith = DerivedRef::from(faith.clone());
-            state.serialize_field("faith", &faith)?;
-        }
-        if let Some(culture) = &self.culture {
-            let culture = DerivedRef::from(culture.clone());
-            state.serialize_field("culture", &culture)?;
-        }
-        if let Some(de_jure) = &self.de_jure {
-            let de_jure = DerivedRef::from(de_jure.clone());
-            state.serialize_field("de_jure", &de_jure)?;
-        }
-        if let Some(de_facto) = &self.de_facto {
-            let de_facto = DerivedRef::from(de_facto.clone());
-            state.serialize_field("de_facto", &de_facto)?;
-        }
-        state.serialize_field("de_jure_vassals", &into_ref_array(&self.de_jure_vassals))?;
-        state.serialize_field("de_facto_vassals", &into_ref_array(&self.de_facto_vassals))?;
-        let mut history = Vec::new();
-        for h in self.history.iter() {
-            let mut o = (h.0.clone(), None, h.2.clone());
-            if let Some(holder) = &h.1 {
-                let c = DerivedRef::from(holder.clone());
-                o.1 = Some(c);
-            }
-            history.push(o);
-        }
-        state.serialize_field("claims", &into_ref_array(&self.claims))?;
-        state.serialize_field("history", &history)?;
-        if let Some(capital) = &self.capital {
-            state.serialize_field("capital", &DerivedRef::from(capital.clone()))?;
-        }
-        state.end()
-    }
-}
-
 impl Renderable for Title {
     fn get_template() -> &'static str {
         TITLE_TEMPLATE_NAME
@@ -350,26 +357,6 @@ impl Renderable for Title {
 
     fn get_subdir() -> &'static str {
         "titles"
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        if let Some(de_jure) = &self.de_jure {
-            stack.push((de_jure.clone().into(), depth));
-        }
-        if let Some(de_facto) = &self.de_facto {
-            stack.push((de_facto.clone().into(), depth));
-        }
-        for v in &self.de_jure_vassals {
-            stack.push((v.clone().into(), depth));
-        }
-        for o in &self.history {
-            if let Some(character) = &o.1 {
-                stack.push((character.clone().into(), depth));
-            }
-        }
-        if let Some(capital) = &self.capital {
-            stack.push((capital.clone().into(), depth));
-        }
     }
 
     fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {

@@ -1,21 +1,21 @@
-use std::path::Path;
+use std::{cell::Ref, path::Path};
 
 use jomini::common::Date;
 use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, RenderableType, TreeNode},
+        display::{Grapher, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{OneOrMany, RefOrRaw, Wrapper, WrapperMut},
+        types::{OneOrMany, Wrapper, WrapperMut},
     },
-    serialize_array_ref, DummyInit, GameObjectDerived, Shared, Title,
+    DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Title,
 };
 
 /// A struct representing a culture in the game
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Culture {
     id: GameId,
     name: Option<GameString>,
@@ -23,9 +23,7 @@ pub struct Culture {
     heritage: Option<GameString>,
     martial: Option<GameString>,
     date: Option<Date>,
-    #[serde(serialize_with = "serialize_array_ref")]
     children: Vec<Shared<Culture>>,
-    #[serde(serialize_with = "serialize_array_ref")]
     parents: Vec<Shared<Culture>>,
     traditions: Vec<GameString>,
     language: Option<GameString>,
@@ -90,6 +88,15 @@ impl GameObjectDerived for Culture {
     fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        for p in &self.parents {
+            collection.extend([E::from(p.clone().into())]);
+        }
+        for c in &self.children {
+            collection.extend([E::from(c.clone().into())]);
+        }
+    }
 }
 
 impl TreeNode for Culture {
@@ -144,7 +151,7 @@ impl Renderable for Culture {
             grapher.create_culture_graph(self.id, &path);
         }
         if let Some(map) = data.get_map() {
-            let filter = |title: &RefOrRaw<Title>| {
+            let filter = |title: Ref<Title>| {
                 let key = title.get_key();
                 if key.is_none() {
                     return false;
@@ -167,15 +174,6 @@ impl Renderable for Culture {
                 ));
                 culture_map.save(&path);
             }
-        }
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        for p in &self.parents {
-            stack.push((p.clone().into(), depth));
-        }
-        for c in &self.children {
-            stack.push((c.clone().into(), depth));
         }
     }
 }

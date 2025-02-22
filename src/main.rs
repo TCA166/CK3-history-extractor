@@ -151,7 +151,7 @@ fn main() -> Result<(), UserError> {
     } else {
         grapher = None;
     }
-    let env = create_env(
+    let mut env = create_env(
         args.use_internal,
         data.get_map().is_some(),
         args.no_vis,
@@ -175,7 +175,6 @@ fn main() -> Result<(), UserError> {
         player_progress.set_message(format!("Rendering {}", folder_name));
         let path = args.output.join(folder_name);
         let mut renderer = Renderer::new(
-            &env,
             path.as_path(),
             &game_state,
             &data,
@@ -186,9 +185,10 @@ fn main() -> Result<(), UserError> {
         render_spinner.set_style(spinner_style.clone());
         render_spinner.enable_steady_tick(INTERVAL);
         if !args.no_vis {
-            render_spinner.inc(renderer.render_all(timeline.as_ref().unwrap()));
+            render_spinner.inc(renderer.add_object(timeline.as_ref().unwrap()) as u64);
         }
-        render_spinner.inc(renderer.render_all(player));
+        render_spinner.inc(renderer.add_object(player) as u64);
+        renderer.render_all(&mut env);
         render_spinner.finish_with_message("Rendering complete");
         if stdin().is_terminal() && stdout().is_terminal() && !args.no_interaction {
             // no need to error out here, its just a convenience feature

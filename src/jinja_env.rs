@@ -1,8 +1,13 @@
 use std::{fs, path::Path};
 
 use minijinja::{AutoEscape, Environment, State, UndefinedBehavior, Value};
+use serde::{ser::SerializeStruct, Serialize};
 
-use super::game_data::{GameData, Localize};
+use super::{
+    game_data::{GameData, Localize},
+    types::{Shared, Wrapper},
+    Renderable,
+};
 
 #[cfg(feature = "internal")]
 mod internal_templates {
@@ -38,6 +43,24 @@ const TEMPLATE_NAMES: [&str; 8] = [
 
 const LOCALIZATION_GLOBAL: &str = "localization";
 const LOCALIZATION_FUNC_NAME: &str = "localize";
+
+const DERIVED_REF_NAME_ATTR: &str = "name";
+const DERIVED_REF_SUBDIR_ATTR: &str = "subdir";
+const DERIVED_REF_ID_ATTR: &str = "id";
+
+impl<T: Renderable> Serialize for Shared<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("DerivedRef", 3)?;
+        let internal = self.get_internal();
+        state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
+        state.serialize_field(DERIVED_REF_NAME_ATTR, &internal.get_name())?;
+        state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
+        state.end()
+    }
+}
 
 // MAYBE there's a better way of providing localization, however, I have yet to find it
 
@@ -156,35 +179,19 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
 /// The function must be rendered without html escape.
 /// Calling this on an undefined reference will fail.
 fn render_ref(reference: Value, root: Option<bool>) -> String {
-    if reference.is_none() {
-        return "none".to_string();
-    }
-    let n = reference.get_attr("name").unwrap();
+    let n = reference.get_attr(DERIVED_REF_NAME_ATTR).unwrap();
     let name = n.as_str().unwrap();
-    if reference.get_attr("shallow").unwrap().is_true() {
+    if reference.get_attr("depth").unwrap().as_i64().unwrap() <= 0 {
         format!("{}", name)
     } else {
-        let subdir = reference.get_attr("subdir").unwrap();
+        let subdir = reference.get_attr(DERIVED_REF_SUBDIR_ATTR).unwrap();
+        let id = reference.get_attr(DERIVED_REF_ID_ATTR).unwrap();
         if subdir.is_none() {
-            return format!(
-                "<a href=\"./{}.html\">{}</a>",
-                reference.get_attr("id").unwrap(),
-                name
-            );
+            return format!("<a href=\"./{}.html\">{}</a>", id, name);
         } else if root.is_some() && root.unwrap() {
-            format!(
-                "<a href=\"{}/{}.html\">{}</a>",
-                subdir,
-                reference.get_attr("id").unwrap(),
-                name
-            )
+            format!("<a href=\"{}/{}.html\">{}</a>", subdir, id, name)
         } else {
-            format!(
-                "<a href=\"../{}/{}.html\">{}</a>",
-                subdir,
-                reference.get_attr("id").unwrap(),
-                name
-            )
+            format!("<a href=\"../{}/{}.html\">{}</a>", subdir, id, name)
         }
     }
 }

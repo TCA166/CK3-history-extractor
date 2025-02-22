@@ -1,11 +1,11 @@
 use std::path::Path;
 
 use jomini::common::Date;
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{
@@ -13,9 +13,10 @@ use super::{
         },
         types::{HashMap, Wrapper, WrapperMut},
     },
-    into_ref_array, Character, DerivedRef, DummyInit, GameId, GameObjectDerived, Shared,
+    Character, DummyInit, GameId, GameObjectDerived, GameObjectDerivedType, Shared,
 };
 
+#[derive(Serialize, Debug)]
 pub struct Dynasty {
     id: GameId,
     parent: Option<Shared<Dynasty>>,
@@ -214,34 +215,14 @@ impl GameObjectDerived for Dynasty {
             return GameString::from("Unknown");
         }
     }
-}
 
-impl Serialize for Dynasty {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Dynasty", 11)?;
-        state.serialize_field("id", &self.id)?;
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        for leader in self.leaders.iter() {
+            collection.extend([E::from(leader.clone().into())]);
+        }
         if let Some(parent) = &self.parent {
-            let parent = DerivedRef::<Dynasty>::from(parent.clone());
-            state.serialize_field("parent", &parent)?;
+            collection.extend([E::from(parent.clone().into())]);
         }
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("members", &self.members)?;
-        state.serialize_field("houses", &self.houses)?;
-        state.serialize_field("prestige_tot", &self.prestige_tot)?;
-        state.serialize_field("prestige", &self.prestige)?;
-        if !self.perks.is_empty() {
-            state.serialize_field("perks", &self.perks)?;
-        }
-        let leaders = into_ref_array(&self.leaders);
-        state.serialize_field("leaders", &leaders)?;
-        state.serialize_field("found_date", &self.found_date)?;
-        if let Some(motto_raw) = &self.motto {
-            state.serialize_field("motto", &motto_raw.0)?;
-        }
-        state.end()
     }
 }
 
@@ -259,15 +240,6 @@ impl Renderable for Dynasty {
             let mut buf = path.join(Self::get_subdir());
             buf.push(format!("{}.svg", self.id));
             grapher.create_dynasty_graph(self, &buf);
-        }
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        for leader in self.leaders.iter() {
-            stack.push((leader.clone().into(), depth));
-        }
-        if let Some(parent) = &self.parent {
-            stack.push((parent.clone().into(), depth));
         }
     }
 }

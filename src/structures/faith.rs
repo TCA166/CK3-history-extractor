@@ -1,25 +1,24 @@
-use std::path::Path;
+use std::{cell::Ref, path::Path};
 
 use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{RefOrRaw, Wrapper},
+        types::Wrapper,
     },
-    serialize_ref, Character, DummyInit, GameObjectDerived, Shared, Title,
+    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Title,
 };
 
 /// A struct representing a faith in the game
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Faith {
     id: GameId,
     name: Option<GameString>,
     tenets: Vec<GameString>,
-    #[serde(serialize_with = "serialize_ref")]
     head: Option<Shared<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
@@ -73,6 +72,12 @@ impl GameObjectDerived for Faith {
     fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        if let Some(head) = &self.head {
+            collection.extend([E::from(head.clone().into())]);
+        }
+    }
 }
 
 impl Renderable for Faith {
@@ -97,7 +102,7 @@ impl Renderable for Faith {
             grapher.create_faith_graph(self.id, &buf);
         }
         if let Some(map) = data.get_map() {
-            let filter = |title: &RefOrRaw<Title>| {
+            let filter = |title: Ref<Title>| {
                 let key = title.get_key();
                 if key.is_none() {
                     return false;
@@ -117,12 +122,6 @@ impl Renderable for Faith {
                 faith_map.draw_text(format!("Map of the {} faith", &self.name.as_ref().unwrap()));
                 faith_map.save(&buf);
             }
-        }
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        if let Some(head) = &self.head {
-            stack.push((head.clone().into(), depth));
         }
     }
 }

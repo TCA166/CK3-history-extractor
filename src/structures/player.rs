@@ -8,13 +8,13 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, RenderableType},
+        display::{Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
-    Character, FromGameObject, GameObjectDerived, LineageNode, Shared,
+    Character, FromGameObject, GameObjectDerived, GameObjectDerivedType, LineageNode, Shared,
 };
 
 use std::{
@@ -28,7 +28,7 @@ const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
 const BASE_COLOR: [u8; 3] = [255, 255, 255];
 
 /// A struct representing a player in the game
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Player {
     pub name: GameString,
     pub id: GameId,
@@ -71,6 +71,13 @@ impl GameObjectDerived for Player {
     fn get_name(&self) -> GameString {
         self.name.clone()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
+        for node in self.lineage.iter() {
+            collection.extend([E::from(node.get_character().clone().into())]);
+        }
+    }
 }
 
 impl Renderable for Player {
@@ -84,12 +91,6 @@ impl Renderable for Player {
 
     fn get_template() -> &'static str {
         H_TEMPLATE_NAME
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        for char in self.lineage.iter() {
-            stack.push((char.get_character().into(), depth + 1));
-        }
     }
 
     fn render(

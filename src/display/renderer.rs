@@ -1,22 +1,27 @@
 use std::{
+    cell::Ref,
+    collections::VecDeque,
     fs,
+    ops::Deref,
     path::{Path, PathBuf},
     thread,
 };
 
-use minijinja::{Environment, Value};
+use derive_more::From;
+use minijinja::Environment;
 
 use serde::Serialize;
 
 use super::{
     super::{
         game_data::GameData,
-        parser::{GameId, GameState},
-        structures::{Character, Culture, Dynasty, Faith, GameObjectDerived, Title},
-        types::{HashMap, HashSet, RefOrRaw, Wrapper},
+        parser::GameState,
+        structures::{
+            Character, Culture, Dynasty, Faith, GameObjectDerived, GameObjectDerivedType, Title,
+        },
+        types::{HashMap, Shared, Wrapper},
     },
     graph::Grapher,
-    RenderableType,
 };
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
@@ -29,15 +34,36 @@ fn create_dir_maybe<P: AsRef<Path>>(name: P) {
     }
 }
 
+#[derive(From)]
+enum RenderableType {
+    Character(Shared<Character>),
+    Dynasty(Shared<Dynasty>),
+    Title(Shared<Title>),
+    Faith(Shared<Faith>),
+    Culture(Shared<Culture>),
+}
+
+impl TryFrom<&GameObjectDerivedType> for RenderableType {
+    type Error = ();
+
+    fn try_from(value: &GameObjectDerivedType) -> Result<Self, Self::Error> {
+        match value {
+            GameObjectDerivedType::Character(c) => Ok(c.clone().into()),
+            GameObjectDerivedType::Dynasty(d) => Ok(d.clone().into()),
+            GameObjectDerivedType::Title(t) => Ok(t.clone().into()),
+            GameObjectDerivedType::Faith(f) => Ok(f.clone().into()),
+            GameObjectDerivedType::Culture(c) => Ok(c.clone().into()),
+            _ => Err(()),
+        }
+    }
+}
+
 /// A struct that renders objects into html pages.
 /// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
 /// Additionally holds references to the GameMap and [Grapher] objects, should they exist of course.
 /// It is meant to be used as a worker object that renders objects into html pages.
 pub struct Renderer<'a> {
-    /// The [minijinja] environment object that is used to render the templates.
-    env: &'a Environment<'a>,
-    /// A hashmap that tracks which objects have been rendered.
-    rendered: HashMap<&'static str, HashSet<GameId>>,
+    depth_map: HashMap<GameObjectDerivedType, usize>,
     /// The path where the objects will be rendered to.
     /// This usually takes the form of './{username}'s history/'.
     path: &'a Path,
@@ -68,7 +94,6 @@ impl<'a> Renderer<'a> {
     ///
     /// A new Renderer object.
     pub fn new(
-        env: &'a Environment<'a>,
         path: &'a Path,
         state: &'a GameState,
         data: &'a GameData,
@@ -82,8 +107,7 @@ impl<'a> Renderer<'a> {
         create_dir_maybe(path.join(Faith::get_subdir()));
         create_dir_maybe(path.join(Culture::get_subdir()));
         Renderer {
-            env,
-            rendered: HashMap::default(),
+            depth_map: HashMap::default(),
             path,
             data,
             grapher,
@@ -93,54 +117,64 @@ impl<'a> Renderer<'a> {
     }
 
     /// Renders the object and returns true if it was actually rendered.
-    /// If the object is already rendered or is not ok to be rendered, then it returns false.
-    /// If the object was rendered it calls the [Renderable::render] method on the object and [Renderable::append_ref] on the object.
-    fn render<T: Renderable>(
-        &mut self,
-        obj: RefOrRaw<T>,
-        depth: usize,
-        stack: &mut Vec<(RenderableType, usize)>,
-    ) -> bool {
-        //if it is rendered then return
-        let rendered = self
-            .rendered
-            .entry(T::get_subdir())
-            .or_insert(HashSet::default());
-        if rendered.contains(&obj.get_id()) || depth <= 0 {
-            return false;
-        } else {
-            rendered.insert(obj.get_id());
-        }
+    /// If the object was rendered it calls the [Renderable::render] method on the object.
+    fn render<T: Renderable>(&self, obj: Ref<T>, env: &Environment<'_>) {
         //render the object
-        eprintln!("Serializing: {} {}", obj.get_id(), T::get_template());
-        let ctx = Value::from_serialize(&obj);
-        let template = self.env.get_template(T::get_template()).unwrap();
-        let contents = template.render(ctx).unwrap();
+        let template = env.get_template(T::get_template()).unwrap();
         let path = obj.get_path(self.path);
+        obj.render(&self.path, &self.state, self.grapher, self.data);
+        // FIXME add depth data during serialization
+        let contents = template.render(obj.deref()).unwrap();
         thread::spawn(move || {
             //IO heavy, so spawn a thread
             fs::write(path, contents).unwrap();
         });
-        obj.render(&self.path, &self.state, self.grapher, self.data);
-        obj.append_ref(stack, depth - 1);
-        return true;
     }
 
     /// Renders a renderable enum object.
     /// Calls [Renderer::render] on the object if it is not already rendered.
-    fn render_enum(
-        &mut self,
-        obj: &RenderableType,
-        depth: usize,
-        stack: &mut Vec<(RenderableType, usize)>,
-    ) -> bool {
+    fn render_enum(&self, obj: &RenderableType, env: &Environment<'_>) {
         match obj {
-            RenderableType::Character(obj) => self.render(obj.get_internal(), depth, stack),
-            RenderableType::Dynasty(obj) => self.render(obj.get_internal(), depth, stack),
-            RenderableType::Title(obj) => self.render(obj.get_internal(), depth, stack),
-            RenderableType::Faith(obj) => self.render(obj.get_internal(), depth, stack),
-            RenderableType::Culture(obj) => self.render(obj.get_internal(), depth, stack),
+            RenderableType::Character(obj) => self.render(obj.get_internal(), env),
+            RenderableType::Dynasty(obj) => self.render(obj.get_internal(), env),
+            RenderableType::Title(obj) => self.render(obj.get_internal(), env),
+            RenderableType::Faith(obj) => self.render(obj.get_internal(), env),
+            RenderableType::Culture(obj) => self.render(obj.get_internal(), env),
         }
+    }
+
+    pub fn add_object<G: GameObjectDerived>(&mut self, obj: &G) -> usize {
+        // BFS with depth https://stackoverflow.com/a/31248992/12520385
+        let mut queue: VecDeque<Option<GameObjectDerivedType>> = VecDeque::new();
+        obj.get_references(&mut queue);
+        let mut res = queue.len();
+        queue.push_back(None);
+        // algorithm determined depth
+        let mut alg_depth = self.initial_depth;
+        while let Some(obj) = queue.pop_front() {
+            res += 1;
+            if let Some(obj) = obj {
+                if let Some(stored_depth) = self.depth_map.get_mut(&obj) {
+                    if alg_depth > *stored_depth {
+                        *stored_depth = alg_depth;
+                        obj.get_references(&mut queue);
+                    }
+                } else {
+                    obj.get_references(&mut queue);
+                    self.depth_map.insert(obj, alg_depth);
+                }
+            } else {
+                alg_depth -= 1;
+                if alg_depth == 0 {
+                    break;
+                }
+                queue.push_back(None);
+                if queue.front().unwrap().is_none() {
+                    break;
+                }
+            }
+        }
+        return res;
     }
 
     /// Renders all the objects that are related to the given object.
@@ -172,19 +206,13 @@ impl<'a> Renderer<'a> {
     /// # Returns
     ///
     /// The number of objects that were rendered.
-    pub fn render_all<T: Renderable>(&mut self, obj: &T) -> u64 {
-        let mut stack: Vec<(RenderableType, usize)> = Vec::new();
-        if !self.render(RefOrRaw::Raw(obj), self.initial_depth, &mut stack) {
-            return 0;
-        }
-        let mut counter = 1;
-        while let Some((obj, depth)) = stack.pop() {
-            if self.render_enum(&obj, depth, &mut stack) {
-                counter += 1;
+    pub fn render_all(self, env: &mut Environment<'_>) -> usize {
+        for obj in self.depth_map.keys() {
+            if let Ok(obj) = obj.try_into() {
+                self.render_enum(&obj, env);
             }
         }
-        // TODO store which objects were rendered, pass it to the environment
-        return counter;
+        return self.depth_map.len();
     }
 }
 
@@ -244,10 +272,4 @@ pub trait Renderable: Serialize + GameObjectDerived {
         data: &GameData,
     ) {
     }
-
-    /// Appends all the related objects to the stack.
-    /// This is used to ensure that all the related objects are rendered.
-    /// If you have a reference to another object that should be rendered, then you should append it to the stack.
-    /// Failure to do so will result in broken links in the rendered html pages.
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize);
 }

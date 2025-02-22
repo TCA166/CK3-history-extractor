@@ -1,5 +1,5 @@
 use jomini::common::Date;
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
@@ -9,11 +9,11 @@ use super::{
         },
         types::Wrapper,
     },
-    Character, FromGameObject, GameId, GameObjectDerived, Shared,
+    Character, FromGameObject, GameId, GameObjectDerived, GameObjectDerivedType, Shared,
 };
 
 /// A struct representing a lineage node in the game
-#[derive(Serialize)]
+#[derive(Debug)]
 pub struct LineageNode {
     character: Option<Shared<Character>>,
     date: Option<Date>,
@@ -92,6 +92,10 @@ impl GameObjectDerived for LineageNode {
     fn get_name(&self) -> GameString {
         self.character.as_ref().unwrap().get_internal().get_name()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
+    }
 }
 
 impl Localizable for LineageNode {
@@ -116,5 +120,24 @@ impl Localizable for LineageNode {
             *perk = localization.localize(perk_key)?;
         }
         Ok(())
+    }
+}
+
+impl Serialize for LineageNode {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("LineageNode", 8)?;
+        state.serialize_field(
+            "character",
+            &*self.character.as_ref().unwrap().get_internal(),
+        )?;
+        state.serialize_field("date", &self.date)?;
+        state.serialize_field("score", &self.score)?;
+        state.serialize_field("prestige", &self.prestige)?;
+        state.serialize_field("piety", &self.piety)?;
+        state.serialize_field("dread", &self.dread)?;
+        state.serialize_field("lifestyle", &self.lifestyle)?;
+        state.serialize_field("perks", &self.perks)?;
+        state.serialize_field("id", &self.id)?;
+        state.end()
     }
 }

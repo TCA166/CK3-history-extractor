@@ -1,11 +1,11 @@
 {% extends "base" %}
 
 {% block title %}
-{{tier}} {% if tier|length != 0 %} of {%endif%} {{name}}
+{% if tier is not none %}{{tier}} of {%endif%} {{name}}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{{tier}} {% if tier|length != 0 %} of {%endif%} {{name}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{% if tier is not none %}{{tier}} of {%endif%} {{name}}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 

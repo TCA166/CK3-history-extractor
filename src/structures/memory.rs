@@ -1,34 +1,20 @@
 use jomini::common::Date;
-use serde::{ser::SerializeSeq, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
-        display::RenderableType,
         game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
     },
-    Character, DerivedRef, DummyInit, GameObjectDerived, Shared,
+    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Wrapper,
 };
 
-fn serialize_participants<S: serde::Serializer>(
-    val: &Vec<(String, Shared<Character>)>,
-    s: S,
-) -> Result<S::Ok, S::Error> {
-    let mut seq = s.serialize_seq(Some(val.len()))?;
-    for (name, character) in val {
-        let character = DerivedRef::from(character.clone());
-        seq.serialize_element(&(name, character))?;
-    }
-    seq.end()
-}
-
 /// A struct representing a memory in the game
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Memory {
     id: GameId,
     date: Option<Date>,
     r#type: Option<GameString>,
-    #[serde(serialize_with = "serialize_participants")]
     participants: Vec<(String, Shared<Character>)>,
 }
 
@@ -71,6 +57,12 @@ impl GameObjectDerived for Memory {
     fn get_name(&self) -> GameString {
         self.r#type.as_ref().unwrap().clone()
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        for part in self.participants.iter() {
+            collection.extend([E::from(part.1.clone().into())]);
+        }
+    }
 }
 
 impl Localizable for Memory {
@@ -89,10 +81,8 @@ impl Localizable for Memory {
     }
 }
 
-impl Memory {
-    pub fn add_participants(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        for part in self.participants.iter() {
-            stack.push((part.1.clone().into(), depth));
-        }
+impl Serialize for Shared<Memory> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.get_internal().serialize(serializer)
     }
 }

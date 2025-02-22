@@ -1,9 +1,9 @@
 use jomini::common::Date;
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
-        display::{Renderable, RenderableType, TreeNode},
+        display::{Renderable, TreeNode},
         game_data::{Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{
@@ -11,23 +11,25 @@ use super::{
         },
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    derived_ref::into_ref_array,
-    Artifact, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, Memory,
-    Shared, Title,
+    Artifact, Culture, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, GameObjectDerivedType,
+    Memory, Shared, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
 /// Effectively either a vassal([Character]) or a vassal([DerivedRef]) contract.
 /// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
+#[derive(Serialize, Debug)]
+#[serde(untagged)]
 enum Vassal {
     Character(Shared<Character>),
-    Reference(Shared<DerivedRef<Character>>),
+    Reference(Shared<Option<Shared<Character>>>),
 }
 
 // MAYBE enum for dead and alive character?
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
+#[derive(Serialize, Debug)]
 pub struct Character {
     id: GameId,
     name: Option<GameString>,
@@ -36,7 +38,9 @@ pub struct Character {
     dead: bool,
     date: Option<Date>,
     reason: Option<GameString>,
+    #[serde(default = "Character::get_faith")]
     faith: Option<Shared<Faith>>,
+    #[serde(default = "Character::get_culture")]
     culture: Option<Shared<Culture>>,
     house: Option<Shared<Dynasty>>,
     skills: Vec<i8>,
@@ -56,7 +60,7 @@ pub struct Character {
     kills: Vec<Shared<Character>>,
     languages: Vec<GameString>,
     vassals: Vec<Vassal>,
-    liege: Option<DerivedRef<Character>>,
+    liege: Option<Shared<Character>>,
     female: bool,
     artifacts: Vec<Shared<Artifact>>,
 }
@@ -167,7 +171,8 @@ impl Character {
                 Vassal::Reference(c) => provinces.append(
                     &mut c
                         .get_internal()
-                        .get_ref()
+                        .as_ref()
+                        .unwrap()
                         .get_internal()
                         .get_barony_keys(de_jure),
                 ),
@@ -268,7 +273,7 @@ impl DummyInit for Character {
                     if let Ok(mut o) = liege_chr.try_get_internal_mut() {
                         o.add_vassal(game_state.get_character(&self.id));
                     }
-                    self.liege = Some(DerivedRef::<Character>::from(liege_chr.clone()));
+                    self.liege = Some(liege_chr.clone());
                 }
             }
         }
@@ -443,6 +448,53 @@ impl GameObjectDerived for Character {
             return GameString::from("Unknown".to_string());
         }
     }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        if let Some(faith) = &self.faith {
+            collection.extend([E::from(faith.clone().into())]);
+        }
+        if let Some(culture) = &self.culture {
+            collection.extend([E::from(culture.clone().into())]);
+        }
+        if let Some(house) = &self.house {
+            collection.extend([E::from(house.clone().into())]);
+        }
+        if let Some(liege) = &self.liege {
+            collection.extend([E::from(liege.clone().into())]);
+        }
+        for s in self.spouses.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for s in self.former.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for s in self.children.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for s in self.parents.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for s in self.kills.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for s in self.vassals.iter() {
+            match s {
+                Vassal::Character(c) => collection.extend([E::from(c.clone().into())]),
+                Vassal::Reference(c) => {
+                    collection.extend([E::from(c.get_internal().as_ref().unwrap().clone().into())])
+                }
+            }
+        }
+        for s in self.titles.iter() {
+            collection.extend([E::from(s.clone().into())]);
+        }
+        for m in self.memories.iter() {
+            collection.extend([E::from(m.clone().into())]);
+        }
+        for a in self.artifacts.iter() {
+            collection.extend([E::from(a.clone().into())]);
+        }
+    }
 }
 
 impl TreeNode for Character {
@@ -469,84 +521,6 @@ impl TreeNode for Character {
     }
 }
 
-impl Serialize for Character {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("Character", 29)?;
-        state.serialize_field("name", &self.get_name())?;
-        state.serialize_field("nick", &self.nick)?;
-        state.serialize_field("birth", &self.birth)?;
-        state.serialize_field("dead", &self.dead)?;
-        state.serialize_field("date", &self.date)?;
-        state.serialize_field("reason", &self.reason)?;
-        eprintln!("test");
-        let faith = self.get_faith();
-        let culture = self.get_culture();
-        eprintln!("test2");
-        if let Some(house) = &self.house {
-            let rd = DerivedRef::from(house.clone());
-            state.serialize_field("house", &rd)?;
-        }
-        if let Some(faith) = faith {
-            let rf = DerivedRef::<Faith>::from(faith.clone());
-            state.serialize_field("faith", &rf)?;
-        }
-        if let Some(culture) = culture {
-            let rc = DerivedRef::<Culture>::from(culture.clone());
-            state.serialize_field("culture", &rc)?;
-        }
-        state.serialize_field("skills", &self.skills)?;
-        state.serialize_field("traits", &self.traits)?;
-        //serialize spouses as DerivedRef
-        let spouses = into_ref_array::<Character>(&self.spouses);
-        state.serialize_field("spouses", &spouses)?;
-        //serialize former as DerivedRef
-        let former = into_ref_array::<Character>(&self.former);
-        state.serialize_field("former", &former)?;
-        //serialize children as DerivedRef
-        let children = into_ref_array::<Character>(&self.children);
-        state.serialize_field("children", &children)?;
-        //serialize parents as DerivedRef
-        let parents = into_ref_array::<Character>(&self.parents);
-        state.serialize_field("parents", &parents)?;
-        state.serialize_field("dna", &self.dna)?;
-        //serialize memories as DerivedRef
-        state.serialize_field("memories", &self.memories)?;
-        //serialize titles as DerivedRef
-        let titles = into_ref_array::<Title>(&self.titles);
-        state.serialize_field("titles", &titles)?;
-        state.serialize_field("gold", &self.gold)?;
-        state.serialize_field("piety", &self.piety)?;
-        state.serialize_field("prestige", &self.prestige)?;
-        state.serialize_field("dread", &self.dread)?;
-        state.serialize_field("strength", &self.strength)?;
-        //serialize kills as DerivedRef
-        let kills = into_ref_array::<Character>(&self.kills);
-        state.serialize_field("kills", &kills)?;
-        state.serialize_field("languages", &self.languages)?;
-        let mut vassals = Vec::new();
-        for vassal in self.vassals.iter() {
-            match vassal {
-                Vassal::Character(c) => {
-                    vassals.push(DerivedRef::from(c.clone()));
-                }
-                Vassal::Reference(c) => {
-                    vassals.push(DerivedRef::from(c.get_internal().get_ref().clone()))
-                }
-            }
-        }
-        state.serialize_field("artifacts", &self.artifacts)?;
-        state.serialize_field("vassals", &vassals)?;
-        state.serialize_field("id", &self.id)?;
-        if let Some(liege) = &self.liege {
-            state.serialize_field("liege", liege)?;
-        }
-        state.end()
-    }
-}
-
 impl Renderable for Character {
     fn get_template() -> &'static str {
         C_TEMPLATE_NAME
@@ -554,53 +528,6 @@ impl Renderable for Character {
 
     fn get_subdir() -> &'static str {
         "characters"
-    }
-
-    fn append_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        if let Some(faith) = &self.faith {
-            stack.push((faith.clone().into(), depth));
-        }
-        if let Some(culture) = &self.culture {
-            stack.push((culture.clone().into(), depth));
-        }
-        if let Some(house) = &self.house {
-            stack.push((house.clone().into(), depth));
-        }
-        if let Some(liege) = &self.liege {
-            stack.push((liege.get_ref().clone().into(), depth));
-        }
-        for s in self.spouses.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for s in self.former.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for s in self.children.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for s in self.parents.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for s in self.kills.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for s in self.vassals.iter() {
-            match s {
-                Vassal::Character(c) => stack.push((c.clone().into(), depth)),
-                Vassal::Reference(c) => {
-                    stack.push((c.get_internal().get_ref().clone().into(), depth))
-                }
-            }
-        }
-        for s in self.titles.iter() {
-            stack.push((s.clone().into(), depth));
-        }
-        for m in self.memories.iter() {
-            m.get_internal().add_participants(stack, depth);
-        }
-        for a in self.artifacts.iter() {
-            a.get_internal().add_ref(stack, depth - 1);
-        }
     }
 }
 

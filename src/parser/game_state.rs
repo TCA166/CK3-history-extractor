@@ -1,14 +1,14 @@
-use std::collections::HashMap;
+use std::{cell::Ref, collections::HashMap};
 
 use super::{
     super::{
         display::{Grapher, RealmDifference, Timeline},
         game_data::{Localizable, LocalizationError, Localize},
         structures::{
-            Artifact, Character, Culture, DerivedRef, DummyInit, Dynasty, Faith, GameObjectDerived,
-            Memory, Title,
+            Artifact, Character, Culture, DummyInit, Dynasty, Faith, GameObjectDerived, Memory,
+            Title,
         },
-        types::{RefOrRaw, Shared, Wrapper, WrapperMut},
+        types::{Shared, Wrapper, WrapperMut},
     },
     game_object::{GameId, GameObjectMap, GameString},
     ParsingError,
@@ -29,6 +29,18 @@ fn get_or_insert_dummy<T: DummyInit>(
         let v = Shared::wrap(T::dummy(*key));
         map.insert(*key, v.clone());
         v
+    }
+}
+
+impl Serialize for Shared<Option<Shared<Character>>> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self.get_internal().as_ref() {
+            Some(c) => c.serialize(serializer),
+            None => serializer.serialize_none(),
+        }
     }
 }
 
@@ -55,7 +67,7 @@ pub struct GameState {
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
-    contract_transform: HashMap<GameId, Shared<DerivedRef<Character>>>,
+    contract_transform: HashMap<GameId, Shared<Option<Shared<Character>>>>,
     /// The current date from the meta section
     current_date: Option<Date>,
     /// The time Y.M.D from which the game started
@@ -108,25 +120,24 @@ impl GameState {
     }
 
     /// Gets the vassal associated with the contract with the given id
-    pub fn get_vassal(&mut self, contract_id: &GameId) -> Shared<DerivedRef<Character>> {
-        if !self.contract_transform.contains_key(contract_id) {
-            let v = Shared::wrap(DerivedRef::dummy());
-            self.contract_transform.insert(*contract_id, v.clone());
-            v
+    pub fn get_vassal(&mut self, contract_id: &GameId) -> Shared<Option<Shared<Character>>> {
+        if let Some(v) = self.contract_transform.get(contract_id) {
+            return v.clone();
         } else {
-            self.contract_transform.get(contract_id).unwrap().clone()
+            let v = Shared::wrap(None);
+            self.contract_transform.insert(*contract_id, v.clone());
+            return v;
         }
     }
 
     /// Adds a new vassal contract
     pub fn add_contract(&mut self, contract_id: &GameId, character_id: &GameId) {
         let char = self.get_character(character_id);
-        if self.contract_transform.contains_key(contract_id) {
-            let entry = self.contract_transform.get(contract_id).unwrap();
-            entry.get_internal_mut().init(char);
+        if let Some(contract) = self.contract_transform.get_mut(contract_id) {
+            contract.get_internal_mut().replace(char);
         } else {
-            let r = Shared::wrap(DerivedRef::from(char));
-            self.contract_transform.insert(*contract_id, r);
+            self.contract_transform
+                .insert(*contract_id, Shared::wrap(Some(char)));
         }
     }
 
@@ -216,15 +227,14 @@ impl GameState {
             .init(value, self)
     }
 
-    pub fn get_baronies_of_counties<F: Fn(&RefOrRaw<Title>) -> bool>(
+    pub fn get_baronies_of_counties<F: Fn(Ref<Title>) -> bool>(
         &self,
         filter: F,
     ) -> Vec<GameString> {
         let mut res = Vec::new();
         for title in self.titles.values() {
-            let title = title.get_internal();
-            if filter(&title) {
-                res.append(&mut title.get_barony_keys());
+            if filter(title.get_internal()) {
+                res.append(&mut title.get_internal().get_barony_keys());
             }
         }
         res

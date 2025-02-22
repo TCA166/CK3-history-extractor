@@ -9,7 +9,3 @@ pub use graph::{Grapher, TreeNode};
 /// A submodule handling the rendering of the timeline page
 mod timeline;
 pub use timeline::{RealmDifference, Timeline};
-
-/// A submodule that provides the [RenderableType] enum.
-mod renderable_type;
-pub use renderable_type::RenderableType;

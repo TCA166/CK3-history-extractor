@@ -1,43 +1,16 @@
 use jomini::common::Date;
-use serde::{ser::SerializeSeq, Serialize, Serializer};
+use serde::{Serialize, Serializer};
 
 use super::{
     super::{
-        display::RenderableType,
         game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Shared,
     },
-    serialize_ref, Character, DerivedRef, DummyInit, GameObjectDerived,
+    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Wrapper,
 };
 
-fn serialize_history<S: Serializer>(
-    val: &Vec<(
-        GameString,
-        Date,
-        Option<Shared<Character>>,
-        Option<Shared<Character>>,
-    )>,
-    s: S,
-) -> Result<S::Ok, S::Error> {
-    let mut seq = s.serialize_seq(Some(val.len()))?;
-    for (r#type, date, actor, recipient) in val {
-        let actor = if let Some(actor) = actor {
-            Some(DerivedRef::from(actor.clone()))
-        } else {
-            None
-        };
-        let recipient = if let Some(recipient) = recipient {
-            Some(DerivedRef::from(recipient.clone()))
-        } else {
-            None
-        };
-        seq.serialize_element(&(r#type, date, actor, recipient))?;
-    }
-    seq.end()
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Artifact {
     id: GameId,
     name: Option<GameString>,
@@ -46,9 +19,7 @@ pub struct Artifact {
     rarity: Option<GameString>,
     quality: u32,
     wealth: u32,
-    #[serde(serialize_with = "serialize_ref")]
     owner: Option<Shared<Character>>,
-    #[serde(serialize_with = "serialize_history")]
     history: Vec<(
         GameString,
         Date,
@@ -64,6 +35,17 @@ impl GameObjectDerived for Artifact {
 
     fn get_name(&self) -> GameString {
         self.name.as_ref().unwrap().clone()
+    }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        for h in self.history.iter() {
+            if let Some(actor) = &h.2 {
+                collection.extend([E::from(actor.clone().into())]);
+            }
+            if let Some(recipient) = &h.3 {
+                collection.extend([E::from(recipient.clone().into())]);
+            }
+        }
     }
 }
 
@@ -188,20 +170,6 @@ impl Localizable for Artifact {
     }
 }
 
-impl Artifact {
-    /// Render the characters in the history of the artifact
-    pub fn add_ref(&self, stack: &mut Vec<(RenderableType, usize)>, depth: usize) {
-        for h in self.history.iter() {
-            if let Some(actor) = &h.2 {
-                stack.push((actor.clone().into(), depth));
-            }
-            if let Some(recipient) = &h.3 {
-                stack.push((recipient.clone().into(), depth));
-            }
-        }
-    }
-}
-
 // Comparing implementations so that we can sort artifacts by quality and wealth
 
 impl PartialEq for Artifact {
@@ -223,5 +191,14 @@ impl Eq for Artifact {}
 impl Ord for Artifact {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl Serialize for Shared<Artifact> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.get_internal().serialize(serializer)
     }
 }

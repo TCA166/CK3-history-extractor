@@ -1,54 +1,11 @@
 use std::{
     cell::{BorrowMutError, Ref, RefCell, RefMut},
-    ops::Deref,
     rc::Rc,
 };
-
-use super::structures::GameObjectDerived;
-
-use serde::Serialize;
 
 // Opaque type aliases for the standard library types.
 /// A type alias for a hash map.
 pub type HashMap<K, V> = std::collections::HashMap<K, V>;
-/// A type alias for a hash set.
-pub type HashSet<T> = std::collections::HashSet<T>;
-
-/// A reference or a raw value. I have no clue why this isn't a standard library type.
-/// A [Ref] and a raw reference are both dereferencable to the same type.
-pub enum RefOrRaw<'a, T: 'a> {
-    Ref(Ref<'a, T>),
-    Raw(&'a T),
-}
-
-impl<T: GameObjectDerived> PartialEq for RefOrRaw<'_, T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.get_id() == other.get_id()
-    }
-}
-
-impl<'a, T> Deref for RefOrRaw<'a, T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            RefOrRaw::Ref(r) => r.deref(),
-            RefOrRaw::Raw(r) => r,
-        }
-    }
-}
-
-impl<'a, T: Serialize> Serialize for RefOrRaw<'a, T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            RefOrRaw::Ref(r) => r.deref().serialize(serializer),
-            RefOrRaw::Raw(r) => r.serialize(serializer),
-        }
-    }
-}
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
@@ -59,7 +16,7 @@ pub trait Wrapper<T> {
     fn wrap(t: T) -> Self;
 
     /// Get the internal value as a reference or a raw value
-    fn get_internal(&self) -> RefOrRaw<T>;
+    fn get_internal(&self) -> Ref<T>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
@@ -83,8 +40,14 @@ pub trait WrapperMut<T> {
 /// let value:Ref<String> = obj.get_internal();
 /// ```
 #[derive(Debug)]
-pub struct Shared<T> {
+pub struct Shared<T: ?Sized> {
     inner: Rc<RefCell<T>>,
+}
+
+impl<T> From<T> for Shared<T> {
+    fn from(value: T) -> Self {
+        Self::wrap(value)
+    }
 }
 
 impl<T> Wrapper<T> for Shared<T> {
@@ -94,8 +57,8 @@ impl<T> Wrapper<T> for Shared<T> {
         }
     }
 
-    fn get_internal(&self) -> RefOrRaw<T> {
-        RefOrRaw::Ref(self.inner.borrow())
+    fn get_internal(&self) -> Ref<T> {
+        self.inner.borrow()
     }
 }
 
@@ -114,15 +77,6 @@ impl<T> Clone for Shared<T> {
         Shared {
             inner: self.inner.clone(),
         }
-    }
-}
-
-impl<T: GameObjectDerived + Serialize> Serialize for Shared<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.get_internal().serialize(serializer)
     }
 }
 
