@@ -33,7 +33,7 @@
             </div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">Religion Head:
-                {%if head is defined%}
+                {%if head is not none%}
                 {{head|render_ref}}
                 {%else%}
                 None

@@ -12,16 +12,16 @@
 {% block main %}
 <div class="row">
     <div class="col w-50">
-        {%if capital is defined and capital.id != id%}
+        {%if capital is not none and capital.id != id%}
         Capital: {{capital|render_ref}}
         <br>
         {%endif%}
-        {%if de_jure is defined%}
+        {%if de_jure is not none%}
         De jure title liege: 
         {{de_jure|render_ref}}
         <br>
         {%endif%}
-        {%if de_facto is defined and de_facto != de_jure%}
+        {%if de_facto is not none and de_facto != de_jure%}
         De facto title liege:
         {{de_facto|render_ref}}
         <br>
@@ -50,11 +50,11 @@
             {%endfor%}
         </ul>
         {%endif%}
-        {%if faith is defined %}
+        {%if faith is not none %}
         Faith: {{faith|render_ref}}
         <br>
         {%endif%}
-        {%if culture is defined %}
+        {%if culture is not none %}
         Culture: {{culture|render_ref}}
         <br>
         {%endif%}

@@ -8,14 +8,14 @@ use std::{
 };
 
 use derive_more::From;
-use minijinja::Environment;
+use minijinja::{Environment, Value};
 
 use serde::Serialize;
 
 use super::{
     super::{
         game_data::GameData,
-        parser::GameState,
+        parser::{GameId, GameState, GameString},
         structures::{
             Character, Culture, Dynasty, Faith, GameObjectDerived, GameObjectDerivedType, Title,
         },
@@ -43,6 +43,37 @@ enum RenderableType {
     Culture(Shared<Culture>),
 }
 
+impl GameObjectDerived for RenderableType {
+    fn get_id(&self) -> GameId {
+        match self {
+            RenderableType::Character(c) => c.get_internal().get_id(),
+            RenderableType::Dynasty(d) => d.get_internal().get_id(),
+            RenderableType::Title(t) => t.get_internal().get_id(),
+            RenderableType::Faith(f) => f.get_internal().get_id(),
+            RenderableType::Culture(c) => c.get_internal().get_id(),
+        }
+    }
+    fn get_name(&self) -> Option<GameString> {
+        match self {
+            RenderableType::Character(c) => c.get_internal().get_name(),
+            RenderableType::Dynasty(d) => d.get_internal().get_name(),
+            RenderableType::Title(t) => t.get_internal().get_name(),
+            RenderableType::Faith(f) => f.get_internal().get_name(),
+            RenderableType::Culture(c) => c.get_internal().get_name(),
+        }
+    }
+
+    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+        match self {
+            RenderableType::Character(c) => c.get_internal().get_references(collection),
+            RenderableType::Dynasty(d) => d.get_internal().get_references(collection),
+            RenderableType::Title(t) => t.get_internal().get_references(collection),
+            RenderableType::Faith(f) => f.get_internal().get_references(collection),
+            RenderableType::Culture(c) => c.get_internal().get_references(collection),
+        }
+    }
+}
+
 impl TryFrom<&GameObjectDerivedType> for RenderableType {
     type Error = ();
 
@@ -54,6 +85,18 @@ impl TryFrom<&GameObjectDerivedType> for RenderableType {
             GameObjectDerivedType::Faith(f) => Ok(f.clone().into()),
             GameObjectDerivedType::Culture(c) => Ok(c.clone().into()),
             _ => Err(()),
+        }
+    }
+}
+
+impl RenderableType {
+    pub fn get_subdir(&self) -> &'static str {
+        match self {
+            RenderableType::Character(_) => Character::get_subdir(),
+            RenderableType::Dynasty(_) => Dynasty::get_subdir(),
+            RenderableType::Title(_) => Title::get_subdir(),
+            RenderableType::Faith(_) => Faith::get_subdir(),
+            RenderableType::Culture(_) => Culture::get_subdir(),
         }
     }
 }
@@ -186,12 +229,22 @@ impl<'a> Renderer<'a> {
     ///
     /// The number of objects that were rendered.
     pub fn render_all(self, env: &mut Environment<'_>) -> usize {
-        // FIXME add depth data to the env as a global
+        let mut global_depth_map = HashMap::default();
+        for (obj, value) in self.depth_map.iter() {
+            if let Ok(obj) = RenderableType::try_from(obj) {
+                global_depth_map
+                    .entry(obj.get_subdir())
+                    .or_insert(HashMap::default())
+                    .insert(obj.get_id(), *value);
+            }
+        }
+        env.add_global("depth_map", Value::from_serialize(global_depth_map));
         for obj in self.depth_map.keys() {
             if let Ok(obj) = obj.try_into() {
                 self.render_enum(&obj, env);
             }
         }
+        env.remove_global("depth_map");
         return self.depth_map.len();
     }
 }

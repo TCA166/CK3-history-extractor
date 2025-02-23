@@ -12,7 +12,7 @@
 {% block main %}
 <div class="row w-100">
     <div class="col w-50">
-        {%if ethos is defined%}
+        {%if ethos is not none%}
         Nature: {{ethos}}
         <br />
         {%endif%}
@@ -22,7 +22,7 @@
         <br />
         Martial Customs: {{martial}}
         <br />
-        {%if date != none and date != '0001-01-01'%}
+        {%if date is not none and date != '0001-01-01'%}
         Culture Creation Date: {{date}}
         <br />
         {%endif%}

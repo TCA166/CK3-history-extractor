@@ -59,7 +59,7 @@ pub trait GameObjectDerived {
 
     /// Get the name of the object.
     /// The result of this method depends on the type.
-    fn get_name(&self) -> GameString;
+    fn get_name(&self) -> Option<GameString>;
 
     /// Get the unique identifier of the object.
     /// This is a tuple of the id and the type name. Since id is unique within a section, and each [GameObjectDerived] type should have an associated section, this tuple is unique.
@@ -104,7 +104,7 @@ impl GameObjectDerived for GameObjectDerivedType {
         }
     }
 
-    fn get_name(&self) -> GameString {
+    fn get_name(&self) -> Option<GameString> {
         match self {
             GameObjectDerivedType::Character(c) => c.get_internal().get_name(),
             GameObjectDerivedType::Culture(c) => c.get_internal().get_name(),

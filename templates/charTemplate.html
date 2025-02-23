@@ -3,11 +3,11 @@
 <!--TODO common phrase localization-->
 
 {% block title %}
-{{name}} {{nick if nick is defined}}
+{{name}} {%if nick is not none%}{{nick}}{%endif%}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{{name}} {{nick if nick is defined}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{{name}} {%if nick is not none%}{{nick}}{%endif%}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 
@@ -20,14 +20,14 @@
             Date of death: {{date}}<br />
             Reason of death: {%if reason != none%}{{reason}}{%else%}Natural causes{%endif%}<br />
             {%endif%}
-            {%if culture is defined%}
+            {%if culture is defined and culture is not none%}
             Culture: {{culture|render_ref}} <br>
             {%endif%}
-            {%if faith is defined%}
+            {%if faith is defined and faith is not none%}
             Faith: {{faith|render_ref}} <br>
             {%endif%}
-            Dynastic House: {%if house is defined%}{{house|render_ref}}{%else%}Lowborn{%endif%}<br />
-            {%if liege is defined%}
+            Dynastic House: {%if house is not none%}{{house|render_ref}}{%else%}Lowborn{%endif%}<br />
+            {%if liege is not none%}
             Liege: {{liege|render_ref}}<br>
             {%endif%}
         </div>
@@ -132,8 +132,8 @@
                 <ul class="collapse list-group list-group-flush" id="collapseExample">
                     {%for memory in memories%}
                     <li class="list-group-item">
-                        {{memory.date}}:{%if memory.type is defined%}{{memory.type}}{%endif%}<br>
-                        {%if memory.participants is defined%}
+                        {{memory.date}}:{%if memory.type is not none%}{{memory.type}}{%endif%}<br>
+                        {%if memory.participants is not none%}
                         {%for key, value in memory.participants%}
                             {{value|render_ref}}
                         {%endfor%}

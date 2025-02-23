@@ -68,8 +68,8 @@ impl GameObjectDerived for Player {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        self.name.clone()
+    fn get_name(&self) -> Option<GameString> {
+        Some(self.name.clone())
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

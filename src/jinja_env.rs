@@ -74,7 +74,7 @@ impl Localize<String> for Value {
     }
 
     fn is_empty(&self) -> bool {
-        false
+        self.is_none()
     }
 }
 
@@ -178,21 +178,40 @@ fn determine_auto_escape(_value: &str) -> AutoEscape {
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.
 /// The function must be rendered without html escape.
 /// Calling this on an undefined reference will fail.
-fn render_ref(reference: Value, root: Option<bool>) -> String {
-    let n = reference.get_attr(DERIVED_REF_NAME_ATTR).unwrap();
-    let name = n.as_str().unwrap();
-    if reference.get_attr("depth").unwrap().as_i64().unwrap() <= 0 {
-        format!("{}", name)
-    } else {
+fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
+    if reference.is_none() {
+        return "".to_string();
+    }
+    if let Some(name) = reference
+        .get_attr(DERIVED_REF_NAME_ATTR)
+        .expect("Reference doesn't have attributes")
+        .as_str()
+    {
         let subdir = reference.get_attr(DERIVED_REF_SUBDIR_ATTR).unwrap();
         let id = reference.get_attr(DERIVED_REF_ID_ATTR).unwrap();
-        if subdir.is_none() {
-            return format!("<a href=\"./{}.html\">{}</a>", id, name);
-        } else if root.is_some() && root.unwrap() {
-            format!("<a href=\"{}/{}.html\">{}</a>", subdir, id, name)
+        if state
+            .lookup("depth_map")
+            .unwrap()
+            .get_item(&subdir)
+            .unwrap()
+            .get_item(&id)
+            .unwrap()
+            .as_i64()
+            .unwrap_or(0)
+            <= 0
+        {
+            format!("{}", name)
         } else {
-            format!("<a href=\"../{}/{}.html\">{}</a>", subdir, id, name)
+            if subdir.is_none() {
+                return format!("<a href=\"./{}.html\">{}</a>", id, name);
+            } else if root.is_some() && root.unwrap() {
+                format!("<a href=\"{}/{}.html\">{}</a>", subdir, id, name)
+            } else {
+                format!("<a href=\"../{}/{}.html\">{}</a>", subdir, id, name)
+            }
         }
+    } else {
+        "".to_string()
     }
 }
 

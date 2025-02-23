@@ -38,6 +38,7 @@ const Y_LABEL: &str = "Percentage of global deaths";
 
 /// The maximum y value for the death graphs
 const MAX_Y: f64 = 100.0;
+const MIN_Y: f64 = 0.0;
 
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
@@ -57,34 +58,34 @@ fn handle_node<T: TreeNode>(
     >,
     parent: usize,
     fnt: &FontDesc,
-) -> usize {
+) {
     let ch = node.get_internal();
     let id = ch.get_id() as usize;
-    let name = ch.get_name().clone();
-    //we use sz, which is the rough size of a character, to calculate the size of the node
-    let txt_size = fnt.box_size(&name).unwrap();
-    let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
-    let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
-    //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
-    let txt_point = (
-        -(node_width as i32 - txt_size.0 as i32),
-        -(node_height as i32 - txt_size.1 as i32),
-    );
-    //add node to tree
-    tree.add_node(id, node_width, node_height, parent);
-    stack.push((id, node.clone()));
-    //add aux data to storage because the nodes only store the id and no additional data
-    storage.insert(
-        id,
-        (
-            parent,
-            name,
-            (node_width, node_height),
-            txt_point,
-            ch.get_class(),
-        ),
-    );
-    return id;
+    if let Some(name) = ch.get_name() {
+        //we use sz, which is the rough size of a character, to calculate the size of the node
+        let txt_size = fnt.box_size(&name).unwrap();
+        let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
+        let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
+        //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
+        let txt_point = (
+            -(node_width as i32 - txt_size.0 as i32),
+            -(node_height as i32 - txt_size.1 as i32),
+        );
+        //add node to tree
+        tree.add_node(id, node_width, node_height, parent);
+        stack.push((id, node.clone()));
+        //add aux data to storage because the nodes only store the id and no additional data
+        storage.insert(
+            id,
+            (
+                parent,
+                name,
+                (node_width, node_height),
+                txt_point,
+                ch.get_class(),
+            ),
+        );
+    }
 }
 
 /// A trait for objects that can be used in a tree structure
@@ -109,18 +110,17 @@ fn create_graph<P: AsRef<Path>>(
 ) {
     let mut min_x: i16 = 0;
     let mut max_x: i16 = 0;
-    let mut min_y = 0.0;
-    for (x, y) in data {
+    for (x, _) in data {
         if *x < min_x || min_x == 0 {
             min_x = *x;
         }
         if *x > max_x {
             max_x = *x;
         }
-        if *y < min_y {
-            min_y = *y;
-        }
     }
+
+    min_x += 1;
+    max_x -= 1;
 
     let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
     root.fill(&WHITE).unwrap();
@@ -129,7 +129,7 @@ fn create_graph<P: AsRef<Path>>(
         .margin(GRAPH_MARGIN)
         .x_label_area_size(GRAPH_LABEL_SPACE)
         .y_label_area_size(GRAPH_LABEL_SPACE)
-        .build_cartesian_2d(min_x as f64..max_x as f64, min_y..MAX_Y)
+        .build_cartesian_2d(min_x as f64..max_x as f64, MIN_Y..MAX_Y)
         .unwrap();
 
     let mut mesh = chart.configure_mesh();
@@ -474,7 +474,11 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
             .unwrap();
         }
         root.draw(&Text::new(
-            title.get_internal().get_name().to_string(),
+            title
+                .get_internal()
+                .get_name()
+                .expect("Title has no name")
+                .to_string(),
             (txt_x as i32, -lifespan_y * (i + 1) as i32),
             fnt.clone(),
         ))

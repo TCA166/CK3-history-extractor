@@ -206,14 +206,11 @@ impl GameObjectDerived for Dynasty {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        if let Some(name) = &self.name {
-            return name.clone();
-        } else if let Some(parent) = &self.parent {
-            return parent.get_internal().get_name();
-        } else {
-            return GameString::from("Unknown");
-        }
+    fn get_name(&self) -> Option<GameString> {
+        self.name.clone().or(self
+            .parent
+            .as_ref()
+            .and_then(|x| x.get_internal().get_name()))
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

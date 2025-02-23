@@ -54,8 +54,8 @@ impl GameObjectDerived for Memory {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        self.r#type.as_ref().unwrap().clone()
+    fn get_name(&self) -> Option<GameString> {
+        self.r#type.as_ref().map(|s| s.clone())
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

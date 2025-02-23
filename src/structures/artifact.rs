@@ -33,8 +33,8 @@ impl GameObjectDerived for Artifact {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        self.name.as_ref().unwrap().clone()
+    fn get_name(&self) -> Option<GameString> {
+        self.name.as_ref().map(|val| val.clone())
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

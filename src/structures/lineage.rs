@@ -89,7 +89,7 @@ impl GameObjectDerived for LineageNode {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
+    fn get_name(&self) -> Option<GameString> {
         self.character.as_ref().unwrap().get_internal().get_name()
     }
 

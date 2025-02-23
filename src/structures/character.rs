@@ -1,5 +1,5 @@
 use jomini::common::Date;
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 use super::{
     super::{
@@ -29,7 +29,7 @@ enum Vassal {
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct Character {
     id: GameId,
     name: Option<GameString>,
@@ -38,9 +38,7 @@ pub struct Character {
     dead: bool,
     date: Option<Date>,
     reason: Option<GameString>,
-    #[serde(default = "Character::get_faith")]
     faith: Option<Shared<Faith>>,
-    #[serde(default = "Character::get_culture")]
     culture: Option<Shared<Culture>>,
     house: Option<Shared<Dynasty>>,
     skills: Vec<i8>,
@@ -441,12 +439,8 @@ impl GameObjectDerived for Character {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        if let Some(name) = &self.name {
-            return name.clone();
-        } else {
-            return GameString::from("Unknown".to_string());
-        }
+    fn get_name(&self) -> Option<GameString> {
+        self.name.as_ref().map(|val| val.clone())
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
@@ -514,10 +508,53 @@ impl TreeNode for Character {
 
     fn get_class(&self) -> Option<GameString> {
         if let Some(house) = &self.house {
-            return Some(house.get_internal().get_name().clone());
+            house.get_internal().get_name()
         } else {
             None
         }
+    }
+}
+
+impl Serialize for Character {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut state = serializer.serialize_struct("Character", 30)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("nick", &self.nick)?;
+        state.serialize_field("birth", &self.birth)?;
+        state.serialize_field("dead", &self.dead)?;
+        state.serialize_field("date", &self.date)?;
+        state.serialize_field("reason", &self.reason)?;
+        state.serialize_field("house", &self.house)?;
+        if let Some(faith) = self.get_faith() {
+            state.serialize_field("faith", &faith)?;
+        }
+        if let Some(culture) = self.get_culture() {
+            state.serialize_field("culture", &culture)?;
+        }
+        state.serialize_field("skills", &self.skills)?;
+        state.serialize_field("traits", &self.traits)?;
+        state.serialize_field("spouses", &self.spouses)?;
+        state.serialize_field("former", &self.former)?;
+        state.serialize_field("children", &self.children)?;
+        state.serialize_field("parents", &self.parents)?;
+        state.serialize_field("dna", &self.dna)?;
+        state.serialize_field("memories", &self.memories)?;
+        state.serialize_field("titles", &self.titles)?;
+        state.serialize_field("gold", &self.gold)?;
+        state.serialize_field("piety", &self.piety)?;
+        state.serialize_field("prestige", &self.prestige)?;
+        state.serialize_field("dread", &self.dread)?;
+        state.serialize_field("strength", &self.strength)?;
+        state.serialize_field("kills", &self.kills)?;
+        state.serialize_field("languages", &self.languages)?;
+        state.serialize_field("artifacts", &self.artifacts)?;
+        state.serialize_field("vassals", &self.vassals)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("liege", &self.liege)?;
+        state.end()
     }
 }
 

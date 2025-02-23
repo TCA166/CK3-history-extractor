@@ -72,8 +72,8 @@ impl GameObjectDerived for Timeline {
         0
     }
 
-    fn get_name(&self) -> GameString {
-        GameString::from("Timeline")
+    fn get_name(&self) -> Option<GameString> {
+        Some(GameString::from("Timeline"))
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

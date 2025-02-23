@@ -300,8 +300,8 @@ impl GameObjectDerived for Title {
         self.id
     }
 
-    fn get_name(&self) -> GameString {
-        self.name.as_ref().unwrap().clone()
+    fn get_name(&self) -> Option<GameString> {
+        self.name.as_ref().map(|x| x.clone())
     }
 
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {

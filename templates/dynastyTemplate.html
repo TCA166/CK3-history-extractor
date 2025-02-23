@@ -1,11 +1,11 @@
 {% extends "base" %}
 
 {% block title %}
-{%if parent is defined%}House{%endif%} {{name}}
+{%if parent is not none%}House{%endif%} {{name}}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{%if parent is defined and parent != dynasty %}House{%endif%} {{name}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{%if parent is not none and parent != dynasty %}House{%endif%} {{name}}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 
@@ -16,15 +16,15 @@
         Creation Date: {{found_date}}
         <br />
         {%endif%}
-        {%if motto is defined%}
+        {%if motto is not none%}
         Motto: "{{motto}}"
         <br />
         {%endif%}
-        {%if parent is defined and parent.id != id%}
+        {%if parent is not none and parent.id != id%}
         Parent Dynasty: {{parent|render_ref}}
         <br />
         {%endif%}
-        {%if members is defined%}
+        {%if members is not none%}
         Total Members: {{members}}
         {%else%}
         Number of houses: {{houses}}
@@ -32,7 +32,7 @@
         <br>
         Total accumulated renown: {{prestige_tot}}<br>
         Current renown: {{prestige}}<br>
-        {%if perks is defined%}
+        {%if perks is not none%}
         Dynasty Legacies:
         <table class="table table-bordered w-auto">
         {%for key, value in perks|items%}
