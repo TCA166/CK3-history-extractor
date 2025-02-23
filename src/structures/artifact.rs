@@ -7,37 +7,35 @@ use super::{
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Shared,
     },
-    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Wrapper,
+    Character, GameObjectDerived, GameObjectEntity, GameRef, Wrapper,
 };
 
 #[derive(Serialize, Debug)]
 pub struct Artifact {
-    id: GameId,
-    name: Option<GameString>,
-    description: Option<GameString>,
-    r#type: Option<GameString>,
-    rarity: Option<GameString>,
+    name: GameString,
+    description: GameString,
+    r#type: GameString,
+    rarity: GameString,
     quality: u32,
     wealth: u32,
-    owner: Option<Shared<Character>>,
+    owner: GameRef<Character>,
     history: Vec<(
         GameString,
         Date,
-        Option<Shared<Character>>,
-        Option<Shared<Character>>,
+        Option<GameRef<Character>>,
+        Option<GameRef<Character>>,
     )>,
 }
 
 impl GameObjectDerived for Artifact {
-    fn get_id(&self) -> GameId {
-        self.id
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        self.name.as_ref().map(|val| val.clone())
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
         for h in self.history.iter() {
             if let Some(actor) = &h.2 {
                 collection.extend([E::from(actor.clone().into())]);
@@ -47,68 +45,56 @@ impl GameObjectDerived for Artifact {
             }
         }
     }
-}
 
-impl DummyInit for Artifact {
-    fn init(
-        &mut self,
+    fn new(
+        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
-    ) -> Result<(), ParsingError> {
-        self.name = Some(base.get_string("name")?);
-        self.description = Some(base.get_string("description")?);
-        self.r#type = Some(base.get_string("type")?);
-        self.rarity = Some(base.get_string("rarity")?);
-        if let Some(quality_node) = base.get("quality") {
-            self.quality = quality_node.as_integer()? as u32;
-        } else {
-            self.quality = 0;
-        }
-        if let Some(wealth_node) = base.get("wealth") {
-            self.wealth = wealth_node.as_integer()? as u32;
-        } else {
-            self.wealth = 0;
-        }
-        self.owner = Some(game_state.get_character(&base.get_game_id("owner")?));
-        if let Some(history_node) = base.get("history") {
-            let history_node = history_node.as_object()?;
-            if history_node.is_empty() {
-                return Ok(());
-            }
-            if let Some(entries_node) = history_node.as_map()?.get("entries") {
-                for h in entries_node.as_object()?.as_array()? {
-                    let h = h.as_object()?.as_map()?;
-                    let r#type = h.get_string("type")?;
-                    let date = h.get_date("date")?;
-                    let actor = if let Some(actor_node) = h.get("actor") {
-                        Some(game_state.get_character(&actor_node.as_id()?))
-                    } else {
-                        None
-                    };
-                    let recipient = if let Some(recipient_node) = h.get("recipient") {
-                        Some(game_state.get_character(&recipient_node.as_id()?))
-                    } else {
-                        None
-                    };
-                    self.history.push((r#type, date, actor, recipient));
+    ) -> Result<Self, ParsingError> {
+        Ok(Self {
+            name: base.get_string("name")?,
+            description: base.get_string("description")?,
+            r#type: base.get_string("type")?,
+            rarity: base.get_string("rarity")?,
+            quality: base.get("quality").map_or(0, |n| n.as_integer()? as u32),
+            wealth: base.get("wealth").map_or(0, |n| n.as_integer()? as u32),
+            owner: game_state.get_character(&base.get_game_id("owner")?),
+            history: if let Some(history_node) = base.get("history") {
+                let history_node = history_node.as_object()?;
+                if history_node.is_empty() {
+                    Vec::new()
+                } else {
+                    history_node
+                        .get("entries")
+                        .map_or(Vec::new(), |entries_node| {
+                            entries_node
+                                .as_object()?
+                                .as_array()?
+                                .iter()
+                                .map(|h| {
+                                    let h = h.as_object()?.as_map()?;
+                                    let r#type = h.get_string("type")?;
+                                    let date = h.get_date("date")?;
+                                    let actor = if let Some(actor_node) = h.get("actor") {
+                                        Some(game_state.get_character(&actor_node.as_id()?))
+                                    } else {
+                                        None
+                                    };
+                                    let recipient = if let Some(recipient_node) = h.get("recipient")
+                                    {
+                                        Some(game_state.get_character(&recipient_node.as_id()?))
+                                    } else {
+                                        None
+                                    };
+                                    Ok((r#type, date, actor, recipient))
+                                })
+                                .collect::<Result<Vec<_>, ParsingError>>()?
+                        })
                 }
-            }
-        }
-        Ok(())
-    }
-
-    fn dummy(id: GameId) -> Self {
-        Artifact {
-            id,
-            name: None,
-            description: None,
-            r#type: None,
-            rarity: None,
-            quality: 0,
-            wealth: 0,
-            owner: None,
-            history: Vec::new(),
-        }
+            } else {
+                Vec::new()
+            },
+        })
     }
 }
 
@@ -155,16 +141,16 @@ impl Localizable for Artifact {
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
         if let Some(rarity) = &self.rarity {
-            self.rarity = Some(localization.localize(rarity)?);
+            self.rarity = localization.localize(rarity)?;
         }
         if let Some(r#type) = &self.r#type {
-            self.r#type = Some(localization.localize("artifact_".to_string() + r#type)?);
+            self.r#type = localization.localize("artifact_".to_string() + r#type)?;
         }
         if let Some(desc) = &self.description {
-            self.description = Some(handle_tooltips(desc).into());
+            self.description = handle_tooltips(desc).into();
         }
         if let Some(name) = &self.name {
-            self.name = Some(handle_tooltips(name).into());
+            self.name = handle_tooltips(name).into();
         }
         Ok(())
     }

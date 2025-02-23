@@ -9,21 +9,20 @@ use super::{
         },
         types::Wrapper,
     },
-    Character, FromGameObject, GameId, GameObjectDerived, GameObjectDerivedType, Shared,
+    Character, GameId, GameObjectDerived, GameObjectEntity, GameRef, Shared,
 };
 
 /// A struct representing a lineage node in the game
 #[derive(Debug)]
 pub struct LineageNode {
-    character: Option<Shared<Character>>,
-    date: Option<Date>,
+    character: GameRef<Character>,
+    date: Date,
     score: i32,
     prestige: i32,
     piety: i32,
     dread: f32,
     lifestyle: Option<GameString>,
     perks: Vec<GameString>, //in older CK3 version this was a list, guess it no longer is
-    id: GameId,
 }
 
 impl LineageNode {
@@ -33,12 +32,28 @@ impl LineageNode {
     }
 }
 
-impl FromGameObject for LineageNode {
-    fn from_game_object(
+// TODO lineage node shouldnt be GameObjectDerived
+
+impl GameObjectDerived for LineageNode {
+    fn get_name(&self) -> GameString {
+        self.character.as_ref().unwrap().get_internal().get_name()
+    }
+
+    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
+        collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
+    }
+
+    fn new(
+        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
-    ) -> Result<Self, ParsingError> {
-        let id = base.get_game_id("character")?;
+    ) -> Result<Self, ParsingError>
+    where
+        Self: Sized,
+    {
         let char = game_state.get_character(&id);
         let mut perks = Vec::new();
         if let Some(perks_node) = base.get("perk") {
@@ -51,8 +66,8 @@ impl FromGameObject for LineageNode {
             }
         }
         Ok(LineageNode {
-            character: Some(char),
-            date: Some(base.get_date("date")?),
+            character: char,
+            date: base.get_date("date")?,
             score: if let Some(score_node) = base.get("score") {
                 score_node.as_integer()? as i32
             } else {
@@ -79,22 +94,7 @@ impl FromGameObject for LineageNode {
                 None
             },
             perks: perks,
-            id: id,
         })
-    }
-}
-
-impl GameObjectDerived for LineageNode {
-    fn get_id(&self) -> GameId {
-        self.id
-    }
-
-    fn get_name(&self) -> Option<GameString> {
-        self.character.as_ref().unwrap().get_internal().get_name()
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
-        collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
     }
 }
 

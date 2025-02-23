@@ -6,18 +6,19 @@ use super::{
     super::{
         game_data::GameData,
         jinja_env::TIMELINE_TEMPLATE_NAME,
-        parser::{GameId, GameState, GameString},
-        structures::{Character, Culture, Faith, GameObjectDerived, GameObjectDerivedType, Title},
-        types::Shared,
+        parser::{GameState, GameString},
+        structures::{
+            Character, Culture, Faith, GameObjectDerived, GameObjectEntity, GameRef, Title,
+        },
     },
     graph::{create_timeline_graph, Grapher},
-    renderer::Renderable,
+    renderer::{GetPath, Renderable},
 };
 
 /// An enum representing the difference in faith or culture between two realms, really just a wrapper around DerivedRef
 pub enum RealmDifference {
-    Faith(Shared<Faith>),
-    Culture(Shared<Culture>),
+    Faith(GameRef<Faith>),
+    Culture(GameRef<Culture>),
 }
 
 impl Serialize for RealmDifference {
@@ -35,12 +36,12 @@ impl Serialize for RealmDifference {
 /// A struct representing the timeline of the game
 #[derive(Serialize)]
 pub struct Timeline {
-    lifespans: Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+    lifespans: Vec<(GameRef<Title>, Vec<(i16, i16)>)>,
     latest_event: i16,
     events: Vec<(
         i16,
-        Shared<Character>,
-        Shared<Title>,
+        GameRef<Character>,
+        GameRef<Title>,
         GameString,
         RealmDifference,
     )>, // (year, character, title, event_type<conquered, usurped, etc.
@@ -49,12 +50,12 @@ pub struct Timeline {
 impl Timeline {
     /// Creates a new timeline from the game state
     pub fn new(
-        lifespans: Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+        lifespans: Vec<(GameRef<Title>, Vec<(i16, i16)>)>,
         latest_event: i16,
         events: Vec<(
             i16,
-            Shared<Character>,
-            Shared<Title>,
+            GameRef<Character>,
+            GameRef<Title>,
             GameString,
             RealmDifference,
         )>,
@@ -65,18 +66,11 @@ impl Timeline {
             events,
         }
     }
-}
 
-impl GameObjectDerived for Timeline {
-    fn get_id(&self) -> GameId {
-        0
-    }
-
-    fn get_name(&self) -> Option<GameString> {
-        Some(GameString::from("Timeline"))
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    pub fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
         for (title, _) in &self.lifespans {
             collection.extend([E::from(title.clone().into())]);
         }
@@ -91,15 +85,13 @@ impl GameObjectDerived for Timeline {
     }
 }
 
-impl Renderable for Timeline {
-    fn get_subdir() -> &'static str {
-        "."
-    }
-
+impl GetPath for Timeline {
     fn get_path(&self, path: &Path) -> PathBuf {
         path.join("timeline.html")
     }
+}
 
+impl Renderable for Timeline {
     fn get_template() -> &'static str {
         TIMELINE_TEMPLATE_NAME
     }

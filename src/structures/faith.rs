@@ -4,89 +4,80 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable},
+        display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
-    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Title,
+    Character, GameObjectDerived, GameObjectEntity, Shared, Title,
 };
 
 /// A struct representing a faith in the game
 #[derive(Serialize, Debug)]
 pub struct Faith {
-    id: GameId,
-    name: Option<GameString>,
+    name: GameString,
     tenets: Vec<GameString>,
     head: Option<Shared<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
 }
 
-impl DummyInit for Faith {
-    fn dummy(id: GameId) -> Self {
-        Faith {
-            name: None,
-            tenets: Vec::new(),
-            head: None, //trying to create a dummy character here caused a fascinating stack overflow because of infinite recursion
-            fervor: 0.0,
-            doctrines: Vec::new(),
-            id: id,
-        }
-    }
-
-    fn init(
-        &mut self,
-        base: &GameObjectMap,
-        game_state: &mut GameState,
-    ) -> Result<(), ParsingError> {
-        let doctrines_array = base.get_object("doctrine")?.as_array()?;
-        for t in doctrines_array {
-            let s = t.as_string()?;
-            if s.contains("tenet") {
-                self.tenets.push(s);
-            } else {
-                self.doctrines.push(s);
-            }
-        }
-        if let Some(current) = base.get("religious_head") {
-            let title = game_state.get_title(&current.as_id()?);
-            self.head = title.get_internal().get_holder();
-        }
-        if let Some(node) = base.get("name") {
-            self.name = Some(node.as_string()?);
-        } else {
-            self.name = Some(base.get_string("template")?);
-        }
-        self.fervor = base.get_real("fervor")? as f32;
-        Ok(())
-    }
-}
-
 impl GameObjectDerived for Faith {
-    fn get_id(&self) -> GameId {
-        self.id
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        self.name.as_ref().map(|x| x.clone())
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
         if let Some(head) = &self.head {
             collection.extend([E::from(head.clone().into())]);
         }
+    }
+
+    fn new(
+        id: GameId,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError>
+    where
+        Self: Sized,
+    {
+        let mut val = Self {
+            name: base
+                .get("name")
+                .or(base.get("template"))
+                .map(|v| v.as_string()?),
+            fervor: base.get_real("fervor"),
+            head: base
+                .get_game_id("religious_head")
+                .map(|v| game_state.get_title(&v).get_internal().get_holder()),
+            tenets: Vec::new(),
+            doctrines: Vec::new(),
+        };
+        for t in base.get_object("doctrine")?.as_array()? {
+            let s = t.as_string()?;
+            if s.contains("tenet") {
+                val.tenets.push(s);
+            } else {
+                val.doctrines.push(s);
+            }
+        }
+        return Ok(val);
+    }
+}
+
+impl ProceduralPath for Faith {
+    fn get_subdir() -> &'static str {
+        "faiths"
     }
 }
 
 impl Renderable for Faith {
     fn get_template() -> &'static str {
         FAITH_TEMPLATE_NAME
-    }
-
-    fn get_subdir() -> &'static str {
-        "faiths"
     }
 
     fn render(
@@ -131,7 +122,7 @@ impl Localizable for Faith {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
+        self.name = localization.localize(self.name)?;
         for tenet in self.tenets.iter_mut() {
             *tenet = localization.localize(tenet.to_string() + "_name")?;
         }

@@ -14,7 +14,7 @@ use super::{
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
-    Character, FromGameObject, GameObjectDerived, GameObjectDerivedType, LineageNode, Shared,
+    Character, GameObjectDerived, LineageNode, Shared,
 };
 
 use std::{

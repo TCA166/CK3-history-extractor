@@ -3,16 +3,16 @@ use serde::{ser::SerializeStruct, Serialize, Serializer};
 
 use super::{
     super::{
-        display::{Renderable, TreeNode},
+        display::{ProceduralPath, Renderable, TreeNode},
         game_data::{Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
         },
-        types::{OneOrMany, Wrapper, WrapperMut},
+        types::{OneOrMany, Shared, Wrapper, WrapperMut},
     },
-    Artifact, Culture, DummyInit, Dynasty, Faith, GameId, GameObjectDerived, GameObjectDerivedType,
-    Memory, Shared, Title,
+    Artifact, Culture, Dynasty, Faith, GameId, GameObjectDerived, GameObjectEntity, GameRef,
+    Memory, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
@@ -21,8 +21,8 @@ use super::{
 #[derive(Serialize, Debug)]
 #[serde(untagged)]
 enum Vassal {
-    Character(Shared<Character>),
-    Reference(Shared<Option<Shared<Character>>>),
+    Character(Shared<GameObjectEntity<Character>>),
+    Reference(Shared<Option<Shared<GameObjectEntity<Character>>>>),
 }
 
 // MAYBE enum for dead and alive character?
@@ -31,36 +31,35 @@ enum Vassal {
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
 #[derive(Debug)]
 pub struct Character {
-    id: GameId,
-    name: Option<GameString>,
+    name: GameString,
     nick: Option<GameString>,
-    birth: Option<Date>,
+    birth: Date,
     dead: bool,
     date: Option<Date>,
     reason: Option<GameString>,
-    faith: Option<Shared<Faith>>,
-    culture: Option<Shared<Culture>>,
-    house: Option<Shared<Dynasty>>,
+    faith: Option<GameRef<Faith>>,
+    culture: Option<GameRef<Culture>>,
+    house: Option<GameRef<Dynasty>>,
     skills: Vec<i8>,
     traits: Vec<GameString>,
-    spouses: Vec<Shared<Character>>,
-    former: Vec<Shared<Character>>,
-    children: Vec<Shared<Character>>,
-    parents: Vec<Shared<Character>>,
+    spouses: Vec<GameRef<Character>>,
+    former: Vec<GameRef<Character>>,
+    children: Vec<GameRef<Character>>,
+    parents: Vec<GameRef<Character>>,
     dna: Option<GameString>,
-    memories: Vec<Shared<Memory>>,
-    titles: Vec<Shared<Title>>,
+    memories: Vec<GameRef<Memory>>,
+    titles: Vec<GameRef<Title>>,
     gold: f32,
     piety: f32,
     prestige: f32,
     dread: f32,
     strength: f32,
-    kills: Vec<Shared<Character>>,
+    kills: Vec<GameRef<Character>>,
     languages: Vec<GameString>,
     vassals: Vec<Vassal>,
-    liege: Option<Shared<Character>>,
+    liege: Option<GameRef<Character>>,
     female: bool,
-    artifacts: Vec<Shared<Artifact>>,
+    artifacts: Vec<GameRef<Artifact>>,
 }
 
 // So both faith and culture can be stored for a character in the latest leader of their house.
@@ -88,9 +87,9 @@ impl Character {
     }
 
     /// Gets the faith of the character
-    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+    pub fn get_faith(&self) -> GameRef<Faith> {
         if let Some(faith) = &self.faith {
-            return Some(faith.clone());
+            return faith.clone();
         } else {
             if let Some(house) = &self.house {
                 let o = house.get_internal();
@@ -105,9 +104,9 @@ impl Character {
     }
 
     /// Gets the culture of the character
-    pub fn get_culture(&self) -> Option<Shared<Culture>> {
+    pub fn get_culture(&self) -> GameRef<Culture> {
         if let Some(culture) = &self.culture {
-            return Some(culture.clone());
+            return culture.clone();
         } else {
             if let Some(house) = &self.house {
                 let o = house.get_internal();
@@ -122,7 +121,7 @@ impl Character {
     }
 
     /// Adds a character as a parent of this character
-    pub fn register_parent(&mut self, parent: Shared<Character>) {
+    pub fn register_parent(&mut self, parent: GameRef<Character>) {
         self.parents.push(parent);
     }
 
@@ -132,7 +131,7 @@ impl Character {
     }
 
     /// Adds a character as a vassal of this character
-    pub fn add_vassal(&mut self, vassal: Shared<Character>) {
+    pub fn add_vassal(&mut self, vassal: GameRef<Character>) {
         self.vassals.push(Vassal::Character(vassal));
     }
 
@@ -180,9 +179,9 @@ impl Character {
     }
 
     /// Gets the descendants of the character
-    pub fn get_descendants(&self) -> Vec<Shared<Character>> {
+    pub fn get_descendants(&self) -> Vec<GameRef<Character>> {
         let mut res = Vec::new();
-        let mut stack: Vec<Shared<Character>> = Vec::new();
+        let mut stack: Vec<GameRef<Character>> = Vec::new();
         for child in self.children.iter() {
             stack.push(child.clone());
             res.push(child.clone());
@@ -199,7 +198,7 @@ impl Character {
     }
 
     /// Gets the dynasty of the character
-    pub fn get_dynasty(&self) -> Option<Shared<Dynasty>> {
+    pub fn get_dynasty(&self) -> Option<GameRef<Dynasty>> {
         if let Some(house) = &self.house {
             return Some(house.clone());
         } else {
@@ -208,25 +207,50 @@ impl Character {
     }
 }
 
-impl DummyInit for Character {
-    fn dummy(id: GameId) -> Self {
-        Character {
-            name: None,
-            nick: None,
-            birth: None,
+impl GameObjectDerived for Character {
+    fn new(
+        id: GameId,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
+        let mut val = Self {
+            // a few simple keys
+            female: base.get("female")?.as_boolean()?,
+            name: base.get_string("first_name")?,
+            birth: base.get_date("birth")?,
+            // non mandatory, yet simple keys
+            nick: base
+                .get("nickname_text")
+                .or(base.get("nickname"))
+                .map(|x| x.as_string()?),
+            faith: base.get("faith").map(|x| game_state.get_faith(&x.as_id()?)),
+            culture: base
+                .get("culture")
+                .map(|x| game_state.get_culture(&x.as_id()?)),
+            dna: base.get("dna").map(|x| x.as_string()?),
+            traits: base
+                .get("traits")
+                .map(|x| x.as_object()?.as_array()?)
+                .unwrap_or_default()
+                .iter()
+                .map(|x| game_state.get_trait(x.as_integer()? as u16))
+                .collect::<Result<Vec<_>, _>>()?,
+            skills: base
+                .get("skills")
+                .map(|x| x.as_object()?.as_array()?)
+                .unwrap_or_default()
+                .iter()
+                .map(|x| x.as_integer()? as i8)
+                .collect(),
+            // keys grouped together in sections, we resolve these later
             dead: false,
             date: None,
             reason: None,
-            faith: None,
-            culture: None,
             house: None,
-            skills: Vec::new(),
-            traits: Vec::new(),
             spouses: Vec::new(),
             former: Vec::new(),
             children: Vec::new(),
             parents: Vec::new(),
-            dna: None,
             memories: Vec::new(),
             titles: Vec::new(),
             gold: 0.0,
@@ -238,46 +262,93 @@ impl DummyInit for Character {
             languages: Vec::new(),
             vassals: Vec::new(),
             liege: None,
-            female: false,
-            id: id,
             artifacts: Vec::new(),
+        };
+        if let Some(dynasty_id) = base.get("dynasty_house") {
+            let d = game_state.get_dynasty(&dynasty_id.as_id()?);
+            d.get_internal_mut()
+                .register_member(game_state.get_character(&id));
+            val.house = Some(d);
         }
-    }
-
-    fn init(
-        &mut self,
-        base: &GameObjectMap,
-        game_state: &mut GameState,
-    ) -> Result<(), ParsingError> {
-        if let Some(female) = base.get("female") {
-            self.female = female.as_boolean()?;
+        if let Some(landed_data_node) = base.get("landed_data") {
+            let landed_data = landed_data_node.as_object()?.as_map()?;
+            if let Some(dread_node) = landed_data.get("dread") {
+                val.dread = dread_node.as_real()? as f32;
+            }
+            if let Some(strength_node) = landed_data.get("strength") {
+                val.strength = strength_node.as_real()? as f32;
+            }
+            if let Some(titles_node) = landed_data.get("domain") {
+                for t in titles_node.as_object()?.as_array()? {
+                    val.titles.push(game_state.get_title(&t.as_id()?));
+                }
+            }
+            if let Some(vassals_node) = landed_data.get("vassal_contracts") {
+                for v in vassals_node.as_object()?.as_array()? {
+                    val.vassals
+                        .push(Vassal::Reference(game_state.get_vassal(&v.as_id()?)));
+                }
+            }
         }
         if let Some(dead_data) = base.get("dead_data") {
-            self.dead = true;
+            val.dead = true;
             let o = dead_data.as_object()?.as_map()?;
             if let Some(reason_node) = o.get("reason") {
-                self.reason = Some(reason_node.as_string()?);
+                val.reason = Some(reason_node.as_string()?);
             }
             if let Some(domain_node) = o.get("domain") {
                 for t in domain_node.as_object()?.as_array()? {
-                    self.titles.push(game_state.get_title(&t.as_id()?));
+                    val.titles.push(game_state.get_title(&t.as_id()?));
                 }
             }
-            self.date = Some(o.get_date("date")?);
+            val.date = Some(o.get_date("date")?);
             if let Some(liege_node) = o.get("liege") {
-                let id = liege_node.as_id()?;
-                if id != self.id {
-                    let liege_chr = game_state.get_character(&id).clone();
+                let liege_id = liege_node.as_id()?;
+                if id != liege_id {
+                    let liege_chr = game_state.get_character(&liege_id).clone();
                     if let Ok(mut o) = liege_chr.try_get_internal_mut() {
-                        o.add_vassal(game_state.get_character(&self.id));
+                        o.add_vassal(game_state.get_character(&id));
                     }
-                    self.liege = Some(liege_chr.clone());
+                    val.liege = Some(liege_chr.clone());
                 }
             }
-        }
-        //find skills
-        for s in base.get_object("skill")?.as_array()?.into_iter() {
-            self.skills.push(s.as_integer()? as i8);
+        } else if let Some(alive_data) = base.get("alive_data") {
+            val.dead = false;
+            let alive_data = alive_data.as_object()?.as_map()?;
+            val.piety = process_currency(alive_data.get("piety"))?;
+            val.prestige = process_currency(alive_data.get("prestige"))?;
+            if let Some(kills_node) = alive_data.get("kills") {
+                for k in kills_node.as_object()?.as_array()? {
+                    val.kills
+                        .push(game_state.get_character(&k.as_id()?).clone());
+                }
+            }
+            if let Some(gold_node) = alive_data.get("gold") {
+                val.gold = gold_node.as_real()? as f32;
+            }
+            for l in alive_data.get_object("languages")?.as_array()? {
+                val.languages.push(l.as_string()?);
+            }
+            if let Some(perk_node) = alive_data.get("perks") {
+                for p in perk_node.as_object()?.as_array()? {
+                    val.traits.push(p.as_string()?);
+                }
+            }
+            if let Some(memory_node) = alive_data.get("memories") {
+                for m in memory_node.as_object()?.as_array()? {
+                    val.memories
+                        .push(game_state.get_memory(&m.as_id()?).clone());
+                }
+            }
+            if let Some(inventory_node) = alive_data.get("inventory") {
+                if let Some(artifacts_node) = inventory_node.as_object()?.as_map()?.get("artifacts")
+                {
+                    for a in artifacts_node.as_object()?.as_array()? {
+                        val.artifacts
+                            .push(game_state.get_artifact(&a.as_id()?).clone());
+                    }
+                }
+            }
         }
         if let Some(family_data) = base.get("family_data") {
             let f = family_data.as_object()?;
@@ -285,7 +356,7 @@ impl DummyInit for Character {
                 let f = f.as_map()?;
                 if let Some(former_spouses_node) = f.get("former_spouses") {
                     for s in former_spouses_node.as_object()?.as_array()? {
-                        self.former
+                        val.former
                             .push(game_state.get_character(&s.as_id()?).clone());
                     }
                 }
@@ -293,22 +364,22 @@ impl DummyInit for Character {
                     if let SaveFileValue::Object(o) = spouse_node {
                         for s in o.as_array()? {
                             let c = game_state.get_character(&s.as_id()?).clone();
-                            let contains = self
+                            let contains = val
                                 .former
                                 .iter()
                                 .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                             if !contains {
-                                self.spouses.push(c);
+                                val.spouses.push(c);
                             }
                         }
                     } else {
                         let c = game_state.get_character(&spouse_node.as_id()?).clone();
-                        let contains = self
+                        let contains = val
                             .former
                             .iter()
                             .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                         if !contains {
-                            self.spouses.push(c);
+                            val.spouses.push(c);
                         }
                     }
                 }
@@ -316,134 +387,39 @@ impl DummyInit for Character {
                     let c = game_state
                         .get_character(&primary_spouse_node.as_id()?)
                         .clone();
-                    let mut contains = self
+                    let mut contains = val
                         .spouses
                         .iter()
                         .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                     contains = contains
-                        || self
+                        || val
                             .spouses
                             .iter()
                             .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
                     if !contains {
-                        self.spouses.push(c);
+                        val.spouses.push(c);
                     }
                 }
                 if let Some(children_node) = f.get("child") {
-                    let parent = game_state.get_character(&self.id);
+                    let parent = game_state.get_character(&id);
                     for s in children_node.as_object()?.as_array()? {
                         let c = game_state.get_character(&s.as_id()?).clone();
                         c.get_internal_mut().register_parent(parent.clone());
-                        self.children.push(c);
+                        val.children.push(c);
                     }
                 }
             }
         }
-        //find dna
-        if let Some(dna) = base.get("dna") {
-            self.dna = Some(dna.as_string()?);
-        }
-        //find traits
-        if let Some(traits_node) = base.get("traits") {
-            for t in traits_node.as_object()?.as_array()? {
-                let index = t.as_integer()? as u16;
-                self.traits.push(game_state.get_trait(index));
-            }
-        }
-        //find alive data
-        if !self.dead {
-            if let Some(alive_data) = base.get("alive_data") {
-                let alive_data = alive_data.as_object()?.as_map()?;
-                self.piety = process_currency(alive_data.get("piety"))?;
-                self.prestige = process_currency(alive_data.get("prestige"))?;
-                if let Some(kills_node) = alive_data.get("kills") {
-                    for k in kills_node.as_object()?.as_array()? {
-                        self.kills
-                            .push(game_state.get_character(&k.as_id()?).clone());
-                    }
-                }
-                if let Some(gold_node) = alive_data.get("gold") {
-                    self.gold = gold_node.as_real()? as f32;
-                }
-                for l in alive_data.get_object("languages")?.as_array()? {
-                    self.languages.push(l.as_string()?);
-                }
-                if let Some(perk_node) = alive_data.get("perks") {
-                    for p in perk_node.as_object()?.as_array()? {
-                        self.traits.push(p.as_string()?);
-                    }
-                }
-                if let Some(memory_node) = alive_data.get("memories") {
-                    for m in memory_node.as_object()?.as_array()? {
-                        self.memories
-                            .push(game_state.get_memory(&m.as_id()?).clone());
-                    }
-                }
-                if let Some(inventory_node) = alive_data.get("inventory") {
-                    if let Some(artifacts_node) =
-                        inventory_node.as_object()?.as_map()?.get("artifacts")
-                    {
-                        for a in artifacts_node.as_object()?.as_array()? {
-                            self.artifacts
-                                .push(game_state.get_artifact(&a.as_id()?).clone());
-                        }
-                    }
-                }
-            }
-        }
-        //find landed data
-        if let Some(landed_data_node) = base.get("landed_data") {
-            let landed_data = landed_data_node.as_object()?.as_map()?;
-            if let Some(dread_node) = landed_data.get("dread") {
-                self.dread = dread_node.as_real()? as f32;
-            }
-            if let Some(strength_node) = landed_data.get("strength") {
-                self.strength = strength_node.as_real()? as f32;
-            }
-            if let Some(titles_node) = landed_data.get("domain") {
-                for t in titles_node.as_object()?.as_array()? {
-                    self.titles.push(game_state.get_title(&t.as_id()?));
-                }
-            }
-            if let Some(vassals_node) = landed_data.get("vassal_contracts") {
-                for v in vassals_node.as_object()?.as_array()? {
-                    self.vassals
-                        .push(Vassal::Reference(game_state.get_vassal(&v.as_id()?)));
-                }
-            }
-        }
-        //find house
-        self.name = Some(base.get_string("first_name")?);
-        if let Some(text) = base.get("nickname_text").or(base.get("nickname")) {
-            self.nick = Some(text.as_string()?);
-        }
-        self.birth = Some(base.get_date("birth")?);
-        if let Some(dynasty_id) = base.get("dynasty_house") {
-            let d = game_state.get_dynasty(&dynasty_id.as_id()?);
-            d.get_internal_mut()
-                .register_member(game_state.get_character(&self.id));
-            self.house = Some(d);
-        }
-        if let Some(faith_node) = base.get("faith") {
-            self.faith = Some(game_state.get_faith(&faith_node.as_id()?))
-        }
-        if let Some(culture_node) = base.get("culture") {
-            self.culture = Some(game_state.get_culture(&culture_node.as_id()?).clone());
-        }
-        Ok(())
-    }
-}
-
-impl GameObjectDerived for Character {
-    fn get_id(&self) -> GameId {
-        self.id
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        self.name.as_ref().map(|val| val.clone())
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
         if let Some(faith) = &self.faith {
             collection.extend([E::from(faith.clone().into())]);
         }
@@ -558,13 +534,15 @@ impl Serialize for Character {
     }
 }
 
+impl ProceduralPath for Character {
+    fn get_subdir() -> &'static str {
+        "characters"
+    }
+}
+
 impl Renderable for Character {
     fn get_template() -> &'static str {
         C_TEMPLATE_NAME
-    }
-
-    fn get_subdir() -> &'static str {
-        "characters"
     }
 }
 
@@ -576,7 +554,7 @@ impl Localizable for Character {
         if self.name.is_none() {
             return Ok(());
         } else {
-            self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
+            self.name = localization.localize(self.name)?;
         }
         if let Some(nick) = &self.nick {
             self.nick = Some(localization.localize(nick)?);

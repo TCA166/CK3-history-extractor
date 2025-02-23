@@ -5,97 +5,82 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, TreeNode},
+        display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Title,
+    GameObjectDerived, GameObjectEntity, GameRef, Shared, Title,
 };
 
 /// A struct representing a culture in the game
 #[derive(Serialize, Debug)]
 pub struct Culture {
-    id: GameId,
-    name: Option<GameString>,
+    name: GameString,
     ethos: Option<GameString>,
-    heritage: Option<GameString>,
-    martial: Option<GameString>,
+    heritage: GameString,
+    martial: GameString,
     date: Option<Date>,
-    children: Vec<Shared<Culture>>,
-    parents: Vec<Shared<Culture>>,
+    children: Vec<GameRef<Culture>>,
+    parents: Vec<GameRef<Culture>>,
     traditions: Vec<GameString>,
-    language: Option<GameString>,
+    language: GameString,
     // TODO innovations
 }
 
-impl DummyInit for Culture {
-    fn dummy(id: GameId) -> Self {
-        Culture {
-            name: None,
-            ethos: None,
-            heritage: None,
-            martial: None,
-            date: None,
-            parents: Vec::new(),
-            children: Vec::new(),
-            traditions: Vec::new(),
-            language: None,
-            id: id,
-        }
-    }
-
-    fn init(
-        &mut self,
-        base: &GameObjectMap,
-        game_state: &mut GameState,
-    ) -> Result<(), ParsingError> {
-        if let Some(parents_obj) = base.get("parents") {
-            for p in parents_obj.as_object()?.as_array()? {
-                let parent = game_state.get_culture(&p.as_id()?).clone();
-                if let Ok(mut r) = parent.try_get_internal_mut() {
-                    r.register_child(game_state.get_culture(&self.id));
-                }
-                self.parents.push(parent.clone());
-            }
-        }
-        if let Some(traditions_obj) = base.get("traditions") {
-            for t in traditions_obj.as_object()?.as_array()? {
-                self.traditions.push(t.as_string()?);
-            }
-        }
-        self.name = Some(base.get_string("name")?);
-        if let Some(eth) = base.get("ethos") {
-            //this is possible, shoutout u/Kinc4id
-            self.ethos = Some(eth.as_string()?);
-        }
-        self.heritage = Some(base.get_string("heritage")?);
-        self.martial = Some(base.get_string("martial_custom")?);
-        if let Some(node) = base.get("created") {
-            self.date = Some(node.as_date()?);
-        }
-        self.language = Some(base.get_string("language")?);
-        Ok(())
-    }
-}
-
 impl GameObjectDerived for Culture {
-    fn get_id(&self) -> GameId {
-        self.id
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        self.name.as_ref().map(|x| x.clone())
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
+        &self,
+        collection: &mut C,
+    ) {
         for p in &self.parents {
             collection.extend([E::from(p.clone().into())]);
         }
         for c in &self.children {
             collection.extend([E::from(c.clone().into())]);
         }
+    }
+
+    fn new(
+        id: GameId,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
+        Ok(Self {
+            name: base.get_string("name")?,
+            //this is possible, shoutout u/Kinc4id
+            ethos: base.get("ethos").map(|n| n.as_string()?),
+            heritage: base.get_string("heritage")?,
+            martial: base.get_string("martial_custom")?,
+            date: base.get("created").map(|n| n.as_date()?),
+            language: base.get_string("language")?,
+            traditions: base.get("traditions").map_or(Vec::new(), |n| {
+                n.as_object()?
+                    .as_array()?
+                    .iter()
+                    .map(|t| t.as_string()?)
+                    .collect()
+            }),
+            children: Vec::new(),
+            parents: base.get("parents").map_or(Vec::new(), |n| {
+                n.as_object()?
+                    .as_array()?
+                    .iter()
+                    .map(|p| {
+                        let parent = game_state.get_culture(&p.as_id()?);
+                        if let Ok(mut r) = parent.try_get_internal_mut() {
+                            r.register_child(game_state.get_culture(&id));
+                        }
+                        parent
+                    })
+                    .collect()
+            }),
+        })
     }
 }
 
@@ -129,13 +114,15 @@ impl Culture {
     }
 }
 
+impl ProceduralPath for Culture {
+    fn get_subdir() -> &'static str {
+        "cultures"
+    }
+}
+
 impl Renderable for Culture {
     fn get_template() -> &'static str {
         CUL_TEMPLATE_NAME
-    }
-
-    fn get_subdir() -> &'static str {
-        "cultures"
     }
 
     fn render(
@@ -183,19 +170,13 @@ impl Localizable for Culture {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        self.name = Some(localization.localize(self.name.as_ref().unwrap())?);
+        self.name = localization.localize(self.name)?;
         if let Some(eth) = &self.ethos {
             self.ethos = Some(localization.localize(eth.to_string() + "_name")?);
         }
-        if let Some(heritage) = &self.heritage {
-            self.heritage = Some(localization.localize(heritage.to_string() + "_name")?);
-        }
-        if let Some(martial) = &self.martial {
-            self.martial = Some(localization.localize(martial.to_string() + "_name")?);
-        }
-        if let Some(language) = &self.language {
-            self.language = Some(localization.localize(language.to_string() + "_name")?);
-        }
+        self.heritage = localization.localize(self.heritage.to_string() + "_name")?;
+        self.martial = localization.localize(self.martial.to_string() + "_name")?;
+        self.language = localization.localize(self.language.to_string() + "_name")?;
         for t in &mut self.traditions {
             *t = localization.localize(t.to_string() + "_name")?;
         }

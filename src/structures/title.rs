@@ -19,7 +19,7 @@ use super::{
         },
         types::{OneOrMany, Wrapper, WrapperMut},
     },
-    Character, Culture, DummyInit, Faith, GameObjectDerived, GameObjectDerivedType, Shared,
+    Character, Culture, Faith, GameObjectDerived, Shared,
 };
 
 #[derive(Serialize, Debug)]

@@ -6,7 +6,7 @@ use super::{
         game_data::{Localizable, LocalizationError, Localize},
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
     },
-    Character, DummyInit, GameObjectDerived, GameObjectDerivedType, Shared, Wrapper,
+    Character, GameObjectDerived, Shared, Wrapper,
 };
 
 /// A struct representing a memory in the game

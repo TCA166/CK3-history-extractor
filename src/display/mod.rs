@@ -1,6 +1,6 @@
 /// A submodule that provides [Renderable] trait for objects that can be rendered.
 mod renderer;
-pub use renderer::{Renderable, Renderer};
+pub use renderer::{GetPath, ProceduralPath, Renderable, Renderer};
 
 /// The graphing submodule that handles the creation of graphs from the game state.
 mod graph;

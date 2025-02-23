@@ -17,7 +17,8 @@ use super::{
         game_data::GameData,
         parser::{GameId, GameState, GameString},
         structures::{
-            Character, Culture, Dynasty, Faith, GameObjectDerived, GameObjectDerivedType, Title,
+            Character, Culture, Dynasty, EntityRef, Faith, GameObjectDerived, GameObjectEntity,
+            GameRef, Title,
         },
         types::{HashMap, Shared, Wrapper},
     },
@@ -36,67 +37,24 @@ fn create_dir_maybe<P: AsRef<Path>>(name: P) {
 
 #[derive(From)]
 enum RenderableType {
-    Character(Shared<Character>),
-    Dynasty(Shared<Dynasty>),
-    Title(Shared<Title>),
-    Faith(Shared<Faith>),
-    Culture(Shared<Culture>),
+    Character(GameRef<Character>),
+    Dynasty(GameRef<Dynasty>),
+    Title(GameRef<Title>),
+    Faith(GameRef<Faith>),
+    Culture(GameRef<Culture>),
 }
 
-impl GameObjectDerived for RenderableType {
-    fn get_id(&self) -> GameId {
-        match self {
-            RenderableType::Character(c) => c.get_internal().get_id(),
-            RenderableType::Dynasty(d) => d.get_internal().get_id(),
-            RenderableType::Title(t) => t.get_internal().get_id(),
-            RenderableType::Faith(f) => f.get_internal().get_id(),
-            RenderableType::Culture(c) => c.get_internal().get_id(),
-        }
-    }
-    fn get_name(&self) -> Option<GameString> {
-        match self {
-            RenderableType::Character(c) => c.get_internal().get_name(),
-            RenderableType::Dynasty(d) => d.get_internal().get_name(),
-            RenderableType::Title(t) => t.get_internal().get_name(),
-            RenderableType::Faith(f) => f.get_internal().get_name(),
-            RenderableType::Culture(c) => c.get_internal().get_name(),
-        }
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
-        match self {
-            RenderableType::Character(c) => c.get_internal().get_references(collection),
-            RenderableType::Dynasty(d) => d.get_internal().get_references(collection),
-            RenderableType::Title(t) => t.get_internal().get_references(collection),
-            RenderableType::Faith(f) => f.get_internal().get_references(collection),
-            RenderableType::Culture(c) => c.get_internal().get_references(collection),
-        }
-    }
-}
-
-impl TryFrom<&GameObjectDerivedType> for RenderableType {
+impl TryFrom<&EntityRef> for RenderableType {
     type Error = ();
 
-    fn try_from(value: &GameObjectDerivedType) -> Result<Self, Self::Error> {
+    fn try_from(value: &EntityRef) -> Result<Self, Self::Error> {
         match value {
-            GameObjectDerivedType::Character(c) => Ok(c.clone().into()),
-            GameObjectDerivedType::Dynasty(d) => Ok(d.clone().into()),
-            GameObjectDerivedType::Title(t) => Ok(t.clone().into()),
-            GameObjectDerivedType::Faith(f) => Ok(f.clone().into()),
-            GameObjectDerivedType::Culture(c) => Ok(c.clone().into()),
+            EntityRef::Character(c) => Ok(c.clone().into()),
+            EntityRef::Dynasty(d) => Ok(d.clone().into()),
+            EntityRef::Title(t) => Ok(t.clone().into()),
+            EntityRef::Faith(f) => Ok(f.clone().into()),
+            EntityRef::Culture(c) => Ok(c.clone().into()),
             _ => Err(()),
-        }
-    }
-}
-
-impl RenderableType {
-    pub fn get_subdir(&self) -> &'static str {
-        match self {
-            RenderableType::Character(_) => Character::get_subdir(),
-            RenderableType::Dynasty(_) => Dynasty::get_subdir(),
-            RenderableType::Title(_) => Title::get_subdir(),
-            RenderableType::Faith(_) => Faith::get_subdir(),
-            RenderableType::Culture(_) => Culture::get_subdir(),
         }
     }
 }
@@ -105,7 +63,7 @@ impl RenderableType {
 /// It is meant to be used as a worker object that collects objects and renders them all at once.
 /// The objects are rendered in a BFS order, with the depth of the objects being determined by the BFS algorithm.
 pub struct Renderer<'a> {
-    depth_map: HashMap<GameObjectDerivedType, usize>,
+    depth_map: HashMap<EntityRef, usize>,
     /// The path where the objects will be rendered to.
     /// This usually takes the form of './{username}'s history/'.
     path: &'a Path,
@@ -186,7 +144,7 @@ impl<'a> Renderer<'a> {
     /// This method uses a BFS algorithm to determine the depth of the object.
     pub fn add_object<G: GameObjectDerived>(&mut self, obj: &G) -> usize {
         // BFS with depth https://stackoverflow.com/a/31248992/12520385
-        let mut queue: VecDeque<Option<GameObjectDerivedType>> = VecDeque::new();
+        let mut queue: VecDeque<Option<EntityRef>> = VecDeque::new();
         obj.get_references(&mut queue);
         let mut res = queue.len();
         queue.push_back(None);
@@ -249,38 +207,29 @@ impl<'a> Renderer<'a> {
     }
 }
 
-/// Trait for objects that can be rendered into a html page.
-/// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
-/// Each object that implements this trait should have a corresponding template file in the templates folder.
-pub trait Renderable: Serialize + GameObjectDerived {
-    /// Returns the template file name.
-    /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
-    fn get_template() -> &'static str;
-
-    /// Returns the subdirectory name where the rendered template should be written to.
-    /// This method is used to create a subdirectory in the root output path, and by the [Renderable::get_path] method.
+pub trait ProceduralPath {
     fn get_subdir() -> &'static str;
+}
 
-    /// Returns the path where the rendered template should be written to.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The root output path of the renderer.
-    ///
-    /// # Default Implementation
-    ///
-    /// The default implementation returns a path in the format: `{path}/{subdir}/{id}.html`.
-    /// Subdir is returned by [Renderable::get_subdir] and id is returned by [GameObjectDerived::get_id].
-    /// This can be of course overridden by the implementing object.
-    ///
-    /// # Returns
-    ///
-    /// The full path where the object should be written to.
+pub trait GetPath {
+    fn get_path(&self, path: &Path) -> PathBuf;
+}
+
+impl<T: GameObjectDerived + ProceduralPath> GetPath for T {
     fn get_path(&self, path: &Path) -> PathBuf {
         let mut buf = path.join(Self::get_subdir());
         buf.push(format!("{}.html", self.get_id()));
         buf
     }
+}
+
+/// Trait for objects that can be rendered into a html page.
+/// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
+/// Each object that implements this trait should have a corresponding template file in the templates folder.
+pub trait Renderable: Serialize + GetPath {
+    /// Returns the template file name.
+    /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
+    fn get_template() -> &'static str;
 
     /// Renders all the objects that are related to this object.
     /// For example: graphs, maps, etc.

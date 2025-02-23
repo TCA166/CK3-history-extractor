@@ -5,8 +5,8 @@ use super::{
         display::{Grapher, RealmDifference, Timeline},
         game_data::{Localizable, LocalizationError, Localize},
         structures::{
-            Artifact, Character, Culture, DummyInit, Dynasty, Faith, GameObjectDerived, Memory,
-            Title,
+            Artifact, Character, Culture, Dynasty, Faith, GameObjectDerived, GameObjectEntity,
+            GameRef, Memory, Title,
         },
         types::{Shared, Wrapper, WrapperMut},
     },
@@ -19,20 +19,20 @@ use jomini::common::{Date, PdsDate};
 use serde::Serialize;
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
-fn get_or_insert_dummy<T: DummyInit>(
-    map: &mut HashMap<GameId, Shared<T>>,
+fn get_or_insert_dummy<T: GameObjectDerived>(
+    map: &mut HashMap<GameId, GameRef<T>>,
     key: &GameId,
-) -> Shared<T> {
+) -> GameRef<T> {
     if let Some(val) = map.get(key) {
         return val.clone();
     } else {
-        let v = Shared::wrap(T::dummy(*key));
+        let v = Shared::wrap(GameObjectEntity::new(*key));
         map.insert(*key, v.clone());
         v
     }
 }
 
-impl Serialize for Shared<Option<Shared<Character>>> {
+impl Serialize for Shared<Option<GameRef<Character>>> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -51,23 +51,23 @@ impl Serialize for Shared<Option<Shared<Character>>> {
 #[derive(Serialize)]
 pub struct GameState {
     /// A character id->Character transform
-    characters: HashMap<GameId, Shared<Character>>,
+    characters: HashMap<GameId, GameRef<Character>>,
     /// A title id->Title transform
-    titles: HashMap<GameId, Shared<Title>>,
+    titles: HashMap<GameId, GameRef<Title>>,
     /// A faith id->Title transform
-    faiths: HashMap<GameId, Shared<Faith>>,
+    faiths: HashMap<GameId, GameRef<Faith>>,
     /// A culture id->Culture transform
-    cultures: HashMap<GameId, Shared<Culture>>,
+    cultures: HashMap<GameId, GameRef<Culture>>,
     /// A dynasty id->Dynasty transform
-    dynasties: HashMap<GameId, Shared<Dynasty>>,
+    dynasties: HashMap<GameId, GameRef<Dynasty>>,
     /// A memory id->Memory transform
-    memories: HashMap<GameId, Shared<Memory>>,
+    memories: HashMap<GameId, GameRef<Memory>>,
     /// A artifact id->Artifact transform
-    artifacts: HashMap<GameId, Shared<Artifact>>,
+    artifacts: HashMap<GameId, GameRef<Artifact>>,
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
-    contract_transform: HashMap<GameId, Shared<Option<Shared<Character>>>>,
+    contract_transform: HashMap<GameId, Shared<Option<GameRef<Character>>>>,
     /// The current date from the meta section
     current_date: Option<Date>,
     /// The time Y.M.D from which the game started
@@ -115,12 +115,12 @@ impl GameState {
     }
 
     /// Get a character by key
-    pub fn get_character(&mut self, key: &GameId) -> Shared<Character> {
+    pub fn get_character(&mut self, key: &GameId) -> GameRef<Character> {
         get_or_insert_dummy(&mut self.characters, key)
     }
 
     /// Gets the vassal associated with the contract with the given id
-    pub fn get_vassal(&mut self, contract_id: &GameId) -> Shared<Option<Shared<Character>>> {
+    pub fn get_vassal(&mut self, contract_id: &GameId) -> Shared<Option<GameRef<Character>>> {
         if let Some(v) = self.contract_transform.get(contract_id) {
             return v.clone();
         } else {

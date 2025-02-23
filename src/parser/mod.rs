@@ -113,10 +113,7 @@ impl<'a> error::Error for ParsingError {
     }
 }
 
-use super::{
-    structures::{FromGameObject, Player},
-    types::HashMap,
-};
+use super::{structures::Player, types::HashMap};
 
 /// A function that processes a section of the save file.
 /// Based on the given section, it will update the [GameState] object and the
