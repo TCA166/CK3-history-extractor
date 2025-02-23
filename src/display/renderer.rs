@@ -59,9 +59,8 @@ impl TryFrom<&GameObjectDerivedType> for RenderableType {
 }
 
 /// A struct that renders objects into html pages.
-/// It holds a reference to the [Environment] that is used to render the templates, tracks which objects have been rendered and holds the root path.
-/// Additionally holds references to the GameMap and [Grapher] objects, should they exist of course.
-/// It is meant to be used as a worker object that renders objects into html pages.
+/// It is meant to be used as a worker object that collects objects and renders them all at once.
+/// The objects are rendered in a BFS order, with the depth of the objects being determined by the BFS algorithm.
 pub struct Renderer<'a> {
     depth_map: HashMap<GameObjectDerivedType, usize>,
     /// The path where the objects will be rendered to.
@@ -79,16 +78,16 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    /// Create a new Renderer with the given [Environment] and path.
+    /// Create a new Renderer.
     /// [create_dir_maybe] is called on the path to ensure that the directory exists, and the subdirectories are created.
     ///
     /// # Arguments
     ///
-    /// * `env` - The [Environment] object that is used to render the templates.
     /// * `path` - The root path where the objects will be rendered to. Usually takes the form of './{username}'s history/'.
     /// * `state` - The game state object.
     /// * `game_map` - The game map object, if it exists.
     /// * `grapher` - The grapher object, if it exists.
+    /// * `initial_depth` - The initial depth of the objects that are added to the renderer.
     ///
     /// # Returns
     ///
@@ -116,14 +115,12 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    /// Renders the object and returns true if it was actually rendered.
-    /// If the object was rendered it calls the [Renderable::render] method on the object.
+    /// Renders the [Renderable] object.
     fn render<T: Renderable>(&self, obj: Ref<T>, env: &Environment<'_>) {
         //render the object
         let template = env.get_template(T::get_template()).unwrap();
         let path = obj.get_path(self.path);
         obj.render(&self.path, &self.state, self.grapher, self.data);
-        // FIXME add depth data during serialization
         let contents = template.render(obj.deref()).unwrap();
         thread::spawn(move || {
             //IO heavy, so spawn a thread
@@ -131,8 +128,7 @@ impl<'a> Renderer<'a> {
         });
     }
 
-    /// Renders a renderable enum object.
-    /// Calls [Renderer::render] on the object if it is not already rendered.
+    /// Renders the [RenderableType] object.
     fn render_enum(&self, obj: &RenderableType, env: &Environment<'_>) {
         match obj {
             RenderableType::Character(obj) => self.render(obj.get_internal(), env),
@@ -143,6 +139,8 @@ impl<'a> Renderer<'a> {
         }
     }
 
+    /// Adds an object to the renderer, and returns the number of objects that were added.
+    /// This method uses a BFS algorithm to determine the depth of the object.
     pub fn add_object<G: GameObjectDerived>(&mut self, obj: &G) -> usize {
         // BFS with depth https://stackoverflow.com/a/31248992/12520385
         let mut queue: VecDeque<Option<GameObjectDerivedType>> = VecDeque::new();
@@ -177,36 +175,18 @@ impl<'a> Renderer<'a> {
         return res;
     }
 
-    /// Renders all the objects that are related to the given object.
-    /// It uses a stack to keep track of the objects that need to be rendered.
+    /// Renders all the objects that have been added to the renderer.
+    /// This method consumes the renderer object.
     ///
-    /// # Method
+    /// # Arguments
     ///
-    /// This method renders templates for given objects and the necessary graphics.
-    ///
-    /// ## Template Rendering
-    ///
-    /// First a corresponding template is retrieved from the [Environment] object using
-    /// the template name given by [Renderable::get_template].
-    /// Then the object is serialized (using [serde::Serialize]) into a [minijinja::Value] object.
-    /// Using this value object the template is rendered and the contents are written to a file
-    /// using the path given by [Renderable::get_path].
-    ///
-    /// ## Object Rendering
-    ///
-    /// In order to ensure all the necessary objects for the template to display correctly are rendered,
-    /// the [Renderable::render] method is called on the object.
-    /// This method is meant to render all the graphics that are related to the object.
-    ///
-    /// ## Related Objects
-    ///
-    /// The [Renderable::append_ref] method is called on the object to append all the related objects to the stack.
-    /// This is done to ensure that all the related objects are rendered and the process is repeated for all the objects.
+    /// * `env` - The [Environment] object that is used to render the templates.
     ///
     /// # Returns
     ///
     /// The number of objects that were rendered.
     pub fn render_all(self, env: &mut Environment<'_>) -> usize {
+        // FIXME add depth data to the env as a global
         for obj in self.depth_map.keys() {
             if let Ok(obj) = obj.try_into() {
                 self.render_enum(&obj, env);
@@ -258,7 +238,7 @@ pub trait Renderable: Serialize + GameObjectDerived {
     /// * `path` - The root output path of the renderer.
     /// * `game_state` - The game state object.
     /// * `grapher` - The grapher object, if it exists.
-    /// * `map` - The game map object, if it exists.
+    /// * `data` - The game data object.
     ///
     /// # Default Implementation
     ///

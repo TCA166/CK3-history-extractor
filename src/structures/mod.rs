@@ -58,12 +58,16 @@ pub trait GameObjectDerived {
     fn get_id(&self) -> GameId;
 
     /// Get the name of the object.
+    /// The result of this method depends on the type.
     fn get_name(&self) -> GameString;
 
+    /// Get the unique identifier of the object.
+    /// This is a tuple of the id and the type name. Since id is unique within a section, and each [GameObjectDerived] type should have an associated section, this tuple is unique.
     fn get_unique_identifier(&self) -> (GameId, &'static str) {
         (self.get_id(), type_name::<Self>())
     }
 
+    /// Extends the provided collection with references to other [GameObjectDerived] objects, if any.
     fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C);
 }
 
