@@ -55,15 +55,11 @@ impl<T: GameObjectDerived + FromGameObject + ProceduralPath> Serialize for GameR
         S: serde::Serializer,
     {
         let internal = self.get_internal();
-        if let Some(inner) = internal.inner() {
-            let mut state = serializer.serialize_struct("DerivedRef", 3)?;
-            state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
-            state.serialize_field(DERIVED_REF_NAME_ATTR, &inner.get_name())?;
-            state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
-            state.end()
-        } else {
-            serializer.serialize_none()
-        }
+        let mut state = serializer.serialize_struct("DerivedRef", 3)?;
+        state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
+        state.serialize_field(DERIVED_REF_NAME_ATTR, &internal.get_name())?;
+        state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
+        state.end()
     }
 }
 

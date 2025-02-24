@@ -6,7 +6,7 @@ use crate::types::Wrapper;
 use super::{
     super::{
         game_data::{Localizable, LocalizationError, Localize},
-        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
@@ -30,7 +30,6 @@ pub struct Artifact {
 
 impl FromGameObject for Artifact {
     fn from_game_object(
-        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -54,8 +53,6 @@ impl FromGameObject for Artifact {
                 if let Some(entries_node) = map.get("entries") {
                     for h in entries_node.as_object()?.as_array()? {
                         let h = h.as_object()?.as_map()?;
-                        let r#type = h.get_string("type")?;
-                        let date = h.get_date("date")?;
                         let actor = if let Some(actor_node) = h.get("actor") {
                             Some(game_state.get_character(&actor_node.as_id()?))
                         } else {
@@ -66,7 +63,12 @@ impl FromGameObject for Artifact {
                         } else {
                             None
                         };
-                        artifact.history.push((r#type, date, actor, recipient));
+                        artifact.history.push((
+                            h.get_string("type")?,
+                            h.get_date("date")?,
+                            actor,
+                            recipient,
+                        ));
                     }
                 }
             }

@@ -29,7 +29,7 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{GetPath, Renderable, Renderer};
+use display::{GetPath, Renderer};
 
 mod game_data;
 use game_data::{GameDataLoader, Localizable};

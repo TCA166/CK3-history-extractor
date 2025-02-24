@@ -4,7 +4,7 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::{Localizable, LocalizationError, Localize},
-        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
@@ -20,7 +20,6 @@ pub struct Memory {
 
 impl FromGameObject for Memory {
     fn from_game_object(
-        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {

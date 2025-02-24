@@ -68,6 +68,8 @@ pub struct GameState {
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<Option<GameRef<Character>>>>,
+    #[serde(skip)]
+    county_date: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     /// The current date from the meta section
     current_date: Option<Date>,
     /// The time Y.M.D from which the game started
@@ -86,6 +88,7 @@ impl Default for GameState {
             artifacts: HashMap::default(),
             traits_lookup: Vec::new(),
             contract_transform: HashMap::default(),
+            county_date: HashMap::default(),
             current_date: None,
             offset_date: None,
         }
@@ -231,7 +234,7 @@ impl GameState {
         let mut res = Vec::new();
         for title in self.titles.values() {
             if let Some(title) = title.get_internal().inner() {
-                if filter(title) {
+                if filter(&title) {
                     res.append(&mut title.get_barony_keys());
                 }
             }
@@ -241,18 +244,9 @@ impl GameState {
 
     pub fn add_county_data(
         &mut self,
-        county_data: HashMap<&str, (GameRef<Faith>, GameRef<Culture>)>,
+        county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     ) {
-        for title in self.titles.values() {
-            let mut title = title.get_internal_mut();
-            let key = title.get_key();
-            let assoc = county_data.get(key.as_ref());
-            if assoc.is_none() {
-                continue;
-            }
-            let (faith, culture) = assoc.unwrap();
-            title.add_county_data(culture.clone(), faith.clone())
-        }
+        self.county_date = county_data;
     }
 
     pub fn new_grapher(&self) -> Grapher {
@@ -261,26 +255,27 @@ impl GameState {
         let mut culture_yearly_deaths = HashMap::default();
         let start_year = self.current_date.unwrap().year() - self.offset_date.unwrap().year();
         for character in self.characters.values() {
-            let char = character.get_internal();
-            if let Some(death_date) = char.get_death_date() {
-                if death_date.year() < start_year {
-                    continue;
-                }
-                let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
-                *count += 1;
-                {
-                    let entry = faith_yearly_deaths
-                        .entry(char.get_faith().get_internal().get_id())
-                        .or_insert(HashMap::default());
-                    let count = entry.entry(death_date.year()).or_insert(0.);
-                    *count += 1.;
-                }
-                {
-                    let entry = culture_yearly_deaths
-                        .entry(char.get_culture().get_internal().get_id())
-                        .or_insert(HashMap::default());
-                    let count = entry.entry(death_date.year()).or_insert(0.);
-                    *count += 1.;
+            if let Some(char) = character.get_internal().inner() {
+                if let Some(death_date) = char.get_death_date() {
+                    if death_date.year() < start_year {
+                        continue;
+                    }
+                    let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
+                    *count += 1;
+                    {
+                        let entry = faith_yearly_deaths
+                            .entry(char.get_faith().get_internal().get_id())
+                            .or_insert(HashMap::default());
+                        let count = entry.entry(death_date.year()).or_insert(0.);
+                        *count += 1.;
+                    }
+                    {
+                        let entry = culture_yearly_deaths
+                            .entry(char.get_culture().get_internal().get_id())
+                            .or_insert(HashMap::default());
+                        let count = entry.entry(death_date.year()).or_insert(0.);
+                        *count += 1.;
+                    }
                 }
             }
         }
@@ -309,50 +304,51 @@ impl GameState {
         let mut event_checkout = Vec::new();
         for title in self.titles.values() {
             //first we handle the empires and collect titles that might be relevant for events
-            let t = title.get_internal();
-            let hist = t.get_history_iter();
-            if hist.len() == 0 {
-                continue;
-            }
-            let k = t.get_key();
-            //if the key is there
-            let kingdom = k.as_ref().starts_with("k_");
-            if kingdom {
+            if let Some(t) = title.get_internal().inner() {
+                let hist = t.get_history_iter();
+                if hist.len() == 0 {
+                    continue;
+                }
+                let k = t.get_key();
+                //if the key is there
+                let kingdom = k.as_ref().starts_with("k_");
+                if kingdom {
+                    event_checkout.push(title.clone());
+                    //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
+                    continue;
+                }
+                let empire = k.as_ref().starts_with("e_");
+                if !empire {
+                    continue;
+                }
                 event_checkout.push(title.clone());
-                //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
-                continue;
-            }
-            let empire = k.as_ref().starts_with("e_");
-            if !empire {
-                continue;
-            }
-            event_checkout.push(title.clone());
-            event_checkout.push(title.get_internal().get_capital().unwrap().clone());
-            let mut item = (title.clone(), Vec::new());
-            let mut empty = true;
-            let mut start = 0;
-            for entry in hist {
-                let yr = entry.0.year();
-                if yr > latest_event {
-                    latest_event = yr;
+                event_checkout.push(t.get_capital().unwrap().clone());
+                let mut item = (title.clone(), Vec::new());
+                let mut empty = true;
+                let mut start = 0;
+                for entry in hist {
+                    let yr = entry.0.year();
+                    if yr > latest_event {
+                        latest_event = yr;
+                    }
+                    let event = entry.2.as_ref();
+                    if event == DESTROYED_STR {
+                        //if it was destroyed we mark the end of the lifespan
+                        item.1.push((start, yr));
+                        empty = true;
+                    } else if empty {
+                        //else if we are not in a lifespan we start a new one
+                        start = yr;
+                        empty = false;
+                    }
                 }
-                let event = entry.2.as_ref();
-                if event == DESTROYED_STR {
-                    //if it was destroyed we mark the end of the lifespan
-                    item.1.push((start, yr));
-                    empty = true;
-                } else if empty {
-                    //else if we are not in a lifespan we start a new one
-                    start = yr;
-                    empty = false;
+                if empire {
+                    if !empty {
+                        item.1.push((start, 0));
+                    }
+                    //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
+                    lifespans.push(item);
                 }
-            }
-            if empire {
-                if !empty {
-                    item.1.push((start, 0));
-                }
-                //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
-                lifespans.push(item);
             }
         }
         let mut events: Vec<(
@@ -363,55 +359,58 @@ impl GameState {
             RealmDifference,
         )> = Vec::new();
         for title in event_checkout {
-            let tit = title.get_internal();
-            //find the first event that has a character attached
-            let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
-            let next = hist.next();
-            if next.is_none() {
-                continue;
-            }
-            let first_char = next.unwrap().1.as_ref().unwrap().get_internal();
-            let mut faith = first_char.get_faith().get_internal().get_id();
-            let mut culture = first_char.get_culture().get_internal().get_id();
-            for entry in hist {
-                let char = entry.1.as_ref();
-                if char.is_none() {
+            if let Some(tit) = title.get_internal().inner() {
+                //find the first event that has a character attached
+                let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
+                let next = hist.next();
+                if next.is_none() {
                     continue;
                 }
-                let char = char.unwrap();
-                let event = entry.2.as_ref();
-                let ch = char.get_internal();
-                let char_faith = ch.get_faith();
-                let ch_faith = char_faith.get_internal();
-                let char_culture = ch.get_culture();
-                let ch_culture = char_culture.get_internal();
-                if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
-                    let year: i16 = entry.0.year();
-                    if ch_faith.get_id() != faith {
-                        events.push((
-                            year,
-                            char.clone(),
-                            title.clone(),
-                            GameString::from("faith"),
-                            RealmDifference::Faith(char_faith.clone()),
-                        ));
-                        faith = ch_faith.get_id();
-                    } else if ch_culture.get_id() != culture {
-                        events.push((
-                            year,
-                            char.clone(),
-                            title.clone(),
-                            GameString::from("people"),
-                            RealmDifference::Culture(char_culture.clone()),
-                        ));
-                        culture = ch_culture.get_id();
-                    }
-                } else {
-                    if ch_faith.get_id() != faith {
-                        faith = ch_faith.get_id();
-                    }
-                    if ch_culture.get_id() != culture {
-                        culture = ch_culture.get_id();
+                if let Some(first_char) = next.unwrap().1.as_ref().unwrap().get_internal().inner() {
+                    let mut faith = first_char.get_faith().get_internal().get_id();
+                    let mut culture = first_char.get_culture().get_internal().get_id();
+                    for entry in hist {
+                        let char = entry.1.as_ref();
+                        if char.is_none() {
+                            continue;
+                        }
+                        let char = char.unwrap();
+                        let event = entry.2.as_ref();
+                        if let Some(ch) = char.get_internal().inner() {
+                            let char_faith = ch.get_faith();
+                            let ch_faith = char_faith.get_internal();
+                            let char_culture = ch.get_culture();
+                            let ch_culture = char_culture.get_internal();
+                            if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
+                                let year: i16 = entry.0.year();
+                                if ch_faith.get_id() != faith {
+                                    events.push((
+                                        year,
+                                        char.clone(),
+                                        title.clone(),
+                                        GameString::from("faith"),
+                                        RealmDifference::Faith(char_faith.clone()),
+                                    ));
+                                    faith = ch_faith.get_id();
+                                } else if ch_culture.get_id() != culture {
+                                    events.push((
+                                        year,
+                                        char.clone(),
+                                        title.clone(),
+                                        GameString::from("people"),
+                                        RealmDifference::Culture(char_culture.clone()),
+                                    ));
+                                    culture = ch_culture.get_id();
+                                }
+                            } else {
+                                if ch_faith.get_id() != faith {
+                                    faith = ch_faith.get_id();
+                                }
+                                if ch_culture.get_id() != culture {
+                                    culture = ch_culture.get_id();
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -426,26 +425,61 @@ impl Localizable for GameState {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        for (_, character) in &mut self.characters {
-            character.get_internal_mut().localize(localization)?;
+        for character in self.characters.values_mut() {
+            let mut internal = character.get_internal_mut();
+            if let Some(inner) = internal.inner_mut() {
+                inner.localize(localization)?;
+                inner.finalize(character);
+            }
         }
-        for (_, title) in &mut self.titles {
-            title.get_internal_mut().localize(localization)?;
+        for title in &mut self.titles.values_mut() {
+            title.finalize();
+            if let Some(internal) = title.get_internal_mut().inner_mut() {
+                internal.localize(localization)?;
+                if let Some(assoc) = self.county_date.get(internal.get_key().as_ref()) {
+                    internal.add_county_data(assoc.1.clone(), assoc.0.clone());
+                }
+            }
         }
-        for (_, faith) in &mut self.faiths {
-            faith.get_internal_mut().localize(localization)?;
+        for faith in &mut self.faiths.values_mut() {
+            faith.finalize();
+            faith
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
         }
-        for (_, culture) in &mut self.cultures {
-            culture.get_internal_mut().localize(localization)?;
+        for culture in &mut self.cultures.values_mut() {
+            culture.finalize();
+            culture
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
         }
-        for (_, dynasty) in &mut self.dynasties {
-            dynasty.get_internal_mut().localize(localization)?;
+        for dynasty in &mut self.dynasties.values_mut() {
+            dynasty.finalize();
+            dynasty
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
         }
-        for (_, memory) in &mut self.memories {
-            memory.get_internal_mut().localize(localization)?;
+        for memory in &mut self.memories.values_mut() {
+            memory.finalize();
+            memory
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
         }
-        for (_, artifact) in &mut self.artifacts {
-            artifact.get_internal_mut().localize(localization)?;
+        for artifact in &mut self.artifacts.values_mut() {
+            artifact.finalize();
+            artifact
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
         }
         Ok(())
     }

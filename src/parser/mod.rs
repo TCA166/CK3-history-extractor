@@ -165,7 +165,7 @@ pub fn process_section(
                 let p = p.as_object()?.as_map()?;
                 let faith = game_state.get_faith(&p.get_game_id("faith")?);
                 let culture = game_state.get_culture(&p.get_game_id("culture")?);
-                key_assoc.insert(key.as_str(), (faith, culture));
+                key_assoc.insert(key.to_owned(), (faith, culture));
             }
             game_state.add_county_data(key_assoc);
         }
@@ -267,7 +267,7 @@ pub fn process_section(
         }
         "played_character" => {
             // TODO what about id?
-            let p = Player::from_game_object(0, i.parse()?.as_map()?, game_state)?;
+            let p = Player::from_game_object(i.parse()?.as_map()?, game_state)?;
             players.push(p);
         }
         "artifacts" => {

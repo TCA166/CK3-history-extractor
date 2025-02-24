@@ -11,7 +11,7 @@ use super::{
         display::{GetPath, Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef, LineageNode,
@@ -37,7 +37,6 @@ pub struct Player {
 
 impl FromGameObject for Player {
     fn from_game_object(
-        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -51,9 +50,7 @@ impl FromGameObject for Player {
             lineage: Vec::new(),
         };
         for leg in base.get_object("legacy")?.as_array()? {
-            let id = base.get_game_id("character")?;
             player.lineage.push(LineageNode::from_game_object(
-                id,
                 leg.as_object()?.as_map()?,
                 game_state,
             )?)
@@ -105,49 +102,63 @@ impl Renderable for Player {
                 I once had an idea that it could be possible to still have a timelapse by looking at dead vassals of the children of chars in lineage
                 But that idea got stuck at the recursive step of that algorithm, and even so the result would have NO accuracy
                  */
-                let char = char.get_character(); //this variable for no reason other than compiler bitching
-                let char = char.get_internal();
-                //we get the provinces held by the character and the vassals who died under their reign.
-                //This is the closes approximation we can get of changes in the map that are 100% accurate
-                let death_date = char.get_death_date();
-                let date = if let Some(death_date) = &death_date {
-                    death_date.iso_8601()
-                } else {
-                    game_state.get_current_date().unwrap().iso_8601()
-                };
-                let mut barony_map = map.create_map_flat(char.get_barony_keys(true), TARGET_COLOR);
-                barony_map.draw_text(date.to_string());
-                let fbytes: ImageBuffer<_, _> = barony_map.into();
-                //these variables cuz fbytes is moved
-                let width = fbytes.width();
-                let height = fbytes.height();
-                let frame =
-                    Frame::from_parts(fbytes, width, height, Delay::from_numer_denom_ms(3000, 1));
-                gif_encoder.encode_frame(frame).unwrap();
+                if let Some(char) = char.get_character().get_internal().inner() {
+                    //we get the provinces held by the character and the vassals who died under their reign.
+                    //This is the closes approximation we can get of changes in the map that are 100% accurate
+                    let death_date = char.get_death_date();
+                    let date = if let Some(death_date) = &death_date {
+                        death_date.iso_8601()
+                    } else {
+                        game_state.get_current_date().unwrap().iso_8601()
+                    };
+                    let mut barony_map =
+                        map.create_map_flat(char.get_barony_keys(true), TARGET_COLOR);
+                    barony_map.draw_text(date.to_string());
+                    let fbytes: ImageBuffer<_, _> = barony_map.into();
+                    //these variables cuz fbytes is moved
+                    let width = fbytes.width();
+                    let height = fbytes.height();
+                    let frame = Frame::from_parts(
+                        fbytes,
+                        width,
+                        height,
+                        Delay::from_numer_denom_ms(3000, 1),
+                    );
+                    gif_encoder.encode_frame(frame).unwrap();
+                }
             }
             gif_encoder.set_repeat(Repeat::Infinite).unwrap();
             let mut direct_titles = HashSet::new();
             let mut descendant_title = HashSet::new();
             let first = self.lineage.first().unwrap().get_character();
-            let first = first.get_internal();
-            let dynasty = first.get_dynasty();
-            let dynasty = dynasty.as_ref().unwrap().get_internal();
-            let descendants = dynasty.get_founder().get_internal().get_descendants();
-            for desc in descendants {
-                let desc = desc.get_internal();
-                if desc.get_death_date().is_some() {
-                    continue;
-                }
-                let target = if desc
-                    .get_dynasty()
-                    .map_or(false, |d| d.get_internal().is_same_dynasty(&dynasty))
+            if let Some(first) = first.get_internal().inner() {
+                let dynasty = first.get_dynasty();
+                let dynasty = dynasty.as_ref().unwrap().get_internal();
+                for desc in dynasty
+                    .inner()
+                    .unwrap()
+                    .get_founder()
+                    .get_internal()
+                    .inner()
+                    .unwrap()
+                    .get_descendants()
                 {
-                    &mut direct_titles
-                } else {
-                    &mut descendant_title
-                };
-                for title in desc.get_barony_keys(false) {
-                    target.insert(title.clone());
+                    if let Some(desc) = desc.get_internal().inner() {
+                        if desc.get_death_date().is_some() {
+                            continue;
+                        }
+                        let target = if desc
+                            .get_dynasty()
+                            .map_or(false, |d| d.get_internal().is_same_dynasty(&dynasty))
+                        {
+                            &mut direct_titles
+                        } else {
+                            &mut descendant_title
+                        };
+                        for title in desc.get_barony_keys(false) {
+                            target.insert(title.clone());
+                        }
+                    }
                 }
             }
             let mut dynasty_map = map.create_map::<_, Vec<GameString>>(

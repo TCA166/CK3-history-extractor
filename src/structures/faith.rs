@@ -7,7 +7,7 @@ use super::{
         display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::FAITH_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
@@ -18,6 +18,7 @@ use super::{
 pub struct Faith {
     name: GameString,
     tenets: Vec<GameString>,
+    head_title: Option<GameRef<Title>>,
     head: Option<GameRef<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
@@ -25,7 +26,6 @@ pub struct Faith {
 
 impl FromGameObject for Faith {
     fn from_game_object(
-        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -37,9 +37,11 @@ impl FromGameObject for Faith {
                 .transpose()?
                 .unwrap(),
             fervor: base.get_real("fervor")? as f32,
-            head: base
+            head_title: base
                 .get_game_id("religious_head")
-                .map(|v| game_state.get_title(&v).get_internal().get_holder())?,
+                .map(|v| game_state.get_title(&v))
+                .ok(),
+            head: None,
             tenets: Vec::new(),
             doctrines: Vec::new(),
         };
@@ -63,6 +65,14 @@ impl GameObjectDerived for Faith {
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         if let Some(head) = &self.head {
             collection.extend([E::from(head.clone().into())]);
+        }
+    }
+
+    fn finalize(&mut self, _reference: &GameRef<Self>) {
+        if let Some(head_title) = &self.head_title {
+            if let Some(head) = head_title.get_internal().inner() {
+                self.head = head.get_holder()
+            }
         }
     }
 }
@@ -105,7 +115,9 @@ impl Renderable for GameObjectEntity<Faith> {
                 let mut buf = path.join(Faith::get_subdir());
                 buf.push(format!("{}.png", self.id));
                 let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
-                faith_map.draw_text(format!("Map of the {} faith", &self.name));
+                if let Some(inner) = self.inner() {
+                    faith_map.draw_text(format!("Map of the {} faith", &inner.name));
+                }
                 faith_map.save(&buf);
             }
         }

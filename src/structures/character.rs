@@ -11,7 +11,7 @@ use super::{
         },
         types::{Shared, Wrapper, WrapperMut},
     },
-    Artifact, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameId, GameObjectDerived,
+    Artifact, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
     GameObjectEntity, GameRef, Memory, Title,
 };
 
@@ -92,7 +92,14 @@ impl Character {
             return faith.clone();
         } else {
             let house = self.house.as_ref().unwrap().get_internal();
-            house.get_leader().get_internal().get_faith()
+            house
+                .inner()
+                .unwrap()
+                .get_leader()
+                .get_internal()
+                .inner()
+                .unwrap()
+                .get_faith()
         }
     }
 
@@ -102,7 +109,14 @@ impl Character {
             return culture.clone();
         } else {
             let house = self.house.as_ref().unwrap().get_internal();
-            house.get_leader().get_internal().get_culture()
+            house
+                .inner()
+                .unwrap()
+                .get_leader()
+                .get_internal()
+                .inner()
+                .unwrap()
+                .get_culture()
         }
     }
 
@@ -133,32 +147,34 @@ impl Character {
     pub fn get_barony_keys(&self, de_jure: bool) -> Vec<GameString> {
         let mut provinces = Vec::new();
         for title in self.titles.iter() {
-            let title = title.get_internal();
-            let key = title.get_key();
-            if key.starts_with("e_") || key.starts_with("k_") {
-                //for kingdoms and empires we don't want to add the de jure baronies
-                continue;
-            } else {
-                if de_jure {
-                    provinces.append(&mut title.get_de_jure_barony_keys());
+            if let Some(title) = title.get_internal().inner() {
+                let key = title.get_key();
+                if key.starts_with("e_") || key.starts_with("k_") {
+                    //for kingdoms and empires we don't want to add the de jure baronies
+                    continue;
                 } else {
-                    provinces.append(&mut title.get_barony_keys());
+                    if de_jure {
+                        provinces.append(&mut title.get_de_jure_barony_keys());
+                    } else {
+                        provinces.append(&mut title.get_barony_keys());
+                    }
                 }
             }
         }
         for vassal in self.vassals.iter() {
             match vassal {
                 Vassal::Character(c) => {
-                    provinces.append(&mut c.get_internal().get_barony_keys(de_jure))
+                    if let Some(c) = c.get_internal().inner() {
+                        provinces.append(&mut c.get_barony_keys(de_jure));
+                    }
                 }
-                Vassal::Reference(c) => provinces.append(
-                    &mut c
-                        .get_internal()
-                        .as_ref()
-                        .unwrap()
-                        .get_internal()
-                        .get_barony_keys(de_jure),
-                ),
+                Vassal::Reference(c) => {
+                    if let Some(c) = c.get_internal().as_ref() {
+                        if let Some(c) = c.get_internal().inner() {
+                            provinces.append(&mut c.get_barony_keys(de_jure))
+                        }
+                    }
+                }
             }
         }
         return provinces;
@@ -172,12 +188,12 @@ impl Character {
             stack.push(child.clone());
             res.push(child.clone());
         }
-        while !stack.is_empty() {
-            let c = stack.pop().unwrap();
-            let c = c.get_internal();
-            for child in c.children.iter() {
-                stack.push(child.clone());
-                res.push(child.clone());
+        while let Some(c) = stack.pop() {
+            if let Some(c) = c.get_internal().inner() {
+                for child in c.children.iter() {
+                    stack.push(child.clone());
+                    res.push(child.clone());
+                }
             }
         }
         return res;
@@ -195,7 +211,6 @@ impl Character {
 
 impl FromGameObject for Character {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -203,8 +218,7 @@ impl FromGameObject for Character {
             // a few simple keys
             female: base
                 .get("female")
-                .and_then(|val| Some(val.as_boolean()))
-                .unwrap()?,
+                .map_or(Ok(false), |val| val.as_boolean())?,
             name: base.get_string("first_name")?,
             birth: base.get_date("birth")?,
             // non mandatory, yet simple keys
@@ -256,10 +270,7 @@ impl FromGameObject for Character {
             }
         }
         if let Some(dynasty_id) = base.get("dynasty_house") {
-            let d = game_state.get_dynasty(&dynasty_id.as_id()?);
-            d.get_internal_mut()
-                .register_member(game_state.get_character(&id));
-            val.house = Some(d);
+            val.house = Some(game_state.get_dynasty(&dynasty_id.as_id()?));
         }
         if let Some(landed_data_node) = base.get("landed_data") {
             let landed_data = landed_data_node.as_object()?.as_map()?;
@@ -294,14 +305,7 @@ impl FromGameObject for Character {
             }
             val.date = Some(o.get_date("date")?);
             if let Some(liege_node) = o.get("liege") {
-                let liege_id = liege_node.as_id()?;
-                if id != liege_id {
-                    let liege_chr = game_state.get_character(&liege_id).clone();
-                    if let Ok(mut o) = liege_chr.try_get_internal_mut() {
-                        o.add_vassal(game_state.get_character(&id));
-                    }
-                    val.liege = Some(liege_chr.clone());
-                }
+                val.liege = Some(game_state.get_character(&liege_node.as_id()?));
             }
         } else if let Some(alive_data) = base.get("alive_data") {
             val.dead = false;
@@ -392,11 +396,9 @@ impl FromGameObject for Character {
                     }
                 }
                 if let Some(children_node) = f.get("child") {
-                    let parent = game_state.get_character(&id);
                     for s in children_node.as_object()?.as_array()? {
-                        let c = game_state.get_character(&s.as_id()?).clone();
-                        c.get_internal_mut().register_parent(parent.clone());
-                        val.children.push(c);
+                        val.children
+                            .push(game_state.get_character(&s.as_id()?).clone());
                     }
                 }
             }
@@ -456,6 +458,35 @@ impl GameObjectDerived for Character {
             collection.extend([E::from(a.clone().into())]);
         }
     }
+
+    fn finalize(&mut self, reference: &GameRef<Character>) {
+        if let Some(house) = &self.house {
+            if let Some(house) = house.get_internal_mut().inner_mut() {
+                house.register_member(reference.clone());
+            } else {
+                self.house = None;
+            }
+        }
+        if let Some(liege) = &self.liege {
+            if let Ok(mut inner) = liege.try_get_internal_mut() {
+                if let Some(liege) = inner.inner_mut() {
+                    liege.add_vassal(reference.clone());
+                } else {
+                    self.liege = None;
+                }
+            }
+        }
+        if let Some(house) = &self.house {
+            if let Some(house) = house.get_internal_mut().inner_mut() {
+                house.register_member(reference.clone());
+            }
+        }
+        for p in self.parents.iter() {
+            if let Some(parent) = p.get_internal_mut().inner_mut() {
+                parent.register_parent(reference.clone());
+            }
+        }
+    }
 }
 
 impl TreeNode<Vec<GameRef<Character>>> for Character {
@@ -475,7 +506,11 @@ impl TreeNode<Vec<GameRef<Character>>> for Character {
 
     fn get_class(&self) -> Option<GameString> {
         if let Some(house) = &self.house {
-            Some(house.get_internal().get_name())
+            if let Some(house) = house.get_internal().inner() {
+                return Some(house.get_name());
+            } else {
+                None
+            }
         } else {
             None
         }

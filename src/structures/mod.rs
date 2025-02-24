@@ -4,6 +4,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+use crate::types::WrapperMut;
+
 use super::{
     parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
     types::{Shared, Wrapper},
@@ -49,7 +51,6 @@ pub use artifact::Artifact;
 
 pub trait FromGameObject: Sized {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError>;
@@ -58,13 +59,16 @@ pub trait FromGameObject: Sized {
 /// A trait for objects that can be created from a [GameObjectMap].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
-pub trait GameObjectDerived {
+pub trait GameObjectDerived: Sized {
     /// Get the name of the object.
     /// The result of this method depends on the type.
     fn get_name(&self) -> GameString;
 
     /// Extends the provided collection with references to other [GameObjectDerived] objects, if any.
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C);
+
+    #[allow(unused_variables)]
+    fn finalize(&mut self, reference: &GameRef<Self>) {}
 }
 
 #[derive(Serialize, Debug)]
@@ -94,7 +98,7 @@ impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<(), ParsingError> {
-        self.entity = Some(T::from_game_object(self.id, base, game_state)?);
+        self.entity = Some(T::from_game_object(base, game_state)?);
         Ok(())
     }
 
@@ -107,6 +111,14 @@ impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {
     }
 }
 
+impl<T: GameObjectDerived + FromGameObject> GameRef<T> {
+    pub fn finalize(&mut self) {
+        if let Some(entity) = self.get_internal_mut().entity.as_mut() {
+            entity.finalize(self);
+        }
+    }
+}
+
 impl<T: GameObjectDerived + FromGameObject> PartialEq for GameRef<T> {
     fn eq(&self, other: &Self) -> bool {
         self.get_internal().get_unique_identifier() == other.get_internal().get_unique_identifier()
@@ -114,23 +126,6 @@ impl<T: GameObjectDerived + FromGameObject> PartialEq for GameRef<T> {
 }
 
 impl<T: GameObjectDerived + FromGameObject> Eq for GameRef<T> {}
-
-//TODO this is bad
-
-impl<T: GameObjectDerived + FromGameObject> Deref for GameObjectEntity<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        self.inner().expect("Dereferenced an un-initialized Entity")
-    }
-}
-
-impl<T: GameObjectDerived + FromGameObject> DerefMut for GameObjectEntity<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.inner_mut()
-            .expect("Dereferenced mutably an un-initialized Entity")
-    }
-}
 
 pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 

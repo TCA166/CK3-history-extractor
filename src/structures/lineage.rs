@@ -9,7 +9,7 @@ use super::{
         },
         types::Wrapper,
     },
-    Character, EntityRef, FromGameObject, GameId, GameObjectDerived, GameRef,
+    Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
 
 /// A struct representing a lineage node in the game
@@ -34,11 +34,9 @@ impl LineageNode {
 
 impl FromGameObject for LineageNode {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
-        let char = game_state.get_character(&id);
         let mut perks = Vec::new();
         if let Some(perks_node) = base.get("perk") {
             if let SaveFileValue::Object(o) = perks_node {
@@ -50,7 +48,7 @@ impl FromGameObject for LineageNode {
             }
         }
         Ok(LineageNode {
-            character: char,
+            character: game_state.get_character(&base.get_game_id("character")?),
             date: base.get_date("date")?,
             score: if let Some(score_node) = base.get("score") {
                 score_node.as_integer()? as i32
@@ -84,7 +82,11 @@ impl FromGameObject for LineageNode {
 
 impl GameObjectDerived for LineageNode {
     fn get_name(&self) -> GameString {
-        self.character.get_internal().get_name()
+        self.character
+            .get_internal()
+            .inner()
+            .expect("Character in lineage must be initialized")
+            .get_name()
     }
 
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
@@ -103,7 +105,13 @@ impl Localizable for LineageNode {
         for perk in self.perks.iter_mut() {
             let mut perk_key = perk.to_string();
             if perk_key == "family_man_perk" {
-                perk_key += if self.character.get_internal().get_female() {
+                perk_key += if self
+                    .character
+                    .get_internal()
+                    .inner()
+                    .expect("Character in lineage must be initialized")
+                    .get_female()
+                {
                     "_female_name"
                 } else {
                     "_male_name"

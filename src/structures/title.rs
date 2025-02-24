@@ -14,8 +14,8 @@ use super::{
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
-            GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError,
-            SaveFileObject, SaveFileValue,
+            GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileObject,
+            SaveFileValue,
         },
         types::{Wrapper, WrapperMut},
     },
@@ -111,9 +111,7 @@ impl Title {
             provinces.push(self.key.clone());
         }
         for v in &self.de_facto_vassals {
-            if let Some(title) = v.get_internal().inner() {
-                provinces.append(&mut title.get_barony_keys());
-            }
+            provinces.append(&mut v.get_internal().get_barony_keys());
         }
         provinces
     }
@@ -124,9 +122,7 @@ impl Title {
             provinces.push(self.key.clone());
         }
         for v in &self.de_jure_vassals {
-            if let Some(title) = v.get_internal().inner() {
-                provinces.append(&mut title.get_barony_keys());
-            }
+            provinces.append(&mut v.get_internal().get_barony_keys());
         }
         provinces
     }
@@ -185,7 +181,6 @@ impl Title {
 
 impl FromGameObject for Title {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -208,25 +203,17 @@ impl FromGameObject for Title {
             de_jure: base
                 .get("de_jure_liege")
                 .map(|liege| {
-                    liege.as_id().and_then(|liege_id| {
-                        let liege = game_state.get_title(&liege_id);
-                        liege
-                            .get_internal_mut()
-                            .add_jure_vassal(game_state.get_title(&id).clone());
-                        Ok(liege)
-                    })
+                    liege
+                        .as_id()
+                        .and_then(|liege_id| Ok(game_state.get_title(&liege_id)))
                 })
                 .transpose()?,
             de_facto: base
-                .get("de_jure_liege")
+                .get("de_facto_liege")
                 .map(|liege| {
-                    liege.as_id().and_then(|liege_id| {
-                        let liege = game_state.get_title(&liege_id).clone();
-                        liege
-                            .get_internal_mut()
-                            .add_facto_vassal(game_state.get_title(&id).clone());
-                        Ok(liege)
-                    })
+                    liege
+                        .as_id()
+                        .and_then(|liege_id| Ok(game_state.get_title(&liege_id).clone()))
                 })
                 .transpose()?,
             de_jure_vassals: Vec::default(),
@@ -333,6 +320,19 @@ impl GameObjectDerived for Title {
         }
         if let Some(capital) = &self.capital {
             collection.extend([E::from(capital.clone().into())]);
+        }
+    }
+
+    fn finalize(&mut self, reference: &GameRef<Title>) {
+        if let Some(de_jure) = &self.de_jure {
+            de_jure
+                .get_internal_mut()
+                .add_jure_vassal(reference.clone());
+        }
+        if let Some(de_facto) = &self.de_facto {
+            de_facto
+                .get_internal_mut()
+                .add_facto_vassal(reference.clone());
         }
     }
 }

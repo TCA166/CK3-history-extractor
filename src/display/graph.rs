@@ -11,7 +11,7 @@ use tidy_tree::TidyTree;
 
 use super::super::{
     parser::{GameId, GameString},
-    structures::{Dynasty, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title},
+    structures::{Dynasty, FromGameObject, GameObjectDerived, GameRef, Title},
     types::{HashMap, Wrapper},
 };
 
@@ -62,10 +62,10 @@ fn handle_node<
     parent: usize,
     fnt: &FontDesc,
 ) {
-    let ch = node.get_internal();
-    let id = ch.get_id() as usize;
-    if let Some(obj) = ch.inner() {
-        let name = obj.get_name();
+    let obj = node.get_internal();
+    let id = obj.get_id() as usize;
+    if let Some(ch) = obj.inner() {
+        let name = ch.get_name();
         let txt_size = fnt.box_size(&name).unwrap();
         let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
         let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
@@ -85,7 +85,7 @@ fn handle_node<
                 name,
                 (node_width, node_height),
                 txt_point,
-                obj.get_class(),
+                ch.get_class(),
             ),
         );
     }
@@ -101,22 +101,6 @@ pub trait TreeNode<I: IntoIterator>: Sized {
 
     /// Returns the class of the node
     fn get_class(&self) -> Option<GameString>;
-}
-
-impl<I: IntoIterator<Item = GameRef<G>>, G: GameObjectDerived + FromGameObject + TreeNode<I>>
-    TreeNode<I> for GameObjectEntity<G>
-{
-    fn get_children(&self) -> Option<I> {
-        self.inner().and_then(|inner| inner.get_children())
-    }
-
-    fn get_class(&self) -> Option<GameString> {
-        self.inner().and_then(|inner| inner.get_class())
-    }
-
-    fn get_parent(&self) -> Option<I> {
-        self.inner().and_then(|inner| inner.get_parent())
-    }
 }
 
 /// Creates a graph from a given data set
@@ -225,22 +209,23 @@ impl Grapher {
         let mut stack = Vec::new(); //BFS stack
         handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
         while let Some(current) = stack.pop() {
-            let char = current.1.get_internal();
-            let iter = if reverse {
-                if let Some(parent) = char.get_parent() {
-                    parent
+            if let Some(char) = current.1.get_internal().inner() {
+                let iter = if reverse {
+                    if let Some(parent) = char.get_parent() {
+                        parent
+                    } else {
+                        continue;
+                    }
                 } else {
-                    continue;
+                    if let Some(children) = char.get_children() {
+                        children
+                    } else {
+                        continue;
+                    }
+                };
+                for el in iter {
+                    handle_node(el, &mut tree, &mut stack, &mut storage, current.0, &fnt);
                 }
-            } else {
-                if let Some(children) = char.get_children() {
-                    children
-                } else {
-                    continue;
-                }
-            };
-            for el in iter {
-                handle_node(el, &mut tree, &mut stack, &mut storage, current.0, &fnt);
             }
         }
 
@@ -447,38 +432,40 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
     }
     //draw the empire lifespans
     for (i, (title, data)) in timespans.iter().enumerate() {
-        let mut txt_x = 0;
-        for (start, end) in data {
-            if *start < txt_x || txt_x == 0 {
-                txt_x = *start;
+        if let Some(title) = title.get_internal().inner() {
+            let mut txt_x = 0;
+            for (start, end) in data {
+                if *start < txt_x || txt_x == 0 {
+                    txt_x = *start;
+                }
+                let real_end;
+                if *end == 0 {
+                    real_end = max_date as i32;
+                } else {
+                    real_end = *end as i32;
+                }
+                root.draw(&Rectangle::new(
+                    [
+                        (
+                            *start as i32,
+                            -lifespan_y * i as i32 - TIMELINE_MARGIN as i32,
+                        ),
+                        (
+                            real_end,
+                            -lifespan_y * (i + 1) as i32 - TIMELINE_MARGIN as i32,
+                        ),
+                    ],
+                    Into::<ShapeStyle>::into(&GREEN).filled(),
+                ))
+                .unwrap();
             }
-            let real_end;
-            if *end == 0 {
-                real_end = max_date as i32;
-            } else {
-                real_end = *end as i32;
-            }
-            root.draw(&Rectangle::new(
-                [
-                    (
-                        *start as i32,
-                        -lifespan_y * i as i32 - TIMELINE_MARGIN as i32,
-                    ),
-                    (
-                        real_end,
-                        -lifespan_y * (i + 1) as i32 - TIMELINE_MARGIN as i32,
-                    ),
-                ],
-                Into::<ShapeStyle>::into(&GREEN).filled(),
+            root.draw(&Text::new(
+                title.get_name(),
+                (txt_x as i32, -lifespan_y * (i + 1) as i32),
+                fnt.clone(),
             ))
             .unwrap();
         }
-        root.draw(&Text::new(
-            title.get_internal().get_name(),
-            (txt_x as i32, -lifespan_y * (i + 1) as i32),
-            fnt.clone(),
-        ))
-        .unwrap();
     }
     root.present().unwrap();
 }

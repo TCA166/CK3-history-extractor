@@ -8,7 +8,7 @@ use super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
-        parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::{Wrapper, WrapperMut},
     },
     EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
@@ -31,7 +31,6 @@ pub struct Culture {
 
 impl FromGameObject for Culture {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -55,11 +54,7 @@ impl FromGameObject for Culture {
         };
         if let Some(parents_obj) = base.get("parents") {
             for p in parents_obj.as_object()?.as_array()? {
-                let parent = game_state.get_culture(&p.as_id()?).clone();
-                if let Ok(mut r) = parent.try_get_internal_mut() {
-                    r.register_child(game_state.get_culture(&id));
-                }
-                culture.parents.push(parent.clone());
+                culture.parents.push(game_state.get_culture(&p.as_id()?));
             }
         }
         return Ok(culture);
@@ -77,6 +72,16 @@ impl GameObjectDerived for Culture {
         }
         for c in &self.children {
             collection.extend([E::from(c.clone().into())]);
+        }
+    }
+
+    fn finalize(&mut self, reference: &GameRef<Culture>) {
+        for p in &self.parents {
+            if let Ok(mut r) = p.try_get_internal_mut() {
+                if let Some(parent) = r.inner_mut() {
+                    parent.register_child(reference.clone());
+                }
+            }
         }
     }
 }
@@ -144,7 +149,9 @@ impl Renderable for GameObjectEntity<Culture> {
                 let mut path = path.join(Culture::get_subdir());
                 path.push(format!("{}.png", self.id));
                 let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
-                culture_map.draw_text(format!("Map of the {} culture", &self.name));
+                if let Some(inner) = self.inner() {
+                    culture_map.draw_text(format!("Map of the {} culture", &inner.name));
+                }
                 culture_map.save(&path);
             }
         }

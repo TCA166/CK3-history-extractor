@@ -13,7 +13,7 @@ use super::{
         },
         types::{HashMap, Wrapper, WrapperMut},
     },
-    Character, EntityRef, FromGameObject, GameId, GameObjectDerived, GameObjectEntity, GameRef,
+    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
 };
 
 #[derive(Serialize, Debug)]
@@ -28,7 +28,7 @@ pub struct Dynasty {
     perks: HashMap<GameString, u8>,
     leaders: Vec<GameRef<Character>>,
     found_date: Option<Date>,
-    motto: Option<(GameString, HashMap<GameString, GameString>)>,
+    motto: Option<(GameString, HashMap<i64, GameString>)>,
 }
 
 impl Dynasty {
@@ -50,7 +50,9 @@ impl Dynasty {
         self.member_list.push(member.clone());
         if let Some(parent) = &self.parent {
             if let Ok(mut p) = parent.try_get_internal_mut() {
-                p.register_member(member);
+                if let Some(p) = p.inner_mut() {
+                    p.register_member(member);
+                }
             }
         }
     }
@@ -67,12 +69,12 @@ impl Dynasty {
 impl GameObjectEntity<Dynasty> {
     /// Checks if the dynasty is the same as another dynasty
     pub fn is_same_dynasty(&self, other: &Self) -> bool {
-        let id = if let Some(parent) = &self.parent {
+        let id = if let Some(parent) = self.entity.as_ref().and_then(|x| x.parent.clone()) {
             parent.get_internal().id
         } else {
             self.id
         };
-        if let Some(other_parent) = &other.parent {
+        if let Some(other_parent) = &other.entity.as_ref().and_then(|x| x.parent.clone()) {
             return id == other_parent.get_internal().id;
         } else {
             return id == other.id;
@@ -82,7 +84,6 @@ impl GameObjectEntity<Dynasty> {
 
 impl FromGameObject for Dynasty {
     fn from_game_object(
-        id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
@@ -95,7 +96,10 @@ impl FromGameObject for Dynasty {
                 .transpose()?,
             found_date: base.get("found_date").map(|n| n.as_date()).transpose()?,
             motto: None,
-            parent: None,
+            parent: base
+                .get("dynasty")
+                .map(|n| n.as_id().and_then(|id| Ok(game_state.get_dynasty(&id))))
+                .transpose()?,
             members: 0,
             member_list: Vec::new(),
             houses: 0,
@@ -104,26 +108,13 @@ impl FromGameObject for Dynasty {
             perks: HashMap::new(),
             leaders: Vec::new(),
         };
-        if let Some(paret) = base.get("dynasty") {
-            let paret = paret.as_id()?;
-            let p = game_state.get_dynasty(&paret).clone();
-            if paret != id {
-                // MAYBE this is bad? I don't know
-                if let Ok(mut p) = p.try_get_internal_mut() {
-                    p.register_house();
-                }
-                val.parent = Some(p.clone());
-            } else if val.name.is_none() {
-                val.name = Some(p.get_internal().get_name());
-            }
-        }
         if let Some(motto_node) = base.get("motto") {
             if let SaveFileValue::Object(obj) = motto_node {
                 let o = obj.as_map()?;
                 let mut vars = HashMap::new();
                 for v in o.get_object("variables")?.as_array()? {
                     let pair = v.as_object()?.as_map()?;
-                    vars.insert(pair.get_string("key")?, pair.get_string("value")?);
+                    vars.insert(pair.get_integer("key")?, pair.get_string("value")?);
                 }
                 val.motto = Some((o.get_string("key")?.clone(), vars));
             } else {
@@ -195,7 +186,7 @@ impl GameObjectDerived for Dynasty {
             .or(self
                 .parent
                 .as_ref()
-                .and_then(|x| Some(x.get_internal().get_name())))
+                .and_then(|x| x.get_internal().inner().and_then(|x| x.name.clone())))
             .unwrap()
     }
 
@@ -205,6 +196,21 @@ impl GameObjectDerived for Dynasty {
         }
         if let Some(parent) = &self.parent {
             collection.extend([E::from(parent.clone().into())]);
+        }
+    }
+
+    fn finalize(&mut self, reference: &GameRef<Dynasty>) {
+        if let Some(parent) = &self.parent {
+            if parent.get_internal().id == reference.get_internal().id {
+                self.parent = None;
+            } else {
+                // MAYBE this is bad? I don't know
+                if let Ok(mut p) = parent.try_get_internal_mut() {
+                    if let Some(p) = p.inner_mut() {
+                        p.register_house();
+                    }
+                }
+            }
         }
     }
 }
@@ -222,9 +228,11 @@ impl Renderable for GameObjectEntity<Dynasty> {
 
     fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if let Some(grapher) = grapher {
-            let mut buf = path.join(Dynasty::get_subdir());
-            buf.push(format!("{}.svg", self.id));
-            grapher.create_dynasty_graph(self, &buf);
+            if let Some(dynasty) = self.inner() {
+                let mut buf = path.join(Dynasty::get_subdir());
+                buf.push(format!("{}.svg", self.id));
+                grapher.create_dynasty_graph(dynasty, &buf);
+            }
         }
     }
 }
