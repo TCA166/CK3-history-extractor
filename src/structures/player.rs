@@ -8,13 +8,13 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable},
+        display::{GetPath, Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
-    Character, GameObjectDerived, LineageNode, Shared,
+    Character, EntityRef, FromGameObject, GameObjectDerived, GameRef, LineageNode,
 };
 
 use std::{
@@ -30,49 +30,44 @@ const BASE_COLOR: [u8; 3] = [255, 255, 255];
 /// A struct representing a player in the game
 #[derive(Serialize, Debug)]
 pub struct Player {
-    pub name: GameString,
-    pub id: GameId,
-    pub character: Option<Shared<Character>>,
-    pub lineage: Vec<LineageNode>,
+    name: GameString,
+    character: Option<GameRef<Character>>,
+    lineage: Vec<LineageNode>,
 }
 
 impl FromGameObject for Player {
     fn from_game_object(
+        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
-        let mut lineage: Vec<LineageNode> = Vec::new();
-        for leg in base.get_object("legacy")?.as_array()? {
-            lineage.push(LineageNode::from_game_object(
-                leg.as_object()?.as_map()?,
-                game_state,
-            )?)
-        }
-        // apparently the player id can be negative?
-        let id = base.get_integer("player")? as i32;
-        Ok(Player {
+        let mut player = Self {
             name: base.get_string("name")?,
-            id: id as u32,
             character: Some(
                 game_state
                     .get_character(&base.get_game_id("character")?)
                     .clone(),
             ),
-            lineage: lineage,
-        })
+            lineage: Vec::new(),
+        };
+        for leg in base.get_object("legacy")?.as_array()? {
+            let id = base.get_game_id("character")?;
+            player.lineage.push(LineageNode::from_game_object(
+                id,
+                leg.as_object()?.as_map()?,
+                game_state,
+            )?)
+        }
+        Ok(player)
     }
 }
 
 impl GameObjectDerived for Player {
-    fn get_id(&self) -> GameId {
-        self.id
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        Some(self.name.clone())
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
         for node in self.lineage.iter() {
             collection.extend([E::from(node.get_character().clone().into())]);
@@ -80,15 +75,13 @@ impl GameObjectDerived for Player {
     }
 }
 
-impl Renderable for Player {
-    fn get_subdir() -> &'static str {
-        "."
-    }
-
+impl GetPath for Player {
     fn get_path(&self, path: &Path) -> PathBuf {
         path.join("index.html")
     }
+}
 
+impl Renderable for Player {
     fn get_template() -> &'static str {
         H_TEMPLATE_NAME
     }
@@ -177,7 +170,7 @@ impl Renderable for Player {
         }
         if let Some(grapher) = grapher {
             let last = self.lineage.last().unwrap().get_character();
-            grapher.create_tree_graph::<Character, PathBuf>(last, true, &path.join("line.svg"));
+            grapher.create_tree_graph(last, true, &path.join("line.svg"));
         }
     }
 }

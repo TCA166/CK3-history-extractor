@@ -1,6 +1,7 @@
 use std::{
     any::type_name,
     hash::{Hash, Hasher},
+    ops::{Deref, DerefMut},
 };
 
 use super::{
@@ -46,27 +47,24 @@ pub use lineage::LineageNode;
 mod artifact;
 pub use artifact::Artifact;
 
+pub trait FromGameObject: Sized {
+    fn from_game_object(
+        id: GameId,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError>;
+}
+
 /// A trait for objects that can be created from a [GameObjectMap].
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
 /// The idea is to have uniform interface for the object initialization.
 pub trait GameObjectDerived {
-    fn new(
-        id: GameId,
-        base: &GameObjectMap,
-        game_state: &mut GameState,
-    ) -> Result<Self, ParsingError>
-    where
-        Self: Sized;
-
     /// Get the name of the object.
     /// The result of this method depends on the type.
     fn get_name(&self) -> GameString;
 
     /// Extends the provided collection with references to other [GameObjectDerived] objects, if any.
-    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    );
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C);
 }
 
 #[derive(Serialize, Debug)]
@@ -76,7 +74,7 @@ pub struct GameObjectEntity<T: GameObjectDerived> {
     entity: Option<T>,
 }
 
-impl<T: GameObjectDerived> GameObjectEntity<T> {
+impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {
     pub fn new(id: GameId) -> Self {
         Self { id, entity: None }
     }
@@ -96,31 +94,87 @@ impl<T: GameObjectDerived> GameObjectEntity<T> {
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<(), ParsingError> {
-        self.entity = Some(T::new(self.id, base, game_state)?);
+        self.entity = Some(T::from_game_object(self.id, base, game_state)?);
         Ok(())
     }
 
     pub fn inner(&self) -> Option<&T> {
         self.entity.as_ref()
     }
+
+    pub fn inner_mut(&mut self) -> Option<&mut T> {
+        self.entity.as_mut()
+    }
+}
+
+impl<T: GameObjectDerived + FromGameObject> PartialEq for GameRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_internal().get_unique_identifier() == other.get_internal().get_unique_identifier()
+    }
+}
+
+impl<T: GameObjectDerived + FromGameObject> Eq for GameRef<T> {}
+
+//TODO this is bad
+
+impl<T: GameObjectDerived + FromGameObject> Deref for GameObjectEntity<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner().expect("Dereferenced an un-initialized Entity")
+    }
+}
+
+impl<T: GameObjectDerived + FromGameObject> DerefMut for GameObjectEntity<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner_mut()
+            .expect("Dereferenced mutably an un-initialized Entity")
+    }
 }
 
 pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 
-impl<T: GameObjectDerived> Hash for GameObjectEntity<T> {
+impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.get_unique_identifier().hash(state);
     }
 }
 
-#[derive(From, Debug, PartialEq, Eq, Serialize)]
-#[serde(untagged)]
+#[derive(From, Debug, PartialEq, Eq)]
 pub enum EntityRef {
-    Character(Character),
-    Culture(Culture),
-    Dynasty(Dynasty),
-    Faith(Faith),
-    Title(Title),
-    Memory(Memory),
-    Artifact(Artifact),
+    Character(GameRef<Character>),
+    Culture(GameRef<Culture>),
+    Dynasty(GameRef<Dynasty>),
+    Faith(GameRef<Faith>),
+    Title(GameRef<Title>),
+    Memory(GameRef<Memory>),
+    Artifact(GameRef<Artifact>),
+}
+
+impl Hash for EntityRef {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            EntityRef::Character(char) => char.get_internal().hash(state),
+            EntityRef::Culture(cul) => cul.get_internal().hash(state),
+            EntityRef::Dynasty(dynasty) => dynasty.get_internal().hash(state),
+            EntityRef::Faith(faith) => faith.get_internal().hash(state),
+            EntityRef::Title(title) => title.get_internal().hash(state),
+            EntityRef::Memory(mem) => mem.get_internal().hash(state),
+            EntityRef::Artifact(art) => art.get_internal().hash(state),
+        }
+    }
+}
+
+impl EntityRef {
+    pub fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
+        match self {
+            EntityRef::Character(char) => char.get_internal().get_references(collection),
+            EntityRef::Culture(cul) => cul.get_internal().get_references(collection),
+            EntityRef::Dynasty(dynasty) => dynasty.get_internal().get_references(collection),
+            EntityRef::Faith(faith) => faith.get_internal().get_references(collection),
+            EntityRef::Title(title) => title.get_internal().get_references(collection),
+            EntityRef::Memory(mem) => mem.get_internal().get_references(collection),
+            EntityRef::Artifact(art) => art.get_internal().get_references(collection),
+        }
+    }
 }

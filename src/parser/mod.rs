@@ -113,7 +113,10 @@ impl<'a> error::Error for ParsingError {
     }
 }
 
-use super::{structures::Player, types::HashMap};
+use super::{
+    structures::{FromGameObject, Player},
+    types::HashMap,
+};
 
 /// A function that processes a section of the save file.
 /// Based on the given section, it will update the [GameState] object and the
@@ -263,7 +266,8 @@ pub fn process_section(
             }
         }
         "played_character" => {
-            let p = Player::from_game_object(i.parse()?.as_map()?, game_state)?;
+            // TODO what about id?
+            let p = Player::from_game_object(0, i.parse()?.as_map()?, game_state)?;
             players.push(p);
         }
         "artifacts" => {

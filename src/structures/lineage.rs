@@ -1,5 +1,5 @@
 use jomini::common::Date;
-use serde::{ser::SerializeStruct, Serialize};
+use serde::Serialize;
 
 use super::{
     super::{
@@ -9,11 +9,11 @@ use super::{
         },
         types::Wrapper,
     },
-    Character, GameId, GameObjectDerived, GameObjectEntity, GameRef, Shared,
+    Character, EntityRef, FromGameObject, GameId, GameObjectDerived, GameRef,
 };
 
 /// A struct representing a lineage node in the game
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct LineageNode {
     character: GameRef<Character>,
     date: Date,
@@ -27,33 +27,17 @@ pub struct LineageNode {
 
 impl LineageNode {
     /// Gets the character associated with the lineage node
-    pub fn get_character(&self) -> Shared<Character> {
-        self.character.as_ref().unwrap().clone()
+    pub fn get_character(&self) -> GameRef<Character> {
+        self.character.clone()
     }
 }
 
-// TODO lineage node shouldnt be GameObjectDerived
-
-impl GameObjectDerived for LineageNode {
-    fn get_name(&self) -> GameString {
-        self.character.as_ref().unwrap().get_internal().get_name()
-    }
-
-    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    ) {
-        collection.extend([E::from(self.character.as_ref().unwrap().clone().into())]);
-    }
-
-    fn new(
+impl FromGameObject for LineageNode {
+    fn from_game_object(
         id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
-    ) -> Result<Self, ParsingError>
-    where
-        Self: Sized,
-    {
+    ) -> Result<Self, ParsingError> {
         let char = game_state.get_character(&id);
         let mut perks = Vec::new();
         if let Some(perks_node) = base.get("perk") {
@@ -98,6 +82,16 @@ impl GameObjectDerived for LineageNode {
     }
 }
 
+impl GameObjectDerived for LineageNode {
+    fn get_name(&self) -> GameString {
+        self.character.get_internal().get_name()
+    }
+
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
+        collection.extend([E::from(self.character.clone().into())]);
+    }
+}
+
 impl Localizable for LineageNode {
     fn localize<L: Localize<GameString>>(
         &mut self,
@@ -109,7 +103,7 @@ impl Localizable for LineageNode {
         for perk in self.perks.iter_mut() {
             let mut perk_key = perk.to_string();
             if perk_key == "family_man_perk" {
-                perk_key += if self.character.as_ref().unwrap().get_internal().get_female() {
+                perk_key += if self.character.get_internal().get_female() {
                     "_female_name"
                 } else {
                     "_male_name"
@@ -120,24 +114,5 @@ impl Localizable for LineageNode {
             *perk = localization.localize(perk_key)?;
         }
         Ok(())
-    }
-}
-
-impl Serialize for LineageNode {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut state = serializer.serialize_struct("LineageNode", 8)?;
-        state.serialize_field(
-            "character",
-            &*self.character.as_ref().unwrap().get_internal(),
-        )?;
-        state.serialize_field("date", &self.date)?;
-        state.serialize_field("score", &self.score)?;
-        state.serialize_field("prestige", &self.prestige)?;
-        state.serialize_field("piety", &self.piety)?;
-        state.serialize_field("dread", &self.dread)?;
-        state.serialize_field("lifestyle", &self.lifestyle)?;
-        state.serialize_field("perks", &self.perks)?;
-        state.serialize_field("id", &self.id)?;
-        state.end()
     }
 }

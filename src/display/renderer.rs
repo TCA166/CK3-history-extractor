@@ -15,12 +15,12 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::GameData,
-        parser::{GameId, GameState, GameString},
+        parser::{GameId, GameState},
         structures::{
-            Character, Culture, Dynasty, EntityRef, Faith, GameObjectDerived, GameObjectEntity,
-            GameRef, Title,
+            Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
+            GameObjectEntity, GameRef, Title,
         },
-        types::{HashMap, Shared, Wrapper},
+        types::{HashMap, Wrapper},
     },
     graph::Grapher,
 };
@@ -55,6 +55,28 @@ impl TryFrom<&EntityRef> for RenderableType {
             EntityRef::Faith(f) => Ok(f.clone().into()),
             EntityRef::Culture(c) => Ok(c.clone().into()),
             _ => Err(()),
+        }
+    }
+}
+
+impl RenderableType {
+    fn get_id(&self) -> GameId {
+        match self {
+            RenderableType::Character(c) => c.get_internal().get_id(),
+            RenderableType::Dynasty(d) => d.get_internal().get_id(),
+            RenderableType::Title(t) => t.get_internal().get_id(),
+            RenderableType::Faith(f) => f.get_internal().get_id(),
+            RenderableType::Culture(c) => c.get_internal().get_id(),
+        }
+    }
+
+    fn get_subdir(&self) -> &'static str {
+        match self {
+            RenderableType::Character(_) => Character::get_subdir(),
+            RenderableType::Dynasty(_) => Dynasty::get_subdir(),
+            RenderableType::Title(_) => Title::get_subdir(),
+            RenderableType::Faith(_) => Faith::get_subdir(),
+            RenderableType::Culture(_) => Culture::get_subdir(),
         }
     }
 }
@@ -215,9 +237,9 @@ pub trait GetPath {
     fn get_path(&self, path: &Path) -> PathBuf;
 }
 
-impl<T: GameObjectDerived + ProceduralPath> GetPath for T {
+impl<T: GameObjectDerived + ProceduralPath + FromGameObject> GetPath for GameObjectEntity<T> {
     fn get_path(&self, path: &Path) -> PathBuf {
-        let mut buf = path.join(Self::get_subdir());
+        let mut buf = path.join(T::get_subdir());
         buf.push(format!("{}.html", self.get_id()));
         buf
     }

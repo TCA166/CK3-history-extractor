@@ -11,8 +11,8 @@ use tidy_tree::TidyTree;
 
 use super::super::{
     parser::{GameId, GameString},
-    structures::{Character, Dynasty, GameObjectDerived, Title},
-    types::{HashMap, OneOrMany, Shared, Wrapper},
+    structures::{Dynasty, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title},
+    types::{HashMap, Wrapper},
 };
 
 use std::path::Path;
@@ -42,10 +42,13 @@ const MIN_Y: f64 = 0.0;
 
 /// Handles node initialization within the graph.
 /// Tree is the tree object we are adding the node to, stack is the stack we are using to traverse the tree, storage is the hashmap we are using to store the node data, fnt is the font we are using to calculate the size of the node, and parent is the parent node id.
-fn handle_node<T: TreeNode>(
-    node: Shared<T>,
+fn handle_node<
+    I: IntoIterator<Item = GameRef<T>>,
+    T: TreeNode<I> + GameObjectDerived + FromGameObject,
+>(
+    node: GameRef<T>,
     tree: &mut TidyTree,
-    stack: &mut Vec<(usize, Shared<T>)>,
+    stack: &mut Vec<(usize, GameRef<T>)>,
     storage: &mut HashMap<
         usize,
         (
@@ -61,8 +64,8 @@ fn handle_node<T: TreeNode>(
 ) {
     let ch = node.get_internal();
     let id = ch.get_id() as usize;
-    if let Some(name) = ch.get_name() {
-        //we use sz, which is the rough size of a character, to calculate the size of the node
+    if let Some(obj) = ch.inner() {
+        let name = obj.get_name();
         let txt_size = fnt.box_size(&name).unwrap();
         let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
         let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
@@ -82,22 +85,38 @@ fn handle_node<T: TreeNode>(
                 name,
                 (node_width, node_height),
                 txt_point,
-                ch.get_class(),
+                obj.get_class(),
             ),
         );
     }
 }
 
 /// A trait for objects that can be used in a tree structure
-pub trait TreeNode: GameObjectDerived + Sized {
+pub trait TreeNode<I: IntoIterator>: Sized {
     /// Returns an iterator over the children of the node
-    fn get_children(&self) -> Option<OneOrMany<Self>>;
+    fn get_children(&self) -> Option<I>;
 
     /// Returns an iterator over the parent of the node
-    fn get_parent(&self) -> Option<OneOrMany<Self>>;
+    fn get_parent(&self) -> Option<I>;
 
     /// Returns the class of the node
     fn get_class(&self) -> Option<GameString>;
+}
+
+impl<I: IntoIterator<Item = GameRef<G>>, G: GameObjectDerived + FromGameObject + TreeNode<I>>
+    TreeNode<I> for GameObjectEntity<G>
+{
+    fn get_children(&self) -> Option<I> {
+        self.inner().and_then(|inner| inner.get_children())
+    }
+
+    fn get_class(&self) -> Option<GameString> {
+        self.inner().and_then(|inner| inner.get_class())
+    }
+
+    fn get_parent(&self) -> Option<I> {
+        self.inner().and_then(|inner| inner.get_parent())
+    }
 }
 
 /// Creates a graph from a given data set
@@ -189,9 +208,13 @@ impl Grapher {
 
     /// Creates a tree graph from a given node
     /// The reverse parameter determines if the tree is drawn from the parent to the children or the other way around
-    pub fn create_tree_graph<T: TreeNode, P: AsRef<Path>>(
+    pub fn create_tree_graph<
+        I: IntoIterator<Item = GameRef<T>>,
+        T: TreeNode<I> + GameObjectDerived + FromGameObject,
+        P: AsRef<Path>,
+    >(
         &self,
-        start: Shared<T>, // the root node that is a TreeNode
+        start: GameRef<T>, // the root node that is a TreeNode
         reverse: bool,
         output_path: &P,
     ) {
@@ -203,43 +226,21 @@ impl Grapher {
         handle_node(start, &mut tree, &mut stack, &mut storage, NO_PARENT, &fnt);
         while let Some(current) = stack.pop() {
             let char = current.1.get_internal();
-            let iter;
-            if reverse {
+            let iter = if reverse {
                 if let Some(parent) = char.get_parent() {
-                    iter = parent;
+                    parent
                 } else {
                     continue;
                 }
             } else {
                 if let Some(children) = char.get_children() {
-                    iter = children;
+                    children
                 } else {
                     continue;
                 }
-            }
-            match iter {
-                OneOrMany::One(child) => {
-                    handle_node(
-                        child.clone(),
-                        &mut tree,
-                        &mut stack,
-                        &mut storage,
-                        current.0,
-                        &fnt,
-                    );
-                }
-                OneOrMany::Many(children) => {
-                    for child in children {
-                        handle_node(
-                            child.clone(),
-                            &mut tree,
-                            &mut stack,
-                            &mut storage,
-                            current.0,
-                            &fnt,
-                        );
-                    }
-                }
+            };
+            for el in iter {
+                handle_node(el, &mut tree, &mut stack, &mut storage, current.0, &fnt);
             }
         }
 
@@ -380,8 +381,7 @@ impl Grapher {
     /// Creates a dynasty graph, meaning the family tree graph
     pub fn create_dynasty_graph<P: AsRef<Path>>(&self, dynasty: &Dynasty, output_path: &P) {
         //we get the founder and use it as root
-        let founder = dynasty.get_founder();
-        self.create_tree_graph::<Character, P>(founder, false, output_path)
+        self.create_tree_graph(dynasty.get_founder(), false, output_path)
     }
 
     pub fn create_culture_graph<P: AsRef<Path>>(&self, culture_id: GameId, output_path: &P) {
@@ -398,7 +398,7 @@ impl Grapher {
 }
 
 pub fn create_timeline_graph<P: AsRef<Path>>(
-    timespans: &Vec<(Shared<Title>, Vec<(i16, i16)>)>,
+    timespans: &Vec<(GameRef<Title>, Vec<(i16, i16)>)>,
     max_date: i16,
     output_path: P,
 ) {
@@ -474,11 +474,7 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
             .unwrap();
         }
         root.draw(&Text::new(
-            title
-                .get_internal()
-                .get_name()
-                .expect("Title has no name")
-                .to_string(),
+            title.get_internal().get_name(),
             (txt_x as i32, -lifespan_y * (i + 1) as i32),
             fnt.clone(),
         ))

@@ -79,9 +79,3 @@ impl<T> Clone for Shared<T> {
         }
     }
 }
-
-/// A type that can be either a single value or a vector of values.
-pub enum OneOrMany<'a, T> {
-    One(&'a Shared<T>),
-    Many(&'a Vec<Shared<T>>),
-}

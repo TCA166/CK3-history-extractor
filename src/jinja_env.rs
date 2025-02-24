@@ -4,9 +4,10 @@ use minijinja::{AutoEscape, Environment, State, UndefinedBehavior, Value};
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
+    display::ProceduralPath,
     game_data::{GameData, Localize},
-    types::{Shared, Wrapper},
-    Renderable,
+    structures::{FromGameObject, GameObjectDerived, GameRef},
+    types::Wrapper,
 };
 
 #[cfg(feature = "internal")]
@@ -48,17 +49,21 @@ const DERIVED_REF_NAME_ATTR: &str = "name";
 const DERIVED_REF_SUBDIR_ATTR: &str = "subdir";
 const DERIVED_REF_ID_ATTR: &str = "id";
 
-impl<T: Renderable> Serialize for Shared<T> {
+impl<T: GameObjectDerived + FromGameObject + ProceduralPath> Serialize for GameRef<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        let mut state = serializer.serialize_struct("DerivedRef", 3)?;
         let internal = self.get_internal();
-        state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
-        state.serialize_field(DERIVED_REF_NAME_ATTR, &internal.get_name())?;
-        state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
-        state.end()
+        if let Some(inner) = internal.inner() {
+            let mut state = serializer.serialize_struct("DerivedRef", 3)?;
+            state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
+            state.serialize_field(DERIVED_REF_NAME_ATTR, &inner.get_name())?;
+            state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
+            state.end()
+        } else {
+            serializer.serialize_none()
+        }
     }
 }
 

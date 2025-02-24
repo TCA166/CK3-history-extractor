@@ -7,9 +7,7 @@ use super::{
         game_data::GameData,
         jinja_env::TIMELINE_TEMPLATE_NAME,
         parser::{GameState, GameString},
-        structures::{
-            Character, Culture, Faith, GameObjectDerived, GameObjectEntity, GameRef, Title,
-        },
+        structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, GameRef, Title},
     },
     graph::{create_timeline_graph, Grapher},
     renderer::{GetPath, Renderable},
@@ -66,11 +64,14 @@ impl Timeline {
             events,
         }
     }
+}
 
-    pub fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    ) {
+impl GameObjectDerived for Timeline {
+    fn get_name(&self) -> GameString {
+        GameString::from("Timeline")
+    }
+
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         for (title, _) in &self.lifespans {
             collection.extend([E::from(title.clone().into())]);
         }

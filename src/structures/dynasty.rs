@@ -13,7 +13,7 @@ use super::{
         },
         types::{HashMap, Wrapper, WrapperMut},
     },
-    Character, GameId, GameObjectDerived, GameObjectEntity, GameRef,
+    Character, EntityRef, FromGameObject, GameId, GameObjectDerived, GameObjectEntity, GameRef,
 };
 
 #[derive(Serialize, Debug)]
@@ -28,7 +28,7 @@ pub struct Dynasty {
     perks: HashMap<GameString, u8>,
     leaders: Vec<GameRef<Character>>,
     found_date: Option<Date>,
-    motto: Option<(GameString, HashMap<String, GameString>)>,
+    motto: Option<(GameString, HashMap<GameString, GameString>)>,
 }
 
 impl Dynasty {
@@ -62,9 +62,11 @@ impl Dynasty {
         }
         self.leaders.first().unwrap().clone()
     }
+}
 
+impl GameObjectEntity<Dynasty> {
     /// Checks if the dynasty is the same as another dynasty
-    pub fn is_same_dynasty(&self, other: &Dynasty) -> bool {
+    pub fn is_same_dynasty(&self, other: &Self) -> bool {
         let id = if let Some(parent) = &self.parent {
             parent.get_internal().id
         } else {
@@ -78,27 +80,8 @@ impl Dynasty {
     }
 }
 
-impl GameObjectDerived for Dynasty {
-    fn get_name(&self) -> GameString {
-        self.name.clone().or(self
-            .parent
-            .as_ref()
-            .and_then(|x| x.get_internal().get_name()))
-    }
-
-    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    ) {
-        for leader in self.leaders.iter() {
-            collection.extend([E::from(leader.clone().into())]);
-        }
-        if let Some(parent) = &self.parent {
-            collection.extend([E::from(parent.clone().into())]);
-        }
-    }
-
-    fn new(
+impl FromGameObject for Dynasty {
+    fn from_game_object(
         id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
@@ -108,34 +91,11 @@ impl GameObjectDerived for Dynasty {
             name: base
                 .get("name")
                 .or(base.get("localized_name"))
-                .map(|n| n.as_string()?),
-            found_date: base.get("found_date").map(|n| n.as_date()?),
-            motto: base.get("motto").map(|n| {
-                if let SaveFileValue::Object(obj) = n {
-                    let o = obj.as_map()?;
-                    let mut vars = HashMap::new();
-                    for v in o.get_object("variables")?.as_array()? {
-                        let pair = v.as_object()?.as_map()?;
-                        vars.insert(pair.get_string("key")?.clone(), pair.get_string("value")?);
-                    }
-                    (o.get_string("key")?.clone(), vars)
-                } else {
-                    (n.as_string()?, HashMap::new())
-                }
-            }),
-            parent: base.get("dynasty").map(|n| {
-                let parent_id = n.as_id()?;
-                if parent_id != id {
-                    // MAYBE this is bad? I don't know
-                    let p = game_state.get_dynasty(&parent_id).clone();
-                    if let Ok(mut p) = p.try_get_internal_mut() {
-                        p.register_house();
-                    }
-                    Some(p.clone())
-                } else {
-                    None
-                }
-            }),
+                .map(|n| n.as_string())
+                .transpose()?,
+            found_date: base.get("found_date").map(|n| n.as_date()).transpose()?,
+            motto: None,
+            parent: None,
             members: 0,
             member_list: Vec::new(),
             houses: 0,
@@ -144,6 +104,32 @@ impl GameObjectDerived for Dynasty {
             perks: HashMap::new(),
             leaders: Vec::new(),
         };
+        if let Some(paret) = base.get("dynasty") {
+            let paret = paret.as_id()?;
+            let p = game_state.get_dynasty(&paret).clone();
+            if paret != id {
+                // MAYBE this is bad? I don't know
+                if let Ok(mut p) = p.try_get_internal_mut() {
+                    p.register_house();
+                }
+                val.parent = Some(p.clone());
+            } else if val.name.is_none() {
+                val.name = Some(p.get_internal().get_name());
+            }
+        }
+        if let Some(motto_node) = base.get("motto") {
+            if let SaveFileValue::Object(obj) = motto_node {
+                let o = obj.as_map()?;
+                let mut vars = HashMap::new();
+                for v in o.get_object("variables")?.as_array()? {
+                    let pair = v.as_object()?.as_map()?;
+                    vars.insert(pair.get_string("key")?, pair.get_string("value")?);
+                }
+                val.motto = Some((o.get_string("key")?.clone(), vars));
+            } else {
+                val.motto = Some((motto_node.as_string()?, HashMap::default()));
+            }
+        }
         if let Some(perks_obj) = base.get("perk") {
             for p in perks_obj.as_object()?.as_array()? {
                 let perk = p.as_string()?;
@@ -202,20 +188,41 @@ impl GameObjectDerived for Dynasty {
     }
 }
 
+impl GameObjectDerived for Dynasty {
+    fn get_name(&self) -> GameString {
+        self.name
+            .clone()
+            .or(self
+                .parent
+                .as_ref()
+                .and_then(|x| Some(x.get_internal().get_name())))
+            .unwrap()
+    }
+
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
+        for leader in self.leaders.iter() {
+            collection.extend([E::from(leader.clone().into())]);
+        }
+        if let Some(parent) = &self.parent {
+            collection.extend([E::from(parent.clone().into())]);
+        }
+    }
+}
+
 impl ProceduralPath for Dynasty {
     fn get_subdir() -> &'static str {
         "dynasties"
     }
 }
 
-impl Renderable for Dynasty {
+impl Renderable for GameObjectEntity<Dynasty> {
     fn get_template() -> &'static str {
         DYN_TEMPLATE_NAME
     }
 
     fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if let Some(grapher) = grapher {
-            let mut buf = path.join(Self::get_subdir());
+            let mut buf = path.join(Dynasty::get_subdir());
             buf.push(format!("{}.svg", self.id));
             grapher.create_dynasty_graph(self, &buf);
         }

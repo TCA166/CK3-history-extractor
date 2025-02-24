@@ -9,10 +9,10 @@ use super::{
         parser::{
             GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
         },
-        types::{OneOrMany, Shared, Wrapper, WrapperMut},
+        types::{Shared, Wrapper, WrapperMut},
     },
-    Artifact, Culture, Dynasty, Faith, GameId, GameObjectDerived, GameObjectEntity, GameRef,
-    Memory, Title,
+    Artifact, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameId, GameObjectDerived,
+    GameObjectEntity, GameRef, Memory, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
@@ -91,16 +91,9 @@ impl Character {
         if let Some(faith) = &self.faith {
             return faith.clone();
         } else {
-            if let Some(house) = &self.house {
-                let o = house.get_internal();
-                let leader = o.get_leader();
-                let leader = leader.get_internal();
-                if leader.get_id() != self.id {
-                    return leader.get_faith();
-                }
-            }
+            let house = self.house.as_ref().unwrap().get_internal();
+            house.get_leader().get_internal().get_faith()
         }
-        None
     }
 
     /// Gets the culture of the character
@@ -108,16 +101,9 @@ impl Character {
         if let Some(culture) = &self.culture {
             return culture.clone();
         } else {
-            if let Some(house) = &self.house {
-                let o = house.get_internal();
-                let leader = o.get_leader();
-                let leader = leader.get_internal();
-                if leader.get_id() != self.id {
-                    return leader.get_culture();
-                }
-            }
+            let house = self.house.as_ref().unwrap().get_internal();
+            house.get_leader().get_internal().get_culture()
         }
-        None
     }
 
     /// Adds a character as a parent of this character
@@ -148,7 +134,7 @@ impl Character {
         let mut provinces = Vec::new();
         for title in self.titles.iter() {
             let title = title.get_internal();
-            let key = title.get_key().unwrap();
+            let key = title.get_key();
             if key.starts_with("e_") || key.starts_with("k_") {
                 //for kingdoms and empires we don't want to add the de jure baronies
                 continue;
@@ -207,41 +193,37 @@ impl Character {
     }
 }
 
-impl GameObjectDerived for Character {
-    fn new(
+impl FromGameObject for Character {
+    fn from_game_object(
         id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
         let mut val = Self {
             // a few simple keys
-            female: base.get("female")?.as_boolean()?,
+            female: base
+                .get("female")
+                .and_then(|val| Some(val.as_boolean()))
+                .unwrap()?,
             name: base.get_string("first_name")?,
             birth: base.get_date("birth")?,
             // non mandatory, yet simple keys
             nick: base
                 .get("nickname_text")
                 .or(base.get("nickname"))
-                .map(|x| x.as_string()?),
-            faith: base.get("faith").map(|x| game_state.get_faith(&x.as_id()?)),
+                .map(|x| x.as_string())
+                .transpose()?,
+            faith: base
+                .get("faith")
+                .map(|x| x.as_id().and_then(|id| Ok(game_state.get_faith(&id))))
+                .transpose()?,
             culture: base
                 .get("culture")
-                .map(|x| game_state.get_culture(&x.as_id()?)),
-            dna: base.get("dna").map(|x| x.as_string()?),
-            traits: base
-                .get("traits")
-                .map(|x| x.as_object()?.as_array()?)
-                .unwrap_or_default()
-                .iter()
-                .map(|x| game_state.get_trait(x.as_integer()? as u16))
-                .collect::<Result<Vec<_>, _>>()?,
-            skills: base
-                .get("skills")
-                .map(|x| x.as_object()?.as_array()?)
-                .unwrap_or_default()
-                .iter()
-                .map(|x| x.as_integer()? as i8)
-                .collect(),
+                .map(|x| x.as_id().and_then(|id| Ok(game_state.get_culture(&id))))
+                .transpose()?,
+            dna: base.get("dna").map(|x| x.as_string()).transpose()?,
+            traits: Vec::new(),
+            skills: Vec::new(),
             // keys grouped together in sections, we resolve these later
             dead: false,
             date: None,
@@ -264,6 +246,15 @@ impl GameObjectDerived for Character {
             liege: None,
             artifacts: Vec::new(),
         };
+        for s in base.get_object("skill")?.as_array()?.into_iter() {
+            val.skills.push(s.as_integer()? as i8);
+        }
+        if let Some(traits_node) = base.get("traits") {
+            for t in traits_node.as_object()?.as_array()? {
+                let index = t.as_integer()? as u16;
+                val.traits.push(game_state.get_trait(index));
+            }
+        }
         if let Some(dynasty_id) = base.get("dynasty_house") {
             let d = game_state.get_dynasty(&dynasty_id.as_id()?);
             d.get_internal_mut()
@@ -410,16 +401,16 @@ impl GameObjectDerived for Character {
                 }
             }
         }
+        Ok(val)
     }
+}
 
+impl GameObjectDerived for Character {
     fn get_name(&self) -> GameString {
         self.name.clone()
     }
 
-    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    ) {
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         if let Some(faith) = &self.faith {
             collection.extend([E::from(faith.clone().into())]);
         }
@@ -467,24 +458,24 @@ impl GameObjectDerived for Character {
     }
 }
 
-impl TreeNode for Character {
-    fn get_children(&self) -> Option<OneOrMany<Character>> {
+impl TreeNode<Vec<GameRef<Character>>> for Character {
+    fn get_children(&self) -> Option<Vec<GameRef<Character>>> {
         if self.children.is_empty() {
             return None;
         }
-        Some(OneOrMany::Many(&self.children))
+        Some(self.children.clone())
     }
 
-    fn get_parent(&self) -> Option<OneOrMany<Character>> {
+    fn get_parent(&self) -> Option<Vec<GameRef<Character>>> {
         if self.parents.is_empty() {
             return None;
         }
-        Some(OneOrMany::Many(&self.parents))
+        Some(self.parents.clone())
     }
 
     fn get_class(&self) -> Option<GameString> {
         if let Some(house) = &self.house {
-            house.get_internal().get_name()
+            Some(house.get_internal().get_name())
         } else {
             None
         }
@@ -504,12 +495,8 @@ impl Serialize for Character {
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
         state.serialize_field("house", &self.house)?;
-        if let Some(faith) = self.get_faith() {
-            state.serialize_field("faith", &faith)?;
-        }
-        if let Some(culture) = self.get_culture() {
-            state.serialize_field("culture", &culture)?;
-        }
+        state.serialize_field("faith", &self.get_faith())?;
+        state.serialize_field("culture", &self.get_culture())?;
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
         state.serialize_field("spouses", &self.spouses)?;
@@ -528,7 +515,6 @@ impl Serialize for Character {
         state.serialize_field("languages", &self.languages)?;
         state.serialize_field("artifacts", &self.artifacts)?;
         state.serialize_field("vassals", &self.vassals)?;
-        state.serialize_field("id", &self.id)?;
         state.serialize_field("liege", &self.liege)?;
         state.end()
     }
@@ -540,7 +526,7 @@ impl ProceduralPath for Character {
     }
 }
 
-impl Renderable for Character {
+impl Renderable for GameObjectEntity<Character> {
     fn get_template() -> &'static str {
         C_TEMPLATE_NAME
     }
@@ -551,11 +537,7 @@ impl Localizable for Character {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        if self.name.is_none() {
-            return Ok(());
-        } else {
-            self.name = localization.localize(self.name)?;
-        }
+        self.name = localization.localize(&self.name)?;
         if let Some(nick) = &self.nick {
             self.nick = Some(localization.localize(nick)?);
         }

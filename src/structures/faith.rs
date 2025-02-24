@@ -1,4 +1,4 @@
-use std::{cell::Ref, path::Path};
+use std::path::Path;
 
 use serde::Serialize;
 
@@ -10,7 +10,7 @@ use super::{
         parser::{GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
         types::Wrapper,
     },
-    Character, GameObjectDerived, GameObjectEntity, Shared, Title,
+    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
 };
 
 /// A struct representing a faith in the game
@@ -18,42 +18,28 @@ use super::{
 pub struct Faith {
     name: GameString,
     tenets: Vec<GameString>,
-    head: Option<Shared<Character>>,
+    head: Option<GameRef<Character>>,
     fervor: f32,
     doctrines: Vec<GameString>,
 }
 
-impl GameObjectDerived for Faith {
-    fn get_name(&self) -> GameString {
-        self.name.clone()
-    }
-
-    fn get_references<T: GameObjectDerived, E: From<GameObjectEntity<T>>, C: Extend<E>>(
-        &self,
-        collection: &mut C,
-    ) {
-        if let Some(head) = &self.head {
-            collection.extend([E::from(head.clone().into())]);
-        }
-    }
-
-    fn new(
-        id: GameId,
+impl FromGameObject for Faith {
+    fn from_game_object(
+        _id: GameId,
         base: &GameObjectMap,
         game_state: &mut GameState,
-    ) -> Result<Self, ParsingError>
-    where
-        Self: Sized,
-    {
+    ) -> Result<Self, ParsingError> {
         let mut val = Self {
             name: base
                 .get("name")
                 .or(base.get("template"))
-                .map(|v| v.as_string()?),
-            fervor: base.get_real("fervor"),
+                .map(|v| v.as_string())
+                .transpose()?
+                .unwrap(),
+            fervor: base.get_real("fervor")? as f32,
             head: base
                 .get_game_id("religious_head")
-                .map(|v| game_state.get_title(&v).get_internal().get_holder()),
+                .map(|v| game_state.get_title(&v).get_internal().get_holder())?,
             tenets: Vec::new(),
             doctrines: Vec::new(),
         };
@@ -69,13 +55,25 @@ impl GameObjectDerived for Faith {
     }
 }
 
+impl GameObjectDerived for Faith {
+    fn get_name(&self) -> GameString {
+        self.name.clone()
+    }
+
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
+        if let Some(head) = &self.head {
+            collection.extend([E::from(head.clone().into())]);
+        }
+    }
+}
+
 impl ProceduralPath for Faith {
     fn get_subdir() -> &'static str {
         "faiths"
     }
 }
 
-impl Renderable for Faith {
+impl Renderable for GameObjectEntity<Faith> {
     fn get_template() -> &'static str {
         FAITH_TEMPLATE_NAME
     }
@@ -88,17 +86,14 @@ impl Renderable for Faith {
         data: &GameData,
     ) {
         if let Some(grapher) = grapher {
-            let mut buf = path.join(Self::get_subdir());
+            let mut buf = path.join(Faith::get_subdir());
             buf.push(format!("{}.svg", self.id));
             grapher.create_faith_graph(self.id, &buf);
         }
         if let Some(map) = data.get_map() {
-            let filter = |title: Ref<Title>| {
+            let filter = |title: &Title| {
                 let key = title.get_key();
-                if key.is_none() {
-                    return false;
-                }
-                if key.as_ref().unwrap().starts_with("c_") {
+                if key.starts_with("c_") {
                     if let Some(c_faith) = title.get_faith() {
                         return c_faith.get_internal().id == self.id;
                     }
@@ -107,10 +102,10 @@ impl Renderable for Faith {
             };
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
-                let mut buf = path.join(Self::get_subdir());
+                let mut buf = path.join(Faith::get_subdir());
                 buf.push(format!("{}.png", self.id));
                 let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
-                faith_map.draw_text(format!("Map of the {} faith", &self.name.as_ref().unwrap()));
+                faith_map.draw_text(format!("Map of the {} faith", &self.name));
                 faith_map.save(&buf);
             }
         }
@@ -122,7 +117,7 @@ impl Localizable for Faith {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        self.name = localization.localize(self.name)?;
+        self.name = localization.localize(&self.name)?;
         for tenet in self.tenets.iter_mut() {
             *tenet = localization.localize(tenet.to_string() + "_name")?;
         }

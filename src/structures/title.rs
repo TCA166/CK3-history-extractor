@@ -10,16 +10,17 @@ use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, Renderable, TreeNode},
+        display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameId, GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError,
             SaveFileObject, SaveFileValue,
         },
-        types::{OneOrMany, Wrapper, WrapperMut},
+        types::{Wrapper, WrapperMut},
     },
-    Character, Culture, Faith, GameObjectDerived, Shared,
+    Character, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
+    GameRef,
 };
 
 #[derive(Serialize, Debug)]
@@ -72,22 +73,21 @@ impl Default for TitleType {
 /// A struct representing a title in the game
 #[derive(Serialize, Debug)]
 pub struct Title {
-    id: GameId,
-    key: Option<GameString>,
+    key: GameString,
     tier: TitleType,
-    name: Option<GameString>,
-    de_jure: Option<Shared<Title>>,
-    de_facto: Option<Shared<Title>>,
-    de_jure_vassals: Vec<Shared<Title>>,
-    de_facto_vassals: Vec<Shared<Title>>,
-    history: Vec<(Date, Option<Shared<Character>>, GameString)>,
-    claims: Vec<Shared<Character>>,
+    name: GameString,
+    de_jure: Option<GameRef<Title>>,
+    de_facto: Option<GameRef<Title>>,
+    de_jure_vassals: Vec<GameRef<Title>>,
+    de_facto_vassals: Vec<GameRef<Title>>,
+    history: Vec<(Date, Option<GameRef<Character>>, GameString)>,
+    claims: Vec<GameRef<Character>>,
 
-    capital: Option<Shared<Title>>,
+    capital: Option<GameRef<Title>>,
     /// Only used for counties
-    culture: Option<Shared<Culture>>,
+    culture: Option<GameRef<Culture>>,
     /// Only used for counties
-    faith: Option<Shared<Faith>>,
+    faith: Option<GameRef<Faith>>,
     color: [u8; 3],
 }
 
@@ -95,64 +95,69 @@ pub struct Title {
 
 impl Title {
     /// Adds a de jure vassal to the title
-    pub fn add_jure_vassal(&mut self, vassal: Shared<Title>) {
+    pub fn add_jure_vassal(&mut self, vassal: GameRef<Title>) {
         self.de_jure_vassals.push(vassal);
     }
 
     /// Adds a de facto vassal to the title
-    pub fn add_facto_vassal(&mut self, vassal: Shared<Title>) {
+    pub fn add_facto_vassal(&mut self, vassal: GameRef<Title>) {
         self.de_facto_vassals.push(vassal);
     }
 
     /// Recursively gets all the de facto barony keys of the title
     pub fn get_barony_keys(&self) -> Vec<GameString> {
         let mut provinces = Vec::new();
-        if self.key.as_ref().unwrap().starts_with("b_") {
-            provinces.push(self.key.clone().unwrap());
+        if let TitleType::Barony = self.tier {
+            provinces.push(self.key.clone());
         }
         for v in &self.de_facto_vassals {
-            provinces.append(&mut v.get_internal().get_barony_keys());
+            if let Some(title) = v.get_internal().inner() {
+                provinces.append(&mut title.get_barony_keys());
+            }
         }
         provinces
     }
 
     pub fn get_de_jure_barony_keys(&self) -> Vec<GameString> {
         let mut provinces = Vec::new();
-        if self.key.as_ref().unwrap().starts_with("b_") {
-            provinces.push(self.key.clone().unwrap());
+        if let TitleType::Barony = self.tier {
+            provinces.push(self.key.clone());
         }
         for v in &self.de_jure_vassals {
-            provinces.append(&mut v.get_internal().get_barony_keys());
+            if let Some(title) = v.get_internal().inner() {
+                provinces.append(&mut title.get_barony_keys());
+            }
         }
         provinces
     }
 
     /// Returns the key of the title
-    pub fn get_key(&self) -> Option<GameString> {
+    pub fn get_key(&self) -> GameString {
         self.key.clone()
     }
 
     /// Returns an iterator over the history of the title
-    pub fn get_history_iter(&self) -> Iter<(Date, Option<Shared<Character>>, GameString)> {
+    pub fn get_history_iter(&self) -> Iter<(Date, Option<GameRef<Character>>, GameString)> {
         self.history.iter()
     }
 
     /// Returns the capital of the title
-    pub fn get_capital(&self) -> Option<Shared<Title>> {
+    pub fn get_capital(&self) -> Option<GameRef<Title>> {
         self.capital.clone()
     }
 
     /// Adds the culture and faith data to the title
-    pub fn add_county_data(&mut self, culture: Shared<Culture>, faith: Shared<Faith>) {
-        if !self.key.as_ref().unwrap().starts_with("c_") {
+    pub fn add_county_data(&mut self, culture: GameRef<Culture>, faith: GameRef<Faith>) {
+        if let TitleType::County = self.tier {
+            self.culture = Some(culture);
+            self.faith = Some(faith);
+        } else {
             panic!("Can only add county data to a county title");
         }
-        self.culture = Some(culture);
-        self.faith = Some(faith);
     }
 
     /// Returns the culture of the title
-    pub fn get_culture(&self) -> Option<Shared<Culture>> {
+    pub fn get_culture(&self) -> Option<GameRef<Culture>> {
         if let Some(culture) = &self.culture {
             return Some(culture.clone());
         } else {
@@ -161,7 +166,7 @@ impl Title {
     }
 
     /// Returns the faith of the title
-    pub fn get_faith(&self) -> Option<Shared<Faith>> {
+    pub fn get_faith(&self) -> Option<GameRef<Faith>> {
         if let Some(faith) = &self.faith {
             return Some(faith.clone());
         } else {
@@ -170,7 +175,7 @@ impl Title {
     }
 
     /// Returns the holder of the title
-    pub fn get_holder(&self) -> Option<Shared<Character>> {
+    pub fn get_holder(&self) -> Option<GameRef<Character>> {
         if let Some(entry) = self.history.last() {
             return entry.1.clone();
         }
@@ -178,68 +183,77 @@ impl Title {
     }
 }
 
-impl DummyInit for Title {
-    fn dummy(id: GameId) -> Self {
-        Title {
-            key: None,
-            tier: TitleType::default(),
-            name: None,
-            de_jure: None,
-            de_facto: None,
+impl FromGameObject for Title {
+    fn from_game_object(
+        id: GameId,
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
+        let key = base.get_string("key")?;
+        let mut title = Self {
+            key: key.clone(),
+            tier: TitleType::from(key),
+            name: base.get_string("name")?,
+            color: base
+                .get("color")
+                .map(|v| v.as_object().and_then(|obj| obj.as_array()))
+                .transpose()?
+                .map_or([70, 255, 70], |color_obj| {
+                    [
+                        color_obj[0].as_integer().unwrap() as u8,
+                        color_obj[1].as_integer().unwrap() as u8,
+                        color_obj[2].as_integer().unwrap() as u8,
+                    ]
+                }),
+            de_jure: base
+                .get("de_jure_liege")
+                .map(|liege| {
+                    liege.as_id().and_then(|liege_id| {
+                        let liege = game_state.get_title(&liege_id);
+                        liege
+                            .get_internal_mut()
+                            .add_jure_vassal(game_state.get_title(&id).clone());
+                        Ok(liege)
+                    })
+                })
+                .transpose()?,
+            de_facto: base
+                .get("de_jure_liege")
+                .map(|liege| {
+                    liege.as_id().and_then(|liege_id| {
+                        let liege = game_state.get_title(&liege_id).clone();
+                        liege
+                            .get_internal_mut()
+                            .add_facto_vassal(game_state.get_title(&id).clone());
+                        Ok(liege)
+                    })
+                })
+                .transpose()?,
             de_jure_vassals: Vec::default(),
             de_facto_vassals: Vec::default(),
             history: Vec::default(),
             claims: Vec::default(),
-            id: id,
-            color: [70, 255, 70],
-            capital: None,
+            capital: base
+                .get("capital")
+                .map(|capital| capital.as_id().and_then(|id| Ok(game_state.get_title(&id))))
+                .transpose()?,
             culture: None,
             faith: None,
-        }
-    }
-
-    fn init(
-        &mut self,
-        base: &GameObjectMap,
-        game_state: &mut GameState,
-    ) -> Result<(), ParsingError> {
-        if let Some(color) = base.get("color") {
-            let color = color.as_object()?.as_array()?;
-            self.color = [
-                color[0].as_integer()? as u8,
-                color[1].as_integer()? as u8,
-                color[2].as_integer()? as u8,
-            ];
-        }
-        self.key = Some(base.get_string("key")?);
-        self.tier = TitleType::from(self.key.as_ref().unwrap());
-        if let Some(de_jure_id) = base.get("de_jure_liege") {
-            let o = game_state.get_title(&de_jure_id.as_id()?).clone();
-            o.get_internal_mut()
-                .add_jure_vassal(game_state.get_title(&self.id).clone());
-            self.de_jure = Some(o);
-        }
-        if let Some(de_facto_id) = base.get("de_facto_liege") {
-            let o = game_state.get_title(&de_facto_id.as_id()?).clone();
-            o.get_internal_mut()
-                .add_facto_vassal(game_state.get_title(&self.id).clone());
-            self.de_facto = Some(o);
-        }
+        };
         if let Some(claims) = base.get("claim") {
             if let SaveFileValue::Object(claims) = claims {
                 for claim in claims.as_array()? {
-                    self.claims
+                    title
+                        .claims
                         .push(game_state.get_character(&claim.as_id()?).clone());
                 }
             } else {
-                self.claims
+                title
+                    .claims
                     .push(game_state.get_character(&claims.as_id()?).clone());
             }
         }
-        if let Some(capital) = base.get("capital") {
-            self.capital = Some(game_state.get_title(&capital.as_id()?).clone());
-        }
-        self.name = Some(base.get_string("name")?);
+
         if let Some(hist) = base.get("history") {
             for (h, val) in hist.as_object()?.as_map()? {
                 let character;
@@ -265,7 +279,8 @@ impl DummyInit for Title {
                                     loc_character =
                                         Some(game_state.get_character(&entry.as_id()?).clone());
                                 }
-                                self.history
+                                title
+                                    .history
                                     .push((Date::from_str(h)?, loc_character, loc_action))
                             }
                             continue; //if it's an array we handled all the adding already in the loop above
@@ -286,25 +301,21 @@ impl DummyInit for Title {
                     action = GameString::from("Inherited");
                     character = Some(game_state.get_character(&val.as_id()?).clone());
                 }
-                self.history.push((Date::from_str(h)?, character, action));
+                title.history.push((Date::from_str(h)?, character, action));
             }
         }
         //sort history by the first element of the tuple (the date) in descending order
-        self.history.sort_by(|a, b| a.0.cmp(&b.0));
-        Ok(())
+        title.history.sort_by(|a, b| a.0.cmp(&b.0));
+        Ok(title)
     }
 }
 
 impl GameObjectDerived for Title {
-    fn get_id(&self) -> GameId {
-        self.id
+    fn get_name(&self) -> GameString {
+        self.name.clone()
     }
 
-    fn get_name(&self) -> Option<GameString> {
-        self.name.as_ref().map(|x| x.clone())
-    }
-
-    fn get_references<E: From<GameObjectDerivedType>, C: Extend<E>>(&self, collection: &mut C) {
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         if let Some(de_jure) = &self.de_jure {
             collection.extend([E::from(de_jure.clone().into())]);
         }
@@ -326,12 +337,12 @@ impl GameObjectDerived for Title {
     }
 }
 
-impl TreeNode for Title {
-    fn get_children(&self) -> Option<OneOrMany<Self>> {
+impl TreeNode<Vec<GameRef<Title>>> for Title {
+    fn get_children(&self) -> Option<Vec<GameRef<Title>>> {
         if self.de_jure_vassals.is_empty() {
             return None;
         }
-        Some(OneOrMany::Many(&self.de_jure_vassals))
+        Some(self.de_jure_vassals.clone())
     }
 
     fn get_class(&self) -> Option<GameString> {
@@ -342,21 +353,23 @@ impl TreeNode for Title {
         }
     }
 
-    fn get_parent(&self) -> Option<OneOrMany<Self>> {
+    fn get_parent(&self) -> Option<Vec<GameRef<Title>>> {
         if let Some(de_jure) = &self.de_jure {
-            return Some(OneOrMany::One(de_jure));
+            return Some(vec![de_jure.clone()]);
         }
         None
     }
 }
 
-impl Renderable for Title {
-    fn get_template() -> &'static str {
-        TITLE_TEMPLATE_NAME
-    }
-
+impl ProceduralPath for Title {
     fn get_subdir() -> &'static str {
         "titles"
+    }
+}
+
+impl Renderable for GameObjectEntity<Title> {
+    fn get_template() -> &'static str {
+        TITLE_TEMPLATE_NAME
     }
 
     fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
@@ -364,12 +377,12 @@ impl Renderable for Title {
             if self.de_facto_vassals.len() == 0 {
                 return;
             }
-            let mut buf = path.join(Self::get_subdir());
+            let mut buf = path.join(Title::get_subdir());
             buf.push(format!("{}.png", self.id));
             let mut title_map = map.create_map_flat(self.get_barony_keys(), self.color);
             title_map.draw_text(format!(
                 "{} at {}",
-                self.name.as_ref().unwrap(),
+                self.name,
                 game_state.get_current_date().unwrap().iso_8601()
             ));
             title_map.save(&buf);
@@ -382,11 +395,8 @@ impl Localizable for Title {
         &mut self,
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
-        if self.key.is_none() {
-            return Ok(());
-        }
         if self.name == self.key {
-            self.name = Some(localization.localize(self.key.as_ref().unwrap())?);
+            self.name = localization.localize(&self.key)?;
         }
         //for o in self.history.iter_mut() {
         //    o.2 = localization.localize(o.2.as_str());

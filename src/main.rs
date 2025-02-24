@@ -21,7 +21,7 @@ use parser::{process_section, yield_section, GameState, SaveFile, SaveFileError}
 /// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
-use structures::Player;
+use structures::{GameObjectDerived, Player};
 
 /// The submodule responsible for creating the [minijinja::Environment] and loading of templates.
 mod jinja_env;
@@ -29,7 +29,7 @@ use jinja_env::create_env;
 
 /// A module for handling the display of the parsed data.
 mod display;
-use display::{Renderable, Renderer};
+use display::{GetPath, Renderable, Renderer};
 
 mod game_data;
 use game_data::{GameDataLoader, Localizable};
@@ -171,7 +171,7 @@ fn main() -> Result<(), UserError> {
     for player in player_progress.wrap_iter(players.iter_mut()) {
         player.localize(&mut data).unwrap();
         //render each player
-        let folder_name = player.name.to_string() + "'s history";
+        let folder_name = player.get_name().to_string() + "'s history";
         player_progress.set_message(format!("Rendering {}", folder_name));
         let path = args.output.join(folder_name);
         let mut renderer = Renderer::new(
