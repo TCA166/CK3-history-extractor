@@ -147,9 +147,7 @@ fn main() -> Result<(), UserError> {
     //prepare things for rendering
     game_state.localize(&mut data).unwrap();
     let grapher = args.no_vis.not().then(|| game_state.new_grapher());
-    eprintln!("test");
     let timeline = args.no_vis.not().then(|| game_state.new_timeline());
-    eprintln!("test");
     let mut env = create_env(
         args.use_internal,
         data.get_map().is_some(),

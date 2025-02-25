@@ -79,6 +79,16 @@ impl RenderableType {
             RenderableType::Culture(_) => Culture::get_subdir(),
         }
     }
+
+    fn is_initialized(&self) -> bool {
+        match self {
+            RenderableType::Character(c) => c.get_internal().inner().is_some(),
+            RenderableType::Dynasty(d) => d.get_internal().inner().is_some(),
+            RenderableType::Title(t) => t.get_internal().inner().is_some(),
+            RenderableType::Faith(f) => f.get_internal().inner().is_some(),
+            RenderableType::Culture(c) => c.get_internal().inner().is_some(),
+        }
+    }
 }
 
 /// A struct that renders objects into html pages.
@@ -153,6 +163,9 @@ impl<'a> Renderer<'a> {
 
     /// Renders the [RenderableType] object.
     fn render_enum(&self, obj: &RenderableType, env: &Environment<'_>) {
+        if !obj.is_initialized() {
+            return;
+        }
         match obj {
             RenderableType::Character(obj) => self.render(obj.get_internal(), env),
             RenderableType::Dynasty(obj) => self.render(obj.get_internal(), env),
@@ -167,6 +180,7 @@ impl<'a> Renderer<'a> {
     pub fn add_object<G: GameObjectDerived>(&mut self, obj: &G) -> usize {
         // BFS with depth https://stackoverflow.com/a/31248992/12520385
         let mut queue: VecDeque<Option<EntityRef>> = VecDeque::new();
+        // FIXME this makes obj not rendered
         obj.get_references(&mut queue);
         let mut res = queue.len();
         queue.push_back(None);

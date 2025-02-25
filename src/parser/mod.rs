@@ -266,7 +266,6 @@ pub fn process_section(
             }
         }
         "played_character" => {
-            // TODO what about id?
             let p = Player::from_game_object(i.parse()?.as_map()?, game_state)?;
             players.push(p);
         }

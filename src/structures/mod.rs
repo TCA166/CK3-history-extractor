@@ -74,7 +74,7 @@ pub trait GameObjectDerived: Sized {
 pub struct GameObjectEntity<T: GameObjectDerived> {
     id: GameId,
     #[serde(flatten)]
-    entity: Option<T>, // TODO separate object that cannot be None
+    entity: Option<T>,
 }
 
 impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {

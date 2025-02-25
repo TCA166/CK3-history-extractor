@@ -91,6 +91,7 @@ impl Character {
         if let Some(faith) = &self.faith {
             return faith.clone();
         } else {
+            // FIXME this can fail
             let house = self.house.as_ref().unwrap().get_internal();
             house
                 .inner()
@@ -99,7 +100,10 @@ impl Character {
                 .get_internal()
                 .inner()
                 .unwrap()
-                .get_faith()
+                .faith
+                .as_ref()
+                .unwrap()
+                .clone()
         }
     }
 
@@ -116,7 +120,10 @@ impl Character {
                 .get_internal()
                 .inner()
                 .unwrap()
-                .get_culture()
+                .culture
+                .as_ref()
+                .unwrap()
+                .clone()
         }
     }
 
