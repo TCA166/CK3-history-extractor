@@ -202,6 +202,10 @@ impl Localizer {
                             }
                         }
                     }
+                    '$' => {
+                        func_open = !func_open;
+                        new.push(c);
+                    }
                     '[' => {
                         func_open = true;
                         new.push(c);
@@ -427,7 +431,11 @@ pub trait Localize<T: AsRef<str> + From<String>> {
             }
             return Ok(collection.into());
         } else {
-            if !cfg!(feature = "permissive") && !self.is_empty() && !key.as_ref().is_empty() {
+            if !cfg!(feature = "permissive")
+                && !self.is_empty()
+                && !key.as_ref().is_empty()
+                && key.as_ref().contains('_')
+            {
                 eprintln!("Warning: key {} not found", key.as_ref());
             }
             return Ok(demangle_generic(key.as_ref()).into());

@@ -134,7 +134,7 @@
                     <li class="list-group-item">
                         {{memory.date}}:{%if memory.type is not none%}{{memory.type}}{%endif%}<br>
                         {%if memory.participants is not none%}
-                        {%for key, value in memory.participants%}
+                        {%for key, value in memory.participants|items%}
                             {{value|render_ref}}
                         {%endfor%}
                         {%endif%}

@@ -1,5 +1,5 @@
 use std::{
-    cell::{BorrowMutError, Ref, RefCell, RefMut},
+    cell::{BorrowError, BorrowMutError, Ref, RefCell, RefMut},
     rc::Rc,
 };
 
@@ -17,6 +17,8 @@ pub trait Wrapper<T> {
 
     /// Get the internal value as a reference or a raw value
     fn get_internal(&self) -> Ref<T>;
+
+    fn try_get_internal(&self) -> Result<Ref<T>, BorrowError>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
@@ -59,6 +61,10 @@ impl<T> Wrapper<T> for Shared<T> {
 
     fn get_internal(&self) -> Ref<T> {
         self.inner.borrow()
+    }
+
+    fn try_get_internal(&self) -> Result<Ref<T>, BorrowError> {
+        self.inner.try_borrow()
     }
 }
 

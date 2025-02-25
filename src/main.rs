@@ -8,6 +8,7 @@ use std::{
     fmt::{self, Debug, Formatter},
     fs,
     io::{stdin, stdout, IsTerminal},
+    ops::Not,
     time::Duration,
 };
 
@@ -145,24 +146,16 @@ fn main() -> Result<(), UserError> {
     progress_bar.finish_with_message("Save parsing complete");
     //prepare things for rendering
     game_state.localize(&mut data).unwrap();
-    let grapher;
-    if !args.no_vis {
-        grapher = Some(game_state.new_grapher());
-    } else {
-        grapher = None;
-    }
+    let grapher = args.no_vis.not().then(|| game_state.new_grapher());
+    eprintln!("test");
+    let timeline = args.no_vis.not().then(|| game_state.new_timeline());
+    eprintln!("test");
     let mut env = create_env(
         args.use_internal,
         data.get_map().is_some(),
         args.no_vis,
         &data,
     );
-    let timeline;
-    if !args.no_vis {
-        timeline = Some(game_state.new_timeline());
-    } else {
-        timeline = None;
-    }
     // a big progress bar to show the progress of rendering that contains multiple progress bars
     let rendering_progress_bar = MultiProgress::new();
     let player_progress = rendering_progress_bar.add(ProgressBar::new(players.len() as u64));

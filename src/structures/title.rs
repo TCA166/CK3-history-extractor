@@ -111,7 +111,9 @@ impl Title {
             provinces.push(self.key.clone());
         }
         for v in &self.de_facto_vassals {
-            provinces.append(&mut v.get_internal().get_barony_keys());
+            if let Some(v) = v.get_internal().inner() {
+                provinces.append(&mut v.get_barony_keys());
+            }
         }
         provinces
     }
@@ -122,7 +124,9 @@ impl Title {
             provinces.push(self.key.clone());
         }
         for v in &self.de_jure_vassals {
-            provinces.append(&mut v.get_internal().get_barony_keys());
+            if let Some(v) = v.get_internal().inner() {
+                provinces.append(&mut v.get_de_jure_barony_keys());
+            }
         }
         provinces
     }
@@ -325,14 +329,14 @@ impl GameObjectDerived for Title {
 
     fn finalize(&mut self, reference: &GameRef<Title>) {
         if let Some(de_jure) = &self.de_jure {
-            de_jure
-                .get_internal_mut()
-                .add_jure_vassal(reference.clone());
+            if let Some(de_jure) = de_jure.get_internal_mut().inner_mut() {
+                de_jure.add_jure_vassal(reference.clone());
+            }
         }
         if let Some(de_facto) = &self.de_facto {
-            de_facto
-                .get_internal_mut()
-                .add_facto_vassal(reference.clone());
+            if let Some(de_facto) = de_facto.get_internal_mut().inner_mut() {
+                de_facto.add_facto_vassal(reference.clone());
+            }
         }
     }
 }
@@ -374,18 +378,20 @@ impl Renderable for GameObjectEntity<Title> {
 
     fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
         if let Some(map) = data.get_map() {
-            if self.de_facto_vassals.len() == 0 {
-                return;
+            if let Some(title) = self.inner() {
+                if title.de_facto_vassals.len() == 0 {
+                    return;
+                }
+                let mut buf = path.join(Title::get_subdir());
+                buf.push(format!("{}.png", self.id));
+                let mut title_map = map.create_map_flat(title.get_barony_keys(), title.color);
+                title_map.draw_text(format!(
+                    "{} at {}",
+                    title.name,
+                    game_state.get_current_date().unwrap().iso_8601()
+                ));
+                title_map.save(&buf);
             }
-            let mut buf = path.join(Title::get_subdir());
-            buf.push(format!("{}.png", self.id));
-            let mut title_map = map.create_map_flat(self.get_barony_keys(), self.color);
-            title_map.draw_text(format!(
-                "{} at {}",
-                self.name,
-                game_state.get_current_date().unwrap().iso_8601()
-            ));
-            title_map.save(&buf);
         }
     }
 }

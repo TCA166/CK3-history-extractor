@@ -460,14 +460,14 @@ impl GameObjectDerived for Character {
     }
 
     fn finalize(&mut self, reference: &GameRef<Character>) {
-        if let Some(house) = &self.house {
+        if let Some(house) = self.house.clone() {
             if let Some(house) = house.get_internal_mut().inner_mut() {
                 house.register_member(reference.clone());
             } else {
                 self.house = None;
             }
         }
-        if let Some(liege) = &self.liege {
+        if let Some(liege) = self.liege.clone() {
             if let Ok(mut inner) = liege.try_get_internal_mut() {
                 if let Some(liege) = inner.inner_mut() {
                     liege.add_vassal(reference.clone());
@@ -589,12 +589,20 @@ impl Localizable for Character {
                         } else {
                             return Some("his".into());
                         }
+                    } else if stack[1].0 == "GetHerHim" {
+                        if self.female {
+                            return Some("her".into());
+                        } else {
+                            return Some("him".into());
+                        }
                     } else if stack[1].0 == "GetHerselfHimself" {
                         if self.female {
                             return Some("herself".into());
                         } else {
                             return Some("himself".into());
                         }
+                    } else if stack[0].0 == "TARGET_CHARACTER" && stack[1].0 == "GetUIName" {
+                        return Some("an unknown assailant".into()); // TODO
                     }
                 }
                 None

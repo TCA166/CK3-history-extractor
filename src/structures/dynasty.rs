@@ -187,7 +187,7 @@ impl GameObjectDerived for Dynasty {
                 .parent
                 .as_ref()
                 .and_then(|x| x.get_internal().inner().and_then(|x| x.name.clone())))
-            .unwrap()
+            .unwrap_or("Unknown".into())
     }
 
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
@@ -201,7 +201,10 @@ impl GameObjectDerived for Dynasty {
 
     fn finalize(&mut self, reference: &GameRef<Dynasty>) {
         if let Some(parent) = &self.parent {
-            if parent.get_internal().id == reference.get_internal().id {
+            if !reference
+                .try_get_internal()
+                .is_ok_and(|this| this.id != parent.get_internal().id)
+            {
                 self.parent = None;
             } else {
                 // MAYBE this is bad? I don't know
@@ -255,23 +258,47 @@ impl Localizable for Dynasty {
             );
         }
         if let Some((motto, variables)) = &mut self.motto {
-            *motto = localization.localize(&motto)?;
-            for (_, v) in variables.iter_mut() {
-                *v = localization.localize(&v)?;
-            }
-            // TODO localize the motto properly here
-            /*
-            ("motto_the_ancient_x_is_ours", ["motto_family"])
-            ("The Ancient  is Ours", ["Family"])
-            ("motto_unique_pool", ["motto_more_than_silver"])
-            ("", ["Trust From a  is Worth More than Silver"])
-            ("motto_through_x_mind_y", ["motto_an_honorable", "motto_respect"])
-            ("Through  Mind, ", ["an Honorable", "Respect"])
-            ("motto_x_is_y", ["motto_valor", "motto_boldness"])
-            (" is ", ["Valor", "Boldness"])
-            ("motto_single_noun", ["motto_labour"])
-            ("", ["Labor"])
-                         */
+            *motto = localization.localize_query(&motto, |stack| {
+                if stack.len() == 1 {
+                    if let Ok(k) = stack[0].0.parse::<i64>() {
+                        if let Some(v) = variables.get(&k) {
+                            return Some(v.clone());
+                        }
+                    }
+                } else if stack.len() == 2 {
+                    if stack[0].0 == "CHARACTER" && stack.len() >= 2 {
+                        if let Some(leader) =
+                            self.leaders.first().unwrap().clone().get_internal().inner()
+                        {
+                            if stack[1].0 == "Custom" && stack[1].1.len() == 1 {
+                                if stack[1].1[0] == "GetAppropriateGodname" {
+                                    // TODO localize the godname properly here
+                                    return Some("God".into());
+                                } else if stack[1].1[0] == "QueenKing" {
+                                    if leader.get_female() {
+                                        return Some("Queen".into());
+                                    } else {
+                                        return Some("King".into());
+                                    }
+                                } else if stack[1].1[0] == "GetDaughterSon" {
+                                    if leader.get_female() {
+                                        return Some("Daughter".into());
+                                    } else {
+                                        return Some("Son".into());
+                                    }
+                                }
+                            } else if stack[1].0 == "GetFirstName" {
+                                return Some(leader.get_name().clone());
+                            }
+                        } else {
+                            return Some("Unknown".into());
+                        }
+                    }
+                } else if stack[2].0 == "GetBaseNameNoTooltip" {
+                    return Some(self.name.as_ref().unwrap().clone());
+                }
+                None
+            })?;
         }
         Ok(())
     }

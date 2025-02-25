@@ -1,7 +1,6 @@
 use std::{
     any::type_name,
     hash::{Hash, Hasher},
-    ops::{Deref, DerefMut},
 };
 
 use crate::types::WrapperMut;
@@ -163,13 +162,34 @@ impl Hash for EntityRef {
 impl EntityRef {
     pub fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         match self {
-            EntityRef::Character(char) => char.get_internal().get_references(collection),
-            EntityRef::Culture(cul) => cul.get_internal().get_references(collection),
-            EntityRef::Dynasty(dynasty) => dynasty.get_internal().get_references(collection),
-            EntityRef::Faith(faith) => faith.get_internal().get_references(collection),
-            EntityRef::Title(title) => title.get_internal().get_references(collection),
-            EntityRef::Memory(mem) => mem.get_internal().get_references(collection),
-            EntityRef::Artifact(art) => art.get_internal().get_references(collection),
-        }
+            EntityRef::Character(char) => char
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Culture(cul) => cul
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Dynasty(dynasty) => dynasty
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Faith(faith) => faith
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Title(title) => title
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Memory(mem) => mem
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::Artifact(art) => art
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+        };
     }
 }
