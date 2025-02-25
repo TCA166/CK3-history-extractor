@@ -16,6 +16,8 @@ use super::{
     Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
 };
 
+// TODO figure out how to handle houses and dynasties
+
 #[derive(Serialize, Debug)]
 pub struct Dynasty {
     parent: Option<GameRef<Dynasty>>,

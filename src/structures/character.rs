@@ -481,9 +481,9 @@ impl GameObjectDerived for Character {
                 house.register_member(reference.clone());
             }
         }
-        for p in self.parents.iter() {
-            if let Some(parent) = p.get_internal_mut().inner_mut() {
-                parent.register_parent(reference.clone());
+        for child in self.children.iter() {
+            if let Some(child) = child.get_internal_mut().inner_mut() {
+                child.register_parent(reference.clone());
             }
         }
     }
