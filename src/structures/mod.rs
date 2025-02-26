@@ -46,11 +46,14 @@ pub use lineage::LineageNode;
 mod artifact;
 pub use artifact::Artifact;
 
-pub trait FromGameObject: Sized {
+pub trait FromGameObject: GameObjectDerived {
     fn from_game_object(
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError>;
+
+    #[allow(unused_variables)]
+    fn finalize(&mut self, reference: &GameRef<Self>) {}
 }
 
 /// A trait for objects that can be created from a [GameObjectMap].
@@ -63,14 +66,17 @@ pub trait GameObjectDerived: Sized {
 
     /// Extends the provided collection with references to other [GameObjectDerived] objects, if any.
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C);
-
-    #[allow(unused_variables)]
-    fn finalize(&mut self, reference: &GameRef<Self>) {}
 }
 
 #[derive(Serialize, Debug)]
 pub struct GameObjectEntity<T: GameObjectDerived> {
     id: GameId,
+    /* TODO I would for there to be a way to make this NOT an option,
+    naturally this is an option because in the current model we trust structures
+    that the IDs are valid, but sometimes they arent, meaning we cant implement
+    Deref. If we wanted to fix this we would need to have two sets of
+    structures, converting between them in the finalize step but thats a big rework
+    */
     #[serde(flatten)]
     entity: Option<T>,
 }
@@ -157,8 +163,20 @@ impl Hash for EntityRef {
     }
 }
 
-impl EntityRef {
-    pub fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
+impl GameObjectDerived for EntityRef {
+    fn get_name(&self) -> GameString {
+        match self {
+            EntityRef::Character(char) => char.get_internal().inner().unwrap().get_name(),
+            EntityRef::Culture(cul) => cul.get_internal().inner().unwrap().get_name(),
+            EntityRef::Dynasty(dynasty) => dynasty.get_internal().inner().unwrap().get_name(),
+            EntityRef::Faith(faith) => faith.get_internal().inner().unwrap().get_name(),
+            EntityRef::Title(title) => title.get_internal().inner().unwrap().get_name(),
+            EntityRef::Memory(mem) => mem.get_internal().inner().unwrap().get_name(),
+            EntityRef::Artifact(art) => art.get_internal().inner().unwrap().get_name(),
+        }
+    }
+
+    fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         match self {
             EntityRef::Character(char) => char
                 .get_internal()

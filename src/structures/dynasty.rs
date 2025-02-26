@@ -229,6 +229,24 @@ impl FromGameObject for Dynasty {
         }
         return Ok(val);
     }
+
+    fn finalize(&mut self, reference: &GameRef<Dynasty>) {
+        if let Some(parent) = &self.parent {
+            if !reference
+                .try_get_internal()
+                .is_ok_and(|this| this.id != parent.get_internal().id)
+            {
+                self.parent = None;
+            } else {
+                // MAYBE this is bad? I don't know
+                if let Ok(mut p) = parent.try_get_internal_mut() {
+                    if let Some(p) = p.inner_mut() {
+                        p.register_house();
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl GameObjectDerived for Dynasty {
@@ -248,24 +266,6 @@ impl GameObjectDerived for Dynasty {
         }
         if let Some(parent) = &self.parent {
             collection.extend([E::from(parent.clone().into())]);
-        }
-    }
-
-    fn finalize(&mut self, reference: &GameRef<Dynasty>) {
-        if let Some(parent) = &self.parent {
-            if !reference
-                .try_get_internal()
-                .is_ok_and(|this| this.id != parent.get_internal().id)
-            {
-                self.parent = None;
-            } else {
-                // MAYBE this is bad? I don't know
-                if let Ok(mut p) = parent.try_get_internal_mut() {
-                    if let Some(p) = p.inner_mut() {
-                        p.register_house();
-                    }
-                }
-            }
         }
     }
 }

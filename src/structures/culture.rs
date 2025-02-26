@@ -59,6 +59,16 @@ impl FromGameObject for Culture {
         }
         return Ok(culture);
     }
+
+    fn finalize(&mut self, reference: &GameRef<Culture>) {
+        for p in &self.parents {
+            if let Ok(mut r) = p.try_get_internal_mut() {
+                if let Some(parent) = r.inner_mut() {
+                    parent.register_child(reference.clone());
+                }
+            }
+        }
+    }
 }
 
 impl GameObjectDerived for Culture {
@@ -72,16 +82,6 @@ impl GameObjectDerived for Culture {
         }
         for c in &self.children {
             collection.extend([E::from(c.clone().into())]);
-        }
-    }
-
-    fn finalize(&mut self, reference: &GameRef<Culture>) {
-        for p in &self.parents {
-            if let Ok(mut r) = p.try_get_internal_mut() {
-                if let Some(parent) = r.inner_mut() {
-                    parent.register_child(reference.clone());
-                }
-            }
         }
     }
 }

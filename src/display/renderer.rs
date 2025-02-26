@@ -1,5 +1,4 @@
 use std::{
-    cell::Ref,
     collections::VecDeque,
     fs,
     ops::Deref,
@@ -149,7 +148,7 @@ impl<'a> Renderer<'a> {
     }
 
     /// Renders the [Renderable] object.
-    fn render<T: Renderable>(&self, obj: Ref<T>, env: &Environment<'_>) {
+    fn render<T: Renderable, D: Deref<Target = T>>(&self, obj: D, env: &Environment<'_>) {
         //render the object
         let template = env.get_template(T::get_template()).unwrap();
         let path = obj.get_path(self.path);
@@ -177,7 +176,7 @@ impl<'a> Renderer<'a> {
 
     /// Adds an object to the renderer, and returns the number of objects that were added.
     /// This method uses a BFS algorithm to determine the depth of the object.
-    pub fn add_object<G: GameObjectDerived>(&mut self, obj: &G) -> usize {
+    pub fn add_object<G: GameObjectDerived + Renderable>(&mut self, obj: &G) -> usize {
         // BFS with depth https://stackoverflow.com/a/31248992/12520385
         let mut queue: VecDeque<Option<EntityRef>> = VecDeque::new();
         // FIXME this makes obj not rendered

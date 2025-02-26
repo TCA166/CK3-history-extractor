@@ -299,6 +299,19 @@ impl FromGameObject for Title {
         title.history.sort_by(|a, b| a.0.cmp(&b.0));
         Ok(title)
     }
+
+    fn finalize(&mut self, reference: &GameRef<Title>) {
+        if let Some(de_jure) = &self.de_jure {
+            if let Some(de_jure) = de_jure.get_internal_mut().inner_mut() {
+                de_jure.add_jure_vassal(reference.clone());
+            }
+        }
+        if let Some(de_facto) = &self.de_facto {
+            if let Some(de_facto) = de_facto.get_internal_mut().inner_mut() {
+                de_facto.add_facto_vassal(reference.clone());
+            }
+        }
+    }
 }
 
 impl GameObjectDerived for Title {
@@ -324,19 +337,6 @@ impl GameObjectDerived for Title {
         }
         if let Some(capital) = &self.capital {
             collection.extend([E::from(capital.clone().into())]);
-        }
-    }
-
-    fn finalize(&mut self, reference: &GameRef<Title>) {
-        if let Some(de_jure) = &self.de_jure {
-            if let Some(de_jure) = de_jure.get_internal_mut().inner_mut() {
-                de_jure.add_jure_vassal(reference.clone());
-            }
-        }
-        if let Some(de_facto) = &self.de_facto {
-            if let Some(de_facto) = de_facto.get_internal_mut().inner_mut() {
-                de_facto.add_facto_vassal(reference.clone());
-            }
         }
     }
 }

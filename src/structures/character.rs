@@ -93,12 +93,13 @@ impl Character {
         if let Some(faith) = &self.faith {
             return faith.clone();
         } else {
-            // FIXME this can fail
-            if let Some(house) = self.house.as_ref().unwrap().get_internal().inner() {
-                house.get_faith()
-            } else {
-                panic!("House is uninitialized");
-            }
+            self.house
+                .as_ref()
+                .unwrap()
+                .get_internal()
+                .inner()
+                .unwrap()
+                .get_faith()
         }
     }
 
@@ -111,11 +112,13 @@ impl Character {
         if let Some(culture) = &self.culture {
             return culture.clone();
         } else {
-            if let Some(house) = self.house.as_ref().unwrap().get_internal().inner() {
-                house.get_culture()
-            } else {
-                panic!("House is uninitialized");
-            }
+            self.house
+                .as_ref()
+                .unwrap()
+                .get_internal()
+                .inner()
+                .unwrap()
+                .get_culture()
         }
     }
 
@@ -404,6 +407,35 @@ impl FromGameObject for Character {
         }
         Ok(val)
     }
+
+    fn finalize(&mut self, reference: &GameRef<Character>) {
+        if let Some(house) = self.house.clone() {
+            if let Some(house) = house.get_internal_mut().inner_mut() {
+                house.register_member(reference.clone());
+            } else {
+                self.house = None;
+            }
+        }
+        if let Some(liege) = self.liege.clone() {
+            if let Ok(mut inner) = liege.try_get_internal_mut() {
+                if let Some(liege) = inner.inner_mut() {
+                    liege.add_vassal(reference.clone());
+                } else {
+                    self.liege = None;
+                }
+            }
+        }
+        if let Some(house) = &self.house {
+            if let Some(house) = house.get_internal_mut().inner_mut() {
+                house.register_member(reference.clone());
+            }
+        }
+        for child in self.children.iter() {
+            if let Some(child) = child.get_internal_mut().inner_mut() {
+                child.register_parent(reference.clone());
+            }
+        }
+    }
 }
 
 impl GameObjectDerived for Character {
@@ -455,35 +487,6 @@ impl GameObjectDerived for Character {
         }
         for a in self.artifacts.iter() {
             collection.extend([E::from(a.clone().into())]);
-        }
-    }
-
-    fn finalize(&mut self, reference: &GameRef<Character>) {
-        if let Some(house) = self.house.clone() {
-            if let Some(house) = house.get_internal_mut().inner_mut() {
-                house.register_member(reference.clone());
-            } else {
-                self.house = None;
-            }
-        }
-        if let Some(liege) = self.liege.clone() {
-            if let Ok(mut inner) = liege.try_get_internal_mut() {
-                if let Some(liege) = inner.inner_mut() {
-                    liege.add_vassal(reference.clone());
-                } else {
-                    self.liege = None;
-                }
-            }
-        }
-        if let Some(house) = &self.house {
-            if let Some(house) = house.get_internal_mut().inner_mut() {
-                house.register_member(reference.clone());
-            }
-        }
-        for child in self.children.iter() {
-            if let Some(child) = child.get_internal_mut().inner_mut() {
-                child.register_parent(reference.clone());
-            }
         }
     }
 }

@@ -55,6 +55,14 @@ impl FromGameObject for Faith {
         }
         return Ok(val);
     }
+
+    fn finalize(&mut self, _reference: &GameRef<Self>) {
+        if let Some(head_title) = &self.head_title {
+            if let Some(head) = head_title.get_internal().inner() {
+                self.head = head.get_holder()
+            }
+        }
+    }
 }
 
 impl GameObjectDerived for Faith {
@@ -65,14 +73,6 @@ impl GameObjectDerived for Faith {
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
         if let Some(head) = &self.head {
             collection.extend([E::from(head.clone().into())]);
-        }
-    }
-
-    fn finalize(&mut self, _reference: &GameRef<Self>) {
-        if let Some(head_title) = &self.head_title {
-            if let Some(head) = head_title.get_internal().inner() {
-                self.head = head.get_holder()
-            }
         }
     }
 }
