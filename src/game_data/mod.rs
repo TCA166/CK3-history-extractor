@@ -9,7 +9,7 @@ mod loader;
 pub use loader::GameDataLoader;
 use serde::Serialize;
 
-use super::parser::GameString;
+use super::types::GameString;
 
 #[derive(Serialize)]
 pub struct GameData {

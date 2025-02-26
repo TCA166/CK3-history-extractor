@@ -14,10 +14,7 @@ use plotters::{
 };
 use serde::Serialize;
 
-use super::super::{
-    parser::{GameId, GameString},
-    types::HashMap,
-};
+use super::super::types::{GameId, GameString, HashMap};
 
 // color stuff
 

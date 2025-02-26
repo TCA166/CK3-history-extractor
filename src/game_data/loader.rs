@@ -3,9 +3,12 @@ use std::{collections::HashMap, error, mem, path::Path};
 use derive_more::{Display, From};
 
 use super::{
-    super::parser::{
-        yield_section, GameId, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
-        SaveFileObject, SaveFileValue,
+    super::{
+        parser::{
+            yield_section, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
+            SaveFileObject, SaveFileValue,
+        },
+        types::GameId,
     },
     map::MapError,
     GameData, GameMap, Localizer,

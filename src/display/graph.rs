@@ -10,9 +10,8 @@ use plotters::{
 use tidy_tree::TidyTree;
 
 use super::super::{
-    parser::{GameId, GameString},
     structures::{Dynasty, FromGameObject, GameObjectDerived, GameRef, Title},
-    types::{HashMap, Wrapper},
+    types::{GameId, GameString, HashMap, Wrapper},
 };
 
 use std::path::Path;

@@ -15,12 +15,12 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::GameData,
-        parser::{GameId, GameState},
+        parser::GameState,
         structures::{
             Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
             GameObjectEntity, GameRef, Title,
         },
-        types::{HashMap, Wrapper},
+        types::{GameId, HashMap, Wrapper},
     },
     graph::Grapher,
 };

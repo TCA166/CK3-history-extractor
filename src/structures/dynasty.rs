@@ -8,12 +8,11 @@ use super::{
         display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
-        parser::{
-            GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
-        },
-        types::{HashMap, Wrapper, WrapperMut},
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
+        types::{GameString, HashMap, Wrapper, WrapperMut},
     },
-    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
+    Character, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
+    GameRef,
 };
 
 // TODO figure out how to handle houses and dynasties
@@ -34,13 +33,6 @@ pub struct Dynasty {
 }
 
 impl Dynasty {
-    pub fn get_leader(&self) -> GameRef<Character> {
-        if self.leaders.is_empty() {
-            return self.member_list.last().unwrap().clone();
-        }
-        self.leaders.last().unwrap().clone()
-    }
-
     /// Registers a new house in the dynasty
     pub fn register_house(&mut self) {
         self.houses += 1;
@@ -65,6 +57,64 @@ impl Dynasty {
             return self.member_list.first().unwrap().clone();
         }
         self.leaders.first().unwrap().clone()
+    }
+
+    pub fn get_faith(&self) -> GameRef<Faith> {
+        for ch in self.leaders.iter().rev() {
+            if let Some(faith) = ch
+                .get_internal()
+                .inner()
+                .and_then(|x| x.get_faith().clone())
+            {
+                return faith;
+            }
+        }
+        for ch in self.member_list.iter().rev() {
+            if let Some(faith) = ch
+                .get_internal()
+                .inner()
+                .and_then(|x| x.get_faith().clone())
+            {
+                return faith;
+            }
+        }
+        self.parent
+            .as_ref()
+            .unwrap()
+            .get_internal()
+            .inner()
+            .unwrap()
+            .get_faith()
+            .clone()
+    }
+
+    pub fn get_culture(&self) -> GameRef<Culture> {
+        for ch in self.leaders.iter().rev() {
+            if let Some(culture) = ch
+                .get_internal()
+                .inner()
+                .and_then(|x| x.get_culture().clone())
+            {
+                return culture;
+            }
+        }
+        for ch in self.member_list.iter().rev() {
+            if let Some(culture) = ch
+                .get_internal()
+                .inner()
+                .and_then(|x| x.get_culture().clone())
+            {
+                return culture;
+            }
+        }
+        self.parent
+            .as_ref()
+            .unwrap()
+            .get_internal()
+            .inner()
+            .unwrap()
+            .get_culture()
+            .clone()
     }
 }
 

@@ -8,8 +8,8 @@ use super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::CUL_TEMPLATE_NAME,
-        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{Wrapper, WrapperMut},
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
+        types::{GameString, Wrapper, WrapperMut},
     },
     EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
 };

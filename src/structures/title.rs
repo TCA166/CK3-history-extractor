@@ -14,10 +14,10 @@ use super::{
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
-            GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileObject,
+            GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
             SaveFileValue,
         },
-        types::{Wrapper, WrapperMut},
+        types::{GameString, Wrapper, WrapperMut},
     },
     Character, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
     GameRef,

@@ -3,7 +3,7 @@ use std::{fmt, fs, mem};
 
 use serde::Serialize;
 
-use super::super::{parser::GameString, types::HashMap};
+use super::super::types::{GameString, HashMap};
 
 /* This is an imperfect localization parser. Unfortunately, the localization
 files are far too complex to be parsed without also implementing a whole

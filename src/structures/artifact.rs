@@ -6,7 +6,8 @@ use crate::types::Wrapper;
 use super::{
     super::{
         game_data::{Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
+        types::GameString,
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };

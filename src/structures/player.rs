@@ -11,8 +11,8 @@ use super::{
         display::{GetPath, Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
         jinja_env::H_TEMPLATE_NAME,
-        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::Wrapper,
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
+        types::{GameString, Wrapper},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef, LineageNode,
 };

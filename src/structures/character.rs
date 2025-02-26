@@ -6,10 +6,8 @@ use super::{
         display::{ProceduralPath, Renderable, TreeNode},
         game_data::{Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
-        parser::{
-            GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError, SaveFileValue,
-        },
-        types::{Shared, Wrapper, WrapperMut},
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
+        types::{GameString, Shared, Wrapper, WrapperMut},
     },
     Artifact, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
     GameObjectEntity, GameRef, Memory, Title,
@@ -86,44 +84,38 @@ impl Character {
         self.female
     }
 
+    pub fn get_faith(&self) -> Option<GameRef<Faith>> {
+        self.faith.clone()
+    }
+
     /// Gets the faith of the character
-    pub fn get_faith(&self) -> GameRef<Faith> {
+    pub fn find_faith(&self) -> GameRef<Faith> {
         if let Some(faith) = &self.faith {
             return faith.clone();
         } else {
             // FIXME this can fail
-            let house = self.house.as_ref().unwrap().get_internal();
-            house
-                .inner()
-                .unwrap()
-                .get_leader()
-                .get_internal()
-                .inner()
-                .unwrap()
-                .faith
-                .as_ref()
-                .unwrap()
-                .clone()
+            if let Some(house) = self.house.as_ref().unwrap().get_internal().inner() {
+                house.get_faith()
+            } else {
+                panic!("House is uninitialized");
+            }
         }
     }
 
+    pub fn get_culture(&self) -> Option<GameRef<Culture>> {
+        self.culture.clone()
+    }
+
     /// Gets the culture of the character
-    pub fn get_culture(&self) -> GameRef<Culture> {
+    pub fn find_culture(&self) -> GameRef<Culture> {
         if let Some(culture) = &self.culture {
             return culture.clone();
         } else {
-            let house = self.house.as_ref().unwrap().get_internal();
-            house
-                .inner()
-                .unwrap()
-                .get_leader()
-                .get_internal()
-                .inner()
-                .unwrap()
-                .culture
-                .as_ref()
-                .unwrap()
-                .clone()
+            if let Some(house) = self.house.as_ref().unwrap().get_internal().inner() {
+                house.get_culture()
+            } else {
+                panic!("House is uninitialized");
+            }
         }
     }
 
@@ -537,8 +529,8 @@ impl Serialize for Character {
         state.serialize_field("date", &self.date)?;
         state.serialize_field("reason", &self.reason)?;
         state.serialize_field("house", &self.house)?;
-        state.serialize_field("faith", &self.get_faith())?;
-        state.serialize_field("culture", &self.get_culture())?;
+        state.serialize_field("faith", &self.find_faith())?;
+        state.serialize_field("culture", &self.find_culture())?;
         state.serialize_field("skills", &self.skills)?;
         state.serialize_field("traits", &self.traits)?;
         state.serialize_field("spouses", &self.spouses)?;

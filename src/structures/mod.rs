@@ -3,11 +3,9 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::types::WrapperMut;
-
 use super::{
-    parser::{GameId, GameObjectMap, GameState, GameString, ParsingError},
-    types::{Shared, Wrapper},
+    parser::{GameObjectMap, GameState, ParsingError},
+    types::{GameId, GameString, Shared, Wrapper, WrapperMut},
 };
 
 /// A submodule that provides the [Player] object.

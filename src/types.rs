@@ -3,6 +3,17 @@ use std::{
     rc::Rc,
 };
 
+/// A type alias for a game object id.
+pub type GameId = u32;
+
+// implementing the Wrapper trait for GameId is overkill, the opaqueness is not needed as it's always going to be a numeric type
+
+/// A type alias for a game string.
+/// Roughly meant to represent a raw string from a save file, reference counted so that it exists once in memory.
+/// Actually a [Rc] around a [str].
+/// Comparisons might not work because compiler shenanigans, try [Rc::as_ref] when in doubt
+pub type GameString = Rc<str>;
+
 // Opaque type aliases for the standard library types.
 /// A type alias for a hash map.
 pub type HashMap<K, V> = std::collections::HashMap<K, V>;

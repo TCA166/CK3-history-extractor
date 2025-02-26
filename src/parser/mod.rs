@@ -22,8 +22,8 @@ use std::{
 mod game_object;
 use derive_more::From;
 pub use game_object::{
-    ConversionError, GameId, GameObjectCollection, GameObjectMap, GameObjectMapping, GameString,
-    KeyError, SaveFileObject, SaveFileValue, SaveObjectError,
+    ConversionError, GameObjectCollection, GameObjectMap, GameObjectMapping, KeyError,
+    SaveFileObject, SaveFileValue, SaveObjectError,
 };
 
 /// A submodule that provides the [SaveFile] object, which is used to store the
@@ -115,7 +115,7 @@ impl<'a> error::Error for ParsingError {
 
 use super::{
     structures::{FromGameObject, Player},
-    types::HashMap,
+    types::{GameId, HashMap},
 };
 
 /// A function that processes a section of the save file.

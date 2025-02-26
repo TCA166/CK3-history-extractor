@@ -4,8 +4,8 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::{Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, GameString, ParsingError},
-        types::{HashMap, Wrapper},
+        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
+        types::{GameString, HashMap, Wrapper},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };

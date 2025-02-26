@@ -6,8 +6,9 @@ use super::{
     super::{
         game_data::GameData,
         jinja_env::TIMELINE_TEMPLATE_NAME,
-        parser::{GameState, GameString},
+        parser::GameState,
         structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, GameRef, Title},
+        types::GameString,
     },
     graph::{create_timeline_graph, Grapher},
     renderer::{GetPath, Renderable},
