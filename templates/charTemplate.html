@@ -27,7 +27,7 @@
             Faith: {{faith|render_ref}} <br>
             {%endif%}
             Dynastic House: {%if house is not none%}{{house|render_ref}}{%else%}Lowborn{%endif%}<br />
-            {%if liege is not none%}
+            {%if liege is not none and liege.id != id%}
             Liege: {{liege|render_ref}}<br>
             {%endif%}
         </div>

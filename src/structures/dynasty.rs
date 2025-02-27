@@ -60,20 +60,16 @@ impl Dynasty {
     }
 
     pub fn get_faith(&self) -> GameRef<Faith> {
-        for ch in self.leaders.iter().rev() {
+        for ch in self
+            .leaders
+            .iter()
+            .rev()
+            .chain(self.member_list.iter().rev())
+        {
             if let Some(faith) = ch
-                .get_internal()
-                .inner()
-                .and_then(|x| x.get_faith().clone())
-            {
-                return faith;
-            }
-        }
-        for ch in self.member_list.iter().rev() {
-            if let Some(faith) = ch
-                .get_internal()
-                .inner()
-                .and_then(|x| x.get_faith().clone())
+                .try_get_internal()
+                .ok()
+                .and_then(|x| x.inner().and_then(|x| x.get_faith().clone()))
             {
                 return faith;
             }
@@ -89,24 +85,21 @@ impl Dynasty {
     }
 
     pub fn get_culture(&self) -> GameRef<Culture> {
-        for ch in self.leaders.iter().rev() {
+        for ch in self
+            .leaders
+            .iter()
+            .rev()
+            .chain(self.member_list.iter().rev())
+        {
             if let Some(culture) = ch
-                .get_internal()
-                .inner()
-                .and_then(|x| x.get_culture().clone())
+                .try_get_internal()
+                .ok()
+                .and_then(|x| x.inner().and_then(|x| x.get_culture().clone()))
             {
                 return culture;
             }
         }
-        for ch in self.member_list.iter().rev() {
-            if let Some(culture) = ch
-                .get_internal()
-                .inner()
-                .and_then(|x| x.get_culture().clone())
-            {
-                return culture;
-            }
-        }
+        // TODO things can fail here?
         self.parent
             .as_ref()
             .unwrap()
@@ -310,6 +303,9 @@ impl Localizable for Dynasty {
             );
         }
         if let Some((motto, variables)) = &mut self.motto {
+            for (_, v) in variables.iter_mut() {
+                *v = localization.localize(&v)?;
+            }
             *motto = localization.localize_query(&motto, |stack| {
                 if stack.len() == 1 {
                     if let Ok(k) = stack[0].0.parse::<i64>() {

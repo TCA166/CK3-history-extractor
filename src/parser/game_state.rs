@@ -264,14 +264,14 @@ impl GameState {
                     *count += 1;
                     {
                         let entry = faith_yearly_deaths
-                            .entry(char.find_faith().get_internal().get_id())
+                            .entry(char.get_faith().as_ref().unwrap().get_internal().get_id())
                             .or_insert(HashMap::default());
                         let count = entry.entry(death_date.year()).or_insert(0.);
                         *count += 1.;
                     }
                     {
                         let entry = culture_yearly_deaths
-                            .entry(char.find_culture().get_internal().get_id())
+                            .entry(char.get_culture().as_ref().unwrap().get_internal().get_id())
                             .or_insert(HashMap::default());
                         let count = entry.entry(death_date.year()).or_insert(0.);
                         *count += 1.;
@@ -367,8 +367,18 @@ impl GameState {
                     continue;
                 }
                 if let Some(first_char) = next.unwrap().1.as_ref().unwrap().get_internal().inner() {
-                    let mut faith = first_char.find_faith().get_internal().get_id();
-                    let mut culture = first_char.find_culture().get_internal().get_id();
+                    let mut faith = first_char
+                        .get_faith()
+                        .as_ref()
+                        .unwrap()
+                        .get_internal()
+                        .get_id();
+                    let mut culture = first_char
+                        .get_culture()
+                        .as_ref()
+                        .unwrap()
+                        .get_internal()
+                        .get_id();
                     for entry in hist {
                         let char = entry.1.as_ref();
                         if char.is_none() {
@@ -377,9 +387,9 @@ impl GameState {
                         let char = char.unwrap();
                         let event = entry.2.as_ref();
                         if let Some(ch) = char.get_internal().inner() {
-                            let char_faith = ch.find_faith();
+                            let char_faith = ch.get_faith().as_ref().unwrap().clone();
                             let ch_faith = char_faith.get_internal();
-                            let char_culture = ch.find_culture();
+                            let char_culture = ch.get_culture().as_ref().unwrap().clone();
                             let ch_culture = char_culture.get_internal();
                             if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
                                 let year: i16 = entry.0.year();

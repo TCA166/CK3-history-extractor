@@ -1,5 +1,5 @@
 use jomini::common::Date;
-use serde::{ser::SerializeStruct, Serialize, Serializer};
+use serde::Serialize;
 
 use super::{
     super::{
@@ -27,7 +27,7 @@ enum Vassal {
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Character {
     name: GameString,
     nick: Option<GameString>,
@@ -88,38 +88,8 @@ impl Character {
         self.faith.clone()
     }
 
-    /// Gets the faith of the character
-    pub fn find_faith(&self) -> GameRef<Faith> {
-        if let Some(faith) = &self.faith {
-            return faith.clone();
-        } else {
-            self.house
-                .as_ref()
-                .unwrap()
-                .get_internal()
-                .inner()
-                .unwrap()
-                .get_faith()
-        }
-    }
-
     pub fn get_culture(&self) -> Option<GameRef<Culture>> {
         self.culture.clone()
-    }
-
-    /// Gets the culture of the character
-    pub fn find_culture(&self) -> GameRef<Culture> {
-        if let Some(culture) = &self.culture {
-            return culture.clone();
-        } else {
-            self.house
-                .as_ref()
-                .unwrap()
-                .get_internal()
-                .inner()
-                .unwrap()
-                .get_culture()
-        }
     }
 
     /// Adds a character as a parent of this character
@@ -137,13 +107,9 @@ impl Character {
         self.vassals.push(Vassal::Character(vassal));
     }
 
-    /* TODO implement this.
-    The problem is that we cannot do this in the init, because the vassals aren't loaded, and within cull we don't have a shared reference
-
-    pub fn set_liege(&mut self, liege:Shared<Character>){
-        self.liege = Some(DerivedRef::from_derived(liege));
+    pub fn set_liege(&mut self, liege: GameRef<Character>) {
+        self.liege = Some(liege);
     }
-    */
 
     /// Gets all of the held de jure barony keys of the character and their vassals
     pub fn get_barony_keys(&self, de_jure: bool) -> Vec<GameString> {
@@ -435,6 +401,36 @@ impl FromGameObject for Character {
                 child.register_parent(reference.clone());
             }
         }
+        if self.faith.is_none() {
+            if let Some(house) = &self.house {
+                if let Some(house) = house.get_internal().inner() {
+                    self.faith = Some(house.get_faith());
+                }
+            }
+        }
+        if self.culture.is_none() {
+            if let Some(house) = &self.house {
+                if let Some(house) = house.get_internal().inner() {
+                    self.culture = Some(house.get_culture());
+                }
+            }
+        }
+        for vassal in self.vassals.iter_mut() {
+            match vassal {
+                Vassal::Character(c) => {
+                    if let Some(c) = c.get_internal_mut().inner_mut() {
+                        c.set_liege(reference.clone());
+                    }
+                }
+                Vassal::Reference(c) => {
+                    if let Some(c) = c.get_internal_mut().as_mut() {
+                        if let Some(c) = c.get_internal_mut().inner_mut() {
+                            c.set_liege(reference.clone());
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -516,44 +512,6 @@ impl TreeNode<Vec<GameRef<Character>>> for Character {
         } else {
             None
         }
-    }
-}
-
-impl Serialize for Character {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut state = serializer.serialize_struct("Character", 30)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("nick", &self.nick)?;
-        state.serialize_field("birth", &self.birth)?;
-        state.serialize_field("dead", &self.dead)?;
-        state.serialize_field("date", &self.date)?;
-        state.serialize_field("reason", &self.reason)?;
-        state.serialize_field("house", &self.house)?;
-        state.serialize_field("faith", &self.find_faith())?;
-        state.serialize_field("culture", &self.find_culture())?;
-        state.serialize_field("skills", &self.skills)?;
-        state.serialize_field("traits", &self.traits)?;
-        state.serialize_field("spouses", &self.spouses)?;
-        state.serialize_field("former", &self.former)?;
-        state.serialize_field("children", &self.children)?;
-        state.serialize_field("parents", &self.parents)?;
-        state.serialize_field("dna", &self.dna)?;
-        state.serialize_field("memories", &self.memories)?;
-        state.serialize_field("titles", &self.titles)?;
-        state.serialize_field("gold", &self.gold)?;
-        state.serialize_field("piety", &self.piety)?;
-        state.serialize_field("prestige", &self.prestige)?;
-        state.serialize_field("dread", &self.dread)?;
-        state.serialize_field("strength", &self.strength)?;
-        state.serialize_field("kills", &self.kills)?;
-        state.serialize_field("languages", &self.languages)?;
-        state.serialize_field("artifacts", &self.artifacts)?;
-        state.serialize_field("vassals", &self.vassals)?;
-        state.serialize_field("liege", &self.liege)?;
-        state.end()
     }
 }
 

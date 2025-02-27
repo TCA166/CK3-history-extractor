@@ -1,5 +1,5 @@
 use jomini::common::Date;
-use serde::Serialize;
+use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
     super::{
@@ -11,7 +11,7 @@ use super::{
 };
 
 /// A struct representing a lineage node in the game
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct LineageNode {
     character: GameRef<Character>,
     date: Date,
@@ -120,5 +120,23 @@ impl Localizable for LineageNode {
             *perk = localization.localize(perk_key)?;
         }
         Ok(())
+    }
+}
+
+impl Serialize for LineageNode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("LineageNode", 8)?;
+        state.serialize_field("character", &*self.character.get_internal())?;
+        state.serialize_field("date", &self.date)?;
+        state.serialize_field("score", &self.score)?;
+        state.serialize_field("prestige", &self.prestige)?;
+        state.serialize_field("piety", &self.piety)?;
+        state.serialize_field("dread", &self.dread)?;
+        state.serialize_field("lifestyle", &self.lifestyle)?;
+        state.serialize_field("perks", &self.perks)?;
+        state.end()
     }
 }
