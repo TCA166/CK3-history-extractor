@@ -17,11 +17,12 @@ use super::{
         parser::GameState,
         structures::{
             Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, GameRef, Title,
+            GameObjectEntity, GameRef, Player, Title,
         },
         types::{GameId, HashMap, Wrapper},
     },
     graph::Grapher,
+    timeline::Timeline,
 };
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
@@ -90,10 +91,17 @@ impl RenderableType {
     }
 }
 
+#[derive(From)]
+pub enum EntryPoint<'a> {
+    Player(&'a Player),
+    Timeline(&'a Timeline),
+}
+
 /// A struct that renders objects into html pages.
 /// It is meant to be used as a worker object that collects objects and renders them all at once.
 /// The objects are rendered in a BFS order, with the depth of the objects being determined by the BFS algorithm.
 pub struct Renderer<'a> {
+    roots: Vec<EntryPoint<'a>>,
     depth_map: HashMap<EntityRef, usize>,
     /// The path where the objects will be rendered to.
     /// This usually takes the form of './{username}'s history/'.
@@ -138,6 +146,7 @@ impl<'a> Renderer<'a> {
         create_dir_maybe(path.join(Faith::get_subdir()));
         create_dir_maybe(path.join(Culture::get_subdir()));
         Renderer {
+            roots: Vec::new(),
             depth_map: HashMap::default(),
             path,
             data,
@@ -176,10 +185,13 @@ impl<'a> Renderer<'a> {
 
     /// Adds an object to the renderer, and returns the number of objects that were added.
     /// This method uses a BFS algorithm to determine the depth of the object.
-    pub fn add_object<G: GameObjectDerived + Renderable>(&mut self, obj: &G) -> usize {
+    pub fn add_object<G: GameObjectDerived + Renderable>(&mut self, obj: &'a G) -> usize
+    where
+        EntryPoint<'a>: From<&'a G>,
+    {
+        self.roots.push(EntryPoint::from(obj));
         // BFS with depth https://stackoverflow.com/a/31248992/12520385
         let mut queue: VecDeque<Option<EntityRef>> = VecDeque::new();
-        // FIXME this makes obj not rendered
         obj.get_references(&mut queue);
         let mut res = queue.len();
         queue.push_back(None);
@@ -232,6 +244,12 @@ impl<'a> Renderer<'a> {
             }
         }
         env.add_global("depth_map", Value::from_serialize(global_depth_map));
+        for root in &self.roots {
+            match root {
+                EntryPoint::Player(p) => self.render(*p, env),
+                EntryPoint::Timeline(t) => self.render(*t, env),
+            }
+        }
         for obj in self.depth_map.keys() {
             if let Ok(obj) = obj.try_into() {
                 self.render_enum(&obj, env);
