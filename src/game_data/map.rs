@@ -14,6 +14,8 @@ use plotters::{
 };
 use serde::Serialize;
 
+use base64::prelude::*;
+
 use super::super::types::{GameId, GameString, HashMap};
 
 // color stuff
@@ -155,11 +157,19 @@ impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Map {
     }
 }
 
+fn serialize_into_b64<S: serde::Serializer>(
+    bytes: &[u8],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_str(&BASE64_STANDARD.encode(bytes))
+}
+
 /// A struct representing a game map, from which we can create [Map] instances
 #[derive(Serialize)]
 pub struct GameMap {
     height: u32,
     width: u32,
+    #[serde(serialize_with = "serialize_into_b64")]
     province_map: Box<[u8]>,
     title_color_map: HashMap<String, [u8; 3]>,
 }

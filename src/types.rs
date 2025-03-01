@@ -20,15 +20,14 @@ pub type HashMap<K, V> = std::collections::HashMap<K, V>;
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.
-/// For example [GameString](crate::parser::GameString) is a wrapper around a reference counted string that implements this trait meaning if we wanted to change how the reference counting works we can do it with no interface changes.
-/// Literally just a different flavor of [Deref].
 pub trait Wrapper<T> {
     /// Wrap a value in the object
     fn wrap(t: T) -> Self;
 
-    /// Get the internal value as a reference or a raw value
+    /// Get the internal value as a reference or a raw value. Will panic if the value is already mutably borrowed.
     fn get_internal(&self) -> Ref<T>;
 
+    /// Try to get the internal value as a reference or a raw value
     fn try_get_internal(&self) -> Result<Ref<T>, BorrowError>;
 }
 

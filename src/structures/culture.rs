@@ -26,6 +26,7 @@ pub struct Culture {
     parents: Vec<GameRef<Culture>>,
     traditions: Vec<GameString>,
     language: GameString,
+    eras: Vec<(GameString, Option<u16>, Option<u16>)>,
     // TODO innovations
 }
 
@@ -51,10 +52,23 @@ impl FromGameObject for Culture {
                 }),
             children: Vec::new(),
             parents: Vec::new(),
+            eras: Vec::with_capacity(4),
         };
         if let Some(parents_obj) = base.get("parents") {
             for p in parents_obj.as_object()?.as_array()? {
                 culture.parents.push(game_state.get_culture(&p.as_id()?));
+            }
+        }
+        if let Some(era_data) = base.get("culture_era_data") {
+            for era in era_data.as_object()?.as_array()? {
+                let obj = era.as_object()?.as_map()?;
+                culture.eras.push((
+                    obj.get_string("type")?,
+                    obj.get("join")
+                        .and_then(|n| n.as_integer().ok().and_then(|n| Some(n as u16))),
+                    obj.get("left")
+                        .and_then(|n| n.as_integer().ok().and_then(|n| Some(n as u16))),
+                ));
             }
         }
         return Ok(culture);
@@ -172,6 +186,9 @@ impl Localizable for Culture {
         self.language = localization.localize(self.language.to_string() + "_name")?;
         for t in &mut self.traditions {
             *t = localization.localize(t.to_string() + "_name")?;
+        }
+        for (era, _, _) in &mut self.eras {
+            *era = localization.localize(era.to_string())?;
         }
         Ok(())
     }

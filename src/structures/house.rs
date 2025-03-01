@@ -31,10 +31,7 @@ fn get_house_name(base: &GameObjectMap) -> Result<GameString, ParsingError> {
         Ok(name.as_string()?)
     } else {
         match base.get_err("key")? {
-            SaveFileValue::Integer(id) => {
-                // TODO WTF? to what does this refer?
-                Ok(id.to_string().into())
-            }
+            SaveFileValue::Integer(id) => Ok(id.to_string().into()),
             SaveFileValue::String(name) => Ok(name.clone()),
             _ => Err(ParsingError::StructureError(SaveObjectError::KeyError(
                 KeyError::MissingKey("house_name or localized_name".to_string(), base.to_owned()),
@@ -240,6 +237,10 @@ impl House {
 
     pub fn get_dynasty(&self) -> GameRef<Dynasty> {
         self.parent.clone()
+    }
+
+    pub fn get_found_date(&self) -> Option<Date> {
+        self.found_date
     }
 }
 

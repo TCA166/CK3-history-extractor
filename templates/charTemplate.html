@@ -38,27 +38,25 @@
                 <div class="card-header">
                     Base Skills
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered mb-0">
-                        <thead>
-                            <tr>
-                                <th scope="col">Diplomacy</th>
-                                <th scope="col">Stewardship</th>
-                                <th scope="col">Martial</th>
-                                <th scope="col">Intrigue</th>
-                                <th scope="col">Learning</th>
-                                <th scope="col">Prowess</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                {%for skill in skills%}
-                                <td>{{skill}}</td>
-                                {%endfor%}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table table-responsive table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Diplomacy</th>
+                            <th scope="col">Stewardship</th>
+                            <th scope="col">Martial</th>
+                            <th scope="col">Intrigue</th>
+                            <th scope="col">Learning</th>
+                            <th scope="col">Prowess</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            {%for skill in skills%}
+                            <td>{{skill}}</td>
+                            {%endfor%}
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
         <div class="col w-50">

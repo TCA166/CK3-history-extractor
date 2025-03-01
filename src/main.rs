@@ -4,8 +4,8 @@ use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
 use std::{
-    env,
-    fmt::{self, Debug, Formatter},
+    env, error,
+    fmt::{self, Debug, Display, Formatter},
     fs,
     io::{stdin, stdout, IsTerminal},
     ops::Not,
@@ -19,7 +19,7 @@ mod types;
 mod parser;
 use parser::{process_section, yield_section, GameState, SaveFile, SaveFileError};
 
-/// A submodule that provides [GameObjectDerived](crate::structures::GameObjectDerived) objects which are serialized and rendered into HTML.
+/// A submodule that provides objects which are serialized and rendered into HTML.
 /// You can think of them like frontend DB view objects into parsed save files.
 mod structures;
 use structures::{GameObjectDerived, Player};
@@ -32,6 +32,7 @@ use jinja_env::create_env;
 mod display;
 use display::{GetPath, Renderer};
 
+/// A submodule for handling the game data
 mod game_data;
 use game_data::{GameDataLoader, Localizable};
 
@@ -45,21 +46,32 @@ mod steam;
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
 
-#[derive(From)]
+/// An error a user has caused. Shame on him.
+#[derive(From, Debug)]
 enum UserError {
+    /// The program is not running in a terminal
     NoTerminal,
+    /// The file does not exist
     FileDoesNotExist,
+    /// An error occurred during file handling
     FileError(SaveFileError),
 }
 
-impl Debug for UserError {
+impl Display for UserError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            UserError::NoTerminal => write!(f, "Not in a terminal"),
-            UserError::FileDoesNotExist => write!(f, "File does not exist"),
-            UserError::FileError(e) => {
-                write!(f, "Error occurred during save file handling {:?}", e)
-            }
+            UserError::NoTerminal => write!(f, "The program is not running in a terminal"),
+            UserError::FileDoesNotExist => write!(f, "The file does not exist"),
+            UserError::FileError(e) => write!(f, "An error occurred during file handling: {}", e),
+        }
+    }
+}
+
+impl error::Error for UserError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            UserError::FileError(e) => Some(e),
+            _ => None,
         }
     }
 }
@@ -68,7 +80,7 @@ impl Debug for UserError {
 ///
 /// # Process
 ///
-/// 1. Reads the save file name from user
+/// 1. Reads user input through the command line arguments or prompts the user for input.
 /// 2. Parses the save file.
 ///     1. Initializes a [SaveFile] object using the provided file name
 ///     2. Iterates over the Section objects in the save file

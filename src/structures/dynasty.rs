@@ -88,6 +88,13 @@ impl FromGameObject for Dynasty {
     }
 
     fn finalize(&mut self, _reference: &GameRef<Self>) {
+        self.houses.sort_by(|a, b| {
+            a.get_internal()
+                .inner()
+                .unwrap()
+                .get_found_date()
+                .cmp(&b.get_internal().inner().unwrap().get_found_date())
+        });
         // instead of resolving game files we can just get the name from the first house
         if self.name.is_none() {
             self.name = Some(

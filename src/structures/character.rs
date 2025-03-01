@@ -14,7 +14,7 @@ use super::{
 };
 
 /// An enum that holds either a character or a reference to a character.
-/// Effectively either a vassal([Character]) or a vassal([DerivedRef]) contract.
+/// Effectively either a vassal([Character]) or a vassal contract.
 /// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -26,7 +26,6 @@ enum Vassal {
 // MAYBE enum for dead and alive character?
 
 /// Represents a character in the game.
-/// Implements [GameObjectDerived], [Renderable] and [Cullable].
 #[derive(Serialize)]
 pub struct Character {
     name: GameString,
@@ -274,6 +273,12 @@ impl FromGameObject for Character {
             val.date = Some(o.get_date("date")?);
             if let Some(liege_node) = o.get("liege") {
                 val.liege = Some(game_state.get_character(&liege_node.as_id()?));
+            }
+            if let Some(memory_node) = o.get("memories") {
+                for m in memory_node.as_object()?.as_array()? {
+                    val.memories
+                        .push(game_state.get_memory(&m.as_id()?).clone());
+                }
             }
         } else if let Some(alive_data) = base.get("alive_data") {
             val.dead = false;
