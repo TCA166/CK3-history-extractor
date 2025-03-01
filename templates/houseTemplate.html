@@ -1,0 +1,41 @@
+{% extends "base" %}
+
+{% block title %}
+House {{name}}
+{% endblock %}
+
+{% block header %}
+<p class="h1 my-0 me-md-auto fw-normal">House {{name}}</p>
+<a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
+{% endblock %}
+
+{% block main %}
+<div class="row text-start">
+    <div class="col w-50">
+        {%if found_date != "" and found_date != none%}
+        Creation Date: {{found_date}}
+        <br />
+        {%endif%}
+        {%if motto is not none%}
+        Motto: "{{motto[0]}}"
+        <br />
+        {%endif%}
+        Dynasty: {{parent|render_ref}}
+        <br />
+    </div>
+    <div class="col w-50">
+        {%if leaders|length > 0%}
+        <div class="card">
+            <div class="card-header">
+                House head history:
+            </div>
+            <ol class="list-group list-group-numbered list-group-flush">
+                {%for leader in leaders%}
+                <li class="list-group-item">{{leader|render_ref}}</li>
+                {%endfor%}
+            </ol>
+        </div>
+        {%endif%}
+    </div>
+</div>
+{% endblock %}

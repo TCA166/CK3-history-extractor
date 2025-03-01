@@ -14,7 +14,7 @@ use super::{
 };
 
 /// A struct representing a faith in the game
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Faith {
     name: GameString,
     tenets: Vec<GameString>,

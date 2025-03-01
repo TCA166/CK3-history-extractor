@@ -9,14 +9,14 @@ use super::{
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, Shared, Wrapper, WrapperMut},
     },
-    Artifact, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
-    GameObjectEntity, GameRef, Memory, Title,
+    Artifact, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
+    GameRef, House, Memory, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
 /// Effectively either a vassal([Character]) or a vassal([DerivedRef]) contract.
 /// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 #[serde(untagged)]
 enum Vassal {
     Character(Shared<GameObjectEntity<Character>>),
@@ -27,7 +27,7 @@ enum Vassal {
 
 /// Represents a character in the game.
 /// Implements [GameObjectDerived], [Renderable] and [Cullable].
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub struct Character {
     name: GameString,
     nick: Option<GameString>,
@@ -37,7 +37,7 @@ pub struct Character {
     reason: Option<GameString>,
     faith: Option<GameRef<Faith>>,
     culture: Option<GameRef<Culture>>,
-    house: Option<GameRef<Dynasty>>,
+    house: Option<GameRef<House>>,
     skills: Vec<i8>,
     traits: Vec<GameString>,
     spouses: Vec<GameRef<Character>>,
@@ -168,7 +168,7 @@ impl Character {
     }
 
     /// Gets the dynasty of the character
-    pub fn get_dynasty(&self) -> Option<GameRef<Dynasty>> {
+    pub fn get_house(&self) -> Option<GameRef<House>> {
         if let Some(house) = &self.house {
             return Some(house.clone());
         } else {
@@ -238,7 +238,7 @@ impl FromGameObject for Character {
             }
         }
         if let Some(dynasty_id) = base.get("dynasty_house") {
-            val.house = Some(game_state.get_dynasty(&dynasty_id.as_id()?));
+            val.house = Some(game_state.get_house(&dynasty_id.as_id()?));
         }
         if let Some(landed_data_node) = base.get("landed_data") {
             let landed_data = landed_data_node.as_object()?.as_map()?;
@@ -375,13 +375,6 @@ impl FromGameObject for Character {
     }
 
     fn finalize(&mut self, reference: &GameRef<Character>) {
-        if let Some(house) = self.house.clone() {
-            if let Some(house) = house.get_internal_mut().inner_mut() {
-                house.register_member(reference.clone());
-            } else {
-                self.house = None;
-            }
-        }
         if let Some(liege) = self.liege.clone() {
             if let Ok(mut inner) = liege.try_get_internal_mut() {
                 if let Some(liege) = inner.inner_mut() {
@@ -389,11 +382,6 @@ impl FromGameObject for Character {
                 } else {
                     self.liege = None;
                 }
-            }
-        }
-        if let Some(house) = &self.house {
-            if let Some(house) = house.get_internal_mut().inner_mut() {
-                house.register_member(reference.clone());
             }
         }
         for child in self.children.iter() {

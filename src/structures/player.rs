@@ -28,7 +28,7 @@ const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
 const BASE_COLOR: [u8; 3] = [255, 255, 255];
 
 /// A struct representing a player in the game
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Player {
     name: GameString,
     character: Option<GameRef<Character>>,
@@ -132,7 +132,7 @@ impl Renderable for Player {
             let mut descendant_title = HashSet::new();
             let first = self.lineage.first().unwrap().get_character();
             if let Some(first) = first.get_internal().inner() {
-                let dynasty = first.get_dynasty();
+                let dynasty = first.get_house();
                 let dynasty = dynasty.as_ref().unwrap().get_internal();
                 for desc in dynasty
                     .inner()
@@ -147,10 +147,10 @@ impl Renderable for Player {
                         if desc.get_death_date().is_some() {
                             continue;
                         }
-                        let target = if desc
-                            .get_dynasty()
-                            .map_or(false, |d| d.get_internal().is_same_dynasty(&dynasty))
-                        {
+                        let target = if desc.get_house().map_or(false, |d| {
+                            d.get_internal().inner().unwrap().get_dynasty()
+                                == dynasty.inner().unwrap().get_dynasty()
+                        }) {
                             &mut direct_titles
                         } else {
                             &mut descendant_title

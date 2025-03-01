@@ -12,7 +12,7 @@ use super::{
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Artifact {
     name: GameString,
     description: GameString,

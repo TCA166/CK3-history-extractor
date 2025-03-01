@@ -15,7 +15,7 @@ use super::{
 };
 
 /// A struct representing a culture in the game
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Culture {
     name: GameString,
     ethos: Option<GameString>,

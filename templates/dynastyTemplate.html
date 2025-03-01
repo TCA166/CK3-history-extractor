@@ -1,37 +1,22 @@
 {% extends "base" %}
 
 {% block title %}
-{%if parent is not none%}House{%endif%} {{name}}
+{{name}}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{%if parent is not none and parent != dynasty %}House{%endif%} {{name}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{{name}}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 
 {% block main %}
 <div class="row text-start">
     <div class="col w-50">
-        {%if found_date != "" and found_date != none%}
-        Creation Date: {{found_date}}
-        <br />
-        {%endif%}
-        {%if motto is not none%}
-        Motto: "{{motto[0]}}"
-        <br />
-        {%endif%}
-        {%if parent is not none and parent.id != id%}
-        Parent Dynasty: {{parent|render_ref}}
-        <br />
-        {%endif%}
-        {%if members is not none%}
-        Total Members: {{members}}
-        {%else%}
-        Number of houses: {{houses}}
-        {%endif%}
-        <br>
         Total accumulated renown: {{prestige_tot}}<br>
         Current renown: {{prestige}}<br>
+        {%if leader is not none%}
+        Dynasty head: {{leader|render_ref}}<br>
+        {%endif%}
         {%if perks is not none%}
         Dynasty Legacies:
         <table class="table table-bordered w-auto">
@@ -60,14 +45,14 @@
         {%endif%}
     </div>
     <div class="col w-50">
-        {%if leaders|length > 0%}
+        {%if houses|length > 0%}
         <div class="card">
             <div class="card-header">
-                House head history:
+                Dynasty houses:
             </div>
             <ol class="list-group list-group-numbered list-group-flush">
-                {%for leader in leaders%}
-                <li class="list-group-item">{{leader|render_ref}}</li>
+                {%for house in houses%}
+                <li class="list-group-item">{{house|render_ref}}</li>
                 {%endfor%}
             </ol>
         </div>

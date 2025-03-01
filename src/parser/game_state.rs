@@ -6,7 +6,7 @@ use super::{
         game_data::{Localizable, LocalizationError, Localize},
         structures::{
             Artifact, Character, Culture, Dynasty, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, GameRef, Memory, Title,
+            GameObjectEntity, GameRef, House, Memory, Title,
         },
         types::{GameId, GameString, Shared, Wrapper, WrapperMut},
     },
@@ -16,7 +16,7 @@ use super::{
 
 use jomini::common::{Date, PdsDate};
 
-use serde::Serialize;
+use serde::{ser::SerializeMap, Serialize, Serializer};
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
 fn get_or_insert_dummy<T: GameObjectDerived + FromGameObject>(
@@ -44,6 +44,17 @@ impl Serialize for Shared<Option<GameRef<Character>>> {
     }
 }
 
+fn serialize_ref_map<T: Serialize + GameObjectDerived, S: Serializer>(
+    map: &HashMap<GameId, GameRef<T>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let mut state = serializer.serialize_map(Some(map.len()))?;
+    for (k, v) in map.iter() {
+        state.serialize_entry(k, &*v.get_internal())?;
+    }
+    state.end()
+}
+
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
@@ -51,25 +62,35 @@ impl Serialize for Shared<Option<GameRef<Character>>> {
 #[derive(Serialize)]
 pub struct GameState {
     /// A character id->Character transform
+    #[serde(serialize_with = "serialize_ref_map")]
     characters: HashMap<GameId, GameRef<Character>>,
     /// A title id->Title transform
+    #[serde(serialize_with = "serialize_ref_map")]
     titles: HashMap<GameId, GameRef<Title>>,
     /// A faith id->Title transform
+    #[serde(serialize_with = "serialize_ref_map")]
     faiths: HashMap<GameId, GameRef<Faith>>,
     /// A culture id->Culture transform
+    #[serde(serialize_with = "serialize_ref_map")]
     cultures: HashMap<GameId, GameRef<Culture>>,
     /// A dynasty id->Dynasty transform
+    #[serde(serialize_with = "serialize_ref_map")]
     dynasties: HashMap<GameId, GameRef<Dynasty>>,
+    #[serde(serialize_with = "serialize_ref_map")]
+    houses: HashMap<GameId, GameRef<House>>,
     /// A memory id->Memory transform
+    #[serde(serialize_with = "serialize_ref_map")]
     memories: HashMap<GameId, GameRef<Memory>>,
     /// A artifact id->Artifact transform
+    #[serde(serialize_with = "serialize_ref_map")]
     artifacts: HashMap<GameId, GameRef<Artifact>>,
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<Option<GameRef<Character>>>>,
+    character_transform: HashMap<GameId, GameRef<Character>>,
     #[serde(skip)]
-    county_date: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
+    county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     /// The current date from the meta section
     current_date: Option<Date>,
     /// The time Y.M.D from which the game started
@@ -84,11 +105,13 @@ impl Default for GameState {
             faiths: HashMap::default(),
             cultures: HashMap::default(),
             dynasties: HashMap::default(),
+            houses: HashMap::default(),
             memories: HashMap::default(),
             artifacts: HashMap::default(),
             traits_lookup: Vec::new(),
             contract_transform: HashMap::default(),
-            county_date: HashMap::default(),
+            character_transform: HashMap::default(),
+            county_data: HashMap::default(),
             current_date: None,
             offset_date: None,
         }
@@ -99,6 +122,11 @@ impl GameState {
     /// Add a lookup table for traits
     pub fn add_lookup(&mut self, array: Vec<GameString>) {
         self.traits_lookup = array;
+    }
+
+    pub fn add_character_transform(&mut self, transform: HashMap<GameId, GameRef<Character>>) {
+        // TODO use this transform
+        self.character_transform = transform;
     }
 
     /// Get a trait by id
@@ -174,14 +202,20 @@ impl GameState {
         get_or_insert_dummy(&mut self.artifacts, key)
     }
 
+    pub fn get_house(&mut self, key: &GameId) -> GameRef<House> {
+        get_or_insert_dummy(&mut self.houses, key)
+    }
+
+    pub fn add_house(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
+        self.get_house(key).get_internal_mut().init(value, self)
+    }
+
     pub fn add_artifact(
         &mut self,
         key: &GameId,
         value: &GameObjectMap,
     ) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.artifacts, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_artifact(key).get_internal_mut().init(value, self)
     }
 
     /// Add a character to the game state    
@@ -190,44 +224,32 @@ impl GameState {
         key: &GameId,
         value: &GameObjectMap,
     ) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.characters, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_character(key).get_internal_mut().init(value, self)
     }
 
     /// Add a title to the game state
     pub fn add_title(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.titles, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_title(key).get_internal_mut().init(value, self)
     }
 
     /// Add a faith to the game state
     pub fn add_faith(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.faiths, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_faith(key).get_internal_mut().init(value, self)
     }
 
     /// Add a culture to the game state
     pub fn add_culture(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.cultures, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_culture(key).get_internal_mut().init(value, self)
     }
 
     /// Add a dynasty to the game state
     pub fn add_dynasty(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.dynasties, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_dynasty(key).get_internal_mut().init(value, self)
     }
 
     /// Add a memory to the game state
     pub fn add_memory(&mut self, key: &GameId, value: &GameObjectMap) -> Result<(), ParsingError> {
-        get_or_insert_dummy(&mut self.memories, key)
-            .get_internal_mut()
-            .init(value, self)
+        self.get_memory(key).get_internal_mut().init(value, self)
     }
 
     pub fn get_baronies_of_counties<F: Fn(&Title) -> bool>(&self, filter: F) -> Vec<GameString> {
@@ -246,7 +268,7 @@ impl GameState {
         &mut self,
         county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     ) {
-        self.county_date = county_data;
+        self.county_data = county_data;
     }
 
     pub fn new_grapher(&self) -> Grapher {
@@ -446,7 +468,7 @@ impl Localizable for GameState {
             title.finalize();
             if let Some(internal) = title.get_internal_mut().inner_mut() {
                 internal.localize(localization)?;
-                if let Some(assoc) = self.county_date.get(internal.get_key().as_ref()) {
+                if let Some(assoc) = self.county_data.get(internal.get_key().as_ref()) {
                     internal.add_county_data(assoc.1.clone(), assoc.0.clone());
                 }
             }
@@ -462,6 +484,14 @@ impl Localizable for GameState {
         for culture in &mut self.cultures.values_mut() {
             culture.finalize();
             culture
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .localize(localization)?;
+        }
+        for house in &mut self.houses.values_mut() {
+            house.finalize();
+            house
                 .get_internal_mut()
                 .inner_mut()
                 .unwrap()

@@ -71,7 +71,7 @@ impl Default for TitleType {
 }
 
 /// A struct representing a title in the game
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Title {
     key: GameString,
     tier: TitleType,

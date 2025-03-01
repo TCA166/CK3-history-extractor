@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use jomini::common::Date;
 use serde::Serialize;
 
 use super::{
@@ -9,122 +8,19 @@ use super::{
         game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::DYN_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
-        types::{GameString, HashMap, Wrapper, WrapperMut},
+        types::{GameString, HashMap, Wrapper},
     },
-    Character, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
-    GameRef,
+    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, House,
 };
 
-// TODO figure out how to handle houses and dynasties
-
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Dynasty {
-    parent: Option<GameRef<Dynasty>>,
     name: Option<GameString>,
-    members: u32,
-    member_list: Vec<GameRef<Character>>,
-    houses: u32,
     prestige_tot: f32,
     prestige: f32,
     perks: HashMap<GameString, u8>,
-    leaders: Vec<GameRef<Character>>,
-    found_date: Option<Date>,
-    motto: Option<(GameString, HashMap<i64, GameString>)>,
-}
-
-impl Dynasty {
-    /// Registers a new house in the dynasty
-    pub fn register_house(&mut self) {
-        self.houses += 1;
-    }
-
-    /// Registers a new member in the dynasty
-    pub fn register_member(&mut self, member: GameRef<Character>) {
-        self.members += 1;
-        self.member_list.push(member.clone());
-        if let Some(parent) = &self.parent {
-            if let Ok(mut p) = parent.try_get_internal_mut() {
-                if let Some(p) = p.inner_mut() {
-                    p.register_member(member);
-                }
-            }
-        }
-    }
-
-    /// Gets the founder of the dynasty
-    pub fn get_founder(&self) -> GameRef<Character> {
-        if self.leaders.is_empty() {
-            return self.member_list.first().unwrap().clone();
-        }
-        self.leaders.first().unwrap().clone()
-    }
-
-    pub fn get_faith(&self) -> GameRef<Faith> {
-        for ch in self
-            .leaders
-            .iter()
-            .rev()
-            .chain(self.member_list.iter().rev())
-        {
-            if let Some(faith) = ch
-                .try_get_internal()
-                .ok()
-                .and_then(|x| x.inner().and_then(|x| x.get_faith().clone()))
-            {
-                return faith;
-            }
-        }
-        self.parent
-            .as_ref()
-            .unwrap()
-            .get_internal()
-            .inner()
-            .unwrap()
-            .get_faith()
-            .clone()
-    }
-
-    pub fn get_culture(&self) -> GameRef<Culture> {
-        for ch in self
-            .leaders
-            .iter()
-            .rev()
-            .chain(self.member_list.iter().rev())
-        {
-            if let Some(culture) = ch
-                .try_get_internal()
-                .ok()
-                .and_then(|x| x.inner().and_then(|x| x.get_culture().clone()))
-            {
-                return culture;
-            }
-        }
-        // TODO things can fail here?
-        self.parent
-            .as_ref()
-            .unwrap()
-            .get_internal()
-            .inner()
-            .unwrap()
-            .get_culture()
-            .clone()
-    }
-}
-
-impl GameObjectEntity<Dynasty> {
-    /// Checks if the dynasty is the same as another dynasty
-    pub fn is_same_dynasty(&self, other: &Self) -> bool {
-        let id = if let Some(parent) = self.entity.as_ref().and_then(|x| x.parent.clone()) {
-            parent.get_internal().id
-        } else {
-            self.id
-        };
-        if let Some(other_parent) = &other.entity.as_ref().and_then(|x| x.parent.clone()) {
-            return id == other_parent.get_internal().id;
-        } else {
-            return id == other.id;
-        }
-    }
+    leader: Option<GameRef<Character>>,
+    houses: Vec<GameRef<House>>,
 }
 
 impl FromGameObject for Dynasty {
@@ -132,39 +28,21 @@ impl FromGameObject for Dynasty {
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
-        //NOTE: dynasties can have their main house have the same id
         let mut val = Self {
+            // name can also be stored as key, where it's either a string, or an ID pointing to an object declared in game files 00_dynasties.txt
             name: base
                 .get("name")
+                .or(base.get("dynasty_name"))
                 .or(base.get("localized_name"))
-                .map(|n| n.as_string())
-                .transpose()?,
-            found_date: base.get("found_date").map(|n| n.as_date()).transpose()?,
-            motto: None,
-            parent: base
-                .get("dynasty")
-                .map(|n| n.as_id().and_then(|id| Ok(game_state.get_dynasty(&id))))
-                .transpose()?,
-            members: 0,
-            member_list: Vec::new(),
-            houses: 0,
+                .and_then(|n| n.as_string().ok()),
             prestige_tot: 0.0,
             prestige: 0.0,
             perks: HashMap::new(),
-            leaders: Vec::new(),
+            leader: None,
+            houses: Vec::new(),
         };
-        if let Some(motto_node) = base.get("motto") {
-            if let SaveFileValue::Object(obj) = motto_node {
-                let o = obj.as_map()?;
-                let mut vars = HashMap::new();
-                for v in o.get_object("variables")?.as_array()? {
-                    let pair = v.as_object()?.as_map()?;
-                    vars.insert(pair.get_integer("key")?, pair.get_string("value")?);
-                }
-                val.motto = Some((o.get_string("key")?.clone(), vars));
-            } else {
-                val.motto = Some((motto_node.as_string()?, HashMap::default()));
-            }
+        if let Some(leader) = base.get("dynasty_head") {
+            val.leader = Some(game_state.get_character(&leader.as_id()?).clone());
         }
         if let Some(perks_obj) = base.get("perk") {
             for p in perks_obj.as_object()?.as_array()? {
@@ -189,20 +67,6 @@ impl FromGameObject for Dynasty {
                 }
             }
         }
-        if let Some(leaders_obj) = base.get("historical") {
-            if !val.leaders.is_empty() {
-                val.leaders.clear();
-            }
-            for l in leaders_obj.as_object()?.as_array()? {
-                val.leaders
-                    .push(game_state.get_character(&l.as_id()?).clone());
-            }
-        } else if val.leaders.is_empty() {
-            if let Some(current) = base.get("dynasty_head").or(base.get("head_of_house")) {
-                val.leaders
-                    .push(game_state.get_character(&current.as_id()?));
-            }
-        }
         if let Some(currency) = base.get("prestige") {
             let o = currency.as_object()?.as_map()?;
             if let Some(acc) = o.get("accumulated") {
@@ -223,42 +87,56 @@ impl FromGameObject for Dynasty {
         return Ok(val);
     }
 
-    fn finalize(&mut self, reference: &GameRef<Dynasty>) {
-        if let Some(parent) = &self.parent {
-            if !reference
-                .try_get_internal()
-                .is_ok_and(|this| this.id != parent.get_internal().id)
-            {
-                self.parent = None;
-            } else {
-                // MAYBE this is bad? I don't know
-                if let Ok(mut p) = parent.try_get_internal_mut() {
-                    if let Some(p) = p.inner_mut() {
-                        p.register_house();
-                    }
-                }
-            }
+    fn finalize(&mut self, _reference: &GameRef<Self>) {
+        // instead of resolving game files we can just get the name from the first house
+        if self.name.is_none() {
+            self.name = Some(
+                self.houses
+                    .first()
+                    .unwrap()
+                    .clone()
+                    .get_internal()
+                    .inner()
+                    .unwrap()
+                    .get_name()
+                    .clone(),
+            );
         }
+    }
+}
+
+impl Dynasty {
+    pub fn register_house(&mut self, house: GameRef<House>) {
+        self.houses.push(house);
+    }
+
+    pub fn get_founder(&self) -> GameRef<Character> {
+        self.houses
+            .first()
+            .unwrap()
+            .clone()
+            .get_internal()
+            .inner()
+            .unwrap()
+            .get_founder()
+    }
+
+    pub fn get_leader(&self) -> Option<GameRef<Character>> {
+        self.leader.clone()
     }
 }
 
 impl GameObjectDerived for Dynasty {
     fn get_name(&self) -> GameString {
-        self.name
-            .clone()
-            .or(self
-                .parent
-                .as_ref()
-                .and_then(|x| x.get_internal().inner().and_then(|x| x.name.clone())))
-            .unwrap_or("Unknown".into())
+        self.name.as_ref().unwrap().clone()
     }
 
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C) {
-        for leader in self.leaders.iter() {
+        if let Some(leader) = &self.leader {
             collection.extend([E::from(leader.clone().into())]);
         }
-        if let Some(parent) = &self.parent {
-            collection.extend([E::from(parent.clone().into())]);
+        for house in self.houses.iter() {
+            collection.extend([E::from(house.clone().into())]);
         }
     }
 }
@@ -292,8 +170,6 @@ impl Localizable for Dynasty {
     ) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
             self.name = Some(localization.localize(name)?);
-        } else {
-            return Ok(());
         }
         let drained_perks: Vec<_> = self.perks.drain().collect();
         for (perk, level) in drained_perks {
@@ -301,52 +177,6 @@ impl Localizable for Dynasty {
                 localization.localize(perk.to_string() + "_track_name")?,
                 level,
             );
-        }
-        if let Some((motto, variables)) = &mut self.motto {
-            for (_, v) in variables.iter_mut() {
-                *v = localization.localize(&v)?;
-            }
-            *motto = localization.localize_query(&motto, |stack| {
-                if stack.len() == 1 {
-                    if let Ok(k) = stack[0].0.parse::<i64>() {
-                        if let Some(v) = variables.get(&k) {
-                            return Some(v.clone());
-                        }
-                    }
-                } else if stack.len() == 2 {
-                    if stack[0].0 == "CHARACTER" && stack.len() >= 2 {
-                        if let Some(leader) =
-                            self.leaders.first().unwrap().clone().get_internal().inner()
-                        {
-                            if stack[1].0 == "Custom" && stack[1].1.len() == 1 {
-                                if stack[1].1[0] == "GetAppropriateGodname" {
-                                    // TODO localize the godname properly here
-                                    return Some("God".into());
-                                } else if stack[1].1[0] == "QueenKing" {
-                                    if leader.get_female() {
-                                        return Some("Queen".into());
-                                    } else {
-                                        return Some("King".into());
-                                    }
-                                } else if stack[1].1[0] == "GetDaughterSon" {
-                                    if leader.get_female() {
-                                        return Some("Daughter".into());
-                                    } else {
-                                        return Some("Son".into());
-                                    }
-                                }
-                            } else if stack[1].0 == "GetFirstName" {
-                                return Some(leader.get_name().clone());
-                            }
-                        } else {
-                            return Some("Unknown".into());
-                        }
-                    }
-                } else if stack[2].0 == "GetBaseNameNoTooltip" {
-                    return Some(self.name.as_ref().unwrap().clone());
-                }
-                None
-            })?;
         }
         Ok(())
     }

@@ -16,6 +16,7 @@ mod internal_templates {
     pub const INT_C_TEMPLATE: &str = include_str!("../templates/charTemplate.html");
     pub const INT_CUL_TEMPLATE: &str = include_str!("../templates/cultureTemplate.html");
     pub const INT_DYN_TEMPLATE: &str = include_str!("../templates/dynastyTemplate.html");
+    pub const INT_HOUSE_TEMPLATE: &str = include_str!("../templates/houseTemplate.html");
     pub const INT_FAITH_TEMPLATE: &str = include_str!("../templates/faithTemplate.html");
     pub const INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
     pub const INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
@@ -26,16 +27,18 @@ pub const H_TEMPLATE_NAME: &str = "homeTemplate";
 pub const C_TEMPLATE_NAME: &str = "charTemplate";
 pub const CUL_TEMPLATE_NAME: &str = "cultureTemplate";
 pub const DYN_TEMPLATE_NAME: &str = "dynastyTemplate";
+pub const HOUSE_TEMPLATE_NAME: &str = "houseTemplate";
 pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
 pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
 pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
 pub const BASE_TEMPLATE_NAME: &str = "base";
 
-const TEMPLATE_NAMES: [&str; 8] = [
+const TEMPLATE_NAMES: [&str; 9] = [
     H_TEMPLATE_NAME,
     C_TEMPLATE_NAME,
     CUL_TEMPLATE_NAME,
     DYN_TEMPLATE_NAME,
+    HOUSE_TEMPLATE_NAME,
     FAITH_TEMPLATE_NAME,
     TITLE_TEMPLATE_NAME,
     TIMELINE_TEMPLATE_NAME,
@@ -135,6 +138,8 @@ pub fn create_env<'a>(
             env.add_template(CUL_TEMPLATE_NAME, INT_CUL_TEMPLATE)
                 .unwrap();
             env.add_template(DYN_TEMPLATE_NAME, INT_DYN_TEMPLATE)
+                .unwrap();
+            env.add_template(HOUSE_TEMPLATE_NAME, INT_HOUSE_TEMPLATE)
                 .unwrap();
             env.add_template(FAITH_TEMPLATE_NAME, INT_FAITH_TEMPLATE)
                 .unwrap();

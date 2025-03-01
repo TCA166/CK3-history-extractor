@@ -11,7 +11,7 @@ use super::{
 };
 
 /// A struct representing a memory in the game
-#[derive(Serialize, Debug)]
+#[derive(Serialize)]
 pub struct Memory {
     date: Date,
     r#type: GameString,

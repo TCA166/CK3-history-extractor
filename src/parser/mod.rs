@@ -170,26 +170,28 @@ pub fn process_section(
             game_state.add_county_data(key_assoc);
         }
         "dynasties" => {
-            for (key, d) in i.parse()?.as_map()? {
-                if let SaveFileObject::Map(o) = d.as_object()? {
-                    // TODO parse these separately
-                    if key == "dynasty_house" || key == "dynasties" {
-                        for (dynasty_key, h) in o {
-                            match h {
-                                SaveFileValue::Object(o) => {
-                                    game_state.add_dynasty(
-                                        &dynasty_key.parse::<GameId>()?,
-                                        o.as_map()?,
-                                    )?;
-                                }
-                                _ => {
-                                    continue;
-                                }
-                            }
-                        }
-                    }
+            let m = i.parse()?;
+            let m = m.as_map()?;
+            for (key, house) in m.get("dynasty_house").unwrap().as_object()?.as_map()? {
+                if let SaveFileValue::Object(o) = house {
+                    game_state.add_house(&key.parse::<GameId>()?, o.as_map()?)?;
                 }
             }
+            for (key, dynasty) in m.get("dynasties").unwrap().as_object()?.as_map()? {
+                if let SaveFileValue::Object(o) = dynasty {
+                    game_state.add_dynasty(&key.parse::<GameId>()?, o.as_map()?)?;
+                }
+            }
+        }
+        "character_lookup" => {
+            let parsed = i.parse()?;
+            let mut transform = HashMap::new();
+            for (key, val) in parsed.as_map()? {
+                if let Ok(key) = key.parse::<GameId>() {
+                    transform.insert(val.as_id()?, game_state.get_character(&key));
+                }
+            }
+            game_state.add_character_transform(transform);
         }
         "living" => {
             for (key, l) in i.parse()?.as_map()? {

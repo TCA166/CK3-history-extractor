@@ -29,6 +29,9 @@ pub use culture::Culture;
 mod dynasty;
 pub use dynasty::Dynasty;
 
+mod house;
+pub use house::House;
+
 /// A submodule that provides the [Memory] object.
 mod memory;
 pub use memory::Memory;
@@ -138,11 +141,12 @@ impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
     }
 }
 
-#[derive(From, Debug, PartialEq, Eq)]
+#[derive(From, PartialEq, Eq)]
 pub enum EntityRef {
     Character(GameRef<Character>),
     Culture(GameRef<Culture>),
     Dynasty(GameRef<Dynasty>),
+    House(GameRef<House>),
     Faith(GameRef<Faith>),
     Title(GameRef<Title>),
     Memory(GameRef<Memory>),
@@ -155,6 +159,7 @@ impl Hash for EntityRef {
             EntityRef::Character(char) => char.get_internal().hash(state),
             EntityRef::Culture(cul) => cul.get_internal().hash(state),
             EntityRef::Dynasty(dynasty) => dynasty.get_internal().hash(state),
+            EntityRef::House(house) => house.get_internal().hash(state),
             EntityRef::Faith(faith) => faith.get_internal().hash(state),
             EntityRef::Title(title) => title.get_internal().hash(state),
             EntityRef::Memory(mem) => mem.get_internal().hash(state),
@@ -169,6 +174,7 @@ impl GameObjectDerived for EntityRef {
             EntityRef::Character(char) => char.get_internal().inner().unwrap().get_name(),
             EntityRef::Culture(cul) => cul.get_internal().inner().unwrap().get_name(),
             EntityRef::Dynasty(dynasty) => dynasty.get_internal().inner().unwrap().get_name(),
+            EntityRef::House(house) => house.get_internal().inner().unwrap().get_name(),
             EntityRef::Faith(faith) => faith.get_internal().inner().unwrap().get_name(),
             EntityRef::Title(title) => title.get_internal().inner().unwrap().get_name(),
             EntityRef::Memory(mem) => mem.get_internal().inner().unwrap().get_name(),
@@ -187,6 +193,10 @@ impl GameObjectDerived for EntityRef {
                 .inner()
                 .map(|v| v.get_references(collection)),
             EntityRef::Dynasty(dynasty) => dynasty
+                .get_internal()
+                .inner()
+                .map(|v| v.get_references(collection)),
+            EntityRef::House(house) => house
                 .get_internal()
                 .inner()
                 .map(|v| v.get_references(collection)),

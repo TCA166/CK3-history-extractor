@@ -11,7 +11,6 @@ use super::{
 };
 
 /// A struct representing a lineage node in the game
-#[derive(Debug)]
 pub struct LineageNode {
     character: GameRef<Character>,
     date: Date,

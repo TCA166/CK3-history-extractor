@@ -17,7 +17,7 @@ use super::{
         parser::GameState,
         structures::{
             Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, GameRef, Player, Title,
+            GameObjectEntity, GameRef, House, Player, Title,
         },
         types::{GameId, HashMap, Wrapper},
     },
@@ -39,6 +39,7 @@ fn create_dir_maybe<P: AsRef<Path>>(name: P) {
 enum RenderableType {
     Character(GameRef<Character>),
     Dynasty(GameRef<Dynasty>),
+    House(GameRef<House>),
     Title(GameRef<Title>),
     Faith(GameRef<Faith>),
     Culture(GameRef<Culture>),
@@ -51,6 +52,7 @@ impl TryFrom<&EntityRef> for RenderableType {
         match value {
             EntityRef::Character(c) => Ok(c.clone().into()),
             EntityRef::Dynasty(d) => Ok(d.clone().into()),
+            EntityRef::House(h) => Ok(h.clone().into()),
             EntityRef::Title(t) => Ok(t.clone().into()),
             EntityRef::Faith(f) => Ok(f.clone().into()),
             EntityRef::Culture(c) => Ok(c.clone().into()),
@@ -64,6 +66,7 @@ impl RenderableType {
         match self {
             RenderableType::Character(c) => c.get_internal().get_id(),
             RenderableType::Dynasty(d) => d.get_internal().get_id(),
+            RenderableType::House(h) => h.get_internal().get_id(),
             RenderableType::Title(t) => t.get_internal().get_id(),
             RenderableType::Faith(f) => f.get_internal().get_id(),
             RenderableType::Culture(c) => c.get_internal().get_id(),
@@ -74,6 +77,7 @@ impl RenderableType {
         match self {
             RenderableType::Character(_) => Character::get_subdir(),
             RenderableType::Dynasty(_) => Dynasty::get_subdir(),
+            RenderableType::House(_) => House::get_subdir(),
             RenderableType::Title(_) => Title::get_subdir(),
             RenderableType::Faith(_) => Faith::get_subdir(),
             RenderableType::Culture(_) => Culture::get_subdir(),
@@ -84,6 +88,7 @@ impl RenderableType {
         match self {
             RenderableType::Character(c) => c.get_internal().inner().is_some(),
             RenderableType::Dynasty(d) => d.get_internal().inner().is_some(),
+            RenderableType::House(h) => h.get_internal().inner().is_some(),
             RenderableType::Title(t) => t.get_internal().inner().is_some(),
             RenderableType::Faith(f) => f.get_internal().inner().is_some(),
             RenderableType::Culture(c) => c.get_internal().inner().is_some(),
@@ -145,6 +150,7 @@ impl<'a> Renderer<'a> {
         create_dir_maybe(path.join(Title::get_subdir()));
         create_dir_maybe(path.join(Faith::get_subdir()));
         create_dir_maybe(path.join(Culture::get_subdir()));
+        create_dir_maybe(path.join(House::get_subdir()));
         Renderer {
             roots: Vec::new(),
             depth_map: HashMap::default(),
@@ -177,6 +183,7 @@ impl<'a> Renderer<'a> {
         match obj {
             RenderableType::Character(obj) => self.render(obj.get_internal(), env),
             RenderableType::Dynasty(obj) => self.render(obj.get_internal(), env),
+            RenderableType::House(obj) => self.render(obj.get_internal(), env),
             RenderableType::Title(obj) => self.render(obj.get_internal(), env),
             RenderableType::Faith(obj) => self.render(obj.get_internal(), env),
             RenderableType::Culture(obj) => self.render(obj.get_internal(), env),
