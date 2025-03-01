@@ -91,7 +91,9 @@ impl From<&str> for SaveFileValue {
             if let (Some(year), Some(month), Some(day)) = (parts.next(), parts.next(), parts.next())
             {
                 if let (Ok(year), Ok(month), Ok(day)) = (year.parse(), month.parse(), day.parse()) {
-                    return SaveFileValue::Date(Date::from_ymd(year, month, day));
+                    if let Some(date) = Date::from_ymd_opt(year, month, day) {
+                        return SaveFileValue::Date(date);
+                    }
                 }
             }
         } else if dot_count == 1 {
