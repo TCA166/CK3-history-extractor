@@ -78,7 +78,10 @@ wise at least */
 
 impl Localize<String> for Value {
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
-        self.get_attr(key.as_ref()).map(|x| x.into()).ok()
+        self.get_attr(key.as_ref())
+            .ok()
+            .map(|x| x.as_str().and_then(|x| Some(x.to_string())))
+            .flatten()
     }
 
     fn is_empty(&self) -> bool {
