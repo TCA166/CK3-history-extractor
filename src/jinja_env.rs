@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use minijinja::{AutoEscape, Environment, State, UndefinedBehavior, Value};
+use minijinja::{context, Environment, State, UndefinedBehavior, Value};
 use serde::{ser::SerializeStruct, Serialize};
 
 use super::{
@@ -21,6 +21,7 @@ mod internal_templates {
     pub const INT_TITLE_TEMPLATE: &str = include_str!("../templates/titleTemplate.html");
     pub const INT_TIMELINE_TEMPLATE: &str = include_str!("../templates/timelineTemplate.html");
     pub const INT_BASE_TEMPLATE: &str = include_str!("../templates/base.html");
+    pub const INT_REF_TEMPLATE: &str = include_str!("../templates/refTemplate.html");
 }
 
 pub const H_TEMPLATE_NAME: &str = "homeTemplate";
@@ -32,8 +33,9 @@ pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
 pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
 pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
 pub const BASE_TEMPLATE_NAME: &str = "base";
+pub const REF_TEMPLATE_NAME: &str = "refTemplate";
 
-const TEMPLATE_NAMES: [&str; 9] = [
+const TEMPLATE_NAMES: [&str; 10] = [
     H_TEMPLATE_NAME,
     C_TEMPLATE_NAME,
     CUL_TEMPLATE_NAME,
@@ -43,6 +45,7 @@ const TEMPLATE_NAMES: [&str; 9] = [
     TITLE_TEMPLATE_NAME,
     TIMELINE_TEMPLATE_NAME,
     BASE_TEMPLATE_NAME,
+    REF_TEMPLATE_NAME,
 ];
 
 const LOCALIZATION_GLOBAL: &str = "localization";
@@ -129,7 +132,6 @@ pub fn create_env<'a>(
         LOCALIZATION_GLOBAL,
         Value::from_serialize(data.get_localizer()),
     );
-    env.set_auto_escape_callback(|arg0: &str| determine_auto_escape(arg0));
     env.set_undefined_behavior(UndefinedBehavior::Strict);
     let template_path = Path::new("./templates");
     if internal || !template_path.exists() {
@@ -151,6 +153,8 @@ pub fn create_env<'a>(
             env.add_template(TIMELINE_TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
                 .unwrap();
             env.add_template(BASE_TEMPLATE_NAME, INT_BASE_TEMPLATE)
+                .unwrap();
+            env.add_template(REF_TEMPLATE_NAME, INT_REF_TEMPLATE)
                 .unwrap();
         }
         #[cfg(not(feature = "internal"))]
@@ -182,10 +186,6 @@ pub fn create_env<'a>(
     env
 }
 
-fn determine_auto_escape(_value: &str) -> AutoEscape {
-    AutoEscape::None
-}
-
 /// A function that renders a reference.
 /// May be used in the templates as filter(using [Environment::add_filter]) or function(using [Environment::add_function]) to render a reference to another object.
 /// If the reference is shallow, it will render just the name, otherwise render it as a link.
@@ -215,13 +215,12 @@ fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
         {
             format!("{}", name)
         } else {
-            if subdir.is_none() {
-                return format!("<a href=\"./{}.html\">{}</a>", id, name);
-            } else if root.is_some() && root.unwrap() {
-                format!("<a href=\"{}/{}.html\">{}</a>", subdir, id, name)
-            } else {
-                format!("<a href=\"../{}/{}.html\">{}</a>", subdir, id, name)
-            }
+            state
+                .env()
+                .get_template(REF_TEMPLATE_NAME)
+                .unwrap()
+                .render(context! {root=>root, ..reference})
+                .unwrap()
         }
     } else {
         "".to_string()

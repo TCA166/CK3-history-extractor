@@ -468,8 +468,11 @@ impl Localizable for GameState {
             title.finalize();
             if let Some(internal) = title.get_internal_mut().inner_mut() {
                 internal.localize(localization)?;
-                if let Some(assoc) = self.county_data.get(internal.get_key().as_ref()) {
-                    internal.add_county_data(assoc.1.clone(), assoc.0.clone());
+                if let Some(assoc) = self.county_data.get_mut(internal.get_key().as_ref()) {
+                    if let Title::County { faith, culture, .. } = internal {
+                        *faith = Some(assoc.0.clone());
+                        *culture = Some(assoc.1.clone());
+                    }
                 }
             }
         }

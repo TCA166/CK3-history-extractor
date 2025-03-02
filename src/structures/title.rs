@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Display, Formatter},
+    ops::{Deref, DerefMut},
     path::Path,
     slice::Iter,
     str::FromStr,
@@ -23,58 +23,9 @@ use super::{
     GameRef,
 };
 
-#[derive(Serialize, Debug)]
-#[serde(untagged)]
-enum TitleType {
-    Empire,
-    Kingdom,
-    Duchy,
-    County,
-    Barony,
-    Other(Option<GameString>),
-}
-
-impl<S: AsRef<str>> From<S> for TitleType {
-    fn from(value: S) -> Self {
-        if let Some(c) = value.as_ref().chars().next() {
-            match c {
-                'e' => TitleType::Empire,
-                'k' => TitleType::Kingdom,
-                'd' => TitleType::Duchy,
-                'c' => TitleType::County,
-                'b' => TitleType::Barony,
-                _ => TitleType::Other(None),
-            }
-        } else {
-            TitleType::Other(None)
-        }
-    }
-}
-
-impl Display for TitleType {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        match self {
-            TitleType::Empire => write!(f, "Empire"),
-            TitleType::Kingdom => write!(f, "Kingdom"),
-            TitleType::Duchy => write!(f, "Duchy"),
-            TitleType::County => write!(f, "County"),
-            TitleType::Barony => write!(f, "Barony"),
-            TitleType::Other(opt) => write!(f, "{}", opt.as_ref().unwrap_or(&GameString::from(""))),
-        }
-    }
-}
-
-impl Default for TitleType {
-    fn default() -> Self {
-        TitleType::Other(None)
-    }
-}
-
-/// A struct representing a title in the game
 #[derive(Serialize)]
-pub struct Title {
+pub struct TitleData {
     key: GameString,
-    tier: TitleType,
     name: GameString,
     de_jure: Option<GameRef<Title>>,
     de_facto: Option<GameRef<Title>>,
@@ -82,116 +33,18 @@ pub struct Title {
     de_facto_vassals: Vec<GameRef<Title>>,
     history: Vec<(Date, Option<GameRef<Character>>, GameString)>,
     claims: Vec<GameRef<Character>>,
-
     capital: Option<GameRef<Title>>,
-    /// Only used for counties
-    culture: Option<GameRef<Culture>>,
-    /// Only used for counties
-    faith: Option<GameRef<Faith>>,
     color: [u8; 3],
 }
 
-// TODO enum called Title, that split off county title and higher tiers
-
-impl Title {
-    /// Adds a de jure vassal to the title
-    pub fn add_jure_vassal(&mut self, vassal: GameRef<Title>) {
-        self.de_jure_vassals.push(vassal);
-    }
-
-    /// Adds a de facto vassal to the title
-    pub fn add_facto_vassal(&mut self, vassal: GameRef<Title>) {
-        self.de_facto_vassals.push(vassal);
-    }
-
-    /// Recursively gets all the de facto barony keys of the title
-    pub fn get_barony_keys(&self) -> Vec<GameString> {
-        let mut provinces = Vec::new();
-        if let TitleType::Barony = self.tier {
-            provinces.push(self.key.clone());
-        }
-        for v in &self.de_facto_vassals {
-            if let Some(v) = v.get_internal().inner() {
-                provinces.append(&mut v.get_barony_keys());
-            }
-        }
-        provinces
-    }
-
-    pub fn get_de_jure_barony_keys(&self) -> Vec<GameString> {
-        let mut provinces = Vec::new();
-        if let TitleType::Barony = self.tier {
-            provinces.push(self.key.clone());
-        }
-        for v in &self.de_jure_vassals {
-            if let Some(v) = v.get_internal().inner() {
-                provinces.append(&mut v.get_de_jure_barony_keys());
-            }
-        }
-        provinces
-    }
-
-    /// Returns the key of the title
-    pub fn get_key(&self) -> GameString {
-        self.key.clone()
-    }
-
-    /// Returns an iterator over the history of the title
-    pub fn get_history_iter(&self) -> Iter<(Date, Option<GameRef<Character>>, GameString)> {
-        self.history.iter()
-    }
-
-    /// Returns the capital of the title
-    pub fn get_capital(&self) -> Option<GameRef<Title>> {
-        self.capital.clone()
-    }
-
-    /// Adds the culture and faith data to the title
-    pub fn add_county_data(&mut self, culture: GameRef<Culture>, faith: GameRef<Faith>) {
-        if let TitleType::County = self.tier {
-            self.culture = Some(culture);
-            self.faith = Some(faith);
-        } else {
-            panic!("Can only add county data to a county title");
-        }
-    }
-
-    /// Returns the culture of the title
-    pub fn get_culture(&self) -> Option<GameRef<Culture>> {
-        if let Some(culture) = &self.culture {
-            return Some(culture.clone());
-        } else {
-            return None;
-        }
-    }
-
-    /// Returns the faith of the title
-    pub fn get_faith(&self) -> Option<GameRef<Faith>> {
-        if let Some(faith) = &self.faith {
-            return Some(faith.clone());
-        } else {
-            return None;
-        }
-    }
-
-    /// Returns the holder of the title
-    pub fn get_holder(&self) -> Option<GameRef<Character>> {
-        if let Some(entry) = self.history.last() {
-            return entry.1.clone();
-        }
-        None
-    }
-}
-
-impl FromGameObject for Title {
-    fn from_game_object(
+impl TitleData {
+    fn new(
+        key: GameString,
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
-        let key = base.get_string("key")?;
         let mut title = Self {
-            key: key.clone(),
-            tier: TitleType::from(key),
+            key: key,
             name: base.get_string("name")?,
             color: base
                 .get("color")
@@ -228,8 +81,6 @@ impl FromGameObject for Title {
                 .get("capital")
                 .map(|capital| capital.as_id().and_then(|id| Ok(game_state.get_title(&id))))
                 .transpose()?,
-            culture: None,
-            faith: None,
         };
         if let Some(claims) = base.get("claim") {
             if let SaveFileValue::Object(claims) = claims {
@@ -299,6 +150,148 @@ impl FromGameObject for Title {
         title.history.sort_by(|a, b| a.0.cmp(&b.0));
         Ok(title)
     }
+}
+
+#[derive(Serialize)]
+#[serde(tag = "tier")]
+pub enum Title {
+    Empire(TitleData),
+    Kingdom(TitleData),
+    Duchy(TitleData),
+    County {
+        #[serde(flatten)]
+        data: TitleData,
+        culture: Option<GameRef<Culture>>,
+        faith: Option<GameRef<Faith>>,
+    },
+    Barony(TitleData),
+    Other(TitleData),
+}
+
+impl Deref for Title {
+    type Target = TitleData;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Title::Empire(data) => data,
+            Title::Kingdom(data) => data,
+            Title::Duchy(data) => data,
+            Title::County { data, .. } => data,
+            Title::Barony(data) => data,
+            Title::Other(data) => data,
+        }
+    }
+}
+
+impl DerefMut for Title {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Title::Empire(data) => data,
+            Title::Kingdom(data) => data,
+            Title::Duchy(data) => data,
+            Title::County { data, .. } => data,
+            Title::Barony(data) => data,
+            Title::Other(data) => data,
+        }
+    }
+}
+
+impl Title {
+    /// Adds a de jure vassal to the title
+    pub fn add_jure_vassal(&mut self, vassal: GameRef<Title>) {
+        self.de_jure_vassals.push(vassal);
+    }
+
+    /// Adds a de facto vassal to the title
+    pub fn add_facto_vassal(&mut self, vassal: GameRef<Title>) {
+        self.de_facto_vassals.push(vassal);
+    }
+
+    /// Recursively gets all the de facto barony keys of the title
+    pub fn get_barony_keys(&self) -> Vec<GameString> {
+        if let Title::Barony(_) = self {
+            return vec![self.key.clone()];
+        } else {
+            let mut provinces = Vec::new();
+            for v in &self.de_facto_vassals {
+                if let Some(v) = v.get_internal().inner() {
+                    provinces.append(&mut v.get_barony_keys());
+                }
+            }
+            return provinces;
+        }
+    }
+
+    pub fn get_de_jure_barony_keys(&self) -> Vec<GameString> {
+        if let Title::Barony(_) = self {
+            return vec![self.key.clone()];
+        } else {
+            let mut provinces = Vec::new();
+            for v in &self.de_facto_vassals {
+                if let Some(v) = v.get_internal().inner() {
+                    provinces.append(&mut v.get_de_jure_barony_keys());
+                }
+            }
+            return provinces;
+        }
+    }
+
+    /// Returns the key of the title
+    pub fn get_key(&self) -> GameString {
+        self.key.clone()
+    }
+
+    /// Returns an iterator over the history of the title
+    pub fn get_history_iter(&self) -> Iter<(Date, Option<GameRef<Character>>, GameString)> {
+        self.history.iter()
+    }
+
+    /// Returns the capital of the title
+    pub fn get_capital(&self) -> Option<GameRef<Title>> {
+        self.capital.clone()
+    }
+
+    /// Returns the holder of the title
+    pub fn get_holder(&self) -> Option<GameRef<Character>> {
+        if let Some(entry) = self.history.last() {
+            return entry.1.clone();
+        }
+        None
+    }
+
+    /// Returns the type of the title
+    pub fn get_type(&self) -> Option<&'static str> {
+        match self {
+            Title::Empire(_) => Some("Empire"),
+            Title::Kingdom(_) => Some("Kingdom"),
+            Title::Duchy(_) => Some("Duchy"),
+            Title::County { .. } => Some("County"),
+            Title::Barony(_) => Some("Barony"),
+            Title::Other(_) => None,
+        }
+    }
+}
+
+impl FromGameObject for Title {
+    fn from_game_object(
+        base: &GameObjectMap,
+        game_state: &mut GameState,
+    ) -> Result<Self, ParsingError> {
+        let key = base.get_string("key")?;
+        let inner = TitleData::new(key.clone(), base, game_state)?;
+        Ok(match key.as_ref().chars().next().unwrap() {
+            'e' => Self::Empire(inner),
+            'k' => Self::Kingdom(inner),
+            'd' => Self::Duchy(inner),
+            'c' => Self::County {
+                data: inner,
+                culture: None,
+                faith: None,
+            },
+            'b' => Self::Barony(inner),
+            _ => Self::Other(inner),
+        })
+    }
 
     fn finalize(&mut self, reference: &GameRef<Title>) {
         if let Some(de_jure) = &self.de_jure {
@@ -350,11 +343,10 @@ impl TreeNode<Vec<GameRef<Title>>> for Title {
     }
 
     fn get_class(&self) -> Option<GameString> {
-        if let TitleType::Other(opt) = &self.tier {
-            return opt.clone();
-        } else {
-            return Some(GameString::from(self.tier.to_string()));
+        if let Some(tp) = self.get_type() {
+            return Some(tp.into());
         }
+        None
     }
 
     fn get_parent(&self) -> Option<Vec<GameRef<Title>>> {
@@ -408,5 +400,56 @@ impl Localizable for Title {
         //    o.2 = localization.localize(o.2.as_str());
         //}
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize_title_barony() {
+        let title = Title::Barony(TitleData {
+            key: "b_test".into(),
+            name: "Test".into(),
+            de_jure: None,
+            de_facto: None,
+            de_jure_vassals: Vec::new(),
+            de_facto_vassals: Vec::new(),
+            history: Vec::new(),
+            claims: Vec::new(),
+            capital: None,
+            color: [70, 255, 70],
+        });
+        let serialized = serde_json::to_string(&title).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{"tier":"Barony","key":"b_test","name":"Test","de_jure":null,"de_facto":null,"de_jure_vassals":[],"de_facto_vassals":[],"history":[],"claims":[],"capital":null,"color":[70,255,70]}"#
+        );
+    }
+
+    #[test]
+    fn test_serialize_county() {
+        let title = Title::County {
+            data: TitleData {
+                key: "c_test".into(),
+                name: "Test".into(),
+                de_jure: None,
+                de_facto: None,
+                de_jure_vassals: Vec::new(),
+                de_facto_vassals: Vec::new(),
+                history: Vec::new(),
+                claims: Vec::new(),
+                capital: None,
+                color: [70, 255, 70],
+            },
+            culture: None,
+            faith: None,
+        };
+        let serialized = serde_json::to_string(&title).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{"tier":"County","key":"c_test","name":"Test","de_jure":null,"de_facto":null,"de_jure_vassals":[],"de_facto_vassals":[],"history":[],"claims":[],"capital":null,"color":[70,255,70],"culture":null,"faith":null}"#
+        );
     }
 }

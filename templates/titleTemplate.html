@@ -1,11 +1,11 @@
 {% extends "base" %}
 
 {% block title %}
-{% if tier is not none %}{{tier}} of {%endif%} {{name}}
+{%if tier != "Other"%}{{tier}}{%endif%} {{name}}
 {% endblock %}
 
 {% block header %}
-<p class="h1 my-0 me-md-auto fw-normal">{% if tier is not none %}{{tier}} of {%endif%} {{name}}</p>
+<p class="h1 my-0 me-md-auto fw-normal">{%if tier != "Other"%}{{tier}}{%endif%} {{name}}</p>
 <a class="btn btn-outline-primary btn-sm" href="../index.html">Home</a>
 {% endblock %}
 
@@ -50,11 +50,11 @@
             {%endfor%}
         </ul>
         {%endif%}
-        {%if faith is not none %}
+        {%if faith is defined %}
         Faith: {{faith|render_ref}}
         <br>
         {%endif%}
-        {%if culture is not none %}
+        {%if culture is defined %}
         Culture: {{culture|render_ref}}
         <br>
         {%endif%}

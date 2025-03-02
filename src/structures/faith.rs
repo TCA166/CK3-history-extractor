@@ -102,9 +102,8 @@ impl Renderable for GameObjectEntity<Faith> {
         }
         if let Some(map) = data.get_map() {
             let filter = |title: &Title| {
-                let key = title.get_key();
-                if key.starts_with("c_") {
-                    if let Some(c_faith) = title.get_faith() {
+                if let Title::County { faith, .. } = title {
+                    if let Some(c_faith) = faith {
                         return c_faith.get_internal().id == self.id;
                     }
                 }

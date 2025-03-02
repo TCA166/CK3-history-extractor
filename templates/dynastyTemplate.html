@@ -10,8 +10,8 @@
 {% endblock %}
 
 {% block main %}
-<div class="row text-start">
-    <div class="col w-50">
+<div class="row text-start w-100">
+    <div class="col">
         Total accumulated renown: {{prestige_tot}}<br>
         Current renown: {{prestige}}<br>
         {%if leader is not none%}
@@ -44,7 +44,7 @@
         </div>
         {%endif%}
     </div>
-    <div class="col w-50">
+    <div class="col">
         {%if houses|length > 0%}
         <div class="card">
             <div class="card-header">

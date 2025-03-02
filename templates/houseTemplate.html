@@ -10,8 +10,8 @@ House {{name}}
 {% endblock %}
 
 {% block main %}
-<div class="row text-start">
-    <div class="col w-50">
+<div class="row text-start w-100">
+    <div class="col">
         {%if found_date != "" and found_date != none%}
         Creation Date: {{found_date}}
         <br />
@@ -23,7 +23,7 @@ House {{name}}
         Dynasty: {{parent|render_ref}}
         <br />
     </div>
-    <div class="col w-50">
+    <div class="col">
         {%if leaders|length > 0%}
         <div class="card">
             <div class="card-header">

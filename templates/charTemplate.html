@@ -127,18 +127,20 @@
                 <div class="card-header" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
                     Character Memories
                 </div>
-                <ul class="collapse list-group list-group-flush" id="collapseExample">
-                    {%for memory in memories%}
-                    <li class="list-group-item">
-                        {{memory.date}}:{%if memory.type is not none%}{{memory.type}}{%endif%}<br>
-                        {%if memory.participants is not none%}
-                        {%for key, value in memory.participants|items%}
-                            {{value|render_ref}}
+                <div class="collapse" id="collapseExample">
+                    <ul class="d-flex flex-row flex-wrap list-group-flush p-0 m-0">
+                        {%for memory in memories%}
+                        <li class="list-group-item p-2 border flex-fill">
+                            {{memory.date}}:{%if memory.type is not none%}{{memory.type}}{%endif%}<br>
+                            {%if memory.participants is not none%}
+                            {%for key, value in memory.participants|items%}
+                                {{value|render_ref}}
+                            {%endfor%}
+                            {%endif%}
+                        </li>
                         {%endfor%}
-                        {%endif%}
-                    </li>
-                    {%endfor%}
-                </ul>
+                    </ul>
+                </div>
             </div>
             {%endif%}
         </div>

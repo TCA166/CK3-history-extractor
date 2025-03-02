@@ -151,9 +151,9 @@ impl Renderable for GameObjectEntity<Culture> {
         }
         if let Some(map) = data.get_map() {
             let filter = |title: &Title| {
-                if title.get_key().starts_with("c_") {
-                    if let Some(c_culture) = title.get_culture() {
-                        return c_culture.get_internal().id == self.id;
+                if let Title::County { culture, .. } = title {
+                    if let Some(culture) = culture {
+                        return culture.get_internal().id == self.id;
                     }
                 }
                 return false;
