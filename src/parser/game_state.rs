@@ -458,16 +458,11 @@ impl Localizable for GameState {
         localization: &mut L,
     ) -> Result<(), LocalizationError> {
         for character in self.characters.values_mut() {
-            let mut internal = character.get_internal_mut();
-            if let Some(inner) = internal.inner_mut() {
-                inner.localize(localization)?;
-                inner.finalize(character);
-            }
+            character.localize(localization)?;
         }
         for title in &mut self.titles.values_mut() {
-            title.finalize();
+            title.localize(localization)?;
             if let Some(internal) = title.get_internal_mut().inner_mut() {
-                internal.localize(localization)?;
                 if let Some(assoc) = self.county_data.get_mut(internal.get_key().as_ref()) {
                     if let Title::County { faith, culture, .. } = internal {
                         *faith = Some(assoc.0.clone());
@@ -477,52 +472,22 @@ impl Localizable for GameState {
             }
         }
         for faith in &mut self.faiths.values_mut() {
-            faith.finalize();
-            faith
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            faith.localize(localization)?;
         }
         for culture in &mut self.cultures.values_mut() {
-            culture.finalize();
-            culture
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            culture.localize(localization)?;
         }
         for house in &mut self.houses.values_mut() {
-            house.finalize();
-            house
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            house.localize(localization)?;
         }
         for dynasty in &mut self.dynasties.values_mut() {
-            dynasty.finalize();
-            dynasty
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            dynasty.localize(localization)?;
         }
         for memory in &mut self.memories.values_mut() {
-            memory.finalize();
-            memory
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            memory.localize(localization)?;
         }
         for artifact in &mut self.artifacts.values_mut() {
-            artifact.finalize();
-            artifact
-                .get_internal_mut()
-                .inner_mut()
-                .unwrap()
-                .localize(localization)?;
+            artifact.localize(localization)?;
         }
         Ok(())
     }

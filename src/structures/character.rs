@@ -554,6 +554,12 @@ impl Localizable for Character {
                         } else {
                             return Some("himself".into());
                         }
+                    } else if stack[1].0 == "GetSheHe" {
+                        if self.female {
+                            return Some("she".into());
+                        } else {
+                            return Some("he".into());
+                        }
                     } else if stack[0].0 == "TARGET_CHARACTER" && stack[1].0 == "GetUIName" {
                         return Some("an unknown assailant".into()); // TODO
                     }
