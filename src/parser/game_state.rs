@@ -279,7 +279,9 @@ impl GameState {
         for character in self.characters.values() {
             if let Some(char) = character.get_internal().inner() {
                 if let Some(death_date) = char.get_death_date() {
-                    if death_date.year() < start_year {
+                    if death_date.year() <= start_year
+                        || death_date.year() >= self.current_date.unwrap().year()
+                    {
                         continue;
                     }
                     let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);

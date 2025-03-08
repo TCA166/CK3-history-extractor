@@ -20,6 +20,7 @@ use super::{
 use std::{
     collections::HashSet,
     fs::File,
+    ops::Deref,
     path::{Path, PathBuf},
 };
 
@@ -148,8 +149,18 @@ impl Renderable for Player {
                             continue;
                         }
                         let target = if desc.get_house().map_or(false, |d| {
-                            d.get_internal().inner().unwrap().get_dynasty()
-                                == dynasty.inner().unwrap().get_dynasty()
+                            d.get_internal()
+                                .inner()
+                                .unwrap()
+                                .get_dynasty()
+                                .get_internal()
+                                .deref()
+                                == dynasty
+                                    .inner()
+                                    .unwrap()
+                                    .get_dynasty()
+                                    .get_internal()
+                                    .deref()
                         }) {
                             &mut direct_titles
                         } else {

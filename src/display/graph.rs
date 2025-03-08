@@ -121,9 +121,6 @@ fn create_graph<P: AsRef<Path>>(
         }
     }
 
-    min_x += 1;
-    max_x -= 1;
-
     let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
     root.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&root)

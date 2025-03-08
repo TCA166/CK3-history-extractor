@@ -118,6 +118,22 @@ impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {
     }
 }
 
+impl<T: GameObjectDerived + FromGameObject> PartialEq for GameObjectEntity<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get_unique_identifier() == other.get_unique_identifier()
+    }
+}
+
+impl<T: GameObjectDerived + FromGameObject> Eq for GameObjectEntity<T> {}
+
+impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.get_unique_identifier().hash(state);
+    }
+}
+
+pub type GameRef<T> = Shared<GameObjectEntity<T>>;
+
 impl<T: Localizable + GameObjectDerived + FromGameObject> Localizable for GameRef<T> {
     fn localize<L: Localize<GameString>>(
         &mut self,
@@ -134,17 +150,25 @@ impl<T: Localizable + GameObjectDerived + FromGameObject> Localizable for GameRe
 
 impl<T: GameObjectDerived + FromGameObject> PartialEq for GameRef<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.get_internal().get_unique_identifier() == other.get_internal().get_unique_identifier()
+        if let Ok(a) = self.try_get_internal() {
+            if let Ok(b) = other.try_get_internal() {
+                a.get_unique_identifier() == b.get_unique_identifier()
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 }
 
 impl<T: GameObjectDerived + FromGameObject> Eq for GameRef<T> {}
 
-pub type GameRef<T> = Shared<GameObjectEntity<T>>;
-
-impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
+impl<T: GameObjectDerived + FromGameObject> Hash for GameRef<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.get_unique_identifier().hash(state);
+        if let Ok(internal) = self.try_get_internal() {
+            internal.get_unique_identifier().hash(state);
+        }
     }
 }
 

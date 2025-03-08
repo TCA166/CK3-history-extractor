@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use jomini::common::Date;
 use serde::Serialize;
 
@@ -39,7 +41,7 @@ pub struct Character {
     house: Option<GameRef<House>>,
     skills: Vec<i8>,
     traits: Vec<GameString>,
-    spouses: Vec<GameRef<Character>>,
+    spouses: HashSet<GameRef<Character>>,
     former: Vec<GameRef<Character>>,
     children: Vec<GameRef<Character>>,
     parents: Vec<GameRef<Character>>,
@@ -210,7 +212,7 @@ impl FromGameObject for Character {
             date: None,
             reason: None,
             house: None,
-            spouses: Vec::new(),
+            spouses: HashSet::new(),
             former: Vec::new(),
             children: Vec::new(),
             parents: Vec::new(),
@@ -332,41 +334,18 @@ impl FromGameObject for Character {
                     if let SaveFileValue::Object(o) = spouse_node {
                         for s in o.as_array()? {
                             let c = game_state.get_character(&s.as_id()?).clone();
-                            let contains = val
-                                .former
-                                .iter()
-                                .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
-                            if !contains {
-                                val.spouses.push(c);
-                            }
+                            val.spouses.insert(c);
                         }
                     } else {
                         let c = game_state.get_character(&spouse_node.as_id()?).clone();
-                        let contains = val
-                            .former
-                            .iter()
-                            .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
-                        if !contains {
-                            val.spouses.push(c);
-                        }
+                        val.spouses.insert(c);
                     }
                 }
                 if let Some(primary_spouse_node) = f.get("primary_spouse") {
                     let c = game_state
                         .get_character(&primary_spouse_node.as_id()?)
                         .clone();
-                    let mut contains = val
-                        .spouses
-                        .iter()
-                        .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
-                    contains = contains
-                        || val
-                            .spouses
-                            .iter()
-                            .any(|x| x.get_internal().get_id() == c.get_internal().get_id());
-                    if !contains {
-                        val.spouses.push(c);
-                    }
+                    val.spouses.insert(c);
                 }
                 if let Some(children_node) = f.get("child") {
                     for s in children_node.as_object()?.as_array()? {
