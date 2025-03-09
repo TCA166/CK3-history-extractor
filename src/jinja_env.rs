@@ -208,8 +208,8 @@ fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
             .get_item(&subdir)
             .unwrap()
             .get_item(&id)
-            .unwrap()
-            .as_i64()
+            .ok()
+            .and_then(|i| i.as_i64())
             .unwrap_or(0)
             <= 0
         {
