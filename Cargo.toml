@@ -47,7 +47,7 @@ keyvalues-parser = "0.2.0"
 human-panic = "=2.0.2"
 clap = "4.5.31"
 clap_derive = "4.5.28"
-jomini = "0.27.3"
+jomini = "0.28.0"
 lazy_static = "1.5.0"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
 base64 = "0.22.1"
