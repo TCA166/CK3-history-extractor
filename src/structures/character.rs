@@ -18,7 +18,7 @@ use super::{
 /// An enum that holds either a character or a reference to a character.
 /// Effectively either a vassal([Character]) or a vassal contract.
 /// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 #[serde(untagged)]
 enum Vassal {
     Character(Shared<GameObjectEntity<Character>>),
@@ -28,7 +28,7 @@ enum Vassal {
 // MAYBE enum for dead and alive character?
 
 /// Represents a character in the game.
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Character {
     name: GameString,
     nick: Option<GameString>,
@@ -234,8 +234,11 @@ impl FromGameObject for Character {
         }
         if let Some(traits_node) = base.get("traits") {
             for t in traits_node.as_object()?.as_array()? {
-                let index = t.as_integer()? as u16;
-                val.traits.push(game_state.get_trait(index));
+                let integer = t.as_integer()?;
+                if integer >= 0 {
+                    // WTF? a negative index? ok schizo save file go back to bed
+                    val.traits.push(game_state.get_trait(integer as u16));
+                }
             }
         }
         if let Some(dynasty_id) = base.get("dynasty_house") {

@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor"
-version = "2.4.0"
+version = "2.4.1"
 edition = "2021"
 authors = ["TCA"]
 description = "A tool for generating a encyclopedia from your CK3 save file"
@@ -28,29 +28,29 @@ permissive = []
 tokens = []
 
 [dependencies]
-minijinja = { version = "2.7.0", features = ["loader"] }
-serde = { version = "1.0.218", features = ["rc", "derive"] }
-syn = "2.0.98"
-quote = "1.0.38"
-proc-macro2 = "1.0.93"
-zip = "2.2.3"
+minijinja = { version = "2.8.0", features = ["loader"] }
+serde = { version = "1.0.219", features = ["rc", "derive"] }
+syn = "2.0.100"
+quote = "1.0.40"
+proc-macro2 = "1.0.94"
+zip = "2.5.0"
 image = "0.25.5"
 csv = "1.3.1"
 plotters = "0.3.7"
 tidy-tree = "0.1.0"
-serde_json = "1.0.139"
+serde_json = "1.0.140"
 dialoguer = { version = "0.11.0", features = ["completion", "history"] }
 open = "5.3.2"
 rand = "0.9.0"
 indicatif = "0.17.11"
 keyvalues-parser = "0.2.0"
 human-panic = "=2.0.2"
-clap = "4.5.31"
-clap_derive = "4.5.28"
+clap = "4.5.32"
+clap_derive = "4.5.32"
 jomini = "0.28.0"
 lazy_static = "1.5.0"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
 base64 = "0.22.1"
 
 [dev-dependencies]
-tempfile = "3.17.1"
+tempfile = "3.19.1"

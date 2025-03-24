@@ -116,6 +116,10 @@ impl<T: GameObjectDerived + FromGameObject> GameObjectEntity<T> {
     pub fn inner_mut(&mut self) -> Option<&mut T> {
         self.entity.as_mut()
     }
+
+    pub fn replace(&mut self, entity: T) {
+        self.entity.replace(entity);
+    }
 }
 
 impl<T: GameObjectDerived + FromGameObject> PartialEq for GameObjectEntity<T> {

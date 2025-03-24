@@ -18,6 +18,8 @@ use jomini::common::{Date, PdsDate};
 
 use serde::{ser::SerializeMap, Serialize, Serializer};
 
+//TODO the structures should be stored here as boxes, and then the references should be returned as &Box
+
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
 fn get_or_insert_dummy<T: GameObjectDerived + FromGameObject>(
     map: &mut HashMap<GameId, GameRef<T>>,
@@ -125,7 +127,6 @@ impl GameState {
     }
 
     pub fn add_character_transform(&mut self, transform: HashMap<GameId, GameRef<Character>>) {
-        // TODO use this transform
         self.character_transform = transform;
     }
 
@@ -224,7 +225,16 @@ impl GameState {
         key: &GameId,
         value: &GameObjectMap,
     ) -> Result<(), ParsingError> {
-        self.get_character(key).get_internal_mut().init(value, self)
+        let char = self.get_character(key);
+        char.get_internal_mut().init(value, self)?;
+        if let Some(alt) = self.character_transform.get(key) {
+            if alt.get_internal_mut().inner().is_none() {
+                // TODO this clone is very wasteful
+                alt.get_internal_mut()
+                    .replace(char.get_internal().inner().unwrap().clone());
+            }
+        }
+        Ok(())
     }
 
     /// Add a title to the game state

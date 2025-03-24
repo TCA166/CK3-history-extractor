@@ -199,10 +199,8 @@ impl House {
     pub fn get_faith(&self) -> GameRef<Faith> {
         for leader in self.leaders.iter().rev() {
             if let Ok(faith) = leader.try_get_internal() {
-                if let Some(faith) = faith.inner() {
-                    if let Some(faith) = faith.get_faith() {
-                        return faith;
-                    }
+                if let Some(faith) = faith.inner().unwrap().get_faith() {
+                    return faith;
                 }
             }
         }
@@ -212,10 +210,8 @@ impl House {
     pub fn get_culture(&self) -> GameRef<Culture> {
         for leader in self.leaders.iter().rev() {
             if let Ok(culture) = leader.try_get_internal() {
-                if let Some(culture) = culture.inner() {
-                    if let Some(culture) = culture.get_culture() {
-                        return culture;
-                    }
+                if let Some(culture) = culture.inner().unwrap().get_culture() {
+                    return culture;
                 }
             }
         }
