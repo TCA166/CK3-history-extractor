@@ -5,8 +5,8 @@ use std::{
 
 use super::{
     game_data::{Localizable, LocalizationError, Localize},
-    parser::{GameObjectMap, GameState, ParsingError},
-    types::{GameId, GameString, Shared, Wrapper, WrapperMut},
+    parser::{GameObjectMap, GameRef, GameState, ParsingError},
+    types::{GameId, GameString, Wrapper, WrapperMut},
 };
 
 /// A submodule that provides the [Player] object.
@@ -135,8 +135,6 @@ impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
         self.get_unique_identifier().hash(state);
     }
 }
-
-pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 
 impl<T: Localizable + GameObjectDerived + FromGameObject> Localizable for GameRef<T> {
     fn localize<L: Localize<GameString>>(

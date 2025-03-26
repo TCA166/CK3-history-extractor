@@ -5,6 +5,7 @@
 /// boilerplate code to handle both types of save files.
 mod types;
 
+use derive_more::From;
 use std::{
     error,
     fmt::{self, Debug, Display},
@@ -20,7 +21,6 @@ use std::{
 /// directly initialized from the token tape, but that wouldn't play well with
 /// the way we store everything in a central [GameState] object.
 mod game_object;
-use derive_more::From;
 pub use game_object::{
     ConversionError, GameObjectCollection, GameObjectMap, GameObjectMapping, KeyError,
     SaveFileObject, SaveFileValue, SaveObjectError,
@@ -48,7 +48,7 @@ pub use section_reader::yield_section;
 /// reference each other, and in order to allow for centralized storage and easy
 /// access, the [GameState] object is used.
 mod game_state;
-pub use game_state::GameState;
+pub use game_state::{GameRef, GameState};
 use section_reader::SectionReaderError;
 
 /// A submodule providing

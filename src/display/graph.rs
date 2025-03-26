@@ -10,7 +10,8 @@ use plotters::{
 use tidy_tree::TidyTree;
 
 use super::super::{
-    structures::{Dynasty, FromGameObject, GameObjectDerived, GameRef, Title},
+    parser::GameRef,
+    structures::{Dynasty, FromGameObject, GameObjectDerived, Title},
     types::{GameId, GameString, HashMap, Wrapper},
 };
 

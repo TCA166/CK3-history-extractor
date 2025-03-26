@@ -6,7 +6,8 @@ use serde::{ser::SerializeStruct, Serialize};
 use super::{
     display::ProceduralPath,
     game_data::{GameData, Localize},
-    structures::{FromGameObject, GameObjectDerived, GameRef},
+    parser::GameRef,
+    structures::{FromGameObject, GameObjectDerived},
     types::Wrapper,
 };
 
