@@ -163,7 +163,7 @@ impl Renderable for GameObjectEntity<Dynasty> {
         if let Some(grapher) = grapher {
             if let Some(dynasty) = self.inner() {
                 let mut buf = path.join(Dynasty::get_subdir());
-                buf.push(format!("{}.svg", self.id));
+                buf.push(self.id.to_string() + ".svg");
                 grapher.create_dynasty_graph(dynasty, &buf);
             }
         }

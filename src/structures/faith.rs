@@ -97,7 +97,7 @@ impl Renderable for GameObjectEntity<Faith> {
     ) {
         if let Some(grapher) = grapher {
             let mut buf = path.join(Faith::get_subdir());
-            buf.push(format!("{}.svg", self.id));
+            buf.push(self.id.to_string() + ".svg");
             grapher.create_faith_graph(self.id, &buf);
         }
         if let Some(map) = data.get_map() {
@@ -112,7 +112,7 @@ impl Renderable for GameObjectEntity<Faith> {
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
                 let mut buf = path.join(Faith::get_subdir());
-                buf.push(format!("{}.png", self.id));
+                buf.push(self.id.to_string() + ".png");
                 let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
                 if let Some(inner) = self.inner() {
                     faith_map.draw_text(format!("Map of the {} faith", &inner.name));

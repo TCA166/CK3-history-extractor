@@ -1,51 +1,39 @@
-use std::collections::HashMap;
-
-use lazy_static::lazy_static;
-
 use jomini::binary::TokenResolver;
 
+use phf::Map;
+
+// This is generated at build time by the build.rs script.
 #[cfg(feature = "tokens")]
-const TOKENS: &'static str = include_str!("../../tokens_1.tok");
+include!(concat!(env!("OUT_DIR"), "/token_data.rs"));
 
-lazy_static! {
-    pub static ref TOKENS_RESOLVER: TokenTranslator<'static> = TokenTranslator::default();
+/// A struct that translates tokens to strings
+/// Essentially a wrapper around a static map that is generated at build time.
+pub struct TokenTranslator {
+    tokens: Option<&'static Map<u16, &'static str>>,
 }
 
-pub struct TokenTranslator<'a> {
-    tokens: HashMap<u16, &'a str>,
-}
-
-impl<'a> Default for TokenTranslator<'a> {
-    fn default() -> Self {
-        #[cfg(feature = "tokens")]
-        {
-            Self {
-                tokens: TOKENS
-                    .lines()
-                    .map(|line| {
-                        let mut parts = line.splitn(2, ' ');
-                        let token = parts.next().unwrap();
-                        let value = parts.next().unwrap().parse().unwrap();
-                        (value, token)
-                    })
-                    .collect(),
-            }
-        }
-        #[cfg(not(feature = "tokens"))]
-        {
-            Self {
-                tokens: HashMap::default(),
-            }
-        }
-    }
-}
-
-impl TokenResolver for TokenTranslator<'_> {
+impl TokenResolver for TokenTranslator {
     fn resolve(&self, token: u16) -> Option<&str> {
-        self.tokens.get(&token).map(|v| &**v)
+        self.tokens.as_ref().unwrap().get(&token).map(|v| &**v)
     }
 
     fn is_empty(&self) -> bool {
-        self.tokens.is_empty()
+        self.tokens.as_ref().unwrap().is_empty()
     }
 }
+
+/// A static instance of the token translator.
+/// This is used to resolve tokens in the game data on runtime.
+/// If the `tokens` feature is not enabled, this will be a no-op.
+pub const TOKEN_TRANSLATOR: TokenTranslator = {
+    #[cfg(feature = "tokens")]
+    {
+        TokenTranslator {
+            tokens: Some(&TOKENS),
+        }
+    }
+    #[cfg(not(feature = "tokens"))]
+    {
+        TokenTranslator { tokens: None }
+    }
+};

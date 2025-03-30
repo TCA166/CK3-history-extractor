@@ -6,14 +6,14 @@ use jomini::{
 };
 
 use super::{
+    super::types::HashMap,
     game_object::ConversionError,
-    tokens::TOKENS_RESOLVER,
+    tokens::TOKEN_TRANSLATOR,
     types::{Tape, TapeError},
     SaveFileObject, SaveFileValue,
 };
 
 use std::{
-    collections::HashMap,
     error,
     fmt::{self, Debug},
     num::ParseIntError,
@@ -357,7 +357,7 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                 add_value_quoted(&mut stack, &mut key, &mut past_eq, token);
                             }
                             BinaryToken::Id(token) => {
-                                let resolved = TOKENS_RESOLVER
+                                let resolved = TOKEN_TRANSLATOR
                                     .resolve(token)
                                     .ok_or(SectionError::UnknownToken(token))?
                                     .to_string();

@@ -310,6 +310,7 @@ pub trait MapGenerator {
 }
 
 impl MapGenerator for GameMap {
+    // this place is very hot according to the perf profiler
     fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,

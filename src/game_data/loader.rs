@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error, mem, path::Path};
+use std::{error, mem, path::Path};
 
 use derive_more::{Display, From};
 
@@ -8,7 +8,7 @@ use super::{
             yield_section, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
             SaveFileObject, SaveFileValue,
         },
-        types::GameId,
+        types::{GameId, HashMap},
     },
     map::MapError,
     GameData, GameMap, Localizer,

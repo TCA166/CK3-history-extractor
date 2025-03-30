@@ -278,7 +278,7 @@ pub trait GetPath {
 impl<T: GameObjectDerived + ProceduralPath + FromGameObject> GetPath for GameObjectEntity<T> {
     fn get_path(&self, path: &Path) -> PathBuf {
         let mut buf = path.join(T::get_subdir());
-        buf.push(format!("{}.html", self.get_id()));
+        buf.push(self.get_id().to_string() + ".html");
         buf
     }
 }

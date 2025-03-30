@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use super::{
     super::{
@@ -8,7 +8,7 @@ use super::{
             Artifact, Character, Culture, Dynasty, Faith, FromGameObject, GameObjectDerived,
             GameObjectEntity, House, Memory, Title,
         },
-        types::{GameId, GameString, Shared, Wrapper, WrapperMut},
+        types::{GameId, GameString, HashMap, Shared, Wrapper, WrapperMut},
     },
     game_object::GameObjectMap,
     ParsingError,

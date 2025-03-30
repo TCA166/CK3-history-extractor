@@ -63,7 +63,7 @@ impl Localizable for Memory {
                     return Some(part.get_internal().inner().unwrap().get_name());
                 }
             }
-            // TODO
+            // TODO we would need to store meta data for the memory to be able to localize it
             Some("".into())
         })?;
         Ok(())

@@ -146,7 +146,7 @@ impl Renderable for GameObjectEntity<Culture> {
     ) {
         if let Some(grapher) = grapher {
             let mut path = path.join(Culture::get_subdir());
-            path.push(format!("{}.svg", self.id));
+            path.push(self.id.to_string() + ".svg");
             grapher.create_culture_graph(self.id, &path);
         }
         if let Some(map) = data.get_map() {
@@ -161,7 +161,7 @@ impl Renderable for GameObjectEntity<Culture> {
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
                 let mut path = path.join(Culture::get_subdir());
-                path.push(format!("{}.png", self.id));
+                path.push(self.id.to_string() + ".png");
                 let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
                 if let Some(inner) = self.inner() {
                     culture_map.draw_text(format!("Map of the {} culture", &inner.name));

@@ -375,7 +375,7 @@ impl Renderable for GameObjectEntity<Title> {
                     return;
                 }
                 let mut buf = path.join(Title::get_subdir());
-                buf.push(format!("{}.png", self.id));
+                buf.push(self.id.to_string() + ".png");
                 let mut title_map = map.create_map_flat(title.get_barony_keys(), title.color);
                 title_map.draw_text(format!(
                     "{} at {}",

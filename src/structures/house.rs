@@ -154,6 +154,8 @@ impl Localizable for House {
                                     }
                                     _ => {}
                                 }
+                            } else {
+                                return Some("House".into());
                             }
                         }
                         _ => {}

@@ -11,7 +11,7 @@ use jomini::{
 
 use super::{
     section::Section,
-    tokens::TOKENS_RESOLVER,
+    tokens::TOKEN_TRANSLATOR,
     types::{Tape, Token},
 };
 
@@ -129,7 +129,7 @@ pub fn yield_section<'tape, 'data: 'tape>(
                             )))
                         }
                         BinaryToken::Unquoted(token) => potential_key = Some(token.to_string()),
-                        BinaryToken::Id(token) => match TOKENS_RESOLVER.resolve(token) {
+                        BinaryToken::Id(token) => match TOKEN_TRANSLATOR.resolve(token) {
                             Some(key) => {
                                 potential_key = Some(key.to_string());
                             }

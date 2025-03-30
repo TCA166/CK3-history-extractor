@@ -193,9 +193,6 @@ pub fn create_env<'a>(
 /// The function must be rendered without html escape.
 /// Calling this on an undefined reference will fail.
 fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
-    if reference.is_none() {
-        return "".to_string();
-    }
     if let Some(name) = reference
         .get_attr(DERIVED_REF_NAME_ATTR)
         .expect("Reference doesn't have attributes")
@@ -214,7 +211,7 @@ fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
             .unwrap_or(0)
             <= 0
         {
-            format!("{}", name)
+            name.to_string()
         } else {
             state
                 .env()
@@ -224,7 +221,7 @@ fn render_ref(state: &State, reference: Value, root: Option<bool>) -> String {
                 .unwrap()
         }
     } else {
-        "".to_string()
+        "".to_owned()
     }
 }
 
