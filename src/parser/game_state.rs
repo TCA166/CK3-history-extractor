@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use super::{
     super::{
@@ -90,7 +90,7 @@ pub struct GameState {
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<Option<GameRef<Character>>>>,
-    character_transform: HashMap<GameId, GameRef<Character>>,
+    character_transform: HashMap<GameId, GameId>,
     #[serde(skip)]
     county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     /// The current date from the meta section
@@ -126,7 +126,7 @@ impl GameState {
         self.traits_lookup = array;
     }
 
-    pub fn add_character_transform(&mut self, transform: HashMap<GameId, GameRef<Character>>) {
+    pub fn add_character_transform(&mut self, transform: HashMap<GameId, GameId>) {
         self.character_transform = transform;
     }
 
@@ -228,10 +228,13 @@ impl GameState {
         let char = self.get_character(key);
         char.get_internal_mut().init(value, self)?;
         if let Some(alt) = self.character_transform.get(key) {
-            if alt.get_internal_mut().inner().is_none() {
-                // TODO this clone is very wasteful
-                alt.get_internal_mut()
-                    .replace(char.get_internal().inner().unwrap().clone());
+            if let Some(alt_char) = self.characters.get(alt) {
+                if alt_char.get_internal().inner().is_none() {
+                    // TODO this clone is very wasteful
+                    alt_char
+                        .get_internal_mut()
+                        .replace(char.get_internal().inner().unwrap().clone());
+                }
             }
         }
         Ok(())
@@ -282,7 +285,7 @@ impl GameState {
     }
 
     pub fn new_grapher(&self) -> Grapher {
-        let mut total_yearly_deaths: HashMap<i16, i32> = HashMap::default();
+        let mut total_yearly_deaths: BTreeMap<i16, u32> = BTreeMap::default();
         let mut faith_yearly_deaths = HashMap::default();
         let mut culture_yearly_deaths = HashMap::default();
         let start_year = self.current_date.unwrap().year() - self.offset_date.unwrap().year();
@@ -299,33 +302,25 @@ impl GameState {
                     {
                         let entry = faith_yearly_deaths
                             .entry(char.get_faith().as_ref().unwrap().get_internal().get_id())
-                            .or_insert(HashMap::default());
-                        let count = entry.entry(death_date.year()).or_insert(0.);
-                        *count += 1.;
+                            .or_insert(BTreeMap::default());
+                        let count = entry.entry(death_date.year()).or_insert(0);
+                        *count += 1;
                     }
                     {
                         let entry = culture_yearly_deaths
                             .entry(char.get_culture().as_ref().unwrap().get_internal().get_id())
-                            .or_insert(HashMap::default());
-                        let count = entry.entry(death_date.year()).or_insert(0.);
-                        *count += 1.;
+                            .or_insert(BTreeMap::default());
+                        let count = entry.entry(death_date.year()).or_insert(0);
+                        *count += 1;
                     }
                 }
             }
         }
-        for (year, tot) in total_yearly_deaths {
-            for data in faith_yearly_deaths.values_mut() {
-                if let Some(count) = data.get_mut(&year) {
-                    *count /= tot as f64;
-                }
-            }
-            for data in culture_yearly_deaths.values_mut() {
-                if let Some(count) = data.get_mut(&year) {
-                    *count /= tot as f64;
-                }
-            }
-        }
-        Grapher::new(faith_yearly_deaths, culture_yearly_deaths)
+        Grapher::new(
+            faith_yearly_deaths,
+            culture_yearly_deaths,
+            total_yearly_deaths,
+        )
     }
 
     pub fn new_timeline(&self) -> Timeline {

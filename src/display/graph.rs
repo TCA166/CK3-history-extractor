@@ -15,7 +15,7 @@ use super::super::{
     types::{GameId, GameString, HashMap, Wrapper},
 };
 
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 /// Common graph size in pixels
 const GRAPH_SIZE: (u32, u32) = (1024, 768);
@@ -105,19 +105,21 @@ pub trait TreeNode<I: IntoIterator>: Sized {
 
 /// Creates a graph from a given data set
 /// Assumes that the data is sorted by the x value, and that the y value is a percentage
-fn create_graph<P: AsRef<Path>>(
-    data: &Vec<(i16, f64)>,
+fn create_graph<P: AsRef<Path>, S: Into<String>>(
+    data: &BTreeMap<i16, u32>,
+    contast: &BTreeMap<i16, u32>,
     output_path: &P,
-    ylabel: Option<&str>,
-    xlabel: Option<&str>,
+    ylabel: Option<S>,
+    xlabel: Option<S>,
 ) {
     let mut min_x: i16 = 0;
     let mut max_x: i16 = 0;
-    for (x, _) in data {
-        if *x < min_x || min_x == 0 {
+    {
+        let mut iter = data.iter();
+        if let Some((x, _)) = iter.next() {
             min_x = *x;
         }
-        if *x > max_x {
+        if let Some((x, _)) = iter.next_back() {
             max_x = *x;
         }
     }
@@ -125,28 +127,33 @@ fn create_graph<P: AsRef<Path>>(
     let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
     root.fill(&WHITE).unwrap();
     let mut chart = ChartBuilder::on(&root)
-        //.caption("Deaths of culture members through time", ("sans-serif", 50).into_font())
         .margin(GRAPH_MARGIN)
         .x_label_area_size(GRAPH_LABEL_SPACE)
         .y_label_area_size(GRAPH_LABEL_SPACE)
-        .build_cartesian_2d(min_x as f64..max_x as f64, MIN_Y..MAX_Y)
+        .build_cartesian_2d((min_x as i32)..(max_x as i32), MIN_Y..MAX_Y)
         .unwrap();
 
     let mut mesh = chart.configure_mesh();
 
-    if xlabel.is_some() {
-        mesh.x_desc(xlabel.unwrap());
+    if let Some(xlabel) = xlabel {
+        mesh.x_desc(xlabel);
     }
 
-    if ylabel.is_some() {
-        mesh.y_desc(ylabel.unwrap());
+    if let Some(ylabel) = ylabel {
+        mesh.y_desc(ylabel);
     }
 
     mesh.draw().unwrap();
 
     chart
         .draw_series(LineSeries::new(
-            data.iter().map(|(x, y)| (*x as f64, *y * MAX_Y)),
+            (min_x..max_x).map(|year| {
+                (
+                    year as i32,
+                    *data.get(&year).unwrap_or(&0) as f64 / *contast.get(&year).unwrap() as f64
+                        * MAX_Y,
+                )
+            }),
             &RED,
         ))
         .unwrap();
@@ -155,35 +162,21 @@ fn create_graph<P: AsRef<Path>>(
 /// An object that can create graphs from the game state
 pub struct Grapher {
     /// Stored graph data for all faiths, certainly less memory efficient but the speed is worth it
-    faith_graph_complete: HashMap<GameId, Vec<(i16, f64)>>,
-    culture_graph_complete: HashMap<GameId, Vec<(i16, f64)>>,
+    faith_graph_complete: HashMap<GameId, BTreeMap<i16, u32>>,
+    culture_graph_complete: HashMap<GameId, BTreeMap<i16, u32>>,
+    total_deaths: BTreeMap<i16, u32>,
 }
 
 impl Grapher {
     pub fn new(
-        faith_death_data: HashMap<GameId, HashMap<i16, f64>>,
-        culture_death_data: HashMap<GameId, HashMap<i16, f64>>,
+        faith_death_data: HashMap<GameId, BTreeMap<i16, u32>>,
+        culture_death_data: HashMap<GameId, BTreeMap<i16, u32>>,
+        total_deaths: BTreeMap<i16, u32>,
     ) -> Self {
-        let process = |(id, data): (&GameId, &HashMap<i16, f64>)| {
-            let mut vec = Vec::new();
-            for (date, deaths) in data {
-                vec.push((*date, *deaths));
-                if !data.contains_key(&(date + 1)) {
-                    vec.push((date + 1, 0.));
-                }
-                if !data.contains_key(&(date - 1)) {
-                    vec.push((date - 1, 0.));
-                }
-            }
-            vec.sort_by(|a, b| a.0.cmp(&b.0));
-            (*id, vec)
-        };
-        //the idea is to get all the data we may need in one go, chances are all of it is gonna be needed anywho
-        let faith_processed = faith_death_data.iter().map(process).collect();
-        let culture_processed = culture_death_data.iter().map(process).collect();
         Grapher {
-            faith_graph_complete: faith_processed,
-            culture_graph_complete: culture_processed,
+            faith_graph_complete: faith_death_data,
+            culture_graph_complete: culture_death_data,
+            total_deaths,
         }
     }
 
@@ -368,13 +361,13 @@ impl Grapher {
 
     pub fn create_culture_graph<P: AsRef<Path>>(&self, culture_id: GameId, output_path: &P) {
         if let Some(data) = self.culture_graph_complete.get(&culture_id) {
-            create_graph(data, output_path, Some(Y_LABEL), None)
+            create_graph(data, &self.total_deaths, output_path, Some(Y_LABEL), None)
         }
     }
 
     pub fn create_faith_graph<P: AsRef<Path>>(&self, faith_id: GameId, output_path: &P) {
         if let Some(data) = self.faith_graph_complete.get(&faith_id) {
-            create_graph(data, output_path, Some(Y_LABEL), None)
+            create_graph(data, &self.total_deaths, output_path, Some(Y_LABEL), None)
         }
     }
 }

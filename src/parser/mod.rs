@@ -188,7 +188,7 @@ pub fn process_section(
             let mut transform = HashMap::new();
             for (key, val) in parsed.as_map()? {
                 if let Ok(key) = key.parse::<GameId>() {
-                    transform.insert(key, game_state.get_character(&val.as_id()?));
+                    transform.insert(key, val.as_id()?);
                 }
             }
             game_state.add_character_transform(transform);

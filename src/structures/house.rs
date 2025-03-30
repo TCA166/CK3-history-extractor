@@ -154,9 +154,6 @@ impl Localizable for House {
                                     }
                                     _ => {}
                                 }
-                            } else {
-                                // TODO this can happen with uninitialized characters
-                                return Some("Unknown".into());
                             }
                         }
                         _ => {}
