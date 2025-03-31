@@ -57,6 +57,23 @@ fn serialize_ref_map<T: Serialize + GameObjectDerived, S: Serializer>(
     state.end()
 }
 
+/* TODO future refactor
+There is a way I can make this object hold Boxes, and then return &Box.
+This would require me, to properly rework the parser, to use a WIP game state
+for entity storage, that would then @ finalize transform into this. Structures
+would have to be reworked, to hold only raw IDs, and then in finalize
+modify the game state, then create final structures that would have refs
+to the newly finalized game state.
+This would allow me to remove the need for Shared, and make the code
+much cleaner.
+This would also eliminate uninitalized objects.
+
+struct ShallowRef<T: Sized> {
+    casper: PhantomData<T>,
+    id: GameId,
+}
+*/
+
 /// A struct representing all known game objects.
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
