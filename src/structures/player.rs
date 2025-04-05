@@ -1,6 +1,7 @@
 use image::{
+    buffer::ConvertBuffer,
     codecs::gif::{GifEncoder, Repeat},
-    Delay, Frame, ImageBuffer,
+    Delay, Frame, Rgb,
 };
 
 use jomini::common::PdsDate;
@@ -9,7 +10,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{GetPath, Grapher, Renderable},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
+        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
@@ -24,9 +25,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const TARGET_COLOR: [u8; 3] = [70, 255, 70];
-const SECONDARY_COLOR: [u8; 3] = [255, 255, 70];
-const BASE_COLOR: [u8; 3] = [255, 255, 255];
+const TARGET_COLOR: Rgb<u8> = Rgb([70, 255, 70]);
+const SECONDARY_COLOR: Rgb<u8> = Rgb([255, 255, 70]);
+const BASE_COLOR: Rgb<u8> = Rgb([255, 255, 255]);
 
 /// A struct representing a player in the game
 #[derive(Serialize)]
@@ -115,7 +116,7 @@ impl Renderable for Player {
                     let mut barony_map =
                         map.create_map_flat(char.get_barony_keys(true), TARGET_COLOR);
                     barony_map.draw_text(date.to_string());
-                    let fbytes: ImageBuffer<_, _> = barony_map.into();
+                    let fbytes = barony_map.convert();
                     //these variables cuz fbytes is moved
                     let width = fbytes.width();
                     let height = fbytes.height();
@@ -172,7 +173,7 @@ impl Renderable for Player {
                     }
                 }
             }
-            let mut dynasty_map = map.create_map::<_, Vec<GameString>>(
+            let mut dynasty_map = map.create_map::<_, _, Vec<GameString>>(
                 |key: &str| {
                     if direct_titles.contains(key) {
                         return TARGET_COLOR;
@@ -188,7 +189,7 @@ impl Renderable for Player {
                 ("Dynastic titles".to_string(), TARGET_COLOR),
                 ("Descendant titles".to_string(), SECONDARY_COLOR),
             ]);
-            dynasty_map.save(path.join("dynastyMap.png"));
+            dynasty_map.save_in_thread(path.join("dynastyMap.png"));
         }
         if let Some(grapher) = grapher {
             let last = self.lineage.last().unwrap().get_character();

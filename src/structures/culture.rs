@@ -6,7 +6,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
+        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
         jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper, WrapperMut},
@@ -166,7 +166,7 @@ impl Renderable for GameObjectEntity<Culture> {
                 if let Some(inner) = self.inner() {
                     culture_map.draw_text(format!("Map of the {} culture", &inner.name));
                 }
-                culture_map.save(&path);
+                culture_map.save_in_thread(&path);
             }
         }
     }

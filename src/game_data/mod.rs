@@ -1,5 +1,5 @@
 mod map;
-pub use map::{GameMap, MapGenerator};
+pub use map::{GameMap, MapGenerator, MapImage};
 
 mod localizer;
 use localizer::Localizer;

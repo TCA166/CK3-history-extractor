@@ -51,7 +51,7 @@ mod game_state;
 pub use game_state::{GameRef, GameState};
 use section_reader::SectionReaderError;
 
-/// A submodule providing
+/// A submodule providing ironman token declarations.
 mod tokens;
 
 /// An error that occurred somewhere within the broadly defined parsing process.

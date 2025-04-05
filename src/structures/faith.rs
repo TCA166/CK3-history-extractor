@@ -5,7 +5,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
+        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
         jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
@@ -117,7 +117,7 @@ impl Renderable for GameObjectEntity<Faith> {
                 if let Some(inner) = self.inner() {
                     faith_map.draw_text(format!("Map of the {} faith", &inner.name));
                 }
-                faith_map.save(&buf);
+                faith_map.save_in_thread(&buf);
             }
         }
     }

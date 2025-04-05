@@ -116,9 +116,6 @@ impl GameDataLoader {
         if !self.no_vis {
             let map_path = path.join(MAP_PATH_SUFFIX);
             if map_path.exists() && map_path.is_dir() {
-                if self.map.is_some() {
-                    return Err(GameDataError::InvalidData("Multiple map directories found"));
-                }
                 let province_path = path.join(PROVINCE_MAP_PATH);
                 if !province_path.is_file() {
                     return Err(GameDataError::MissingFile(

@@ -1,9 +1,12 @@
-use std::{borrow::Borrow, error, io, num::ParseIntError, path::Path, thread};
+use std::{borrow::Borrow, error, io, num::ParseIntError, ops::Deref, path::Path, thread};
 
 use csv::ReaderBuilder;
 
 use derive_more::{Display, From};
-use image::{save_buffer, ImageBuffer, ImageReader, Rgba};
+use image::{
+    imageops::{crop_imm, resize, FilterType},
+    ImageReader, Rgb, RgbImage,
+};
 
 use plotters::{
     backend::BitMapBackend,
@@ -23,18 +26,14 @@ use super::super::types::{GameId, GameString, HashMap};
 /// The color of the text drawn on the map
 const TEXT_COLOR: RGBAColor = RGBAColor(0, 0, 0, 0.5);
 /// The color of the water on the map
-const WATER_COLOR: [u8; 3] = [20, 150, 255];
+const WATER_COLOR: Rgb<u8> = Rgb([20, 150, 255]);
 /// The color of the land on the map
-const LAND_COLOR: [u8; 3] = [255, 255, 255];
+const LAND_COLOR: Rgb<u8> = Rgb([255, 255, 255]);
 /// The color of the null pixels on the map
-const NULL_COLOR: [u8; 3] = [0, 0, 0];
+const NULL_COLOR: Rgb<u8> = Rgb([0, 0, 0]);
 
 // map image stuff
 
-/// The width of the input map image
-const IMG_WIDTH: u32 = 8192;
-/// The height of the input map image
-const IMG_HEIGHT: u32 = 4096;
 /// The scale factor for the input map image
 const SCALE: u32 = 4;
 
@@ -58,31 +57,28 @@ impl error::Error for MapError {
 }
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
-fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<Box<[u8]>, MapError> {
-    Ok(ImageReader::open(path)?
-        .decode()?
-        .to_rgb8()
-        .into_raw()
-        .into_boxed_slice())
+fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<RgbImage, MapError> {
+    Ok(ImageReader::open(path)?.decode()?.to_rgb8())
 }
 
-/// An instance of an image, that depicts a map.
-pub struct Map {
-    height: u32,
-    width: u32,
-    bytes: Box<[u8]>,
+pub trait MapImage {
+    fn draw_text<T: Borrow<str>>(&mut self, text: T);
+
+    fn draw_legend<C: Into<Rgb<u8>>, I: IntoIterator<Item = (String, C)>>(&mut self, legend: I);
+
+    fn save_in_thread<P: AsRef<Path>>(self, path: P);
 }
 
-impl Map {
+impl MapImage for RgbImage {
     /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
-    pub fn draw_text<T: Borrow<str>>(&mut self, text: T) {
-        let back = BitMapBackend::with_buffer(&mut self.bytes, (self.width, self.height))
-            .into_drawing_area();
-        let text_height = self.height / 20;
+    fn draw_text<T: Borrow<str>>(&mut self, text: T) {
+        let dimensions = self.dimensions();
+        let text_height = dimensions.1 / 20;
+        let back = BitMapBackend::with_buffer(self, dimensions).into_drawing_area();
         let style = ("sans-serif", text_height).into_font().color(&TEXT_COLOR);
         back.draw(&Text::new(
             text,
-            (10, self.height as i32 - text_height as i32),
+            (10, dimensions.1 as i32 - text_height as i32),
             style,
         ))
         .unwrap();
@@ -90,17 +86,18 @@ impl Map {
     }
 
     /// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
-    pub fn draw_legend<I: IntoIterator<Item = (String, [u8; 3])>>(&mut self, legend: I) {
-        let back = BitMapBackend::with_buffer(&mut self.bytes, (self.width, self.height))
-            .into_drawing_area();
-        let text_height = (self.height / 30) as i32;
+    fn draw_legend<C: Into<Rgb<u8>>, I: IntoIterator<Item = (String, C)>>(&mut self, legend: I) {
+        let dimensions = self.dimensions();
+        let text_height = (dimensions.1 / 30) as i32;
+        let back = BitMapBackend::with_buffer(self, dimensions).into_drawing_area();
         let style = ("sans-serif", text_height).into_font();
-        let mut x = (self.width / 50) as i32;
+        let mut x = (dimensions.0 / 50) as i32;
         for (label, color) in legend {
             let text_size = style.box_size(&label).unwrap();
             let margin = text_height / 3;
+            let color = color.into();
             back.draw(
-                &(EmptyElement::at((x, self.height as i32 - (text_height * 2)))
+                &(EmptyElement::at((x, dimensions.1 as i32 - (text_height * 2)))
                     + Rectangle::new(
                         [(0, 0), (text_height, text_height)],
                         ShapeStyle {
@@ -129,39 +126,30 @@ impl Map {
         back.present().unwrap();
     }
 
-    pub fn save<P: AsRef<Path>>(self, path: P) {
+    fn save_in_thread<P: AsRef<Path>>(self, path: P) {
         let path = path.as_ref().to_owned();
         thread::spawn(move || {
-            save_buffer(
-                path,
-                &self.bytes,
-                self.width,
-                self.height,
-                image::ExtendedColorType::Rgb8,
-            )
-            .unwrap();
+            self.save(path).unwrap();
         });
     }
 }
 
-impl Into<ImageBuffer<Rgba<u8>, Vec<u8>>> for Map {
-    fn into(self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
-        let mut rgba = Vec::with_capacity(self.bytes.len() * 4 / 3);
-        for i in 0..self.bytes.len() {
-            rgba.push(self.bytes[i]);
-            if (i + 1) % 3 == 0 {
-                rgba.push(255);
-            }
-        }
-        ImageBuffer::from_vec(self.width, self.height, rgba).unwrap()
-    }
-}
-
 fn serialize_into_b64<S: serde::Serializer>(
-    bytes: &[u8],
+    image: &RgbImage,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
-    serializer.serialize_str(&BASE64_STANDARD.encode(bytes))
+    serializer.serialize_str(&BASE64_STANDARD.encode(image.as_raw()))
+}
+
+fn serialize_title_color_map<S: serde::Serializer>(
+    title_color_map: &HashMap<String, Rgb<u8>>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let mut map = HashMap::new();
+    for (k, v) in title_color_map.iter() {
+        map.insert(k.clone(), v.0);
+    }
+    serializer.serialize_some(&map)
 }
 
 /// A struct representing a game map, from which we can create [Map] instances
@@ -170,8 +158,9 @@ pub struct GameMap {
     height: u32,
     width: u32,
     #[serde(serialize_with = "serialize_into_b64")]
-    province_map: Box<[u8]>,
-    title_color_map: HashMap<String, [u8; 3]>,
+    province_map: RgbImage,
+    #[serde(serialize_with = "serialize_title_color_map")]
+    title_color_map: HashMap<String, Rgb<u8>>,
 }
 
 impl GameMap {
@@ -183,84 +172,42 @@ impl GameMap {
         definition_path: P,
         province_barony_map: HashMap<GameId, String>,
     ) -> Result<Self, MapError> {
-        let mut provinces_bytes = read_png_bytes(provinces_path)?;
-        let river_bytes = read_png_bytes(rivers_path)?;
+        let mut provinces = read_png_bytes(provinces_path)?;
+        let river = read_png_bytes(rivers_path)?;
         //apply river bytes as a mask to the provinces bytes so that non white pixels in rivers are black
-        let len = provinces_bytes.len();
-        let mut x = 0;
-        while x < len {
-            if river_bytes[x] != 255 || river_bytes[x + 1] != 255 || river_bytes[x + 2] != 255 {
-                provinces_bytes[x..x + 3].copy_from_slice(&NULL_COLOR);
+        for (p_b, r_b) in provinces.pixels_mut().zip(river.pixels()) {
+            if r_b[0] != 255 || r_b[1] != 255 || r_b[2] != 255 {
+                *p_b = NULL_COLOR;
             }
-            x += 3;
         }
-        //save_buffer("provinces.png", &provinces_bytes, IMG_WIDTH, IMG_HEIGHT, image::ExtendedColorType::Rgb8).unwrap();
-        //determine the x cutoff point for the provinces bytes - the maximum x coordinate of non black pixels
-        let mut x;
-        let mut y = 0;
+        let (width, height) = provinces.dimensions();
+        // we need to find a bounding box for the terrain
         let mut max_x = 0;
-        while y < IMG_HEIGHT {
-            x = 0;
-            while x < IMG_WIDTH {
-                let idx = (y * IMG_WIDTH * 3 + x * 3) as usize;
-                if idx < len && provinces_bytes[idx] != 0 {
+        let mut min_x = width;
+        for x in 0..width {
+            for y in 0..height {
+                if provinces.get_pixel(x, y) == &NULL_COLOR {
+                    if x < min_x {
+                        min_x = x;
+                    }
+                } else {
                     if x > max_x {
                         max_x = x;
                     }
                 }
-                x += 1;
             }
-            y += 1;
         }
+        // TODO for funky maps like EK2 we want to keep the aspect ratio
+        let cropped = crop_imm(&provinces, min_x, 0, max_x, height);
         //scale the image down to 1/4 of the size
-        let mut x = 0;
-        let mut y = 0;
-        let mut new_bytes = Vec::with_capacity(provinces_bytes.len() / (SCALE * SCALE) as usize);
-        while y < IMG_HEIGHT {
-            x = 0;
-            while x < max_x {
-                //unique scaling algorithm here, we take the most common color in a SCALE x SCALE square and set all the pixels in that square to that color
-                //UNLESS a set amount are water, in which case we set the square to water
-                let mut water: u8 = 0;
-                let mut occurences = HashMap::default();
-                for i in 0..SCALE {
-                    for j in 0..SCALE {
-                        let idx = ((y + i) * IMG_WIDTH * 3 + (x + j) * 3) as usize;
-                        let slc = &provinces_bytes[idx..idx + 3];
-                        if slc == &NULL_COLOR {
-                            water += 1;
-                        } else {
-                            if occurences.contains_key(slc) {
-                                *occurences.get_mut(slc).unwrap() += 1;
-                            } else {
-                                occurences.insert(slc, 1);
-                            }
-                        }
-                    }
-                }
-                x += SCALE;
-                if water > 3 {
-                    new_bytes.extend_from_slice(&NULL_COLOR);
-                    continue;
-                }
-                //add the most common color in colors to the new bytes
-                let mut max = 0;
-                let mut max_color: &[u8] = &[0, 0, 0];
-                for (color, count) in occurences.iter() {
-                    if count > &max {
-                        max = *count;
-                        max_color = *color;
-                    }
-                }
-                new_bytes.extend_from_slice(max_color);
-            }
-            y += SCALE;
-        }
-        let width = x / SCALE;
-        let height = IMG_HEIGHT / SCALE;
-        //save_buffer("provinces.png", &new_bytes, width, height, image::ExtendedColorType::Rgb8).unwrap();
+        provinces = resize(
+            cropped.deref(),
+            (width / SCALE) as u32,
+            (height / SCALE) as u32,
+            FilterType::Triangle,
+        );
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
-        let mut key_colors: HashMap<String, [u8; 3]> = HashMap::default();
+        let mut key_colors: HashMap<String, Rgb<u8>> = HashMap::default();
         let mut rdr = ReaderBuilder::new()
             .comment(Some(b'#'))
             .flexible(true)
@@ -279,13 +226,13 @@ impl GameMap {
             let g = record[2].parse::<u8>()?;
             let b = record[3].parse::<u8>()?;
             if let Some(barony) = province_barony_map.get(&id) {
-                key_colors.insert(barony.clone(), [r, g, b]);
+                key_colors.insert(barony.clone(), Rgb([r, g, b]));
             }
         }
         Ok(GameMap {
             height: height,
             width: width,
-            province_map: new_bytes.into_boxed_slice(),
+            province_map: provinces,
             title_color_map: key_colors,
         })
     }
@@ -293,31 +240,34 @@ impl GameMap {
 
 pub trait MapGenerator {
     /// Creates a new instance of map, with pixels colored in accordance with assoc function. key_list acts as a whitelist of keys to use assoc on. If it's None then assoc is applied to all keys.
-    fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
+    fn create_map<C: Into<Rgb<u8>> + Clone, F: Fn(&str) -> C, I: IntoIterator<Item = GameString>>(
         &self,
         assoc: F,
         key_list: Option<I>,
-    ) -> Map;
+    ) -> RgbImage;
 
     /// Creates a new instance of map, with all pixels corresponding to keys in the key_list colored same as the target_color
-    fn create_map_flat<I: IntoIterator<Item = GameString>>(
+    fn create_map_flat<C: Into<Rgb<u8>> + Clone, I: IntoIterator<Item = GameString>>(
         &self,
         key_list: I,
-        target_color: [u8; 3],
-    ) -> Map {
-        self.create_map(|_| target_color, Some(key_list))
+        target_color: C,
+    ) -> RgbImage {
+        self.create_map(|_| target_color.clone(), Some(key_list))
     }
 }
 
 impl MapGenerator for GameMap {
     // this place is very hot according to the perf profiler
-    fn create_map<F: Fn(&str) -> [u8; 3], I: IntoIterator<Item = GameString>>(
+    fn create_map<
+        C: Into<Rgb<u8>> + Clone,
+        F: Fn(&str) -> C,
+        I: IntoIterator<Item = GameString>,
+    >(
         &self,
         assoc: F,
         key_list: Option<I>,
-    ) -> Map {
-        let mut new_map = Vec::with_capacity(self.province_map.len());
-        let mut colors: HashMap<&[u8], [u8; 3]> = HashMap::default();
+    ) -> RgbImage {
+        let mut colors = HashMap::default();
         if let Some(key_list) = key_list {
             for k in key_list {
                 if let Some(color) = self.title_color_map.get(k.as_ref()) {
@@ -331,35 +281,18 @@ impl MapGenerator for GameMap {
                 colors.insert(v, assoc(k));
             }
         }
-        let mut x = 0;
-        while x < self.province_map.len() {
-            let mut z = x + 3; // overkill, but saves us an arithmetic operation
-            let pixel: &[u8] = &self.province_map[x..z];
-            let clr;
-            if pixel == NULL_COLOR {
-                //if we find a NULL pixel = water
-                clr = &WATER_COLOR;
+        let mut new_map = self.province_map.clone();
+        for pixel in new_map.pixels_mut() {
+            if pixel == &NULL_COLOR {
+                *pixel = WATER_COLOR;
             } else {
                 if let Some(color) = colors.get(pixel) {
-                    clr = color;
+                    *pixel = (*color).clone().into();
                 } else {
-                    clr = &LAND_COLOR;
+                    *pixel = LAND_COLOR;
                 }
             }
-            new_map.extend_from_slice(clr);
-            x = z;
-            z = x + 3;
-            //this ending is a loop to minimize the number of times the checks above are done
-            while x < self.province_map.len() && self.province_map[x..z] == *pixel {
-                new_map.extend_from_slice(clr);
-                x = z;
-                z = x + 3;
-            }
         }
-        return Map {
-            height: self.height,
-            width: self.width,
-            bytes: new_map.into_boxed_slice(),
-        };
+        return new_map;
     }
 }

@@ -123,7 +123,7 @@ fn main() -> Result<(), UserError> {
     let mut include_paths = args.include;
     //even though we don't need these for parsing, we load them here to error out early
     if let Some(game_path) = args.game_path {
-        include_paths.insert(0, game_path);
+        include_paths.push(game_path);
     }
     let mut loader = GameDataLoader::new(args.no_vis, args.language);
     if !include_paths.is_empty() {

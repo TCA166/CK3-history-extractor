@@ -11,7 +11,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator},
+        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
         jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
@@ -382,7 +382,7 @@ impl Renderable for GameObjectEntity<Title> {
                     title.name,
                     game_state.get_current_date().unwrap().iso_8601()
                 ));
-                title_map.save(&buf);
+                title_map.save_in_thread(&buf);
             }
         }
     }

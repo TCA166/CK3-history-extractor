@@ -1,6 +1,6 @@
 use clap_derive::Parser;
 use derive_more::Display;
-use dialoguer::{Completion, Input, Select};
+use dialoguer::{Completion, Input, MultiSelect, Select};
 
 use std::{
     error,
@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::steam::{get_ck3_path, SteamError, CK3_PATH};
+use super::steam::{get_game_path, get_library_path, get_mod_paths, SteamError, CK3_PATH};
 
 const CK3_EXTENSION: &str = "ck3";
 
@@ -86,20 +86,6 @@ fn validate_file_path(input: &String) -> Result<(), InvalidPath> {
     } else {
         return Err(InvalidPath::InvalidPath);
     }
-}
-
-/// A function to validate the path list input.
-fn validate_path_list(input: &String) -> Result<(), InvalidPath> {
-    if input.is_empty() {
-        return Ok(());
-    }
-    for p in input.split(',') {
-        let res = validate_dir_path(&p.to_string());
-        if res.is_err() {
-            return res;
-        }
-    }
-    Ok(())
 }
 
 /// A function to validate the path input.
@@ -190,24 +176,22 @@ impl Args {
                 .interact_text()
                 .unwrap(),
         );
-        let ck3_path = match get_ck3_path() {
-            Ok(p) => p,
+        let ck3_path;
+        let mut mod_paths = Vec::new();
+        match get_library_path() {
+            Ok(p) => {
+                ck3_path = get_game_path(&p).unwrap_or_else(|e| {
+                    eprintln!("Error trying to find your CK3 installation: {}", e);
+                    CK3_PATH.into()
+                });
+                get_mod_paths(&p, &mut mod_paths).unwrap_or_else(|e| {
+                    eprintln!("Error trying to find your CK3 mods: {}", e);
+                });
+            }
             Err(e) => {
-                match e {
-                    SteamError::SteamDirNotFound => {
-                        // we don't assume us being incompetent at finding the steam path is the user's fault
-                        // so we don't print an error here
-                        CK3_PATH.to_string()
-                    }
-                    SteamError::CK3Missing => {
-                        // not having CK3 installed is also fine
-                        "".to_string()
-                    }
-                    e => {
-                        // but if we can't find the CK3 path for some other reason, we print an error
-                        eprintln!("Error trying to find your CK3 installation: {}", e);
-                        CK3_PATH.to_string()
-                    }
+                ck3_path = CK3_PATH.into();
+                if !matches!(e, SteamError::SteamDirNotFound | SteamError::CK3Missing) {
+                    eprintln!("Error trying to find your CK3 installation: {}", e);
                 }
             }
         };
@@ -215,7 +199,7 @@ impl Args {
             .with_prompt("Enter the game path [empty for None]")
             .allow_empty(true)
             .validate_with(validate_dir_path)
-            .with_initial_text(ck3_path)
+            .with_initial_text(ck3_path.to_string_lossy())
             .interact_text()
             .map_or(None, |x| {
                 if x.is_empty() {
@@ -229,19 +213,19 @@ impl Args {
             .default(3)
             .interact()
             .unwrap();
-        let include_input = Input::<String>::new()
-            .with_prompt("Enter the include paths separated by a coma [empty for None]")
-            .allow_empty(true)
-            .validate_with(validate_path_list)
-            .interact()
-            .unwrap();
-        let mut include_paths = Vec::new();
-        if !include_input.is_empty() {
-            include_paths = include_input
-                .split(',')
-                .map(|x| PathBuf::from(x.trim()))
-                .collect();
-        }
+        let include_paths = if mod_paths.len() > 0 {
+            let mod_selection = MultiSelect::new()
+                .with_prompt("Select the mods to include")
+                .items(&mod_paths)
+                .interact()
+                .unwrap();
+            mod_selection
+                .iter()
+                .map(|i| mod_paths[*i].as_ref().clone())
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
         let mut language = LANGUAGES[0];
         if game_path.is_some() || !include_paths.is_empty() {
             let language_selection = Select::new()
