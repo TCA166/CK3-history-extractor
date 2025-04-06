@@ -164,7 +164,7 @@ pub struct Args {
 impl Args {
     /// Create the object based on user input.
     pub fn get_from_user() -> Self {
-        println!("Welcome to CK3 save parser!\nUse tab to autocomplete file paths.");
+        println!("Welcome to CK3 save parser!\nTab autocompletes the query, arrows cycle through possible options, space toggles selection and enter confirms the selection.");
         //console interface only if we are in a terminal
         let completion = SaveFileNameCompletion::default();
         let filename = PathBuf::from(

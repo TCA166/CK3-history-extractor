@@ -184,28 +184,38 @@ impl GameMap {
         // we need to find a bounding box for the terrain
         let mut max_x = 0;
         let mut min_x = width;
+        let mut max_y = 0;
+        let mut min_y = height;
         for x in 0..width {
             for y in 0..height {
-                if provinces.get_pixel(x, y) == &NULL_COLOR {
+                if provinces.get_pixel(x, y) != &NULL_COLOR {
+                    if x > max_x {
+                        max_x = x;
+                    }
                     if x < min_x {
                         min_x = x;
                     }
-                } else {
-                    if x > max_x {
-                        max_x = x;
+                    if y > max_y {
+                        max_y = y;
+                    }
+                    if y < min_y {
+                        min_y = y;
                     }
                 }
             }
         }
-        // TODO for funky maps like EK2 we want to keep the aspect ratio
-        let cropped = crop_imm(&provinces, min_x, 0, max_x, height);
+        let width = max_x - min_x;
+        let height = max_y - min_y;
+        let cropped = crop_imm(&provinces, min_x, min_y, width, height);
+
         //scale the image down to 1/4 of the size
         provinces = resize(
             cropped.deref(),
             (width / SCALE) as u32,
             (height / SCALE) as u32,
-            FilterType::Triangle,
+            FilterType::Nearest,
         );
+        //provinces.save("test.png").unwrap();
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
         let mut key_colors: HashMap<String, Rgb<u8>> = HashMap::default();
         let mut rdr = ReaderBuilder::new()
@@ -226,6 +236,7 @@ impl GameMap {
             let g = record[2].parse::<u8>()?;
             let b = record[3].parse::<u8>()?;
             if let Some(barony) = province_barony_map.get(&id) {
+                // FIXME this doesn't work for EK2
                 key_colors.insert(barony.clone(), Rgb([r, g, b]));
             }
         }
