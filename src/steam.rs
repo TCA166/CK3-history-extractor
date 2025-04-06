@@ -189,7 +189,7 @@ pub struct ModDescriptor {
 
 impl Display for ModDescriptor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} at {}", self.name, self.path.display())
+        write!(f, "\"{}\" at {}", self.name, self.path.display())
     }
 }
 

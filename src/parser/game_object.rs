@@ -178,6 +178,10 @@ impl SaveFileValue {
         match self {
             SaveFileValue::Integer(i) => Ok(*i),
             SaveFileValue::Real(r) => Ok(*r as i64),
+            SaveFileValue::String(s) => {
+                // sometimes developers make an oopsie, and make a typo. Here we try to correct it for them by getting only the digits
+                Ok(s.chars().filter_map(|c| c.to_digit(10)).sum::<u32>() as i64)
+            }
             _ => Err(ConversionError::InvalidType(
                 self.clone(),
                 type_name::<i64>(),

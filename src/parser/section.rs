@@ -1,7 +1,7 @@
 use derive_more::{Display, From};
 use jomini::{
     binary::{ReaderError as BinaryReaderError, Token as BinaryToken, TokenResolver},
-    text::{Operator, ReaderError as TextReaderError, Token as TextToken},
+    text::{ReaderError as TextReaderError, Token as TextToken},
     Scalar, ScalarError,
 };
 
@@ -148,7 +148,11 @@ impl Into<SaveFileObject> for StackEntry {
                 }
                 return SaveFileObject::Array(array);
             } else {
-                unimplemented!("combining a hashmap and an array is not yet implemented");
+                unimplemented!(
+                    "combining a hashmap and an array is not yet implemented, {:?}, {:?}",
+                    map,
+                    array
+                );
             }
         }
     }
@@ -263,12 +267,16 @@ impl<'tape, 'data> Section<'tape, 'data> {
                                     return Ok(value);
                                 }
                             }
-                            TextToken::Operator(op) => {
+                            TextToken::Operator(_op) => {
+                                // here we have a problem, when parsing game code, there can be some instances of non = operators
+                                // MAYBE solve this here somehow
+                                /*
                                 if op == Operator::Equal {
                                     past_eq = true;
                                 } else {
                                     past_eq = false;
-                                }
+                                } */
+                                past_eq = true;
                             }
                             TextToken::Quoted(token) => {
                                 add_value_quoted(

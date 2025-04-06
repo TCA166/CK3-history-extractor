@@ -1,4 +1,4 @@
-use std::{error, mem, path::Path};
+use std::{error, fs::read_dir, io, mem, path::Path};
 
 use derive_more::{Display, From};
 
@@ -38,24 +38,36 @@ impl error::Error for GameDataError {
     }
 }
 
+impl From<io::Error> for GameDataError {
+    fn from(e: io::Error) -> Self {
+        GameDataError::IOError(SaveFileError::from(e))
+    }
+}
+
 /// Creates a mapping from province ids to their barony title keys
-fn create_title_province_map(file: &SaveFile) -> Result<HashMap<GameId, String>, ParsingError> {
+fn create_title_province_map(
+    file: &SaveFile,
+    out: &mut HashMap<GameId, String>,
+) -> Result<(), ParsingError> {
     let mut tape = file.tape();
-    let mut map = HashMap::default();
     while let Some(res) = yield_section(&mut tape) {
         let mut section = res?;
-        let title_object = section.parse()?;
         //DFS in the structure
-        let mut stack = vec![(title_object.as_map()?, section.get_name().to_string())];
+        let mut stack = if let SaveFileObject::Map(base) = section.parse()? {
+            vec![(base, section.get_name().to_string())]
+        } else {
+            // if the base object is an array, something wonky is going on and we just politely retreat
+            continue;
+        };
         while let Some(entry) = stack.pop() {
             if let Some(pro) = entry.0.get("province") {
                 match pro {
                     // apparently pdx sometimes makes an oopsie and in the files the key is doubled, thus leading us to parse that as an array
                     SaveFileValue::Object(o) => {
-                        map.insert(o.as_array()?.get_index(0)?.as_id()?, entry.1);
+                        out.insert(o.as_array()?.get_index(0)?.as_id()?, entry.1);
                     }
                     s => {
-                        map.insert(s.as_id()?, entry.1);
+                        out.insert(s.as_id()?, entry.1);
                     }
                 }
             }
@@ -72,7 +84,7 @@ fn create_title_province_map(file: &SaveFile) -> Result<HashMap<GameId, String>,
             }
         }
     }
-    return Ok(map);
+    Ok(())
 }
 
 // File system stuff
@@ -84,7 +96,7 @@ const PROVINCES_SUFFIX: &str = "provinces.png";
 const RIVERS_SUFFIX: &str = "rivers.png";
 const DEFINITION_SUFFIX: &str = "definition.csv";
 
-const PROVINCE_MAP_PATH: &str = "common/landed_titles/00_landed_titles.txt";
+const PROVINCE_DIR_PATH: &str = "common/landed_titles/";
 
 /// A loader for game data
 pub struct GameDataLoader {
@@ -115,22 +127,33 @@ impl GameDataLoader {
         }
         if !self.no_vis {
             let map_path = path.join(MAP_PATH_SUFFIX);
-            if map_path.exists() && map_path.is_dir() {
-                let province_path = path.join(PROVINCE_MAP_PATH);
-                if !province_path.is_file() {
-                    return Err(GameDataError::MissingFile(
-                        province_path.to_string_lossy().to_string(),
-                    ));
-                }
-                let file = SaveFile::open(&province_path)?;
-                let map = create_title_province_map(&file)?;
-                self.map = Some(GameMap::new(
-                    map_path.join(PROVINCES_SUFFIX),
-                    map_path.join(RIVERS_SUFFIX),
-                    map_path.join(DEFINITION_SUFFIX),
-                    map,
-                )?);
+            if !map_path.exists() || !map_path.is_dir() {
+                return Ok(()); // this is not an error, just no map data
             }
+            let province_dir_path = path.join(PROVINCE_DIR_PATH);
+            if !province_dir_path.exists() || !province_dir_path.is_dir() {
+                // I guess having a custom map with vanilla titles is fine, but not for us
+                return Err(GameDataError::InvalidData(
+                    "custom map without custom titles",
+                ));
+            }
+            let mut title_province_map = HashMap::default();
+            let dir = read_dir(&province_dir_path)?;
+            for entry in dir {
+                let entry = entry?;
+                if entry.file_type()?.is_file() {
+                    create_title_province_map(
+                        &SaveFile::open(entry.path())?,
+                        &mut title_province_map,
+                    )?;
+                }
+            }
+            self.map = Some(GameMap::new(
+                map_path.join(PROVINCES_SUFFIX),
+                map_path.join(RIVERS_SUFFIX),
+                map_path.join(DEFINITION_SUFFIX),
+                title_province_map,
+            )?);
         }
         Ok(())
     }
