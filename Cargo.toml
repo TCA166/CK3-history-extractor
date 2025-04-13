@@ -46,7 +46,7 @@ rand = "0.9.0"
 indicatif = "0.17.11"
 keyvalues-parser = "0.2.0"
 human-panic = "=2.0.2"
-clap = "4.5.35"
+clap = "4.5.36"
 clap_derive = "4.5.32"
 jomini = "0.28.0"
 derive_more = { version = "2.0.1", features = ["from", "display"] }

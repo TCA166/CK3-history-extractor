@@ -6,7 +6,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{ProceduralPath, Renderable, TreeNode},
-        game_data::{Localizable, LocalizationError, Localize},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, Shared, Wrapper, WrapperMut},
@@ -503,10 +503,7 @@ impl Renderable for GameObjectEntity<Character> {
 }
 
 impl Localizable for Character {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.name = localization.localize(&self.name)?;
         if let Some(nick) = &self.nick {
             self.nick = Some(localization.localize(nick)?);

@@ -10,7 +10,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{GetPath, Grapher, Renderable},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
+        game_data::{GameData, Localizable, LocalizationError, MapGenerator, MapImage},
         jinja_env::H_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
@@ -199,10 +199,7 @@ impl Renderable for Player {
 }
 
 impl Localizable for Player {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         for node in self.lineage.iter_mut() {
             node.localize(localization)?;
         }

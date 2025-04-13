@@ -5,7 +5,7 @@ use crate::types::Wrapper;
 
 use super::{
     super::{
-        game_data::{Localizable, LocalizationError, Localize},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::GameString,
     },
@@ -133,10 +133,7 @@ fn handle_tooltips(text: &GameString) -> String {
 }
 
 impl Localizable for Artifact {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.rarity = localization.localize(&self.rarity)?;
         self.r#type = localization.localize("artifact_".to_string() + self.r#type.as_ref())?;
         self.description = handle_tooltips(&self.description).into();

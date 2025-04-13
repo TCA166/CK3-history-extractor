@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use super::{
     super::{
         display::{Grapher, RealmDifference, Timeline},
-        game_data::{Localizable, LocalizationError, Localize},
+        game_data::{GameData, Localizable, LocalizationError},
         structures::{
             Artifact, Character, Culture, Dynasty, Faith, FromGameObject, GameObjectDerived,
             GameObjectEntity, House, Memory, Title,
@@ -477,10 +477,7 @@ impl GameState {
 }
 
 impl Localizable for GameState {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         for character in self.characters.values_mut() {
             character.localize(localization)?;
         }

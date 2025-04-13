@@ -4,7 +4,7 @@ use std::{
 };
 
 use super::{
-    game_data::{Localizable, LocalizationError, Localize},
+    game_data::{GameData, Localizable, LocalizationError},
     parser::{GameObjectMap, GameRef, GameState, ParsingError},
     types::{GameId, GameString, Wrapper, WrapperMut},
 };
@@ -137,10 +137,7 @@ impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
 }
 
 impl<T: Localizable + GameObjectDerived + FromGameObject> Localizable for GameRef<T> {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if let Some(entity) = self.get_internal_mut().entity.as_mut() {
             entity.finalize(self);
             entity.localize(localization)

@@ -173,10 +173,7 @@ impl Renderable for GameObjectEntity<Culture> {
 }
 
 impl Localizable for Culture {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.name = localization.localize(&self.name)?;
         if let Some(eth) = &self.ethos {
             self.ethos = Some(localization.localize(eth.to_string() + "_name")?);

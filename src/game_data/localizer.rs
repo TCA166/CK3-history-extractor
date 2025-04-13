@@ -453,15 +453,6 @@ impl Localize<GameString> for Localizer {
     }
 }
 
-/// A trait that allows an object to be localized.
-pub trait Localizable {
-    /// Localizes the object.
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError>;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

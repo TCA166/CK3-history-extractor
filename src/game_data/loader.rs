@@ -8,7 +8,7 @@ use super::{
             yield_section, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
             SaveFileObject, SaveFileValue,
         },
-        types::{GameId, HashMap},
+        types::{GameId, GameString, HashMap},
     },
     map::MapError,
     GameData, GameMap, Localizer,
@@ -47,14 +47,14 @@ impl From<io::Error> for GameDataError {
 /// Creates a mapping from province ids to their barony title keys
 fn create_title_province_map(
     file: &SaveFile,
-    out: &mut HashMap<GameId, String>,
+    out: &mut HashMap<GameId, GameString>,
 ) -> Result<(), ParsingError> {
     let mut tape = file.tape();
     while let Some(res) = yield_section(&mut tape) {
         let mut section = res?;
         //DFS in the structure
         let mut stack = if let SaveFileObject::Map(base) = section.parse()? {
-            vec![(base, section.get_name().to_string())]
+            vec![(base, GameString::from(section.get_name()))]
         } else {
             // if the base object is an array, something wonky is going on and we just politely retreat
             continue;
@@ -75,7 +75,7 @@ fn create_title_province_map(
                 match val {
                     SaveFileValue::Object(val) => match val {
                         SaveFileObject::Map(val) => {
-                            stack.push((val, key.to_owned()));
+                            stack.push((val, key.into()));
                         }
                         _ => {}
                     },
@@ -104,6 +104,7 @@ pub struct GameDataLoader {
     language: &'static str,
     map: Option<GameMap>,
     localizer: Localizer,
+    title_province_map: HashMap<GameId, GameString>,
 }
 
 impl GameDataLoader {
@@ -115,6 +116,7 @@ impl GameDataLoader {
             language,
             map: None,
             localizer: Localizer::default(),
+            title_province_map: HashMap::default(),
         }
     }
 
@@ -137,14 +139,13 @@ impl GameDataLoader {
                     "custom map without custom titles",
                 ));
             }
-            let mut title_province_map = HashMap::default();
             let dir = read_dir(&province_dir_path)?;
             for entry in dir {
                 let entry = entry?;
                 if entry.file_type()?.is_file() {
                     create_title_province_map(
                         &SaveFile::open(entry.path())?,
-                        &mut title_province_map,
+                        &mut self.title_province_map,
                     )?;
                 }
             }
@@ -152,7 +153,7 @@ impl GameDataLoader {
                 map_path.join(PROVINCES_SUFFIX),
                 map_path.join(RIVERS_SUFFIX),
                 map_path.join(DEFINITION_SUFFIX),
-                title_province_map,
+                &self.title_province_map,
             )?);
         }
         Ok(())
@@ -164,6 +165,7 @@ impl GameDataLoader {
         GameData {
             map: self.map.take(),
             localizer: mem::take(&mut self.localizer),
+            title_province_map: mem::take(&mut self.title_province_map),
         }
     }
 }

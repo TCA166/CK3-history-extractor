@@ -171,10 +171,7 @@ impl Renderable for GameObjectEntity<Dynasty> {
 }
 
 impl Localizable for Dynasty {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
             self.name = Some(localization.localize(name)?);
         }

@@ -142,7 +142,7 @@ fn serialize_into_b64<S: serde::Serializer>(
 }
 
 fn serialize_title_color_map<S: serde::Serializer>(
-    title_color_map: &HashMap<String, Rgb<u8>>,
+    title_color_map: &HashMap<GameString, Rgb<u8>>,
     serializer: S,
 ) -> Result<S::Ok, S::Error> {
     let mut map = HashMap::new();
@@ -160,7 +160,7 @@ pub struct GameMap {
     #[serde(serialize_with = "serialize_into_b64")]
     province_map: RgbImage,
     #[serde(serialize_with = "serialize_title_color_map")]
-    title_color_map: HashMap<String, Rgb<u8>>,
+    title_color_map: HashMap<GameString, Rgb<u8>>,
 }
 
 impl GameMap {
@@ -170,7 +170,7 @@ impl GameMap {
         provinces_path: P,
         rivers_path: P,
         definition_path: P,
-        province_barony_map: HashMap<GameId, String>,
+        province_barony_map: &HashMap<GameId, GameString>,
     ) -> Result<Self, MapError> {
         let mut provinces = read_png_bytes(provinces_path)?;
         let river = read_png_bytes(rivers_path)?;
@@ -217,7 +217,7 @@ impl GameMap {
         );
         //provinces.save("test.png").unwrap();
         //ok so now we have a province map with each land province being a set color and we now just need to read definition.csv
-        let mut key_colors: HashMap<String, Rgb<u8>> = HashMap::default();
+        let mut key_colors: HashMap<GameString, Rgb<u8>> = HashMap::default();
         let mut rdr = ReaderBuilder::new()
             .comment(Some(b'#'))
             .flexible(true)
@@ -236,7 +236,6 @@ impl GameMap {
             let g = record[2].parse::<u8>()?;
             let b = record[3].parse::<u8>()?;
             if let Some(barony) = province_barony_map.get(&id) {
-                // FIXME this doesn't work for EK2
                 key_colors.insert(barony.clone(), Rgb([r, g, b]));
             }
         }

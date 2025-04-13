@@ -389,10 +389,7 @@ impl Renderable for GameObjectEntity<Title> {
 }
 
 impl Localizable for Title {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if self.name == self.key {
             self.name = localization.localize(&self.key)?;
         }

@@ -5,7 +5,7 @@ use serde::Serialize;
 use super::{
     super::{
         display::{ProceduralPath, Renderable},
-        game_data::{Localizable, LocalizationError, Localize},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         jinja_env::HOUSE_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, KeyError, ParsingError, SaveFileValue,
@@ -99,10 +99,7 @@ impl GameObjectDerived for House {
 }
 
 impl Localizable for House {
-    fn localize<L: Localize<GameString>>(
-        &mut self,
-        localization: &mut L,
-    ) -> Result<(), LocalizationError> {
+    fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.name = localization.localize(&self.name)?;
         let query = |stack: &Vec<(String, Vec<String>)>| {
             match stack.len() {
