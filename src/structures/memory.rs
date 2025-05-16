@@ -4,7 +4,10 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
+        parser::{
+            GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
+            SaveFileValue,
+        },
         types::{GameId, GameString, HashMap, Wrapper},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
@@ -82,10 +85,10 @@ impl FromGameObject for Memory {
             for variable in data_node {
                 let variable = variable.as_object()?.as_map()?;
                 let key = variable.get_string("flag")?;
-                val.variables.insert(
-                    key.clone(),
-                    MemoryVariable::from(variable.get_object("data")?.as_map()?),
-                );
+                if let SaveFileObject::Map(data) = variable.get_object("data")? {
+                    val.variables
+                        .insert(key.clone(), MemoryVariable::from(data));
+                }
             }
         }
         Ok(val)

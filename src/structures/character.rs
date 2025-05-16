@@ -297,7 +297,17 @@ impl FromGameObject for Character {
                 }
             }
             if let Some(gold_node) = alive_data.get("gold") {
-                val.gold = gold_node.as_real()? as f32;
+                match gold_node {
+                    SaveFileValue::Object(o) => {
+                        if let Some(gold_node) = o.as_map()?.get("value") {
+                            val.gold = gold_node.as_real()? as f32;
+                        }
+                    }
+                    SaveFileValue::Real(r) => {
+                        val.gold = *r as f32;
+                    }
+                    _ => {}
+                }
             }
             for l in alive_data.get_object("languages")?.as_array()? {
                 val.languages.push(l.as_string()?);

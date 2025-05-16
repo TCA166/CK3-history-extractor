@@ -73,6 +73,12 @@ impl FromGameObject for House {
                     .push(game_state.get_character(&l.as_id()?).clone());
             }
         }
+        if let Some(leader) = base.get("head_of_house") {
+            let char = game_state.get_character(&leader.as_id()?);
+            if !this.leaders.contains(&char) {
+                this.leaders.push(char.clone());
+            }
+        }
         Ok(this)
     }
 
