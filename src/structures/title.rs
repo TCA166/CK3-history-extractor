@@ -277,7 +277,11 @@ impl FromGameObject for Title {
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError> {
-        let key = base.get_string("key")?;
+        let key = if let Some(key) = base.get("key") {
+            key.as_string()?
+        } else {
+            base.get_string("name")?
+        };
         let inner = TitleData::new(key.clone(), base, game_state)?;
         Ok(match key.as_ref().chars().next().unwrap() {
             'e' => Self::Empire(inner),

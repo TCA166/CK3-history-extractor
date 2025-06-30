@@ -25,7 +25,7 @@ pub struct Culture {
     children: Vec<GameRef<Culture>>,
     parents: Vec<GameRef<Culture>>,
     traditions: Vec<GameString>,
-    language: GameString,
+    language: Option<GameString>,
     eras: Vec<(GameString, Option<u16>, Option<u16>)>,
     // TODO innovations
 }
@@ -42,7 +42,7 @@ impl FromGameObject for Culture {
             heritage: base.get_string("heritage")?,
             martial: base.get_string("martial_custom")?,
             date: base.get("created").map(|n| n.as_date()).transpose()?,
-            language: base.get_string("language")?,
+            language: None,
             traditions: base
                 .get("traditions")
                 .map(|n| n.as_object().and_then(|obj| obj.as_array()))
@@ -54,6 +54,10 @@ impl FromGameObject for Culture {
             parents: Vec::new(),
             eras: Vec::with_capacity(4),
         };
+        if let Some(language) = base.get("language") {
+            culture.language = Some(language.as_string()?);
+        }
+
         if let Some(parents_obj) = base.get("parents") {
             for p in parents_obj.as_object()?.as_array()? {
                 culture.parents.push(game_state.get_culture(&p.as_id()?));
@@ -79,6 +83,15 @@ impl FromGameObject for Culture {
             if let Ok(mut r) = p.try_get_internal_mut() {
                 if let Some(parent) = r.inner_mut() {
                     parent.register_child(reference.clone());
+                }
+            }
+        }
+
+        if self.language.is_none() {
+            for p in &self.parents {
+                if let Some(lang) = p.get_internal().inner().unwrap().get_language() {
+                    self.language = Some(lang);
+                    break;
                 }
             }
         }
@@ -123,6 +136,10 @@ impl TreeNode<Vec<GameRef<Culture>>> for Culture {
 impl Culture {
     pub fn register_child(&mut self, child: GameRef<Culture>) {
         self.children.push(child);
+    }
+
+    pub fn get_language(&self) -> Option<GameString> {
+        self.language.clone()
     }
 }
 
@@ -180,7 +197,9 @@ impl Localizable for Culture {
         }
         self.heritage = localization.localize(self.heritage.to_string() + "_name")?;
         self.martial = localization.localize(self.martial.to_string() + "_name")?;
-        self.language = localization.localize(self.language.to_string() + "_name")?;
+        if let Some(language) = &self.language {
+            self.language = Some(localization.localize(language.to_string() + "_name")?);
+        }
         for t in &mut self.traditions {
             *t = localization.localize(t.to_string() + "_name")?;
         }

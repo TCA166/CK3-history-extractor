@@ -27,7 +27,7 @@ fn create_token_file(
         let mut parts = line.splitn(2, ' ');
         let value = parts.next().unwrap();
         let token = parts.next().unwrap().parse::<u16>().unwrap();
-        map.entry(token, &format!("\"{}\"", value));
+        map.entry(token, format!("\"{}\"", value));
     }
     write!(
         &mut file,
