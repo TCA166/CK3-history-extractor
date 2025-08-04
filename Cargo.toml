@@ -1,22 +1,20 @@
 [package]
 name = "ck3_history_extractor"
-version = "2.4.2"
+version = "2.4.3"
 edition = "2021"
 authors = ["TCA"]
-description = "A tool for generating a encyclopedia from your CK3 save file"
+description = "A tool for generating an encyclopedia from your Crusader Kings III save file"
 documentation = "https://tca166.github.io/CK3-history-extractor/ck3_history_extractor/"
 readme = "./README.md"
 homepage = "https://github.com/TCA166/CK3-history-extractor"
 repository = "https://github.com/TCA166/CK3-history-extractor"
 license = "MIT"
 keywords = [
-    "Crusader Kings 3",
-    "CK3",
-    "Paradox",
-    "History",
-    "Save",
-    "Extractor",
-    "Encyclopedia",
+    "crusader-kings-3",
+    "save-files",
+    "visualiser",
+    "extractor",
+    "utility",
 ]
 publish = false
 build = "build.rs"

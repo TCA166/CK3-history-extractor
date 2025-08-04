@@ -130,19 +130,19 @@ pub struct Args {
     /// The path to the save file.
     pub filename: PathBuf,
     #[arg(short, long, default_value_t = 3)]
-    /// The depth to render the player's history.
+    /// The depth to render the player's history. The higher the number, the larger quantity of data will be rendered.
     pub depth: usize,
     #[arg(short, long, default_value_t = LANGUAGES[0], value_parser = parse_lang_arg)]
     /// The language to use for localization.
     pub language: &'static str,
     #[arg(short, long, default_value = None, value_parser = parse_path_arg)]
-    /// The path to the game files.
+    /// The path to the game files. Be sure to point to the /game subdirectory.
     pub game_path: Option<PathBuf>,
     #[arg(short, long, value_parser = parse_path_arg)]
-    /// The paths to include in the rendering.
+    /// The paths that contain assets that should be considered during rendering. Mainly mods and the such.
     pub include: Vec<PathBuf>,
     #[arg(short, long, default_value = ".", value_parser = parse_path_arg)]
-    /// The output path for the rendered files.
+    /// The output path for the rendered files. Within this directory, the program will create subdirectories for each player.
     pub output: PathBuf,
     #[arg(long, default_value = None,)]
     /// A flag that tells the program to dump the game state to a json file.

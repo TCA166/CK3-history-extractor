@@ -14,8 +14,8 @@ to look like in your browser
 
 ## Usage
 
-You are going to need to get the program first. There are a few ways to do that.
-The way I recommend, is to use the precompiled binaries that I release on
+You need to get the executable first. There are a few ways to do that.
+The way I _recommend_, is to use the precompiled binaries that I release on
 GitHub. This is the easiest way to get the program up and running.
 
 You can also of course compile the program yourself. This is also openly
@@ -25,7 +25,7 @@ you are not familiar with compiling Rust programs, I recommend you check out the
 The program is written in Rust and should run on any platform that supports
 Rust.
 
-You can also use the legacy Python version of the program, but I do not
+You can also use the legacy Python version of the program, but I do **not**
 recommend it. You can find it
 [here](https://github.com/TCA166/CK3-history-extractor/releases/tag/v1.0.0)
 
@@ -36,11 +36,10 @@ your save file of choice.
 
 Your save files are most likely located in your documents directory, more
 specifically in
-```%USERPROFILE%\Documents\Paradox Interactive\Crusader Kings III\save games\```.
+`%USERPROFILE%\Documents\Paradox Interactive\Crusader Kings III\save games\`.
 Having located the save file, ideally copy it over to the directory where you
-placed the program. This is not strictly necessary, but it will make your life
-easier. With the current tool version all save files are supported right out of
-the box.
+placed the executable. This is not strictly necessary, but it will make your
+life easier. Currently all save files are supported right out of the box.
 
 ### Running the program
 
@@ -52,18 +51,18 @@ pre-filled paths if needed. Note that on some systems, this feature might not
 work as expected.
 
 **Important:** Ensure that the game path you provide points to the
-```/game``` subdirectory within your ```Crusader Kings III``` folder. Failing to
+`/game` subdirectory within your `Crusader Kings III` folder. Failing to
 do so will result in errors when running the program.
 
 The tool can also be used as a command line utility. Running the tool with the
-```--help``` argument will show you all the available options.
+`--help` argument will show you all the available options.
 
 ## Mod support
 
 This program should work just fine on modded save files. Some specific aspects
 may be represented inaccurately to the in game state, but that can be alleviated
 with providing the tool with the mods you used to play the game. The tool should
-automatically discover installed Steam mods and allow you to select them. Now
+automatically discover installed Steam mods and allow you to select them. If you want to use mods that are not detected through Now
 naturally very invasive mods allowing for individual country de jure drift, or
 using weird non standard title naming schemes might break the tool. If that
 occurs please do let me know and I shall see what I can do.
