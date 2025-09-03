@@ -16,14 +16,9 @@ keywords = [
     "utility",
 ]
 publish = false
-build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-internal = []
-permissive = []
-tokens = []
 
 [dependencies]
 minijinja = { version = "2.12.0", features = ["loader"] }
@@ -36,11 +31,13 @@ human-panic = "=2.0.3"
 clap = "4.5.47"
 clap_derive = "4.5.47"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
-phf = "0.13.1"
 ck3_history_extractor_lib = { path = "lib" }
 
-[build-dependencies]
-phf_codegen = "0.13.1"
+[features]
+internal = []
+permissive = ["ck3_history_extractor_lib/permissive"]
+tokens = ["ck3_history_extractor_lib/tokens"]
+
 
 [workspace]
 members = ["lib"]

@@ -15,8 +15,9 @@ to look like in your browser
 ## Usage
 
 You need to get the executable first. There are a few ways to do that.
-The way I _recommend_, is to use the precompiled binaries that I release on
-GitHub. This is the easiest way to get the program up and running.
+The way I _recommend_, is to use the [precompiled binaries](https://github.com/TCA166/CK3-history-extractor/releases/latest)
+that I release on GitHub. This is the easiest way to get the program up and
+running.
 
 You can also of course compile the program yourself. This is also openly
 supported and I have a [makefile](./Makefile) that should help you with that. If
@@ -39,7 +40,7 @@ specifically in
 `%USERPROFILE%\Documents\Paradox Interactive\Crusader Kings III\save games\`.
 Having located the save file, ideally copy it over to the directory where you
 placed the executable. This is not strictly necessary, but it will make your
-life easier. Currently all save files are supported right out of the box.
+life easier.
 
 ### Running the program
 
@@ -55,17 +56,18 @@ work as expected.
 do so will result in errors when running the program.
 
 The tool can also be used as a command line utility. Running the tool with the
-`--help` argument will show you all the available options.
+`--help` flag will document that interface.
 
 ## Mod support
 
 This program should work just fine on modded save files. Some specific aspects
 may be represented inaccurately to the in game state, but that can be alleviated
-with providing the tool with the mods you used to play the game. The tool should
-automatically discover installed Steam mods and allow you to select them. If you want to use mods that are not detected through Now
-naturally very invasive mods allowing for individual country de jure drift, or
-using weird non standard title naming schemes might break the tool. If that
-occurs please do let me know and I shall see what I can do.
+by providing the tool with the mods you used to play the game. The tool should
+automatically discover installed Steam mods and allow you to select them.
+
+Should you use mods outside the comfy confines of Steam Workshop, your only
+way of loading them using command line arguments, the details of which
+you can learn by providing the `--help` flag.
 
 ### Load order
 
@@ -73,20 +75,16 @@ Internally all provided paths (those added via include and game-path) are
 handled in the same way. Iteratively these paths are searched for localization
 and a valid map definition, with the first path provided being searched almost
 last. Once a valid map definition is found this definition is used and is
-expected to be entirely valid. The game path is loaded last.
-
-## Output example
-
-You can find output examples in the [examples](examples/) directory. In order
-to better showcase the tool, I have deployed the result, and you can view it
-[here](https://tca166.github.io/CK3-history-extractor/TCA166's%20history/index.html).
+expected to be entirely valid. The game path is loaded last. The tool
+shouldn't have a problem with encountering multiple map definitions, but
+that **really** should never happen.
 
 ## Other similar tools
 
 - [CK2-history-extractor](https://github.com/TCA166/CK2-history-extractor) is a
   tool like this for CK2
 - [pdx_unlimiter](https://github.com/crschnick/pdx_unlimiter) is a tool like
-  this, but less focused on CK3 and less on the history aspect. It is more of a
+  this, but less focused on CK3 and the history aspect. It is more of a
   general purpose tool for extracting data from Paradox games.
 
 ## Problems
