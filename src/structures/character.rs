@@ -11,8 +11,8 @@ use super::{
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, Shared, Wrapper, WrapperMut},
     },
-    Artifact, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
-    GameRef, House, Memory, Title,
+    Artifact, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
+    GameObjectEntity, GameRef, House, Memory, Title,
 };
 
 /// An enum that holds either a character or a reference to a character.
@@ -370,47 +370,51 @@ impl FromGameObject for Character {
         }
         Ok(val)
     }
+}
 
-    fn finalize(&mut self, reference: &GameRef<Character>) {
-        if let Some(liege) = self.liege.clone() {
-            if let Ok(mut inner) = liege.try_get_internal_mut() {
-                if let Some(liege) = inner.inner_mut() {
-                    liege.add_vassal(reference.clone());
-                } else {
-                    self.liege = None;
-                }
-            }
-        }
-        for child in self.children.iter() {
-            if let Some(child) = child.get_internal_mut().inner_mut() {
-                child.register_parent(reference.clone());
-            }
-        }
-        if self.faith.is_none() {
-            if let Some(house) = &self.house {
-                if let Some(house) = house.get_internal().inner() {
-                    self.faith = Some(house.get_faith());
-                }
-            }
-        }
-        if self.culture.is_none() {
-            if let Some(house) = &self.house {
-                if let Some(house) = house.get_internal().inner() {
-                    self.culture = Some(house.get_culture());
-                }
-            }
-        }
-        for vassal in self.vassals.iter_mut() {
-            match vassal {
-                Vassal::Character(c) => {
-                    if let Some(c) = c.get_internal_mut().inner_mut() {
-                        c.set_liege(reference.clone());
+impl Finalize for GameRef<Character> {
+    fn finalize(&mut self) {
+        if let Some(char) = self.get_internal_mut().inner_mut() {
+            if let Some(liege) = char.liege.clone() {
+                if let Ok(mut inner) = liege.try_get_internal_mut() {
+                    if let Some(liege) = inner.inner_mut() {
+                        liege.add_vassal(self.clone());
+                    } else {
+                        char.liege = None;
                     }
                 }
-                Vassal::Reference(c) => {
-                    if let Some(c) = c.get_internal_mut().as_mut() {
+            }
+            for child in char.children.iter() {
+                if let Some(child) = child.get_internal_mut().inner_mut() {
+                    child.register_parent(self.clone());
+                }
+            }
+            if char.faith.is_none() {
+                if let Some(house) = &char.house {
+                    if let Some(house) = house.get_internal().inner() {
+                        char.faith = house.get_faith();
+                    }
+                }
+            }
+            if char.culture.is_none() {
+                if let Some(house) = &char.house {
+                    if let Some(house) = house.get_internal().inner() {
+                        char.culture = house.get_culture();
+                    }
+                }
+            }
+            for vassal in char.vassals.iter_mut() {
+                match vassal {
+                    Vassal::Character(c) => {
                         if let Some(c) = c.get_internal_mut().inner_mut() {
-                            c.set_liege(reference.clone());
+                            c.set_liege(self.clone());
+                        }
+                    }
+                    Vassal::Reference(c) => {
+                        if let Some(c) = c.get_internal_mut().as_mut() {
+                            if let Some(c) = c.get_internal_mut().inner_mut() {
+                                c.set_liege(self.clone());
+                            }
                         }
                     }
                 }

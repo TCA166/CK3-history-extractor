@@ -5,7 +5,7 @@ cargo: src/*.rs src/structures/*.rs
 
 debug: src/*.rs src/structures/*.rs
 	@echo "Building with cargo in debug mode..."
-	cargo run --features internal
+	cargo run --features ""
 
 check: src/*.rs src/structures/*.rs
 	@echo "Checking with cargo..."

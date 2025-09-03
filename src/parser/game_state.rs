@@ -5,8 +5,8 @@ use super::{
         display::{Grapher, RealmDifference, Timeline},
         game_data::{GameData, Localizable, LocalizationError},
         structures::{
-            Artifact, Character, Culture, Dynasty, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, House, Memory, Title,
+            Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject,
+            GameObjectDerived, GameObjectEntity, House, Memory, Title,
         },
         types::{GameId, GameString, HashMap, Shared, Wrapper, WrapperMut},
     },
@@ -236,7 +236,7 @@ impl GameState {
         self.get_artifact(key).get_internal_mut().init(value, self)
     }
 
-    /// Add a character to the game state    
+    /// Add a character to the game state
     pub fn add_character(
         &mut self,
         key: &GameId,
@@ -479,9 +479,11 @@ impl GameState {
 impl Localizable for GameState {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         for character in self.characters.values_mut() {
+            character.finalize();
             character.localize(localization)?;
         }
         for title in &mut self.titles.values_mut() {
+            title.finalize();
             title.localize(localization)?;
             if let Some(internal) = title.get_internal_mut().inner_mut() {
                 if let Some(assoc) = self.county_data.get_mut(internal.get_key().as_ref()) {
@@ -493,15 +495,19 @@ impl Localizable for GameState {
             }
         }
         for faith in &mut self.faiths.values_mut() {
+            faith.finalize();
             faith.localize(localization)?;
         }
         for culture in &mut self.cultures.values_mut() {
+            culture.finalize();
             culture.localize(localization)?;
         }
         for house in &mut self.houses.values_mut() {
+            house.finalize();
             house.localize(localization)?;
         }
         for dynasty in &mut self.dynasties.values_mut() {
+            dynasty.finalize();
             dynasty.localize(localization)?;
         }
         for memory in &mut self.memories.values_mut() {

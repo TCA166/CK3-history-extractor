@@ -2,6 +2,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
+use crate::types::WrapperMut;
+
 use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable},
@@ -10,7 +12,8 @@ use super::{
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
     },
-    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
+    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
+    Title,
 };
 
 /// A struct representing a faith in the game
@@ -55,11 +58,15 @@ impl FromGameObject for Faith {
         }
         return Ok(val);
     }
+}
 
-    fn finalize(&mut self, _reference: &GameRef<Self>) {
-        if let Some(head_title) = &self.head_title {
-            if let Some(head) = head_title.get_internal().inner() {
-                self.head = head.get_holder()
+impl Finalize for GameRef<Faith> {
+    fn finalize(&mut self) {
+        if let Some(faith) = self.get_internal_mut().inner_mut() {
+            if let Some(head_title) = &faith.head_title {
+                if let Some(head) = head_title.get_internal().inner() {
+                    faith.head = head.get_holder()
+                }
             }
         }
     }

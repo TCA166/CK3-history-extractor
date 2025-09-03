@@ -19,8 +19,8 @@ use super::{
         },
         types::{GameString, Wrapper, WrapperMut},
     },
-    Character, Culture, EntityRef, Faith, FromGameObject, GameObjectDerived, GameObjectEntity,
-    GameRef,
+    Character, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
+    GameObjectEntity, GameRef,
 };
 
 #[derive(Serialize)]
@@ -296,16 +296,20 @@ impl FromGameObject for Title {
             _ => Self::Other(inner),
         })
     }
+}
 
-    fn finalize(&mut self, reference: &GameRef<Title>) {
-        if let Some(de_jure) = &self.de_jure {
-            if let Some(de_jure) = de_jure.get_internal_mut().inner_mut() {
-                de_jure.add_jure_vassal(reference.clone());
+impl Finalize for GameRef<Title> {
+    fn finalize(&mut self) {
+        if let Some(title) = self.get_internal_mut().inner_mut() {
+            if let Some(de_jure) = &title.de_jure {
+                if let Some(de_jure) = de_jure.get_internal_mut().inner_mut() {
+                    de_jure.add_jure_vassal(self.clone());
+                }
             }
-        }
-        if let Some(de_facto) = &self.de_facto {
-            if let Some(de_facto) = de_facto.get_internal_mut().inner_mut() {
-                de_facto.add_facto_vassal(reference.clone());
+            if let Some(de_facto) = &title.de_facto {
+                if let Some(de_facto) = de_facto.get_internal_mut().inner_mut() {
+                    de_facto.add_facto_vassal(self.clone());
+                }
             }
         }
     }

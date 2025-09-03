@@ -2,6 +2,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
+use crate::types::WrapperMut;
+
 use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable},
@@ -10,7 +12,8 @@ use super::{
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, HashMap, Wrapper},
     },
-    Character, EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, House,
+    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
+    House,
 };
 
 #[derive(Serialize)]
@@ -86,28 +89,33 @@ impl FromGameObject for Dynasty {
         }
         return Ok(val);
     }
+}
 
-    fn finalize(&mut self, _reference: &GameRef<Self>) {
-        self.houses.sort_by(|a, b| {
-            a.get_internal()
-                .inner()
-                .unwrap()
-                .get_found_date()
-                .cmp(&b.get_internal().inner().unwrap().get_found_date())
-        });
-        // instead of resolving game files we can just get the name from the first house
-        if self.name.is_none() {
-            self.name = Some(
-                self.houses
-                    .first()
-                    .unwrap()
-                    .clone()
-                    .get_internal()
+impl Finalize for GameRef<Dynasty> {
+    fn finalize(&mut self) {
+        if let Some(dynasty) = self.get_internal_mut().inner_mut() {
+            dynasty.houses.sort_by(|a, b| {
+                a.get_internal()
                     .inner()
                     .unwrap()
-                    .get_name()
-                    .clone(),
-            );
+                    .get_found_date()
+                    .cmp(&b.get_internal().inner().unwrap().get_found_date())
+            });
+            // instead of resolving game files we can just get the name from the first house
+            if dynasty.name.is_none() {
+                dynasty.name = Some(
+                    dynasty
+                        .houses
+                        .first()
+                        .unwrap()
+                        .clone()
+                        .get_internal()
+                        .inner()
+                        .unwrap()
+                        .get_name()
+                        .clone(),
+                );
+            }
         }
     }
 }

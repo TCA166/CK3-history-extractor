@@ -11,7 +11,7 @@ use super::{
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper, WrapperMut},
     },
-    EntityRef, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
+    EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
 };
 
 /// A struct representing a culture in the game
@@ -77,21 +77,25 @@ impl FromGameObject for Culture {
         }
         return Ok(culture);
     }
+}
 
-    fn finalize(&mut self, reference: &GameRef<Culture>) {
-        for p in &self.parents {
-            if let Ok(mut r) = p.try_get_internal_mut() {
-                if let Some(parent) = r.inner_mut() {
-                    parent.register_child(reference.clone());
+impl Finalize for GameRef<Culture> {
+    fn finalize(&mut self) {
+        if let Some(culture) = self.get_internal_mut().inner_mut() {
+            for p in &culture.parents {
+                if let Ok(mut r) = p.try_get_internal_mut() {
+                    if let Some(parent) = r.inner_mut() {
+                        parent.register_child(self.clone());
+                    }
                 }
             }
-        }
 
-        if self.language.is_none() {
-            for p in &self.parents {
-                if let Some(lang) = p.get_internal().inner().unwrap().get_language() {
-                    self.language = Some(lang);
-                    break;
+            if culture.language.is_none() {
+                for p in &culture.parents {
+                    if let Some(lang) = p.get_internal().inner().unwrap().get_language() {
+                        culture.language = Some(lang);
+                        break;
+                    }
                 }
             }
         }

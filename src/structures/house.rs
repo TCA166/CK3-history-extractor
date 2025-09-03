@@ -13,7 +13,7 @@ use super::{
         },
         types::{GameString, HashMap, Wrapper, WrapperMut},
     },
-    Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
+    Character, Culture, Dynasty, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
     GameObjectEntity, GameRef,
 };
 
@@ -81,13 +81,18 @@ impl FromGameObject for House {
         }
         Ok(this)
     }
+}
 
-    fn finalize(&mut self, reference: &GameRef<Self>) {
-        self.parent
-            .get_internal_mut()
-            .inner_mut()
-            .unwrap()
-            .register_house(reference.clone());
+impl Finalize for GameRef<House> {
+    fn finalize(&mut self) {
+        if let Some(house) = self.get_internal_mut().inner_mut() {
+            house
+                .parent
+                .get_internal_mut()
+                .inner_mut()
+                .unwrap()
+                .register_house(self.clone());
+        }
     }
 }
 
@@ -198,26 +203,26 @@ impl Localizable for House {
 }
 
 impl House {
-    pub fn get_faith(&self) -> GameRef<Faith> {
+    pub fn get_faith(&self) -> Option<GameRef<Faith>> {
         for leader in self.leaders.iter().rev() {
             if let Ok(faith) = leader.try_get_internal() {
                 if let Some(faith) = faith.inner().unwrap().get_faith() {
-                    return faith;
+                    return Some(faith);
                 }
             }
         }
-        unimplemented!()
+        None
     }
 
-    pub fn get_culture(&self) -> GameRef<Culture> {
+    pub fn get_culture(&self) -> Option<GameRef<Culture>> {
         for leader in self.leaders.iter().rev() {
             if let Ok(culture) = leader.try_get_internal() {
                 if let Some(culture) = culture.inner().unwrap().get_culture() {
-                    return culture;
+                    return Some(culture);
                 }
             }
         }
-        unimplemented!()
+        None
     }
 
     pub fn get_founder(&self) -> GameRef<Character> {

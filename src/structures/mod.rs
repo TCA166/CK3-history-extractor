@@ -50,14 +50,16 @@ pub use lineage::LineageNode;
 mod artifact;
 pub use artifact::Artifact;
 
+pub trait Finalize {
+    #[allow(unused_variables)]
+    fn finalize(&mut self) {}
+}
+
 pub trait FromGameObject: GameObjectDerived {
     fn from_game_object(
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError>;
-
-    #[allow(unused_variables)]
-    fn finalize(&mut self, reference: &GameRef<Self>) {}
 }
 
 /// A trait for objects that can be created from a [GameObjectMap].
@@ -139,7 +141,6 @@ impl<T: GameObjectDerived + FromGameObject> Hash for GameObjectEntity<T> {
 impl<T: Localizable + GameObjectDerived + FromGameObject> Localizable for GameRef<T> {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if let Some(entity) = self.get_internal_mut().entity.as_mut() {
-            entity.finalize(self);
             entity.localize(localization)
         } else {
             Ok(())
