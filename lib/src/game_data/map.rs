@@ -15,9 +15,6 @@ use plotters::{
     prelude::{EmptyElement, Rectangle},
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
-use serde::Serialize;
-
-use base64::prelude::*;
 
 use super::super::types::{GameId, GameString, HashMap};
 
@@ -134,32 +131,20 @@ impl MapImage for RgbImage {
     }
 }
 
-fn serialize_into_b64<S: serde::Serializer>(
-    image: &RgbImage,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    serializer.serialize_str(&BASE64_STANDARD.encode(image.as_raw()))
-}
-
-fn serialize_title_color_map<S: serde::Serializer>(
-    title_color_map: &HashMap<GameString, Rgb<u8>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    let mut map = HashMap::new();
-    for (k, v) in title_color_map.iter() {
-        map.insert(k.clone(), v.0);
-    }
-    serializer.serialize_some(&map)
-}
-
 /// A struct representing a game map, from which we can create [Map] instances
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameMap {
     height: u32,
     width: u32,
-    #[serde(serialize_with = "serialize_into_b64")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_into_b64")
+    )]
     province_map: RgbImage,
-    #[serde(serialize_with = "serialize_title_color_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_title_color_map")
+    )]
     title_color_map: HashMap<GameString, Rgb<u8>>,
 }
 
@@ -304,5 +289,29 @@ impl MapGenerator for GameMap {
             }
         }
         return new_map;
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serialize {
+    use super::*;
+    use base64::prelude::*;
+
+    pub fn serialize_into_b64<S: serde::Serializer>(
+        image: &RgbImage,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&BASE64_STANDARD.encode(image.as_raw()))
+    }
+
+    pub fn serialize_title_color_map<S: serde::Serializer>(
+        title_color_map: &HashMap<GameString, Rgb<u8>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        let mut map = HashMap::new();
+        for (k, v) in title_color_map.iter() {
+            map.insert(k.clone(), v.0);
+        }
+        serializer.serialize_some(&map)
     }
 }

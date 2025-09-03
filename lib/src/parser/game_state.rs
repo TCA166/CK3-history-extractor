@@ -1,8 +1,5 @@
-use std::collections::BTreeMap;
-
 use super::{
     super::{
-        display::{Grapher, RealmDifference, Timeline},
         game_data::{GameData, Localizable, LocalizationError},
         structures::{
             Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject,
@@ -14,9 +11,7 @@ use super::{
     ParsingError,
 };
 
-use jomini::common::{Date, PdsDate};
-
-use serde::{ser::SerializeMap, Serialize, Serializer};
+use jomini::common::Date;
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
 fn get_or_insert_dummy<T: GameObjectDerived + FromGameObject>(
@@ -30,29 +25,6 @@ fn get_or_insert_dummy<T: GameObjectDerived + FromGameObject>(
         map.insert(*key, v.clone());
         v
     }
-}
-
-impl Serialize for Shared<Option<GameRef<Character>>> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self.get_internal().as_ref() {
-            Some(c) => c.serialize(serializer),
-            None => serializer.serialize_none(),
-        }
-    }
-}
-
-fn serialize_ref_map<T: Serialize + GameObjectDerived, S: Serializer>(
-    map: &HashMap<GameId, GameRef<T>>,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    let mut state = serializer.serialize_map(Some(map.len()))?;
-    for (k, v) in map.iter() {
-        state.serialize_entry(k, &*v.get_internal())?;
-    }
-    state.end()
 }
 
 /* TODO future refactor
@@ -76,37 +48,61 @@ struct ShallowRef<T: Sized> {
 /// It is guaranteed to always return a reference to the same object for the same key.
 /// Naturally the value of that reference may change as values are added to the game state.
 /// This is mainly used during the process of gathering data from the parsed save file.
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameState {
     /// A character id->Character transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     characters: HashMap<GameId, GameRef<Character>>,
     /// A title id->Title transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     titles: HashMap<GameId, GameRef<Title>>,
     /// A faith id->Title transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     faiths: HashMap<GameId, GameRef<Faith>>,
     /// A culture id->Culture transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     cultures: HashMap<GameId, GameRef<Culture>>,
     /// A dynasty id->Dynasty transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     dynasties: HashMap<GameId, GameRef<Dynasty>>,
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     houses: HashMap<GameId, GameRef<House>>,
     /// A memory id->Memory transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     memories: HashMap<GameId, GameRef<Memory>>,
     /// A artifact id->Artifact transform
-    #[serde(serialize_with = "serialize_ref_map")]
+    #[cfg_attr(
+        feature = "serde",
+        serde(serialize_with = "serialize::serialize_ref_map")
+    )]
     artifacts: HashMap<GameId, GameRef<Artifact>>,
     /// A trait id->Trait identifier transform
     traits_lookup: Vec<GameString>,
     /// A vassal contract id->Character transform
     contract_transform: HashMap<GameId, Shared<Option<GameRef<Character>>>>,
     character_transform: HashMap<GameId, GameId>,
-    #[serde(skip)]
+    #[cfg_attr(feature = "serde", serde(skip))]
     county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     /// The current date from the meta section
     current_date: Option<Date>,
@@ -298,180 +294,6 @@ impl GameState {
     ) {
         self.county_data = county_data;
     }
-
-    pub fn new_grapher(&self) -> Grapher {
-        let mut total_yearly_deaths: BTreeMap<i16, u32> = BTreeMap::default();
-        let mut faith_yearly_deaths = HashMap::default();
-        let mut culture_yearly_deaths = HashMap::default();
-        let start_year = self.current_date.unwrap().year() - self.offset_date.unwrap().year();
-        for character in self.characters.values() {
-            if let Some(char) = character.get_internal().inner() {
-                if let Some(death_date) = char.get_death_date() {
-                    if death_date.year() <= start_year
-                        || death_date.year() >= self.current_date.unwrap().year()
-                    {
-                        continue;
-                    }
-                    let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
-                    *count += 1;
-                    {
-                        let entry = faith_yearly_deaths
-                            .entry(char.get_faith().as_ref().unwrap().get_internal().get_id())
-                            .or_insert(BTreeMap::default());
-                        let count = entry.entry(death_date.year()).or_insert(0);
-                        *count += 1;
-                    }
-                    {
-                        let entry = culture_yearly_deaths
-                            .entry(char.get_culture().as_ref().unwrap().get_internal().get_id())
-                            .or_insert(BTreeMap::default());
-                        let count = entry.entry(death_date.year()).or_insert(0);
-                        *count += 1;
-                    }
-                }
-            }
-        }
-        Grapher::new(
-            faith_yearly_deaths,
-            culture_yearly_deaths,
-            total_yearly_deaths,
-        )
-    }
-
-    pub fn new_timeline(&self) -> Timeline {
-        const DESTROYED_STR: &str = "destroyed";
-        const USURPED_STR: &str = "usurped";
-        const CONQUERED_START_STR: &str = "conq"; //this should match both 'conquered' and 'conquest holy war'
-
-        let mut lifespans = Vec::new();
-        let mut latest_event = 0;
-        let mut event_checkout = Vec::new();
-        for title in self.titles.values() {
-            //first we handle the empires and collect titles that might be relevant for events
-            if let Some(t) = title.get_internal().inner() {
-                let hist = t.get_history_iter();
-                if hist.len() == 0 {
-                    continue;
-                }
-                let k = t.get_key();
-                //if the key is there
-                let kingdom = k.as_ref().starts_with("k_");
-                if kingdom {
-                    event_checkout.push(title.clone());
-                    //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
-                    continue;
-                }
-                let empire = k.as_ref().starts_with("e_");
-                if !empire {
-                    continue;
-                }
-                event_checkout.push(title.clone());
-                event_checkout.push(t.get_capital().unwrap().clone());
-                let mut item = (title.clone(), Vec::new());
-                let mut empty = true;
-                let mut start = 0;
-                for entry in hist {
-                    let yr = entry.0.year();
-                    if yr > latest_event {
-                        latest_event = yr;
-                    }
-                    let event = entry.2.as_ref();
-                    if event == DESTROYED_STR {
-                        //if it was destroyed we mark the end of the lifespan
-                        item.1.push((start, yr));
-                        empty = true;
-                    } else if empty {
-                        //else if we are not in a lifespan we start a new one
-                        start = yr;
-                        empty = false;
-                    }
-                }
-                if empire {
-                    if !empty {
-                        item.1.push((start, 0));
-                    }
-                    //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
-                    lifespans.push(item);
-                }
-            }
-        }
-        let mut events: Vec<(
-            i16,
-            GameRef<Character>,
-            GameRef<Title>,
-            GameString,
-            RealmDifference,
-        )> = Vec::new();
-        for title in event_checkout {
-            if let Some(tit) = title.get_internal().inner() {
-                //find the first event that has a character attached
-                let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
-                let next = hist.next();
-                if next.is_none() {
-                    continue;
-                }
-                if let Some(first_char) = next.unwrap().1.as_ref().unwrap().get_internal().inner() {
-                    let mut faith = first_char
-                        .get_faith()
-                        .as_ref()
-                        .unwrap()
-                        .get_internal()
-                        .get_id();
-                    let mut culture = first_char
-                        .get_culture()
-                        .as_ref()
-                        .unwrap()
-                        .get_internal()
-                        .get_id();
-                    for entry in hist {
-                        let char = entry.1.as_ref();
-                        if char.is_none() {
-                            continue;
-                        }
-                        let char = char.unwrap();
-                        let event = entry.2.as_ref();
-                        if let Some(ch) = char.get_internal().inner() {
-                            let char_faith = ch.get_faith().as_ref().unwrap().clone();
-                            let ch_faith = char_faith.get_internal();
-                            let char_culture = ch.get_culture().as_ref().unwrap().clone();
-                            let ch_culture = char_culture.get_internal();
-                            if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
-                                let year: i16 = entry.0.year();
-                                if ch_faith.get_id() != faith {
-                                    events.push((
-                                        year,
-                                        char.clone(),
-                                        title.clone(),
-                                        GameString::from("faith"),
-                                        RealmDifference::Faith(char_faith.clone()),
-                                    ));
-                                    faith = ch_faith.get_id();
-                                } else if ch_culture.get_id() != culture {
-                                    events.push((
-                                        year,
-                                        char.clone(),
-                                        title.clone(),
-                                        GameString::from("people"),
-                                        RealmDifference::Culture(char_culture.clone()),
-                                    ));
-                                    culture = ch_culture.get_id();
-                                }
-                            } else {
-                                if ch_faith.get_id() != faith {
-                                    faith = ch_faith.get_id();
-                                }
-                                if ch_culture.get_id() != culture {
-                                    culture = ch_culture.get_id();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        events.sort_by(|a, b| a.0.cmp(&b.0));
-        return Timeline::new(lifespans, self.current_date.unwrap().year(), events);
-    }
 }
 
 impl Localizable for GameState {
@@ -515,6 +337,223 @@ impl Localizable for GameState {
             artifact.localize(localization)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serialize {
+    use super::*;
+    use serde::{ser::SerializeMap, Serialize, Serializer};
+
+    impl Serialize for Shared<Option<GameRef<Character>>> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            match self.get_internal().as_ref() {
+                Some(c) => c.serialize(serializer),
+                None => serializer.serialize_none(),
+            }
+        }
+    }
+
+    pub fn serialize_ref_map<T: Serialize + GameObjectDerived, S: Serializer>(
+        map: &HashMap<GameId, GameRef<T>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_map(Some(map.len()))?;
+        for (k, v) in map.iter() {
+            state.serialize_entry(k, &*v.get_internal())?;
+        }
+        state.end()
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    use super::super::super::display::{Grapher, RealmDifference, Timeline};
+    use super::*;
+
+    use std::collections::BTreeMap;
+
+    use jomini::common::PdsDate;
+
+    impl GameState {
+        pub fn new_grapher(&self) -> Grapher {
+            let mut total_yearly_deaths: BTreeMap<i16, u32> = BTreeMap::default();
+            let mut faith_yearly_deaths = HashMap::default();
+            let mut culture_yearly_deaths = HashMap::default();
+            let start_year = self.current_date.unwrap().year() - self.offset_date.unwrap().year();
+            for character in self.characters.values() {
+                if let Some(char) = character.get_internal().inner() {
+                    if let Some(death_date) = char.get_death_date() {
+                        if death_date.year() <= start_year
+                            || death_date.year() >= self.current_date.unwrap().year()
+                        {
+                            continue;
+                        }
+                        let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
+                        *count += 1;
+                        {
+                            let entry = faith_yearly_deaths
+                                .entry(char.get_faith().as_ref().unwrap().get_internal().get_id())
+                                .or_insert(BTreeMap::default());
+                            let count = entry.entry(death_date.year()).or_insert(0);
+                            *count += 1;
+                        }
+                        {
+                            let entry = culture_yearly_deaths
+                                .entry(char.get_culture().as_ref().unwrap().get_internal().get_id())
+                                .or_insert(BTreeMap::default());
+                            let count = entry.entry(death_date.year()).or_insert(0);
+                            *count += 1;
+                        }
+                    }
+                }
+            }
+            Grapher::new(
+                faith_yearly_deaths,
+                culture_yearly_deaths,
+                total_yearly_deaths,
+            )
+        }
+
+        pub fn new_timeline(&self) -> Timeline {
+            const DESTROYED_STR: &str = "destroyed";
+            const USURPED_STR: &str = "usurped";
+            const CONQUERED_START_STR: &str = "conq"; //this should match both 'conquered' and 'conquest holy war'
+
+            let mut lifespans = Vec::new();
+            let mut latest_event = 0;
+            let mut event_checkout = Vec::new();
+            for title in self.titles.values() {
+                //first we handle the empires and collect titles that might be relevant for events
+                if let Some(t) = title.get_internal().inner() {
+                    let hist = t.get_history_iter();
+                    if hist.len() == 0 {
+                        continue;
+                    }
+                    let k = t.get_key();
+                    //if the key is there
+                    let kingdom = k.as_ref().starts_with("k_");
+                    if kingdom {
+                        event_checkout.push(title.clone());
+                        //event_checkout.push(title.get_internal().get_capital().unwrap().clone());
+                        continue;
+                    }
+                    let empire = k.as_ref().starts_with("e_");
+                    if !empire {
+                        continue;
+                    }
+                    event_checkout.push(title.clone());
+                    event_checkout.push(t.get_capital().unwrap().clone());
+                    let mut item = (title.clone(), Vec::new());
+                    let mut empty = true;
+                    let mut start = 0;
+                    for entry in hist {
+                        let yr = entry.0.year();
+                        if yr > latest_event {
+                            latest_event = yr;
+                        }
+                        let event = entry.2.as_ref();
+                        if event == DESTROYED_STR {
+                            //if it was destroyed we mark the end of the lifespan
+                            item.1.push((start, yr));
+                            empty = true;
+                        } else if empty {
+                            //else if we are not in a lifespan we start a new one
+                            start = yr;
+                            empty = false;
+                        }
+                    }
+                    if empire {
+                        if !empty {
+                            item.1.push((start, 0));
+                        }
+                        //println!("{} {:?}", title.get_internal().get_key().unwrap(), item.1);
+                        lifespans.push(item);
+                    }
+                }
+            }
+            let mut events: Vec<(
+                i16,
+                GameRef<Character>,
+                GameRef<Title>,
+                GameString,
+                RealmDifference,
+            )> = Vec::new();
+            for title in event_checkout {
+                if let Some(tit) = title.get_internal().inner() {
+                    //find the first event that has a character attached
+                    let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
+                    let next = hist.next();
+                    if next.is_none() {
+                        continue;
+                    }
+                    if let Some(first_char) =
+                        next.unwrap().1.as_ref().unwrap().get_internal().inner()
+                    {
+                        let mut faith = first_char
+                            .get_faith()
+                            .as_ref()
+                            .unwrap()
+                            .get_internal()
+                            .get_id();
+                        let mut culture = first_char
+                            .get_culture()
+                            .as_ref()
+                            .unwrap()
+                            .get_internal()
+                            .get_id();
+                        for entry in hist {
+                            let char = entry.1.as_ref();
+                            if char.is_none() {
+                                continue;
+                            }
+                            let char = char.unwrap();
+                            let event = entry.2.as_ref();
+                            if let Some(ch) = char.get_internal().inner() {
+                                let char_faith = ch.get_faith().as_ref().unwrap().clone();
+                                let ch_faith = char_faith.get_internal();
+                                let char_culture = ch.get_culture().as_ref().unwrap().clone();
+                                let ch_culture = char_culture.get_internal();
+                                if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
+                                    let year: i16 = entry.0.year();
+                                    if ch_faith.get_id() != faith {
+                                        events.push((
+                                            year,
+                                            char.clone(),
+                                            title.clone(),
+                                            GameString::from("faith"),
+                                            RealmDifference::Faith(char_faith.clone()),
+                                        ));
+                                        faith = ch_faith.get_id();
+                                    } else if ch_culture.get_id() != culture {
+                                        events.push((
+                                            year,
+                                            char.clone(),
+                                            title.clone(),
+                                            GameString::from("people"),
+                                            RealmDifference::Culture(char_culture.clone()),
+                                        ));
+                                        culture = ch_culture.get_id();
+                                    }
+                                } else {
+                                    if ch_faith.get_id() != faith {
+                                        faith = ch_faith.get_id();
+                                    }
+                                    if ch_culture.get_id() != culture {
+                                        culture = ch_culture.get_id();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            events.sort_by(|a, b| a.0.cmp(&b.0));
+            return Timeline::new(lifespans, self.current_date.unwrap().year(), events);
+        }
     }
 }
 

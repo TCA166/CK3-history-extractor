@@ -31,7 +31,7 @@ human-panic = "=2.0.3"
 clap = "4.5.47"
 clap_derive = "4.5.47"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
-ck3_history_extractor_lib = { path = "lib" }
+ck3_history_extractor_lib = { path = "lib", features = ["display"] }
 
 [features]
 internal = []

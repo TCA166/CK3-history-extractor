@@ -1,10 +1,7 @@
 use jomini::common::Date;
 
-use serde::Serialize;
-
 use super::{
     super::{
-        display::{ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{
             GameObjectMap, GameObjectMapping, GameState, KeyError, ParsingError, SaveFileValue,
@@ -13,10 +10,10 @@ use super::{
         types::{GameString, HashMap, Wrapper, WrapperMut},
     },
     Character, Culture, Dynasty, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
-    GameObjectEntity, GameRef,
+    GameRef,
 };
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct House {
     name: GameString,
     parent: GameRef<Dynasty>,
@@ -246,10 +243,19 @@ impl House {
     }
 }
 
-impl ProceduralPath for House {
-    const SUBDIR: &'static str = "houses";
-}
+#[cfg(feature = "display")]
+mod display {
+    use super::super::{
+        super::display::{ProceduralPath, Renderable},
+        GameObjectEntity,
+    };
+    use super::*;
 
-impl Renderable for GameObjectEntity<House> {
-    const TEMPLATE_NAME: &'static str = "houseTemplate";
+    impl ProceduralPath for House {
+        const SUBDIR: &'static str = "houses";
+    }
+
+    impl Renderable for GameObjectEntity<House> {
+        const TEMPLATE_NAME: &'static str = "houseTemplate";
+    }
 }

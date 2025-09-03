@@ -1,7 +1,4 @@
 use jomini::common::Date;
-use serde::Serialize;
-
-use crate::types::Wrapper;
 
 use super::{
     super::{
@@ -12,7 +9,7 @@ use super::{
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Artifact {
     name: GameString,
     description: GameString,
@@ -142,11 +139,18 @@ impl Localizable for Artifact {
     }
 }
 
-impl Serialize for GameRef<Artifact> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.get_internal().serialize(serializer)
+#[cfg(feature = "display")]
+mod serialize {
+    use super::super::super::types::Wrapper;
+    use super::*;
+    use serde::Serialize;
+
+    impl Serialize for GameRef<Artifact> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            self.get_internal().serialize(serializer)
+        }
     }
 }

@@ -1,7 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
-
 use super::{
     super::{
         game_data::GameData,
@@ -14,25 +12,14 @@ use super::{
 };
 
 /// An enum representing the difference in faith or culture between two realms, really just a wrapper around DerivedRef
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 pub enum RealmDifference {
     Faith(GameRef<Faith>),
     Culture(GameRef<Culture>),
 }
 
-impl Serialize for RealmDifference {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self {
-            RealmDifference::Faith(f) => f.serialize(serializer),
-            RealmDifference::Culture(c) => c.serialize(serializer),
-        }
-    }
-}
-
 /// A struct representing the timeline of the game
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Timeline {
     lifespans: Vec<(GameRef<Title>, Vec<(i16, i16)>)>,
     latest_event: i16,

@@ -39,7 +39,6 @@ pub use memory::Memory;
 
 /// A submodule that provides the [Title] object.
 mod title;
-use serde::Serialize;
 pub use title::Title;
 
 /// A submodule that provides the [LineageNode] object.
@@ -76,7 +75,8 @@ pub trait GameObjectDerived: Sized {
     fn get_references<E: From<EntityRef>, C: Extend<E>>(&self, collection: &mut C);
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameObjectEntity<T: GameObjectDerived> {
     id: GameId,
     /* TODO I would for there to be a way to make this NOT an option,
@@ -85,7 +85,7 @@ pub struct GameObjectEntity<T: GameObjectDerived> {
     Deref. If we wanted to fix this we would need to have two sets of
     structures, converting between them in the finalize step but thats a big rework
     */
-    #[serde(flatten)]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     entity: Option<T>,
 }
 
@@ -174,7 +174,7 @@ impl<T: GameObjectDerived + FromGameObject> Hash for GameRef<T> {
     }
 }
 
-#[derive(From, PartialEq, Eq)]
+#[derive(From, PartialEq, Eq, Hash)]
 pub enum EntityRef {
     Character(GameRef<Character>),
     Culture(GameRef<Culture>),
@@ -184,21 +184,6 @@ pub enum EntityRef {
     Title(GameRef<Title>),
     Memory(GameRef<Memory>),
     Artifact(GameRef<Artifact>),
-}
-
-impl Hash for EntityRef {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            EntityRef::Character(char) => char.get_internal().hash(state),
-            EntityRef::Culture(cul) => cul.get_internal().hash(state),
-            EntityRef::Dynasty(dynasty) => dynasty.get_internal().hash(state),
-            EntityRef::House(house) => house.get_internal().hash(state),
-            EntityRef::Faith(faith) => faith.get_internal().hash(state),
-            EntityRef::Title(title) => title.get_internal().hash(state),
-            EntityRef::Memory(mem) => mem.get_internal().hash(state),
-            EntityRef::Artifact(art) => art.get_internal().hash(state),
-        }
-    }
 }
 
 impl GameObjectDerived for EntityRef {

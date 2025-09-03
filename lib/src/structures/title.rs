@@ -1,28 +1,24 @@
 use std::{
     ops::{Deref, DerefMut},
-    path::Path,
     slice::Iter,
     str::FromStr,
 };
 
-use jomini::common::{Date, PdsDate};
-use serde::Serialize;
+use jomini::common::Date;
 
 use super::{
     super::{
-        display::{Grapher, ProceduralPath, Renderable, TreeNode},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{
             GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
             SaveFileValue,
         },
         types::{GameString, Wrapper, WrapperMut},
     },
-    Character, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
-    GameObjectEntity, GameRef,
+    Character, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived, GameRef,
 };
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct TitleData {
     key: GameString,
     name: GameString,
@@ -151,14 +147,13 @@ impl TitleData {
     }
 }
 
-#[derive(Serialize)]
-#[serde(tag = "tier")]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(tag = "tier"))]
 pub enum Title {
     Empire(TitleData),
     Kingdom(TitleData),
     Duchy(TitleData),
     County {
-        #[serde(flatten)]
+        #[cfg_attr(feature = "serde", serde(flatten))]
         data: TitleData,
         culture: Option<GameRef<Culture>>,
         faith: Option<GameRef<Faith>>,
@@ -341,56 +336,6 @@ impl GameObjectDerived for Title {
     }
 }
 
-impl TreeNode<Vec<GameRef<Title>>> for Title {
-    fn get_children(&self) -> Option<Vec<GameRef<Title>>> {
-        if self.de_jure_vassals.is_empty() {
-            return None;
-        }
-        Some(self.de_jure_vassals.clone())
-    }
-
-    fn get_class(&self) -> Option<GameString> {
-        if let Some(tp) = self.get_type() {
-            return Some(tp.into());
-        }
-        None
-    }
-
-    fn get_parent(&self) -> Option<Vec<GameRef<Title>>> {
-        if let Some(de_jure) = &self.de_jure {
-            return Some(vec![de_jure.clone()]);
-        }
-        None
-    }
-}
-
-impl ProceduralPath for Title {
-    const SUBDIR: &'static str = "titles";
-}
-
-impl Renderable for GameObjectEntity<Title> {
-    const TEMPLATE_NAME: &'static str = "titleTemplate";
-
-    fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
-        if let Some(map) = data.get_map() {
-            if let Some(title) = self.inner() {
-                if title.de_facto_vassals.len() == 0 {
-                    return;
-                }
-                let mut buf = path.join(Title::SUBDIR);
-                buf.push(self.id.to_string() + ".png");
-                let mut title_map = map.create_map_flat(title.get_barony_keys(), title.color);
-                title_map.draw_text(format!(
-                    "{} at {}",
-                    title.name,
-                    game_state.get_current_date().unwrap().iso_8601()
-                ));
-                title_map.save_in_thread(&buf);
-            }
-        }
-    }
-}
-
 impl Localizable for Title {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if self.name == self.key {
@@ -400,5 +345,77 @@ impl Localizable for Title {
         //    o.2 = localization.localize(o.2.as_str());
         //}
         Ok(())
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    use super::super::{
+        super::{
+            display::{Grapher, ProceduralPath, Renderable, TreeNode},
+            game_data::{MapGenerator, MapImage},
+        },
+        GameObjectEntity,
+    };
+    use super::*;
+
+    use std::path::Path;
+
+    use jomini::common::PdsDate;
+
+    impl TreeNode<Vec<GameRef<Title>>> for Title {
+        fn get_children(&self) -> Option<Vec<GameRef<Title>>> {
+            if self.de_jure_vassals.is_empty() {
+                return None;
+            }
+            Some(self.de_jure_vassals.clone())
+        }
+
+        fn get_class(&self) -> Option<GameString> {
+            if let Some(tp) = self.get_type() {
+                return Some(tp.into());
+            }
+            None
+        }
+
+        fn get_parent(&self) -> Option<Vec<GameRef<Title>>> {
+            if let Some(de_jure) = &self.de_jure {
+                return Some(vec![de_jure.clone()]);
+            }
+            None
+        }
+    }
+
+    impl ProceduralPath for Title {
+        const SUBDIR: &'static str = "titles";
+    }
+
+    impl Renderable for GameObjectEntity<Title> {
+        const TEMPLATE_NAME: &'static str = "titleTemplate";
+
+        fn render(
+            &self,
+            path: &Path,
+            game_state: &GameState,
+            _: Option<&Grapher>,
+            data: &GameData,
+        ) {
+            if let Some(map) = data.get_map() {
+                if let Some(title) = self.inner() {
+                    if title.de_facto_vassals.len() == 0 {
+                        return;
+                    }
+                    let mut buf = path.join(Title::SUBDIR);
+                    buf.push(self.id.to_string() + ".png");
+                    let mut title_map = map.create_map_flat(title.get_barony_keys(), title.color);
+                    title_map.draw_text(format!(
+                        "{} at {}",
+                        title.name,
+                        game_state.get_current_date().unwrap().iso_8601()
+                    ));
+                    title_map.save_in_thread(&buf);
+                }
+            }
+        }
     }
 }

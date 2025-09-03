@@ -1,6 +1,7 @@
 /// A submodule that handles save file parsing
 pub mod parser;
 
+#[cfg(feature = "serde")]
 pub mod derived_ref;
 
 /// A submodule that provides objects which are serialized and rendered into HTML.
@@ -11,6 +12,7 @@ pub mod structures;
 pub mod game_data;
 
 /// A module for handling the display of the parsed data.
+#[cfg(feature = "display")]
 pub mod display;
 
 mod types;

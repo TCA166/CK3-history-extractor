@@ -1,21 +1,13 @@
-use std::path::Path;
-
-use serde::Serialize;
-
-use crate::types::WrapperMut;
-
 use super::{
     super::{
-        display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
-        types::{GameString, HashMap, Wrapper},
+        types::{GameString, HashMap, Wrapper, WrapperMut},
     },
-    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
-    House,
+    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef, House,
 };
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Dynasty {
     name: Option<GameString>,
     prestige_tot: f32,
@@ -155,24 +147,6 @@ impl GameObjectDerived for Dynasty {
     }
 }
 
-impl ProceduralPath for Dynasty {
-    const SUBDIR: &'static str = "dynasties";
-}
-
-impl Renderable for GameObjectEntity<Dynasty> {
-    const TEMPLATE_NAME: &'static str = "dynastyTemplate";
-
-    fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
-        if let Some(grapher) = grapher {
-            if let Some(dynasty) = self.inner() {
-                let mut buf = path.join(Dynasty::SUBDIR);
-                buf.push(self.id.to_string() + ".svg");
-                grapher.create_dynasty_graph(dynasty, &buf);
-            }
-        }
-    }
-}
-
 impl Localizable for Dynasty {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         if let Some(name) = &self.name {
@@ -186,5 +160,34 @@ impl Localizable for Dynasty {
             );
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    pub use super::super::{
+        super::display::{Grapher, ProceduralPath, Renderable},
+        GameObjectEntity,
+    };
+    use super::*;
+
+    use std::path::Path;
+
+    impl ProceduralPath for Dynasty {
+        const SUBDIR: &'static str = "dynasties";
+    }
+
+    impl Renderable for GameObjectEntity<Dynasty> {
+        const TEMPLATE_NAME: &'static str = "dynastyTemplate";
+
+        fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
+            if let Some(grapher) = grapher {
+                if let Some(dynasty) = self.inner() {
+                    let mut buf = path.join(Dynasty::SUBDIR);
+                    buf.push(self.id.to_string() + ".svg");
+                    grapher.create_dynasty_graph(dynasty, &buf);
+                }
+            }
+        }
     }
 }

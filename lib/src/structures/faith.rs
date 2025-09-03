@@ -1,22 +1,14 @@
-use std::path::Path;
-
-use serde::Serialize;
-
-use crate::types::WrapperMut;
-
 use super::{
     super::{
-        display::{Grapher, ProceduralPath, Renderable},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
-        types::{GameString, Wrapper},
+        types::{GameString, Wrapper, WrapperMut},
     },
-    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef,
-    Title,
+    Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef, Title,
 };
 
 /// A struct representing a faith in the game
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Faith {
     name: GameString,
     tenets: Vec<GameString>,
@@ -83,48 +75,6 @@ impl GameObjectDerived for Faith {
     }
 }
 
-impl ProceduralPath for Faith {
-    const SUBDIR: &'static str = "faiths";
-}
-
-impl Renderable for GameObjectEntity<Faith> {
-    const TEMPLATE_NAME: &'static str = "faithTemplate";
-
-    fn render(
-        &self,
-        path: &Path,
-        game_state: &GameState,
-        grapher: Option<&Grapher>,
-        data: &GameData,
-    ) {
-        if let Some(grapher) = grapher {
-            let mut buf = path.join(Faith::SUBDIR);
-            buf.push(self.id.to_string() + ".svg");
-            grapher.create_faith_graph(self.id, &buf);
-        }
-        if let Some(map) = data.get_map() {
-            let filter = |title: &Title| {
-                if let Title::County { faith, .. } = title {
-                    if let Some(c_faith) = faith {
-                        return c_faith.get_internal().id == self.id;
-                    }
-                }
-                return false;
-            };
-            let keys = game_state.get_baronies_of_counties(filter);
-            if !keys.is_empty() {
-                let mut buf = path.join(Faith::SUBDIR);
-                buf.push(self.id.to_string() + ".png");
-                let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
-                if let Some(inner) = self.inner() {
-                    faith_map.draw_text(format!("Map of the {} faith", &inner.name));
-                }
-                faith_map.save_in_thread(&buf);
-            }
-        }
-    }
-}
-
 impl Localizable for Faith {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.name = localization.localize(&self.name)?;
@@ -135,5 +85,61 @@ impl Localizable for Faith {
             *doctrine = localization.localize(doctrine.to_string() + "_name")?;
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    use super::super::{
+        super::{
+            display::{Grapher, ProceduralPath, Renderable},
+            game_data::{MapGenerator, MapImage},
+        },
+        GameObjectEntity,
+    };
+    use super::*;
+
+    use std::path::Path;
+
+    impl ProceduralPath for Faith {
+        const SUBDIR: &'static str = "faiths";
+    }
+
+    impl Renderable for GameObjectEntity<Faith> {
+        const TEMPLATE_NAME: &'static str = "faithTemplate";
+
+        fn render(
+            &self,
+            path: &Path,
+            game_state: &GameState,
+            grapher: Option<&Grapher>,
+            data: &GameData,
+        ) {
+            if let Some(grapher) = grapher {
+                let mut buf = path.join(Faith::SUBDIR);
+                buf.push(self.id.to_string() + ".svg");
+                grapher.create_faith_graph(self.id, &buf);
+            }
+            if let Some(map) = data.get_map() {
+                let filter = |title: &Title| {
+                    if let Title::County { faith, .. } = title {
+                        if let Some(c_faith) = faith {
+                            return c_faith.get_internal().id == self.id;
+                        }
+                    }
+                    return false;
+                };
+                let keys = game_state.get_baronies_of_counties(filter);
+                if !keys.is_empty() {
+                    let mut buf = path.join(Faith::SUBDIR);
+                    buf.push(self.id.to_string() + ".png");
+                    let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
+                    if let Some(inner) = self.inner() {
+                        faith_map.draw_text(format!("Map of the {} faith", &inner.name));
+                    }
+                    faith_map.save_in_thread(&buf);
+                }
+            }
+        }
     }
 }

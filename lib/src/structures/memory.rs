@@ -1,5 +1,4 @@
 use jomini::common::Date;
-use serde::Serialize;
 
 use super::{
     super::{
@@ -13,7 +12,8 @@ use super::{
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 enum MemoryVariable {
     Id(GameId),
     String(GameString),
@@ -49,7 +49,7 @@ impl From<&GameObjectMap> for MemoryVariable {
 }
 
 /// A struct representing a memory in the game
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Memory {
     date: Date,
     r#type: GameString,
@@ -193,11 +193,17 @@ impl Localizable for Memory {
     }
 }
 
-impl Serialize for GameRef<Memory> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.get_internal().serialize(serializer)
+#[cfg(feature = "display")]
+mod serialize {
+    use super::*;
+    use serde::Serialize;
+
+    impl Serialize for GameRef<Memory> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            self.get_internal().serialize(serializer)
+        }
     }
 }

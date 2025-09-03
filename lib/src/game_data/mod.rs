@@ -7,11 +7,10 @@ pub use localizer::{LocalizationError, Localize};
 
 mod loader;
 pub use loader::GameDataLoader;
-use serde::Serialize;
 
 use super::types::{GameId, GameString, HashMap};
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameData {
     map: Option<GameMap>,
     localizer: Localizer,

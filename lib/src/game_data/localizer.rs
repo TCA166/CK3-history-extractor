@@ -1,8 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::{fmt, fs, mem};
 
-use serde::Serialize;
-
 use super::super::types::{GameString, HashMap};
 
 /* This is an imperfect localization parser. Unfortunately, the localization
@@ -75,15 +73,6 @@ impl Default for Localizer {
             initialized: false,
             data: HashMap::default(),
         }
-    }
-}
-
-impl Serialize for Localizer {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.data.serialize(serializer)
     }
 }
 
@@ -450,6 +439,21 @@ impl Localize<GameString> for Localizer {
 
     fn is_empty(&self) -> bool {
         self.data.is_empty()
+    }
+}
+
+#[cfg(feature = "serde")]
+mod serialize {
+    use super::Localizer;
+    use serde::Serialize;
+
+    impl Serialize for Localizer {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            self.data.serialize(serializer)
+        }
     }
 }
 

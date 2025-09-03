@@ -19,8 +19,8 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-minijinja = { version = "2.12.0", features = ["loader"] }
-serde = { version = "1.0.219", features = ["rc", "derive"] }
+minijinja = { version = "2.12.0", features = ["loader"], optional = true }
+serde = { version = "1.0.219", features = ["rc", "derive"], optional = true }
 zip = "4.6.1"
 image = "0.25.6"
 csv = "1.3.1"
@@ -35,6 +35,8 @@ phf = "0.13.1"
 [features]
 permissive = []
 tokens = []
+serde = ["dep:serde"]
+display = ["serde", "dep:minijinja"]
 
 [dev-dependencies]
 tempfile = "3.21.0"

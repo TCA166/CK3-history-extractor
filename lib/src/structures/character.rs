@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 
 use jomini::common::Date;
-use serde::Serialize;
 
 use super::{
     super::{
-        display::{ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, Shared, Wrapper, WrapperMut},
@@ -17,8 +15,8 @@ use super::{
 /// An enum that holds either a character or a reference to a character.
 /// Effectively either a vassal([Character]) or a vassal contract.
 /// This is done so that we can hold a reference to a vassal contract, and also manually added characters from vassals registering themselves via [Character::add_vassal].
-#[derive(Serialize, Clone)]
-#[serde(untagged)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(untagged))]
 enum Vassal {
     Character(Shared<GameObjectEntity<Character>>),
     Reference(Shared<Option<Shared<GameObjectEntity<Character>>>>),
@@ -27,7 +25,8 @@ enum Vassal {
 // MAYBE enum for dead and alive character?
 
 /// Represents a character in the game.
-#[derive(Serialize, Clone)]
+#[derive(Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Character {
     name: GameString,
     nick: Option<GameString>,
@@ -475,42 +474,6 @@ impl GameObjectDerived for Character {
     }
 }
 
-impl TreeNode<Vec<GameRef<Character>>> for Character {
-    fn get_children(&self) -> Option<Vec<GameRef<Character>>> {
-        if self.children.is_empty() {
-            return None;
-        }
-        Some(self.children.clone())
-    }
-
-    fn get_parent(&self) -> Option<Vec<GameRef<Character>>> {
-        if self.parents.is_empty() {
-            return None;
-        }
-        Some(self.parents.clone())
-    }
-
-    fn get_class(&self) -> Option<GameString> {
-        if let Some(house) = &self.house {
-            if let Some(house) = house.get_internal().inner() {
-                return Some(house.get_name());
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    }
-}
-
-impl ProceduralPath for Character {
-    const SUBDIR: &'static str = "characters";
-}
-
-impl Renderable for GameObjectEntity<Character> {
-    const TEMPLATE_NAME: &'static str = "charTemplate";
-}
-
 impl Localizable for Character {
     fn localize(&mut self, localization: &GameData) -> Result<(), LocalizationError> {
         self.name = localization.localize(&self.name)?;
@@ -585,5 +548,47 @@ impl Localizable for Character {
             *t = localization.localize(t.to_string() + "_name")?;
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    use super::super::super::display::{ProceduralPath, Renderable, TreeNode};
+    use super::*;
+
+    impl TreeNode<Vec<GameRef<Character>>> for Character {
+        fn get_children(&self) -> Option<Vec<GameRef<Character>>> {
+            if self.children.is_empty() {
+                return None;
+            }
+            Some(self.children.clone())
+        }
+
+        fn get_parent(&self) -> Option<Vec<GameRef<Character>>> {
+            if self.parents.is_empty() {
+                return None;
+            }
+            Some(self.parents.clone())
+        }
+
+        fn get_class(&self) -> Option<GameString> {
+            if let Some(house) = &self.house {
+                if let Some(house) = house.get_internal().inner() {
+                    return Some(house.get_name());
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+    }
+
+    impl ProceduralPath for Character {
+        const SUBDIR: &'static str = "characters";
+    }
+
+    impl Renderable for GameObjectEntity<Character> {
+        const TEMPLATE_NAME: &'static str = "charTemplate";
     }
 }

@@ -1,20 +1,16 @@
-use std::path::Path;
-
 use jomini::common::Date;
-use serde::Serialize;
 
 use super::{
     super::{
-        display::{Grapher, ProceduralPath, Renderable, TreeNode},
-        game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
+        game_data::{GameData, Localizable, LocalizationError, Localize},
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper, WrapperMut},
     },
-    EntityRef, Finalize, FromGameObject, GameObjectDerived, GameObjectEntity, GameRef, Title,
+    EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef,
 };
 
 /// A struct representing a culture in the game
-#[derive(Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Culture {
     name: GameString,
     ethos: Option<GameString>,
@@ -101,6 +97,16 @@ impl Finalize for GameRef<Culture> {
     }
 }
 
+impl Culture {
+    pub fn register_child(&mut self, child: GameRef<Culture>) {
+        self.children.push(child);
+    }
+
+    pub fn get_language(&self) -> Option<GameString> {
+        self.language.clone()
+    }
+}
+
 impl GameObjectDerived for Culture {
     fn get_name(&self) -> GameString {
         self.name.clone()
@@ -112,78 +118,6 @@ impl GameObjectDerived for Culture {
         }
         for c in &self.children {
             collection.extend([E::from(c.clone().into())]);
-        }
-    }
-}
-
-impl TreeNode<Vec<GameRef<Culture>>> for Culture {
-    fn get_children(&self) -> Option<Vec<GameRef<Culture>>> {
-        if self.children.is_empty() {
-            return None;
-        }
-        Some(self.children.clone())
-    }
-
-    fn get_parent(&self) -> Option<Vec<GameRef<Culture>>> {
-        if self.parents.is_empty() {
-            return None;
-        }
-        Some(self.parents.clone())
-    }
-
-    fn get_class(&self) -> Option<GameString> {
-        Some(self.heritage.clone())
-    }
-}
-
-impl Culture {
-    pub fn register_child(&mut self, child: GameRef<Culture>) {
-        self.children.push(child);
-    }
-
-    pub fn get_language(&self) -> Option<GameString> {
-        self.language.clone()
-    }
-}
-
-impl ProceduralPath for Culture {
-    const SUBDIR: &'static str = "cultures";
-}
-
-impl Renderable for GameObjectEntity<Culture> {
-    const TEMPLATE_NAME: &'static str = "cultureTemplate";
-
-    fn render(
-        &self,
-        path: &Path,
-        game_state: &GameState,
-        grapher: Option<&Grapher>,
-        data: &GameData,
-    ) {
-        if let Some(grapher) = grapher {
-            let mut path = path.join(Culture::SUBDIR);
-            path.push(self.id.to_string() + ".svg");
-            grapher.create_culture_graph(self.id, &path);
-        }
-        if let Some(map) = data.get_map() {
-            let filter = |title: &Title| {
-                if let Title::County { culture, .. } = title {
-                    if let Some(culture) = culture {
-                        return culture.get_internal().id == self.id;
-                    }
-                }
-                return false;
-            };
-            let keys = game_state.get_baronies_of_counties(filter);
-            if !keys.is_empty() {
-                let mut path = path.join(Culture::SUBDIR);
-                path.push(self.id.to_string() + ".png");
-                let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
-                if let Some(inner) = self.inner() {
-                    culture_map.draw_text(format!("Map of the {} culture", &inner.name));
-                }
-                culture_map.save_in_thread(&path);
-            }
         }
     }
 }
@@ -206,5 +140,81 @@ impl Localizable for Culture {
             *era = localization.localize(era.to_string())?;
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "display")]
+mod display {
+    use super::super::{
+        super::{
+            display::{Grapher, ProceduralPath, Renderable, TreeNode},
+            game_data::{MapGenerator, MapImage},
+        },
+        GameObjectEntity, Title,
+    };
+    use super::*;
+
+    use std::path::Path;
+
+    impl TreeNode<Vec<GameRef<Culture>>> for Culture {
+        fn get_children(&self) -> Option<Vec<GameRef<Culture>>> {
+            if self.children.is_empty() {
+                return None;
+            }
+            Some(self.children.clone())
+        }
+
+        fn get_parent(&self) -> Option<Vec<GameRef<Culture>>> {
+            if self.parents.is_empty() {
+                return None;
+            }
+            Some(self.parents.clone())
+        }
+
+        fn get_class(&self) -> Option<GameString> {
+            Some(self.heritage.clone())
+        }
+    }
+
+    impl ProceduralPath for Culture {
+        const SUBDIR: &'static str = "cultures";
+    }
+
+    impl Renderable for GameObjectEntity<Culture> {
+        const TEMPLATE_NAME: &'static str = "cultureTemplate";
+
+        fn render(
+            &self,
+            path: &Path,
+            game_state: &GameState,
+            grapher: Option<&Grapher>,
+            data: &GameData,
+        ) {
+            if let Some(grapher) = grapher {
+                let mut path = path.join(Culture::SUBDIR);
+                path.push(self.id.to_string() + ".svg");
+                grapher.create_culture_graph(self.id, &path);
+            }
+            if let Some(map) = data.get_map() {
+                let filter = |title: &Title| {
+                    if let Title::County { culture, .. } = title {
+                        if let Some(culture) = culture {
+                            return culture.get_internal().id == self.id;
+                        }
+                    }
+                    return false;
+                };
+                let keys = game_state.get_baronies_of_counties(filter);
+                if !keys.is_empty() {
+                    let mut path = path.join(Culture::SUBDIR);
+                    path.push(self.id.to_string() + ".png");
+                    let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
+                    if let Some(inner) = self.inner() {
+                        culture_map.draw_text(format!("Map of the {} culture", &inner.name));
+                    }
+                    culture_map.save_in_thread(&path);
+                }
+            }
+        }
     }
 }
