@@ -48,7 +48,7 @@ pub use section_reader::yield_section;
 /// reference each other, and in order to allow for centralized storage and easy
 /// access, the [GameState] object is used.
 mod game_state;
-pub use game_state::{GameRef, GameState};
+pub use game_state::GameState;
 use section_reader::SectionReaderError;
 
 /// A submodule providing ironman token declarations.
@@ -360,7 +360,7 @@ mod tests {
             test={
                 test2={1=2
                     3=4}
-                test3={1 2 
+                test3={1 2
                     3}
                 test4={1 2 3}
                 test5=42
@@ -415,7 +415,7 @@ mod tests {
         3623={
             name=\"dynn_Sao\"
             variables={
-                data={ 
+                data={
                         {
                             flag=\"ai_random_harm_cooldown\"
                             tick=7818
@@ -459,7 +459,7 @@ mod tests {
                             type=boolean
                             identity=1
                         }
-        
+
                     }
          }
             }

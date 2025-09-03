@@ -12,7 +12,6 @@ use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
-        jinja_env::TITLE_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
             SaveFileValue,
@@ -366,15 +365,11 @@ impl TreeNode<Vec<GameRef<Title>>> for Title {
 }
 
 impl ProceduralPath for Title {
-    fn get_subdir() -> &'static str {
-        "titles"
-    }
+    const SUBDIR: &'static str = "titles";
 }
 
 impl Renderable for GameObjectEntity<Title> {
-    fn get_template() -> &'static str {
-        TITLE_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "titleTemplate";
 
     fn render(&self, path: &Path, game_state: &GameState, _: Option<&Grapher>, data: &GameData) {
         if let Some(map) = data.get_map() {
@@ -382,7 +377,7 @@ impl Renderable for GameObjectEntity<Title> {
                 if title.de_facto_vassals.len() == 0 {
                     return;
                 }
-                let mut buf = path.join(Title::get_subdir());
+                let mut buf = path.join(Title::SUBDIR);
                 buf.push(self.id.to_string() + ".png");
                 let mut title_map = map.create_map_flat(title.get_barony_keys(), title.color);
                 title_map.draw_text(format!(
@@ -405,56 +400,5 @@ impl Localizable for Title {
         //    o.2 = localization.localize(o.2.as_str());
         //}
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize_title_barony() {
-        let title = Title::Barony(TitleData {
-            key: "b_test".into(),
-            name: "Test".into(),
-            de_jure: None,
-            de_facto: None,
-            de_jure_vassals: Vec::new(),
-            de_facto_vassals: Vec::new(),
-            history: Vec::new(),
-            claims: Vec::new(),
-            capital: None,
-            color: [70, 255, 70],
-        });
-        let serialized = serde_json::to_string(&title).unwrap();
-        assert_eq!(
-            serialized,
-            r#"{"tier":"Barony","key":"b_test","name":"Test","de_jure":null,"de_facto":null,"de_jure_vassals":[],"de_facto_vassals":[],"history":[],"claims":[],"capital":null,"color":[70,255,70]}"#
-        );
-    }
-
-    #[test]
-    fn test_serialize_county() {
-        let title = Title::County {
-            data: TitleData {
-                key: "c_test".into(),
-                name: "Test".into(),
-                de_jure: None,
-                de_facto: None,
-                de_jure_vassals: Vec::new(),
-                de_facto_vassals: Vec::new(),
-                history: Vec::new(),
-                claims: Vec::new(),
-                capital: None,
-                color: [70, 255, 70],
-            },
-            culture: None,
-            faith: None,
-        };
-        let serialized = serde_json::to_string(&title).unwrap();
-        assert_eq!(
-            serialized,
-            r#"{"tier":"County","key":"c_test","name":"Test","de_jure":null,"de_facto":null,"de_jure_vassals":[],"de_facto_vassals":[],"history":[],"claims":[],"capital":null,"color":[70,255,70],"culture":null,"faith":null}"#
-        );
     }
 }

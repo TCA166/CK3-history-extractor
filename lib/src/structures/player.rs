@@ -11,7 +11,6 @@ use super::{
     super::{
         display::{GetPath, Grapher, Renderable},
         game_data::{GameData, Localizable, LocalizationError, MapGenerator, MapImage},
-        jinja_env::H_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
     },
@@ -81,9 +80,7 @@ impl GetPath for Player {
 }
 
 impl Renderable for Player {
-    fn get_template() -> &'static str {
-        H_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "homeTemplate";
 
     fn render(
         &self,

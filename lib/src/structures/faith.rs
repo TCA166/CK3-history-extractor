@@ -8,7 +8,6 @@ use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
-        jinja_env::FAITH_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper},
     },
@@ -85,15 +84,11 @@ impl GameObjectDerived for Faith {
 }
 
 impl ProceduralPath for Faith {
-    fn get_subdir() -> &'static str {
-        "faiths"
-    }
+    const SUBDIR: &'static str = "faiths";
 }
 
 impl Renderable for GameObjectEntity<Faith> {
-    fn get_template() -> &'static str {
-        FAITH_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "faithTemplate";
 
     fn render(
         &self,
@@ -103,7 +98,7 @@ impl Renderable for GameObjectEntity<Faith> {
         data: &GameData,
     ) {
         if let Some(grapher) = grapher {
-            let mut buf = path.join(Faith::get_subdir());
+            let mut buf = path.join(Faith::SUBDIR);
             buf.push(self.id.to_string() + ".svg");
             grapher.create_faith_graph(self.id, &buf);
         }
@@ -118,7 +113,7 @@ impl Renderable for GameObjectEntity<Faith> {
             };
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
-                let mut buf = path.join(Faith::get_subdir());
+                let mut buf = path.join(Faith::SUBDIR);
                 buf.push(self.id.to_string() + ".png");
                 let mut faith_map = map.create_map_flat(keys, [70, 255, 70]);
                 if let Some(inner) = self.inner() {

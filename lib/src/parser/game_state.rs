@@ -6,7 +6,7 @@ use super::{
         game_data::{GameData, Localizable, LocalizationError},
         structures::{
             Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject,
-            GameObjectDerived, GameObjectEntity, House, Memory, Title,
+            GameObjectDerived, GameObjectEntity, GameRef, House, Memory, Title,
         },
         types::{GameId, GameString, HashMap, Shared, Wrapper, WrapperMut},
     },
@@ -17,8 +17,6 @@ use super::{
 use jomini::common::{Date, PdsDate};
 
 use serde::{ser::SerializeMap, Serialize, Serializer};
-
-pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 
 /// Returns a reference to the object with the given key in the map, or inserts a dummy object if it does not exist and returns a reference to that.
 fn get_or_insert_dummy<T: GameObjectDerived + FromGameObject>(

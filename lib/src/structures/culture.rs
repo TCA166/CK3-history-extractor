@@ -7,7 +7,6 @@ use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize, MapGenerator, MapImage},
-        jinja_env::CUL_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
         types::{GameString, Wrapper, WrapperMut},
     },
@@ -148,15 +147,11 @@ impl Culture {
 }
 
 impl ProceduralPath for Culture {
-    fn get_subdir() -> &'static str {
-        "cultures"
-    }
+    const SUBDIR: &'static str = "cultures";
 }
 
 impl Renderable for GameObjectEntity<Culture> {
-    fn get_template() -> &'static str {
-        CUL_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "cultureTemplate";
 
     fn render(
         &self,
@@ -166,7 +161,7 @@ impl Renderable for GameObjectEntity<Culture> {
         data: &GameData,
     ) {
         if let Some(grapher) = grapher {
-            let mut path = path.join(Culture::get_subdir());
+            let mut path = path.join(Culture::SUBDIR);
             path.push(self.id.to_string() + ".svg");
             grapher.create_culture_graph(self.id, &path);
         }
@@ -181,7 +176,7 @@ impl Renderable for GameObjectEntity<Culture> {
             };
             let keys = game_state.get_baronies_of_counties(filter);
             if !keys.is_empty() {
-                let mut path = path.join(Culture::get_subdir());
+                let mut path = path.join(Culture::SUBDIR);
                 path.push(self.id.to_string() + ".png");
                 let mut culture_map = map.create_map_flat(keys, [70, 255, 70]);
                 if let Some(inner) = self.inner() {

@@ -12,29 +12,16 @@ use std::{
     time::Duration,
 };
 
-/// A submodule that provides opaque types commonly used in the project
-mod types;
-
-/// A submodule that handles save file parsing
-mod parser;
-use parser::{process_section, yield_section, GameState, SaveFile, SaveFileError};
-
-/// A submodule that provides objects which are serialized and rendered into HTML.
-/// You can think of them like frontend DB view objects into parsed save files.
-mod structures;
-use structures::{GameObjectDerived, Player};
+use ck3_history_extractor_lib::{
+    display::{GetPath, Renderer},
+    game_data::{GameDataLoader, Localizable},
+    parser::{process_section, yield_section, GameState, SaveFile, SaveFileError},
+    structures::{GameObjectDerived, Player},
+};
 
 /// The submodule responsible for creating the [minijinja::Environment] and loading of templates.
 mod jinja_env;
 use jinja_env::create_env;
-
-/// A module for handling the display of the parsed data.
-mod display;
-use display::{GetPath, Renderer};
-
-/// A submodule for handling the game data
-mod game_data;
-use game_data::{GameDataLoader, Localizable};
 
 /// A submodule for handling the arguments passed to the program
 mod args;

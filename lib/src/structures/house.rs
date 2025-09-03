@@ -6,7 +6,6 @@ use super::{
     super::{
         display::{ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
-        jinja_env::HOUSE_TEMPLATE_NAME,
         parser::{
             GameObjectMap, GameObjectMapping, GameState, KeyError, ParsingError, SaveFileValue,
             SaveObjectError,
@@ -248,13 +247,9 @@ impl House {
 }
 
 impl ProceduralPath for House {
-    fn get_subdir() -> &'static str {
-        "houses"
-    }
+    const SUBDIR: &'static str = "houses";
 }
 
 impl Renderable for GameObjectEntity<House> {
-    fn get_template() -> &'static str {
-        HOUSE_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "houseTemplate";
 }

@@ -8,7 +8,6 @@ use super::{
     super::{
         display::{Grapher, ProceduralPath, Renderable},
         game_data::{GameData, Localizable, LocalizationError, Localize},
-        jinja_env::DYN_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, HashMap, Wrapper},
     },
@@ -157,20 +156,16 @@ impl GameObjectDerived for Dynasty {
 }
 
 impl ProceduralPath for Dynasty {
-    fn get_subdir() -> &'static str {
-        "dynasties"
-    }
+    const SUBDIR: &'static str = "dynasties";
 }
 
 impl Renderable for GameObjectEntity<Dynasty> {
-    fn get_template() -> &'static str {
-        DYN_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "dynastyTemplate";
 
     fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if let Some(grapher) = grapher {
             if let Some(dynasty) = self.inner() {
-                let mut buf = path.join(Dynasty::get_subdir());
+                let mut buf = path.join(Dynasty::SUBDIR);
                 buf.push(self.id.to_string() + ".svg");
                 grapher.create_dynasty_graph(dynasty, &buf);
             }

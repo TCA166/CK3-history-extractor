@@ -13,17 +13,30 @@ use serde::Serialize;
 
 use super::{
     super::{
-        game_data::GameData,
-        parser::{GameRef, GameState},
+        game_data::{GameData, Localize},
+        parser::GameState,
         structures::{
             Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, House, Player, Title,
+            GameObjectEntity, GameRef, House, Player, Title,
         },
         types::{GameId, HashMap, Wrapper},
     },
     graph::Grapher,
     timeline::Timeline,
 };
+
+impl Localize<String> for Value {
+    fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
+        self.get_attr(key.as_ref())
+            .ok()
+            .map(|x| x.as_str().and_then(|x| Some(x.to_string())))
+            .flatten()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_none()
+    }
+}
 
 /// A convenience function to create a directory if it doesn't exist, and do nothing if it does.
 /// Also prints an error message if the directory creation fails.
@@ -73,14 +86,14 @@ impl RenderableType {
         }
     }
 
-    fn get_subdir(&self) -> &'static str {
+    const fn get_subdir(&self) -> &'static str {
         match self {
-            RenderableType::Character(_) => Character::get_subdir(),
-            RenderableType::Dynasty(_) => Dynasty::get_subdir(),
-            RenderableType::House(_) => House::get_subdir(),
-            RenderableType::Title(_) => Title::get_subdir(),
-            RenderableType::Faith(_) => Faith::get_subdir(),
-            RenderableType::Culture(_) => Culture::get_subdir(),
+            RenderableType::Character(_) => Character::SUBDIR,
+            RenderableType::Dynasty(_) => Dynasty::SUBDIR,
+            RenderableType::House(_) => House::SUBDIR,
+            RenderableType::Title(_) => Title::SUBDIR,
+            RenderableType::Faith(_) => Faith::SUBDIR,
+            RenderableType::Culture(_) => Culture::SUBDIR,
         }
     }
 
@@ -145,12 +158,12 @@ impl<'a> Renderer<'a> {
         initial_depth: usize,
     ) -> Self {
         create_dir_maybe(path);
-        create_dir_maybe(path.join(Character::get_subdir()));
-        create_dir_maybe(path.join(Dynasty::get_subdir()));
-        create_dir_maybe(path.join(Title::get_subdir()));
-        create_dir_maybe(path.join(Faith::get_subdir()));
-        create_dir_maybe(path.join(Culture::get_subdir()));
-        create_dir_maybe(path.join(House::get_subdir()));
+        create_dir_maybe(path.join(Character::SUBDIR));
+        create_dir_maybe(path.join(Dynasty::SUBDIR));
+        create_dir_maybe(path.join(Title::SUBDIR));
+        create_dir_maybe(path.join(Faith::SUBDIR));
+        create_dir_maybe(path.join(Culture::SUBDIR));
+        create_dir_maybe(path.join(House::SUBDIR));
         Renderer {
             roots: Vec::new(),
             depth_map: HashMap::default(),
@@ -165,7 +178,7 @@ impl<'a> Renderer<'a> {
     /// Renders the [Renderable] object.
     fn render<T: Renderable, D: Deref<Target = T>>(&self, obj: D, env: &Environment<'_>) {
         //render the object
-        let template = env.get_template(T::get_template()).unwrap();
+        let template = env.get_template(T::TEMPLATE_NAME).unwrap();
         let path = obj.get_path(self.path);
         obj.render(&self.path, &self.state, self.grapher, self.data);
         let contents = template.render(obj.deref()).unwrap();
@@ -268,7 +281,7 @@ impl<'a> Renderer<'a> {
 }
 
 pub trait ProceduralPath {
-    fn get_subdir() -> &'static str;
+    const SUBDIR: &'static str;
 }
 
 pub trait GetPath {
@@ -277,7 +290,7 @@ pub trait GetPath {
 
 impl<T: GameObjectDerived + ProceduralPath + FromGameObject> GetPath for GameObjectEntity<T> {
     fn get_path(&self, path: &Path) -> PathBuf {
-        let mut buf = path.join(T::get_subdir());
+        let mut buf = path.join(T::SUBDIR);
         buf.push(self.get_id().to_string() + ".html");
         buf
     }
@@ -287,9 +300,8 @@ impl<T: GameObjectDerived + ProceduralPath + FromGameObject> GetPath for GameObj
 /// Since this uses [minijinja] the [serde::Serialize] trait is also needed.
 /// Each object that implements this trait should have a corresponding template file in the templates folder.
 pub trait Renderable: Serialize + GetPath {
-    /// Returns the template file name.
-    /// This method is used to retrieve the template from the [Environment] object in the [Renderer] object.
-    fn get_template() -> &'static str;
+    /// Used to retrieve the template from the [Environment] object in the [Renderer] object
+    const TEMPLATE_NAME: &'static str;
 
     /// Renders all the objects that are related to this object.
     /// For example: graphs, maps, etc.

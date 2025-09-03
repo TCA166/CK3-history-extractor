@@ -5,9 +5,8 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::GameData,
-        jinja_env::TIMELINE_TEMPLATE_NAME,
-        parser::{GameRef, GameState},
-        structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, Title},
+        parser::GameState,
+        structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, GameRef, Title},
         types::GameString,
     },
     graph::{create_timeline_graph, Grapher},
@@ -94,9 +93,7 @@ impl GetPath for Timeline {
 }
 
 impl Renderable for Timeline {
-    fn get_template() -> &'static str {
-        TIMELINE_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "timelineTemplate";
 
     fn render(&self, path: &Path, _: &GameState, grapher: Option<&Grapher>, _: &GameData) {
         if grapher.is_some() {

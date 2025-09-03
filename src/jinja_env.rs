@@ -1,14 +1,12 @@
-use std::{fs, path::Path};
+use std::{fs, path::Path, string::String};
 
 use minijinja::{context, Environment, State, UndefinedBehavior, Value};
-use serde::{ser::SerializeStruct, Serialize};
 
-use super::{
-    display::ProceduralPath,
+use ck3_history_extractor_lib::{
+    derived_ref::{DERIVED_REF_ID_ATTR, DERIVED_REF_NAME_ATTR, DERIVED_REF_SUBDIR_ATTR},
+    display::{Renderable, Timeline},
     game_data::{GameData, Localize},
-    parser::GameRef,
-    structures::{FromGameObject, GameObjectDerived},
-    types::Wrapper,
+    structures::{Character, Culture, Dynasty, Faith, GameObjectEntity, House, Player, Title},
 };
 
 #[cfg(feature = "internal")]
@@ -25,26 +23,18 @@ mod internal_templates {
     pub const INT_REF_TEMPLATE: &str = include_str!("../templates/refTemplate.html");
 }
 
-pub const H_TEMPLATE_NAME: &str = "homeTemplate";
-pub const C_TEMPLATE_NAME: &str = "charTemplate";
-pub const CUL_TEMPLATE_NAME: &str = "cultureTemplate";
-pub const DYN_TEMPLATE_NAME: &str = "dynastyTemplate";
-pub const HOUSE_TEMPLATE_NAME: &str = "houseTemplate";
-pub const FAITH_TEMPLATE_NAME: &str = "faithTemplate";
-pub const TITLE_TEMPLATE_NAME: &str = "titleTemplate";
-pub const TIMELINE_TEMPLATE_NAME: &str = "timelineTemplate";
 pub const BASE_TEMPLATE_NAME: &str = "base";
 pub const REF_TEMPLATE_NAME: &str = "refTemplate";
 
 const TEMPLATE_NAMES: [&str; 10] = [
-    H_TEMPLATE_NAME,
-    C_TEMPLATE_NAME,
-    CUL_TEMPLATE_NAME,
-    DYN_TEMPLATE_NAME,
-    HOUSE_TEMPLATE_NAME,
-    FAITH_TEMPLATE_NAME,
-    TITLE_TEMPLATE_NAME,
-    TIMELINE_TEMPLATE_NAME,
+    Player::TEMPLATE_NAME,
+    GameObjectEntity::<Character>::TEMPLATE_NAME,
+    GameObjectEntity::<Culture>::TEMPLATE_NAME,
+    GameObjectEntity::<Dynasty>::TEMPLATE_NAME,
+    GameObjectEntity::<House>::TEMPLATE_NAME,
+    GameObjectEntity::<Faith>::TEMPLATE_NAME,
+    GameObjectEntity::<Title>::TEMPLATE_NAME,
+    Timeline::TEMPLATE_NAME,
     BASE_TEMPLATE_NAME,
     REF_TEMPLATE_NAME,
 ];
@@ -52,46 +42,11 @@ const TEMPLATE_NAMES: [&str; 10] = [
 const LOCALIZATION_GLOBAL: &str = "localization";
 const LOCALIZATION_FUNC_NAME: &str = "localize";
 
-const DERIVED_REF_NAME_ATTR: &str = "name";
-const DERIVED_REF_SUBDIR_ATTR: &str = "subdir";
-const DERIVED_REF_ID_ATTR: &str = "id";
-
-impl<T: GameObjectDerived + FromGameObject + ProceduralPath> Serialize for GameRef<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let internal = self.get_internal();
-        if let Some(inner) = internal.inner() {
-            let mut state = serializer.serialize_struct("DerivedRef", 3)?;
-            state.serialize_field(DERIVED_REF_ID_ATTR, &internal.get_id())?;
-            state.serialize_field(DERIVED_REF_NAME_ATTR, &inner.get_name())?;
-            state.serialize_field(DERIVED_REF_SUBDIR_ATTR, T::get_subdir())?;
-            state.end()
-        } else {
-            serializer.serialize_none()
-        }
-    }
-}
-
 // MAYBE there's a better way of providing localization, however, I have yet to find it
 
 /* What we do here, is allow for all Value objects to act as localizer, and
 then embed the localizer in the environment. This is sort of bad. Performance
 wise at least */
-
-impl Localize<String> for Value {
-    fn lookup<K: AsRef<str>>(&self, key: K) -> Option<String> {
-        self.get_attr(key.as_ref())
-            .ok()
-            .map(|x| x.as_str().and_then(|x| Some(x.to_string())))
-            .flatten()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.is_none()
-    }
-}
 
 /// # Environment creation
 ///
@@ -139,19 +94,21 @@ pub fn create_env<'a>(
         #[cfg(feature = "internal")]
         {
             use internal_templates::*;
-            env.add_template(H_TEMPLATE_NAME, INT_H_TEMPLATE).unwrap();
-            env.add_template(C_TEMPLATE_NAME, INT_C_TEMPLATE).unwrap();
-            env.add_template(CUL_TEMPLATE_NAME, INT_CUL_TEMPLATE)
+            env.add_template(Player::TEMPLATE_NAME, INT_H_TEMPLATE)
                 .unwrap();
-            env.add_template(DYN_TEMPLATE_NAME, INT_DYN_TEMPLATE)
+            env.add_template(GameObjectEntity::<Character>::TEMPLATE_NAME, INT_C_TEMPLATE)
                 .unwrap();
-            env.add_template(HOUSE_TEMPLATE_NAME, INT_HOUSE_TEMPLATE)
+            env.add_template(GameObjectEntity::<Culture>::TEMPLATE_NAME, INT_CUL_TEMPLATE)
                 .unwrap();
-            env.add_template(FAITH_TEMPLATE_NAME, INT_FAITH_TEMPLATE)
+            env.add_template(GameObjectEntity::<Dynasty>::TEMPLATE_NAME, INT_DYN_TEMPLATE)
                 .unwrap();
-            env.add_template(TITLE_TEMPLATE_NAME, INT_TITLE_TEMPLATE)
+            env.add_template(GameObjectEntity::<House>::TEMPLATE_NAME, INT_HOUSE_TEMPLATE)
                 .unwrap();
-            env.add_template(TIMELINE_TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
+            env.add_template(GameObjectEntity::<Faith>::TEMPLATE_NAME, INT_FAITH_TEMPLATE)
+                .unwrap();
+            env.add_template(GameObjectEntity::<Title>::TEMPLATE_NAME, INT_TITLE_TEMPLATE)
+                .unwrap();
+            env.add_template(Timeline::TEMPLATE_NAME, INT_TIMELINE_TEMPLATE)
                 .unwrap();
             env.add_template(BASE_TEMPLATE_NAME, INT_BASE_TEMPLATE)
                 .unwrap();

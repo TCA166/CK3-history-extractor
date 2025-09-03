@@ -7,7 +7,6 @@ use super::{
     super::{
         display::{ProceduralPath, Renderable, TreeNode},
         game_data::{GameData, Localizable, LocalizationError, Localize},
-        jinja_env::C_TEMPLATE_NAME,
         parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
         types::{GameString, Shared, Wrapper, WrapperMut},
     },
@@ -505,15 +504,11 @@ impl TreeNode<Vec<GameRef<Character>>> for Character {
 }
 
 impl ProceduralPath for Character {
-    fn get_subdir() -> &'static str {
-        "characters"
-    }
+    const SUBDIR: &'static str = "characters";
 }
 
 impl Renderable for GameObjectEntity<Character> {
-    fn get_template() -> &'static str {
-        C_TEMPLATE_NAME
-    }
+    const TEMPLATE_NAME: &'static str = "charTemplate";
 }
 
 impl Localizable for Character {

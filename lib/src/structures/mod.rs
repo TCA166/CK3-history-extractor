@@ -5,8 +5,8 @@ use std::{
 
 use super::{
     game_data::{GameData, Localizable, LocalizationError},
-    parser::{GameObjectMap, GameRef, GameState, ParsingError},
-    types::{GameId, GameString, Wrapper, WrapperMut},
+    parser::{GameObjectMap, GameState, ParsingError},
+    types::{GameId, GameString, Shared, Wrapper, WrapperMut},
 };
 
 /// A submodule that provides the [Player] object.
@@ -49,6 +49,8 @@ pub use lineage::LineageNode;
 /// A submodule that provides the [Artifact] object.
 mod artifact;
 pub use artifact::Artifact;
+
+pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 
 pub trait Finalize {
     #[allow(unused_variables)]
