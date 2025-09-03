@@ -42,15 +42,7 @@ pub trait WrapperMut<T> {
     fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError>;
 }
 
-/// A type alias for shared objects.
-///
-/// # Example
-///
-/// ```
-/// let obj:Shared<String> = Shared::wrap("Hello");
-///
-/// let value:Ref<String> = obj.get_internal();
-/// ```
+/// Really just a type alias for [Rc]<[RefCell]>
 #[derive(Debug)]
 pub struct Shared<T: ?Sized> {
     inner: Rc<RefCell<T>>,
