@@ -280,10 +280,14 @@ impl<'a> Renderer<'a> {
     }
 }
 
+/// An object whose rendered output is meant to be placed in a certain subdirectory.
+/// [GameObjectDerived], [FromGameObject] structs that implement this, will
+/// have [GetPath] implemented automatically.
 pub trait ProceduralPath {
     const SUBDIR: &'static str;
 }
 
+/// An object whose rendered output is meant to be placed at a specific path.
 pub trait GetPath {
     fn get_path(&self, path: &Path) -> PathBuf;
 }

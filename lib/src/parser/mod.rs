@@ -125,7 +125,7 @@ use super::{
 /// Essentially the fasade of the parser, that makes the choices on which
 /// sections to parse and how to parse them.
 pub fn process_section(
-    i: &mut Section,
+    i: Section,
     game_state: &mut GameState,
     players: &mut Vec<Player>,
 ) -> Result<(), ParsingError> {
@@ -310,7 +310,7 @@ mod tests {
             }
         ",
         )?;
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object
@@ -337,7 +337,7 @@ mod tests {
             }
         ",
         )?;
-        let mut section = yield_section(&mut tape).unwrap()?;
+        let section = yield_section(&mut tape).unwrap()?;
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object.as_map()?.get("test2").unwrap().as_object()?;
@@ -368,7 +368,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object
@@ -392,7 +392,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object
@@ -481,7 +481,7 @@ mod tests {
             }
             artifact_claims={ 83888519 }
         }").unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "3623");
         let object = section.parse().unwrap();
         assert_eq!(
@@ -516,7 +516,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object
@@ -574,7 +574,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "c_derby");
         let object = section.parse().unwrap();
         let b_derby = object
@@ -614,7 +614,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         let object = section.parse().unwrap();
         let test2 = object
@@ -648,7 +648,7 @@ mod tests {
         ",
         )
         .unwrap();
-        let mut section = yield_section(&mut tape).unwrap().unwrap();
+        let section = yield_section(&mut tape).unwrap().unwrap();
         assert_eq!(section.get_name(), "duration");
         let object = section.parse().unwrap();
         let arr = object.as_array().unwrap();

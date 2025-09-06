@@ -51,10 +51,11 @@ fn create_title_province_map(
 ) -> Result<(), ParsingError> {
     let mut tape = file.tape();
     while let Some(res) = yield_section(&mut tape) {
-        let mut section = res?;
+        let section = res?;
+        let name = GameString::from(section.get_name());
         //DFS in the structure
         let mut stack = if let SaveFileObject::Map(base) = section.parse()? {
-            vec![(base, GameString::from(section.get_name()))]
+            vec![(base, name)]
         } else {
             // if the base object is an array, something wonky is going on and we just politely retreat
             continue;

@@ -306,6 +306,7 @@ impl std::error::Error for LocalizationError {
     }
 }
 
+/// An object that can be used to localize strings
 pub trait Localize<T: AsRef<str> + From<String>> {
     /// A simple function that looks up raw value associated with the given localization key
     fn lookup<K: AsRef<str>>(&self, key: K) -> Option<T>;

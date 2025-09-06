@@ -58,16 +58,19 @@ fn read_png_bytes<P: AsRef<Path>>(path: P) -> Result<RgbImage, MapError> {
     Ok(ImageReader::open(path)?.decode()?.to_rgb8())
 }
 
+/// An image that represents a map
 pub trait MapImage {
+    /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
     fn draw_text<T: Borrow<str>>(&mut self, text: T);
 
+    /// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
     fn draw_legend<C: Into<Rgb<u8>>, I: IntoIterator<Item = (String, C)>>(&mut self, legend: I);
 
+    /// Saves the image to a file in a separate thread
     fn save_in_thread<P: AsRef<Path>>(self, path: P);
 }
 
 impl MapImage for RgbImage {
-    /// Draws given text on an image buffer, the text is placed at the bottom left corner and is 5% of the height of the image
     fn draw_text<T: Borrow<str>>(&mut self, text: T) {
         let dimensions = self.dimensions();
         let text_height = dimensions.1 / 20;
@@ -82,7 +85,6 @@ impl MapImage for RgbImage {
         back.present().unwrap();
     }
 
-    /// Draws a legend on the given image buffer, the legend is placed at the bottom right corner and consists of a series of colored rectangles with text labels
     fn draw_legend<C: Into<Rgb<u8>>, I: IntoIterator<Item = (String, C)>>(&mut self, legend: I) {
         let dimensions = self.dimensions();
         let text_height = (dimensions.1 / 30) as i32;
@@ -131,7 +133,8 @@ impl MapImage for RgbImage {
     }
 }
 
-/// A struct representing a game map, from which we can create [Map] instances
+/// Represents the game map. The 2D map of provinces, alongside the legend
+/// to make sense of it.
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameMap {
     height: u32,
@@ -233,6 +236,7 @@ impl GameMap {
     }
 }
 
+/// A factory of map images
 pub trait MapGenerator {
     /// Creates a new instance of map, with pixels colored in accordance with assoc function. key_list acts as a whitelist of keys to use assoc on. If it's None then assoc is applied to all keys.
     fn create_map<C: Into<Rgb<u8>> + Clone, F: Fn(&str) -> C, I: IntoIterator<Item = GameString>>(

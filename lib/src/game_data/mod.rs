@@ -10,6 +10,7 @@ pub use loader::GameDataLoader;
 
 use super::types::{GameId, GameString, HashMap};
 
+/// Blanket facade over game files that need to be loaded
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct GameData {
     map: Option<GameMap>,

@@ -172,7 +172,6 @@ fn scalar_to_string(scalar: Scalar) -> Result<String, SectionError> {
 
 /// A section of the save file.
 /// It directly maps to a [SaveFileObject] and is the largest unit of data in the save file.
-/// Since [Tape] holds state, it must be mutable for the section to be parsable.
 pub struct Section<'tape, 'data> {
     tape: &'tape mut Tape<'data>,
     name: String,
@@ -193,12 +192,13 @@ impl<'tape, 'data> Section<'tape, 'data> {
     }
 
     /// Skip the section. This must be called if the section is not going to be parsed.
-    pub fn skip(&mut self) -> Result<(), SectionError> {
+    pub fn skip(self) -> Result<(), SectionError> {
         Ok(self.tape.skip_container()?)
     }
 
     /// Parse the section into a [SaveFileObject]. This will consume the section.
-    pub fn parse(&mut self) -> Result<SaveFileObject, SectionError> {
+    /// Since the tape holds state, it must be mutable for the section to be parsable.
+    pub fn parse(self) -> Result<SaveFileObject, SectionError> {
         let mut stack: Vec<StackEntry> = vec![StackEntry::new(Some(self.name.clone()))];
         let mut key = None;
         let mut past_eq = false;
@@ -412,7 +412,7 @@ mod tests {
     #[test]
     fn test_empty() {
         let mut tape = Tape::Text(TokenReader::from_slice(b""));
-        let mut section = Section::new(&mut tape, "empty".to_string());
+        let section = Section::new(&mut tape, "empty".to_string());
         assert_eq!(section.get_name(), "empty");
         let obj = section.parse().unwrap();
         assert!(matches!(obj, SaveFileObject::Array(_)));
@@ -421,7 +421,7 @@ mod tests {
     #[test]
     fn test_mixed_obj() {
         let mut tape = Tape::Text(TokenReader::from_slice(b"a b 1=c 2={d=5}}"));
-        let mut section = Section::new(&mut tape, "test".to_string());
+        let section = Section::new(&mut tape, "test".to_string());
         let obj = section.parse();
         assert!(obj.is_ok());
         let res = obj.unwrap();
@@ -449,7 +449,7 @@ mod tests {
     #[test]
     fn test_mixed_duplicate_keys() {
         let mut tape = Tape::Text(TokenReader::from_slice(b"a b 1=c 2={d=5} 1={e=6}"));
-        let mut section = Section::new(&mut tape, "test".to_string());
+        let section = Section::new(&mut tape, "test".to_string());
         let obj = section.parse().unwrap();
         obj.as_array()
             .unwrap()
@@ -464,7 +464,7 @@ mod tests {
     #[test]
     fn test_rgb() {
         let mut tape = Tape::Text(TokenReader::from_slice(b"color1=rgb { 220 220 220 }"));
-        let mut section = Section::new(&mut tape, "test".to_string());
+        let section = Section::new(&mut tape, "test".to_string());
         let obj = section.parse().unwrap();
         let rgb = obj
             .as_map()
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn test_skip() {
         let mut tape = Tape::Text(TokenReader::from_slice(b"color1=rgb { 220 220 220 }} "));
-        let mut section = Section::new(&mut tape, "test".to_string());
+        let section = Section::new(&mut tape, "test".to_string());
         section.skip().unwrap();
 
         assert_eq!(tape.position(), 27)
@@ -492,7 +492,7 @@ mod tests {
         let mut tape = Tape::Text(TokenReader::from_slice(
             "test=\"Malik al-Muazzam Styrkár\"}".as_bytes(),
         ));
-        let mut section = Section::new(&mut tape, "test".to_string());
+        let section = Section::new(&mut tape, "test".to_string());
         let obj = section.parse().unwrap();
         let utf8 = obj
             .as_map()

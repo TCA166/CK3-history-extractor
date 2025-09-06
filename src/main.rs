@@ -136,10 +136,10 @@ fn main() -> Result<(), UserError> {
     progress_bar.enable_steady_tick(INTERVAL);
     let mut tape = save.tape();
     while let Some(res) = yield_section(&mut tape) {
-        let mut section = res.unwrap();
+        let section = res.unwrap();
         progress_bar.set_message(section.get_name().to_owned());
         // if an error occured somewhere here, there's nothing we can do
-        process_section(&mut section, &mut game_state, &mut players).unwrap();
+        process_section(section, &mut game_state, &mut players).unwrap();
         progress_bar.inc(1);
     }
     progress_bar.finish_with_message("Save parsing complete");

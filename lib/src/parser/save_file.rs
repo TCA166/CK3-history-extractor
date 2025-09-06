@@ -48,7 +48,7 @@ impl error::Error for SaveFileError {
 /// A struct that represents a ck3 save file.
 /// It is just a wrapper around the contents of the save file.
 /// This is so that we can abstract away the compression, encoding and just
-/// return an abstract [Tape] that can be used to read from the save file.
+/// return an abstract object that can be used to read from the save file.
 pub struct SaveFile {
     /// The contents of the save file, shared between all sections
     contents: Vec<u8>,

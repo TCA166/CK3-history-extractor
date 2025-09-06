@@ -12,8 +12,8 @@ mod tokens {
     /// Codegener for the token data
     /// This will generate a static map of tokens to strings at build time
     /// This is used to resolve tokens in the game data on runtime.
-    pub fn create_token_file(
-        token_filename: &'static str,
+    pub fn create_token_file<P: AsRef<Path>>(
+        token_filename: P,
         output_filename: &'static str,
         variable_name: &'static str,
     ) {
@@ -42,6 +42,12 @@ mod tokens {
 fn main() {
     #[cfg(feature = "tokens")]
     {
-        tokens::create_token_file("../tokens_1.tok", "token_data.rs", "TOKENS");
+        use std::{env, path::Path};
+
+        const TOKENS_FILE: &str = "tokens_1.tok";
+        let tokens_path =
+            Path::new(&env::var("TOKENS_DIR").unwrap_or(".".to_owned())).join(TOKENS_FILE);
+
+        tokens::create_token_file(tokens_path, "token_data.rs", "TOKENS");
     }
 }
