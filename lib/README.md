@@ -1,5 +1,9 @@
 # ck3_history_extractor_lib
 
+[![Crates.io Version](https://img.shields.io/crates/v/ck3_history_extractor_lib)](https://crates.io/crates/ck3_history_extractor_lib)
+[![docs.rs](https://img.shields.io/docsrs/ck3_history_extractor_lib)](https://docs.rs/ck3_history_extractor_lib)
+[![License](https://img.shields.io/crates/l/ck3_history_extractor_lib)](../LICENSE)
+
 The core toolkit
 of [`ck3_history_extractor`](https://github.com/TCA166/CK3-history-extractor).
 If you want to make your own tool that uses ck3 save files, this library is for
