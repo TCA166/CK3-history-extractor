@@ -34,7 +34,26 @@ pub mod save_file;
 #[cfg(feature = "serde")]
 pub mod derived_ref;
 
-/// A submodule for handling the game data
+/// A submodule for handling the game data.
+///
+/// ## Getting Started
+///
+/// The entire module has a simple facade in [game_data::GameData]. It is
+/// created via the [game_data::GameDataLoader] builder, which allows you to
+/// 'add' paths to search through for game data. After you are done searching
+/// for game files, you just [game_data::GameDataLoader::finalize] to get your
+/// [GameData].
+///
+/// ## Example
+///
+/// ```rust
+/// use ck3_history_extractor_lib::game_data::GameDataLoader;
+///
+/// let mut loader = GameDataLoader::new(false, "english");
+/// loader.process_path("/path/to/game/data/");
+/// loader.process_path("/path/to/some/mod");
+/// let game_data = loader.finalize();
+/// ```
 pub mod game_data;
 
 /// A module for handling the display of the parsed data.

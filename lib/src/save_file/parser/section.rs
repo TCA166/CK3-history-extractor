@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_skip() {
-        let mut tape = TokenReader::from_slice(b"color1=rgb { 220 220 220 }");
+        let mut tape = TokenReader::from_slice(b"color1=rgb { 220 220 220 }}");
         let section = TextSection {
             tape: &mut tape,
             name: "test".to_string(),
