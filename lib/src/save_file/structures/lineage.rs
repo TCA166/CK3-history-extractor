@@ -2,9 +2,12 @@ use jomini::common::Date;
 
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
-        types::{GameString, Wrapper},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
+        parser::{
+            types::{GameString, Wrapper},
+            GameObjectMap, GameObjectMapping, ParsingError, SaveFileValue,
+        },
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };

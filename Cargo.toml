@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor"
-version = "2.4.4"
+version = "2.4.5"
 edition = "2021"
 authors = ["TCA"]
 description = "A tool for generating an encyclopedia from your Crusader Kings III save file"
@@ -15,6 +15,7 @@ keywords = [
     "extractor",
     "utility",
 ]
+build = "build.rs"
 publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -31,13 +32,17 @@ human-panic = "=2.0.3"
 clap = "4.5.47"
 clap_derive = "4.5.47"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
+jomini = "0.28.0"
+phf = "0.13.1"
 ck3_history_extractor_lib = { path = "lib", features = ["display"] }
 
 [features]
 internal = []
 permissive = ["ck3_history_extractor_lib/permissive"]
-tokens = ["ck3_history_extractor_lib/tokens"]
+tokens = []
 
+[build-dependencies]
+phf_codegen = "0.13.1"
 
 [workspace]
 members = ["lib"]

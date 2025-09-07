@@ -1,14 +1,15 @@
+use std::collections::HashMap;
+
 use super::{
-    super::{
-        game_data::{GameData, Localizable, LocalizationError},
-        structures::{
-            Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject,
-            GameObjectDerived, GameObjectEntity, GameRef, House, Memory, Title,
-        },
-        types::{GameId, GameString, HashMap, Shared, Wrapper, WrapperMut},
+    super::game_data::{GameData, Localizable, LocalizationError},
+    parser::{
+        types::{GameId, GameString, Shared, Wrapper, WrapperMut},
+        GameObjectMap, ParsingError,
     },
-    game_object::GameObjectMap,
-    ParsingError,
+    structures::{
+        Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject, GameObjectDerived,
+        GameObjectEntity, GameRef, House, Memory, Title,
+    },
 };
 
 use jomini::common::Date;

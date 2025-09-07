@@ -1,8 +1,8 @@
 use serde::Serialize;
 
-use super::{
+use super::save_file::{
+    parser::types::Wrapper,
     structures::{FromGameObject, GameObjectDerived, GameRef},
-    types::Wrapper,
 };
 
 pub const DERIVED_REF_NAME_ATTR: &str = "name";

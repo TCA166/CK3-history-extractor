@@ -4,9 +4,12 @@ use std::{
 };
 
 use super::{
-    game_data::{GameData, Localizable, LocalizationError},
-    parser::{GameObjectMap, GameState, ParsingError},
-    types::{GameId, GameString, Shared, Wrapper, WrapperMut},
+    super::game_data::{GameData, Localizable, LocalizationError},
+    game_state::GameState,
+    parser::{
+        types::{GameId, GameString, Shared, Wrapper, WrapperMut},
+        GameObjectMap, ParsingError,
+    },
 };
 
 /// A submodule that provides the [Player] object.

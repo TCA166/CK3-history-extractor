@@ -1,8 +1,8 @@
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
-        types::GameString,
+        super::game_data::{GameData, Localizable, LocalizationError},
+        game_state::GameState,
+        parser::{types::GameString, GameObjectMap, GameObjectMapping, ParsingError},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef, LineageNode,
 };
@@ -64,9 +64,11 @@ impl Localizable for Player {
 #[cfg(feature = "display")]
 mod display {
     use super::super::super::{
-        display::{GetPath, Grapher, Renderable},
-        game_data::{MapGenerator, MapImage},
-        types::Wrapper,
+        super::{
+            display::{GetPath, Grapher, Renderable},
+            game_data::{MapGenerator, MapImage},
+        },
+        parser::types::Wrapper,
     };
     use super::*;
 

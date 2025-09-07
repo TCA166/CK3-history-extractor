@@ -1,4 +1,7 @@
-use std::{borrow::Borrow, error, io, num::ParseIntError, ops::Deref, path::Path, thread};
+use std::{
+    borrow::Borrow, collections::HashMap, error, io, num::ParseIntError, ops::Deref, path::Path,
+    thread,
+};
 
 use csv::ReaderBuilder;
 
@@ -16,7 +19,7 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::types::{GameId, GameString, HashMap};
+use super::super::save_file::parser::types::{GameId, GameString};
 
 // color stuff
 
@@ -266,7 +269,7 @@ impl MapGenerator for GameMap {
         assoc: F,
         key_list: Option<I>,
     ) -> RgbImage {
-        let mut colors = HashMap::default();
+        let mut colors: HashMap<&Rgb<u8>, C> = HashMap::default();
         if let Some(key_list) = key_list {
             for k in key_list {
                 if let Some(color) = self.title_color_map.get(k.as_ref()) {

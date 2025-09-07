@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use rand::{rng, Rng};
 
 use plotters::{
@@ -9,9 +11,9 @@ use plotters::{
 //https://github.com/zxch3n/tidy/tree/master it is sort of tiny so here github link in case it goes down
 use tidy_tree::TidyTree;
 
-use super::super::{
+use super::super::save_file::{
+    parser::types::{GameId, GameString, Wrapper},
     structures::{Dynasty, FromGameObject, GameObjectDerived, GameRef, Title},
-    types::{GameId, GameString, HashMap, Wrapper},
 };
 
 use std::{collections::BTreeMap, path::Path};
@@ -223,7 +225,7 @@ impl Grapher {
         let root;
 
         let mut groups: HashMap<&str, RGBColor> = HashMap::default(); //class groups
-        let mut positions = HashMap::default();
+        let mut positions: HashMap<usize, (f64, f64)> = HashMap::default();
         {
             //convert the tree layout to a hashmap and apply a 'scale' to the drawing area
             let layout = tree.get_pos(); //this isn't documented, but this function dumps the layout into a 3xN matrix (id, x, y)

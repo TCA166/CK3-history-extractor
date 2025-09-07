@@ -1,14 +1,14 @@
-use std::{error, fs::read_dir, io, mem, path::Path};
+use std::{collections::HashMap, error, fs::read_dir, io, mem, path::Path};
 
 use derive_more::{Display, From};
 
 use super::{
-    super::{
+    super::save_file::{
         parser::{
-            yield_section, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
-            SaveFileObject, SaveFileValue,
+            types::{GameId, GameString},
+            GameObjectCollection, ParsingError, SaveFileObject, SaveFileSection, SaveFileValue,
         },
-        types::{GameId, GameString, HashMap},
+        SaveFile, SaveFileError,
     },
     map::MapError,
     GameData, GameMap, Localizer,
@@ -49,8 +49,8 @@ fn create_title_province_map(
     file: &SaveFile,
     out: &mut HashMap<GameId, GameString>,
 ) -> Result<(), ParsingError> {
-    let mut tape = file.tape();
-    while let Some(res) = yield_section(&mut tape) {
+    let mut tape = file.section_reader(None).unwrap();
+    while let Some(res) = tape.next() {
         let section = res?;
         let name = GameString::from(section.get_name());
         //DFS in the structure

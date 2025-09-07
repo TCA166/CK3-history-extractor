@@ -6,7 +6,9 @@ use ck3_history_extractor_lib::{
     derived_ref::{DERIVED_REF_ID_ATTR, DERIVED_REF_NAME_ATTR, DERIVED_REF_SUBDIR_ATTR},
     display::{Renderable, Timeline},
     game_data::{GameData, Localize},
-    structures::{Character, Culture, Dynasty, Faith, GameObjectEntity, House, Player, Title},
+    save_file::structures::{
+        Character, Culture, Dynasty, Faith, GameObjectEntity, House, Player, Title,
+    },
 };
 
 #[cfg(feature = "internal")]

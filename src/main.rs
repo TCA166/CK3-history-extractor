@@ -15,8 +15,11 @@ use std::{
 use ck3_history_extractor_lib::{
     display::{GetPath, Renderer},
     game_data::{GameDataLoader, Localizable},
-    parser::{process_section, yield_section, GameState, SaveFile, SaveFileError},
-    structures::{GameObjectDerived, Player},
+    save_file::{
+        parser::SaveFileSection,
+        structures::{GameObjectDerived, Player},
+        GameState, SaveFile, SaveFileError,
+    },
 };
 
 /// The submodule responsible for creating the [minijinja::Environment] and loading of templates.
@@ -29,6 +32,9 @@ use args::Args;
 
 /// A submodule for handling Steam integration
 mod steam;
+
+mod tokens;
+use tokens::TOKEN_TRANSLATOR;
 
 /// The interval at which the progress bars should update.
 const INTERVAL: Duration = Duration::from_secs(1);
@@ -72,11 +78,11 @@ impl error::Error for UserError {
 ///     1. Initializes a [SaveFile] object using the provided file name
 ///     2. Iterates over the Section objects in the save file
 ///         If the section is of interest to us (e.g. `living`, `dead_unprunable`, etc.):
-///         1. We parse the section into [SaveFileObject](crate::parser::SaveFileObject) objects
-///         2. We parse the objects into [Derived](structures::GameObjectDerived) objects
+///         1. We parse the section into [SaveFileObject](ck3_history_extractor_lib::save_file::parser::SaveFileObject) objects
+///         2. We parse the objects into [Derived](GameObjectDerived) objects
 ///         3. We store the objects in the [GameState] object
 /// 3. Initializes a [minijinja::Environment] and loads the templates from the `templates` folder
-/// 4. Foreach encountered [structures::Player] in game:
+/// 4. Foreach encountered [Player] in game:
 ///     1. Creates a folder with the player's name
 ///     2. Renders the objects into HTML using the templates and writes them to the folder
 /// 5. Prints the time taken to parse the save file
@@ -134,12 +140,14 @@ fn main() -> Result<(), UserError> {
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(spinner_style.clone());
     progress_bar.enable_steady_tick(INTERVAL);
-    let mut tape = save.tape();
-    while let Some(res) = yield_section(&mut tape) {
+    let mut reader = save.section_reader(Some(&TOKEN_TRANSLATOR)).unwrap();
+    while let Some(res) = reader.next() {
         let section = res.unwrap();
         progress_bar.set_message(section.get_name().to_owned());
         // if an error occured somewhere here, there's nothing we can do
-        process_section(section, &mut game_state, &mut players).unwrap();
+        section
+            .process_section(&mut game_state, &mut players)
+            .unwrap();
         progress_bar.inc(1);
     }
     progress_bar.finish_with_message("Save parsing complete");

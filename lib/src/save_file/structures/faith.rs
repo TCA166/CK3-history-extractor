@@ -1,8 +1,11 @@
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
-        types::{GameString, Wrapper, WrapperMut},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
+        parser::{
+            types::{GameString, Wrapper, WrapperMut},
+            GameObjectMap, GameObjectMapping, ParsingError,
+        },
     },
     Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef, Title,
 };
@@ -91,7 +94,7 @@ impl Localizable for Faith {
 #[cfg(feature = "display")]
 mod display {
     use super::super::{
-        super::{
+        super::super::{
             display::{Grapher, ProceduralPath, Renderable},
             game_data::{MapGenerator, MapImage},
         },

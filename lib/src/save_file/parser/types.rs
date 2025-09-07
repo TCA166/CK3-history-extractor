@@ -1,7 +1,43 @@
 use std::{
     cell::{BorrowError, BorrowMutError, Ref, RefCell, RefMut},
+    error,
+    fmt::Debug,
     rc::Rc,
 };
+
+use derive_more::{Display, From};
+use jomini::{
+    binary::{ReaderError as BinaryReaderError, Token as BinaryToken},
+    text::{ReaderError as TextReaderError, Token as TextToken},
+};
+
+/// An error that can occur when reading from a tape.
+#[derive(Debug, From, Display)]
+pub enum TapeError {
+    Text(TextReaderError),
+    Binary(BinaryReaderError),
+}
+
+impl error::Error for TapeError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            Self::Text(err) => Some(err),
+            Self::Binary(err) => Some(err),
+        }
+    }
+}
+
+/* We only have this rather opaque abstraction, not a generalization of tokens
+because a generalization would discard too much context. Most notably, the
+information regarding whether a string was quoted or not. As such, we only
+have this abstraction, used exclusively in error handling. */
+
+/// An abstraction over [jomini] tokens: [jomini::TextToken] and [jomini::BinaryToken]
+#[derive(From, Debug)]
+pub enum Token<'a> {
+    Text(TextToken<'a>),
+    Binary(BinaryToken<'a>),
+}
 
 /// A type alias for a game object id.
 pub type GameId = u32;
@@ -13,10 +49,6 @@ pub type GameId = u32;
 /// Actually a [Rc] around a [str].
 /// Comparisons might not work because compiler shenanigans, try [Rc::as_ref] when in doubt
 pub type GameString = Rc<str>;
-
-// Opaque type aliases for the standard library types.
-/// A type alias for a hash map.
-pub type HashMap<K, V> = std::collections::HashMap<K, V>;
 
 /// A trait for objects that wrap a certain value.
 /// Allows us to create opaque type aliases for certain types.

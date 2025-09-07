@@ -1,5 +1,6 @@
 use std::{
     any::type_name,
+    collections::HashMap,
     error,
     fmt::{self, Debug},
     num::{ParseFloatError, ParseIntError},
@@ -10,7 +11,7 @@ use std::{
 use derive_more::{Display, From};
 use jomini::common::{Date, PdsDate};
 
-use super::super::types::{GameId, GameString, HashMap};
+use super::types::{GameId, GameString};
 
 /// An error that can occur when converting a value from a save file.
 #[derive(Debug, From, Display)]
@@ -284,7 +285,7 @@ impl SaveFileObject {
     }
 }
 
-#[derive(Debug, From)]
+#[derive(Debug, From, Display)]
 pub enum SaveObjectError {
     ConversionError(ConversionError),
     KeyError(KeyError),
@@ -349,15 +350,6 @@ impl GameObjectCollection for GameObjectArray {
     fn get_index(&self, index: usize) -> Result<&SaveFileValue, KeyError> {
         self.get(index)
             .ok_or_else(|| KeyError::IndexError(index, self.clone()))
-    }
-}
-
-impl fmt::Display for SaveObjectError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ConversionError(e) => write!(f, "conversion error: {}", e),
-            Self::KeyError(e) => write!(f, "key error: {}", e),
-        }
     }
 }
 

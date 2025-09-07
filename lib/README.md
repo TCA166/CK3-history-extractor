@@ -20,30 +20,14 @@ you.
 ## Library features
 
 - `permissive`: Supresses localization errors
-- `tokens`: Enables token loading; necessary for ironman parsing
 - `serde`: Enables serde serialization
 - `display`: Enables visualisation
 
-### Tokens
+### Permissive
 
-Using the `tokens` feature requires some work.
-CK3 ironman save files are serialized into a binary format, with strings
-being encoded as indices in a token table. This token table is static per a
-given game version. The easiest way to obtain it, is to get it via a debug
-command.
-
-1. Launch the game in debug mode (`-debug_mode` in launch options)
-2. Open the console and use the `oos_dump` command
-3. In `Paradox Interactive/Crusader Kings III` you will find a new folder called
-   `oos`
-4. The tokens are dumped in `oos/dummy/tokens_1.tok`
-
-This library expects to find that file in the directory pointed to by the
-`TOKENS_DIR` environment variable, or in the current working directory if that
-variable is not set.
-
-Many thanks to [jzebedee](https://github.com/jzebedee) for details on how to
-obtain the tokens.
+For debugging purposes, the localization errors will be raised, unless
+the `permissive` feature is enabled. This is probably not what you want in a
+production environment.
 
 ### Display
 

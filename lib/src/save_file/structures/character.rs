@@ -4,9 +4,12 @@ use jomini::common::Date;
 
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
-        types::{GameString, Shared, Wrapper, WrapperMut},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
+        parser::{
+            types::{GameString, Shared, Wrapper, WrapperMut},
+            GameObjectMap, GameObjectMapping, ParsingError, SaveFileValue,
+        },
     },
     Artifact, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
     GameObjectEntity, GameRef, House, Memory, Title,
@@ -553,7 +556,7 @@ impl Localizable for Character {
 
 #[cfg(feature = "display")]
 mod display {
-    use super::super::super::display::{ProceduralPath, Renderable, TreeNode};
+    use super::super::super::super::display::{ProceduralPath, Renderable, TreeNode};
     use super::*;
 
     impl TreeNode<Vec<GameRef<Character>>> for Character {

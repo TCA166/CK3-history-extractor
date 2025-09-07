@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor_lib"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["TCA"]
 description = "The ck3_history_extractor toolkit"
@@ -14,7 +14,6 @@ keywords = [
     "extractor",
     "utility",
 ]
-build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -30,19 +29,14 @@ rand = "0.9.1"
 jomini = "0.28.0"
 derive_more = { version = "2.0.1", features = ["from", "display"] }
 base64 = "0.22.1"
-phf = "0.13.1"
 
 [features]
 permissive = []
-tokens = []
 serde = ["dep:serde"]
 display = ["serde", "dep:minijinja"]
 
 [dev-dependencies]
 tempfile = "3.21.0"
-
-[build-dependencies]
-phf_codegen = "0.13.1"
 
 [lib]
 path = "src/lib.rs"

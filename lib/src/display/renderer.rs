@@ -1,5 +1,5 @@
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     fs,
     ops::Deref,
     path::{Path, PathBuf},
@@ -14,12 +14,14 @@ use serde::Serialize;
 use super::{
     super::{
         game_data::{GameData, Localize},
-        parser::GameState,
-        structures::{
-            Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
-            GameObjectEntity, GameRef, House, Player, Title,
+        save_file::{
+            parser::types::{GameId, Wrapper},
+            structures::{
+                Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
+                GameObjectEntity, GameRef, House, Player, Title,
+            },
+            GameState,
         },
-        types::{GameId, HashMap, Wrapper},
     },
     graph::Grapher,
     timeline::Timeline,
@@ -137,7 +139,7 @@ pub struct Renderer<'a> {
 
 impl<'a> Renderer<'a> {
     /// Create a new Renderer.
-    /// [create_dir_maybe] is called on the path to ensure that the directory exists, and the subdirectories are created.
+    /// The Renderer will ensure that the directory exists, and the subdirectories are created.
     ///
     /// # Arguments
     ///
@@ -254,7 +256,8 @@ impl<'a> Renderer<'a> {
     ///
     /// The number of objects that were rendered.
     pub fn render_all(self, env: &mut Environment<'_>) -> usize {
-        let mut global_depth_map = HashMap::default();
+        let mut global_depth_map: HashMap<&'static str, HashMap<GameId, usize>> =
+            HashMap::default();
         for (obj, value) in self.depth_map.iter() {
             if let Ok(obj) = RenderableType::try_from(obj) {
                 global_depth_map

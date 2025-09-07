@@ -8,7 +8,9 @@ pub use localizer::{LocalizationError, Localize};
 mod loader;
 pub use loader::GameDataLoader;
 
-use super::types::{GameId, GameString, HashMap};
+use std::collections::HashMap;
+
+use super::save_file::parser::types::{GameId, GameString};
 
 /// Blanket facade over game files that need to be loaded
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
