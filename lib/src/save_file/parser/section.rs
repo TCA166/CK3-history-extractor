@@ -1,4 +1,6 @@
-use derive_more::{Display, From};
+use std::{collections::HashMap, fmt::Debug, io::Read, num::ParseIntError, string::FromUtf8Error};
+
+use derive_more::{Display, Error, From};
 use jomini::{
     binary::{
         ReaderError as BinaryReaderError, Token as BinaryToken, TokenReader as BinaryTokenReader,
@@ -10,19 +12,15 @@ use jomini::{
 
 use super::{game_object::ConversionError, types::TapeError, SaveFileObject, SaveFileValue};
 
-use std::{
-    collections::HashMap, error, fmt::Debug, io::Read, num::ParseIntError, string::FromUtf8Error,
-};
-
 /// An error that occured while processing a specific section
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum SectionError {
     /// An error occured while converting a value
     ConversionError(ConversionError),
     /// An error occured while parsing a scalar
     ScalarError(ScalarError),
     /// An unknown token was encountered
-    UnknownToken(u16),
+    UnknownToken(#[error(not(source))] u16),
     /// An error occured while reading from the tape
     TapeError(TapeError),
     /// An error occured while decoding bytes
@@ -44,18 +42,6 @@ impl From<BinaryReaderError> for SectionError {
 impl From<ParseIntError> for SectionError {
     fn from(value: ParseIntError) -> Self {
         Self::ConversionError(value.into())
-    }
-}
-
-impl error::Error for SectionError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::ConversionError(err) => Some(err),
-            Self::ScalarError(err) => Some(err),
-            Self::TapeError(err) => Some(err),
-            Self::DecodingError(err) => Some(err),
-            _ => None,
-        }
     }
 }
 

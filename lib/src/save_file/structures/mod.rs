@@ -52,23 +52,44 @@ pub use lineage::LineageNode;
 mod artifact;
 pub use artifact::Artifact;
 
+/// A reference to a game object.
 pub type GameRef<T> = Shared<GameObjectEntity<T>>;
 
+// TODO I would like for Finalize to consume the object and return a 'finalized' version of it.
+
+/// Needs to be finalized before being used.
+/// Meant to to be implemented for different variants of [GameObjectEntity]
+///
+/// ## Implementing Finalize
+///
+/// Let's say, that we have a [GameObjectEntity] of type [Character], and we
+/// want to have a two way relationship with another entity, maybe even another
+/// character. This shouldn't be done during creation, as that other struct
+/// might not exist yet in memory. [Finalize::finalize] is the place to do it.
+///
+/// ## Finalization process
+///
+/// So generally, finalization is meant to be done after all [GameObjectDerived]
+/// have been created. After that, the [Finalize::finalize] method is called
+/// on each object, generally by the [super::GameState].
 pub trait Finalize {
+    /// Resolves all the dangling references and performs any necessary
+    /// finalization tasks.
     #[allow(unused_variables)]
     fn finalize(&mut self) {}
 }
 
+/// For [GameObjectDerived] structs that are derived from a single [GameObjectMap].
 pub trait FromGameObject: GameObjectDerived {
+    /// Creates a new instance of the struct from the provided [GameObjectMap].
     fn from_game_object(
         base: &GameObjectMap,
         game_state: &mut GameState,
     ) -> Result<Self, ParsingError>;
 }
 
-/// A trait for objects that can be created from a [GameObjectMap].
+/// A trait for objects that come from a SaveFile.
 /// Currently these include: [Character], [Culture], [Dynasty], [Faith], [Memory], [Player], [Title].
-/// The idea is to have uniform interface for the object initialization.
 pub trait GameObjectDerived: Sized {
     /// Get the name of the object.
     /// The result of this method depends on the type.

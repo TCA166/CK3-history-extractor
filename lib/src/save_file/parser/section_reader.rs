@@ -1,6 +1,6 @@
-use std::{collections::HashMap, error, fmt::Debug, io::Read};
+use std::{collections::HashMap, fmt::Debug, io::Read};
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 use jomini::{
     binary::{
         ReaderError as BinaryReaderError, Token as BinaryToken, TokenReader as BinaryTokenReader,
@@ -18,25 +18,15 @@ use super::{
 };
 
 /// An error that occurred while reading sections from a tape.
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum SectionReaderError<'err> {
     /// An unexpected token was encountered.
     #[display("reader encountered an unexpected token {:?} at {}: {}", _1, _0, _2)]
     UnexpectedToken(usize, Token<'err>, &'static str),
     /// An unknown token was encountered.
-    UnknownToken(u16),
+    UnknownToken(#[error(not(source))] u16),
     TextReaderError(TextReaderError),
     BinaryReaderError(BinaryReaderError),
-}
-
-impl<'err> error::Error for SectionReaderError<'err> {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::TextReaderError(e) => Some(e),
-            Self::BinaryReaderError(e) => Some(e),
-            _ => None,
-        }
-    }
 }
 
 pub struct TextSectionReader<R: Read> {
@@ -84,16 +74,33 @@ impl<R: Read> TextSectionReader<R> {
                         }
                     }
                     TextToken::Unquoted(scalar) => {
-                        potential_key = Some(scalar.to_string());
+                        if past_eq {
+                            if let Some(key) = potential_key.take() {
+                                self.attributes.insert(key, scalar.to_string());
+                            }
+                            past_eq = false;
+                        } else {
+                            potential_key = Some(scalar.to_string());
+                        }
                     }
-                    _ => {
-                        past_eq = false;
-                        potential_key = None;
+                    TextToken::Quoted(scalar) => {
+                        if past_eq {
+                            if let Some(key) = potential_key.take() {
+                                self.attributes.insert(key, scalar.to_string());
+                            }
+                            past_eq = false;
+                        }
                     }
                 },
             }
         }
         return None;
+    }
+
+    /// Returns the value of an attribute with the given name.
+    /// Attributes are key-value pairs in save file root.
+    pub fn attribute(&self, name: &str) -> Option<&str> {
+        self.attributes.get(name).map(|s| s.as_str())
     }
 }
 
@@ -173,28 +180,20 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b""),
-            attributes: HashMap::default(),
-        };
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(b""));
         assert!(reader.next().is_none());
     }
 
     #[test]
     fn test_single_section() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b"test={a=1}"),
-            attributes: HashMap::default(),
-        };
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(b"test={a=1}"));
         assert_eq!(reader.next().unwrap().unwrap().get_name(), "test");
     }
 
     #[test]
     fn test_single_section_messy() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b" \t\r   test={a=1}   \t\r "),
-            attributes: HashMap::default(),
-        };
+        let mut reader =
+            TextSectionReader::new(TokenReader::from_slice(b" \t\r   test={a=1}   \t\r "));
         let section = reader.next().unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         section.skip().unwrap();
@@ -203,10 +202,8 @@ mod tests {
 
     #[test]
     fn test_multiple_sections() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b"test={a=1}test2={b=2}test3={c=3}"),
-            attributes: HashMap::default(),
-        };
+        let mut reader =
+            TextSectionReader::new(TokenReader::from_slice(b"test={a=1}test2={b=2}test3={c=3}"));
         let section = reader.next().unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         section.skip().unwrap();
@@ -221,20 +218,16 @@ mod tests {
 
     #[test]
     fn test_non_ascii_key() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b"test={\x80=1}"),
-            attributes: HashMap::default(),
-        };
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(b"test={\x80=1}"));
         let section = reader.next().unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
     }
 
     #[test]
     fn test_mixed() {
-        let mut reader = TextSectionReader {
-            tape: TokenReader::from_slice(b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}"),
-            attributes: HashMap::default(),
-        };
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(
+            b"a\na=b\ntest={a=1}test2={b=2}test3={c=3}",
+        ));
         let section = reader.next().unwrap().unwrap();
         assert_eq!(section.get_name(), "test");
         section.skip().unwrap();
@@ -244,5 +237,27 @@ mod tests {
         let section = reader.next().unwrap().unwrap();
         assert_eq!(section.get_name(), "test3");
         section.skip().unwrap();
+    }
+
+    #[test]
+    fn test_attributes() {
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(
+            b"test=\"test\" \n test2=test \n section={test=test}",
+        ));
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "section");
+        assert_eq!(reader.attribute("test"), Some("test"));
+        assert_eq!(reader.attribute("test2"), Some("test"));
+    }
+
+    #[test]
+    fn test_broken_attribute() {
+        let mut reader = TextSectionReader::new(TokenReader::from_slice(
+            b"test=test test test \n test2=test \n section={test=test}",
+        ));
+        let section = reader.next().unwrap().unwrap();
+        assert_eq!(section.get_name(), "section");
+        assert_eq!(reader.attribute("test"), Some("test"));
+        assert_eq!(reader.attribute("test2"), Some("test"));
     }
 }

@@ -1,30 +1,20 @@
 use std::{
     cell::{BorrowError, BorrowMutError, Ref, RefCell, RefMut},
-    error,
     fmt::Debug,
     rc::Rc,
 };
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 use jomini::{
     binary::{ReaderError as BinaryReaderError, Token as BinaryToken},
     text::{ReaderError as TextReaderError, Token as TextToken},
 };
 
 /// An error that can occur when reading from a tape.
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum TapeError {
     Text(TextReaderError),
     Binary(BinaryReaderError),
-}
-
-impl error::Error for TapeError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::Text(err) => Some(err),
-            Self::Binary(err) => Some(err),
-        }
-    }
 }
 
 /* We only have this rather opaque abstraction, not a generalization of tokens

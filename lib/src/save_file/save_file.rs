@@ -1,10 +1,9 @@
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 use jomini::{
     self, binary::TokenReader as BinaryTokenReader, binary::TokenResolver,
     text::TokenReader as TextTokenReader,
 };
 use std::{
-    error,
     fmt::Debug,
     fs::File,
     io::{self, Cursor, Read},
@@ -25,28 +24,17 @@ const BINARY_HEADER: &[u8; 4] = b"U1\x01\x00";
 
 /// An error that can occur when opening a save file.
 /// Generally things that are the fault of the user, however unintentional those may be
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum SaveFileError {
     /// Something went wrong with stdlib IO.
     IoError(io::Error),
     /// We found a problem
     #[display("{}", _0)]
-    ParseError(&'static str),
+    ParseError(#[error(not(source))] &'static str),
     /// Something went wrong with decompressing the save file.
     DecompressionError(ZipError),
     /// Decoding bytes failed
     DecodingError(FromUtf8Error),
-}
-
-impl error::Error for SaveFileError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::DecompressionError(err) => Some(err),
-            Self::IoError(err) => Some(err),
-            Self::DecodingError(err) => Some(err),
-            Self::ParseError(_) => None,
-        }
-    }
 }
 
 /// A struct that represents a ck3 save file.

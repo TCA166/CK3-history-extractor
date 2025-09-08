@@ -1,20 +1,19 @@
 use std::{
     any::type_name,
     collections::HashMap,
-    error,
     fmt::{self, Debug},
     num::{ParseFloatError, ParseIntError},
     rc::Rc,
     str::ParseBoolError,
 };
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 use jomini::common::{Date, PdsDate};
 
 use super::types::{GameId, GameString};
 
 /// An error that can occur when converting a value from a save file.
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum ConversionError {
     /// The value is not of the expected type.
     #[display("failed converting {:?} to {}", _0, _1)]
@@ -23,17 +22,6 @@ pub enum ConversionError {
     ParseFloatError(ParseFloatError),
     ParseBoolError(ParseBoolError),
     DateError(),
-}
-
-impl error::Error for ConversionError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::ParseIntError(err) => Some(err),
-            Self::ParseBoolError(err) => Some(err),
-            Self::ParseFloatError(err) => Some(err),
-            _ => None,
-        }
-    }
 }
 
 /// A string that represents a boolean true value.
@@ -285,7 +273,7 @@ impl SaveFileObject {
     }
 }
 
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum SaveObjectError {
     ConversionError(ConversionError),
     KeyError(KeyError),
@@ -353,16 +341,7 @@ impl GameObjectCollection for GameObjectArray {
     }
 }
 
-impl error::Error for SaveObjectError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            Self::ConversionError(e) => Some(e),
-            Self::KeyError(e) => Some(e),
-        }
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, From, Error)]
 pub enum KeyError {
     MissingKey(String, GameObjectMap),
     IndexError(usize, GameObjectArray),
@@ -374,11 +353,5 @@ impl fmt::Display for KeyError {
             Self::MissingKey(key, obj) => write!(f, "key {} missing from object {:?}", key, obj),
             Self::IndexError(index, obj) => write!(f, "index {} out of range for {:?}", index, obj),
         }
-    }
-}
-
-impl error::Error for KeyError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
     }
 }

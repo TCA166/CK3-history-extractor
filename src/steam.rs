@@ -1,11 +1,11 @@
 use std::{
-    env, error,
+    env,
     fmt::{self, Debug, Display},
     fs::{read_dir, read_to_string},
     path::{Path, PathBuf},
 };
 
-use derive_more::Display;
+use derive_more::{Display, Error};
 use keyvalues_parser::{Value, Vdf};
 
 /// The Steam ID for Crusader Kings III.
@@ -33,7 +33,7 @@ const MOD_PATH: &str = "workshop/content/";
 /// The default path from the library to the CK3 directory.
 pub const CK3_PATH: &str = "common/Crusader Kings III/game";
 
-#[derive(Debug, Display)]
+#[derive(Debug, Display, Error)]
 pub enum SteamError {
     /// The Steam directory was not found.
     #[display("steam directory not found")]
@@ -46,22 +46,13 @@ pub enum SteamError {
     VdfParseError(keyvalues_parser::error::Error),
     /// An error occurred while processing the VDF file.
     #[display("error processing VDF file: {_0}")]
-    VdfProcessingError(&'static str),
+    VdfProcessingError(#[error(not(source))] &'static str),
     /// The CK3 directory was not found. So it was in the manifest, but not in the library.
     #[display("CK3 directory not found")]
     Ck3NotFound,
     /// According to the internal manifest, there is no CK3 installation.
     #[display("CK3 missing from library")]
     CK3Missing,
-}
-
-impl error::Error for SteamError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            SteamError::VdfParseError(e) => Some(e),
-            _ => None,
-        }
-    }
 }
 
 /// Returns the path to the Steam directory.

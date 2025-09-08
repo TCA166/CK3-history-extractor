@@ -1,10 +1,10 @@
 use clap::Parser;
-use derive_more::From;
+use derive_more::{Error, From};
 use human_panic::setup_panic;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde_json;
 use std::{
-    env, error,
+    env,
     fmt::{self, Debug, Display, Formatter},
     fs,
     io::{stdin, stdout, IsTerminal},
@@ -40,7 +40,7 @@ use tokens::TOKEN_TRANSLATOR;
 const INTERVAL: Duration = Duration::from_secs(1);
 
 /// An error a user has caused. Shame on him.
-#[derive(From, Debug)]
+#[derive(From, Debug, Error)]
 enum UserError {
     /// The program is not running in a terminal
     NoTerminal,
@@ -56,15 +56,6 @@ impl Display for UserError {
             UserError::NoTerminal => write!(f, "The program is not running in a terminal"),
             UserError::FileDoesNotExist => write!(f, "The file does not exist"),
             UserError::FileError(e) => write!(f, "An error occurred during file handling: {}", e),
-        }
-    }
-}
-
-impl error::Error for UserError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            UserError::FileError(e) => Some(e),
-            _ => None,
         }
     }
 }

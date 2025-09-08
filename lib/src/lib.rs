@@ -57,5 +57,12 @@ pub mod derived_ref;
 pub mod game_data;
 
 /// A module for handling the display of the parsed data.
+///
+/// ## Getting Started
+///
+/// The main feature of this module is the [display::Renderer], which uses the
+/// [save_file::GameState], [game_data::GameData] and optionally
+/// [display::Grapher] to render [display::Renderable] structs.
+///
 #[cfg(feature = "display")]
 pub mod display;

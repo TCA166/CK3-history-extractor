@@ -27,7 +27,7 @@ plotters = "0.3.7"
 tidy-tree = "0.1.0"
 rand = "0.9.1"
 jomini = "0.28.0"
-derive_more = { version = "2.0.1", features = ["from", "display"] }
+derive_more = { version = "2.0.1", features = ["from", "display", "error"] }
 base64 = "0.22.1"
 
 [features]

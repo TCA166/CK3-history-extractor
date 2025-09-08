@@ -1,6 +1,6 @@
-use std::{collections::HashMap, error, fs::read_dir, io, mem, path::Path};
+use std::{collections::HashMap, fs::read_dir, io, mem, path::Path};
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 
 use super::{
     super::save_file::{
@@ -15,27 +15,17 @@ use super::{
 };
 
 /// An error that occurred while processing game data
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum GameDataError {
     /// A file is missing at the provided path
     #[display("a file {_0} is missing")]
-    MissingFile(String),
+    MissingFile(#[error(not(source))] String),
     /// The data is invalid in some way with description
     #[display("the data is invalid: {_0}")]
-    InvalidData(&'static str),
+    InvalidData(#[error(not(source))] &'static str),
     ParsingError(ParsingError),
     IOError(SaveFileError),
     MapError(MapError),
-}
-
-impl error::Error for GameDataError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            GameDataError::IOError(e) => Some(e),
-            GameDataError::ParsingError(e) => Some(e),
-            _ => None,
-        }
-    }
 }
 
 impl From<io::Error> for GameDataError {
