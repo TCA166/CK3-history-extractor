@@ -42,7 +42,7 @@ pub mod derived_ref;
 /// created via the [game_data::GameDataLoader] builder, which allows you to
 /// 'add' paths to search through for game data. After you are done searching
 /// for game files, you just [game_data::GameDataLoader::finalize] to get your
-/// [GameData].
+/// [game_data::GameData].
 ///
 /// ## Example
 ///
