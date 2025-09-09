@@ -8,12 +8,12 @@ use jomini::common::Date;
 
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
         parser::{
-            GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileObject,
-            SaveFileValue,
+            types::{GameString, Wrapper, WrapperMut},
+            GameObjectMap, GameObjectMapping, ParsingError, SaveFileObject, SaveFileValue,
         },
-        types::{GameString, Wrapper, WrapperMut},
     },
     Character, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived, GameRef,
 };
@@ -351,7 +351,7 @@ impl Localizable for Title {
 #[cfg(feature = "display")]
 mod display {
     use super::super::{
-        super::{
+        super::super::{
             display::{Grapher, ProceduralPath, Renderable, TreeNode},
             game_data::{MapGenerator, MapImage},
         },

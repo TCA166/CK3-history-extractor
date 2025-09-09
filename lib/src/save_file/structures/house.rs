@@ -1,13 +1,16 @@
+use std::collections::HashMap;
+
 use jomini::common::Date;
 
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
         parser::{
-            GameObjectMap, GameObjectMapping, GameState, KeyError, ParsingError, SaveFileValue,
+            types::{GameString, Wrapper, WrapperMut},
+            GameObjectMap, GameObjectMapping, KeyError, ParsingError, SaveFileValue,
             SaveObjectError,
         },
-        types::{GameString, HashMap, Wrapper, WrapperMut},
     },
     Character, Culture, Dynasty, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
     GameRef,
@@ -246,7 +249,7 @@ impl House {
 #[cfg(feature = "display")]
 mod display {
     use super::super::{
-        super::display::{ProceduralPath, Renderable},
+        super::super::display::{ProceduralPath, Renderable},
         GameObjectEntity,
     };
     use super::*;

@@ -1,41 +1,31 @@
-use std::{error, fs::read_dir, io, mem, path::Path};
+use std::{collections::HashMap, fs::read_dir, io, mem, path::Path};
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 
 use super::{
-    super::{
+    super::save_file::{
         parser::{
-            yield_section, GameObjectCollection, ParsingError, SaveFile, SaveFileError,
-            SaveFileObject, SaveFileValue,
+            types::{GameId, GameString},
+            GameObjectCollection, ParsingError, SaveFileObject, SaveFileSection, SaveFileValue,
         },
-        types::{GameId, GameString, HashMap},
+        SaveFile, SaveFileError,
     },
     map::MapError,
     GameData, GameMap, Localizer,
 };
 
 /// An error that occurred while processing game data
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum GameDataError {
     /// A file is missing at the provided path
     #[display("a file {_0} is missing")]
-    MissingFile(String),
+    MissingFile(#[error(not(source))] String),
     /// The data is invalid in some way with description
     #[display("the data is invalid: {_0}")]
-    InvalidData(&'static str),
+    InvalidData(#[error(not(source))] &'static str),
     ParsingError(ParsingError),
     IOError(SaveFileError),
     MapError(MapError),
-}
-
-impl error::Error for GameDataError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            GameDataError::IOError(e) => Some(e),
-            GameDataError::ParsingError(e) => Some(e),
-            _ => None,
-        }
-    }
 }
 
 impl From<io::Error> for GameDataError {
@@ -49,8 +39,8 @@ fn create_title_province_map(
     file: &SaveFile,
     out: &mut HashMap<GameId, GameString>,
 ) -> Result<(), ParsingError> {
-    let mut tape = file.tape();
-    while let Some(res) = yield_section(&mut tape) {
+    let mut tape = file.section_reader(None).unwrap();
+    while let Some(res) = tape.next() {
         let section = res?;
         let name = GameString::from(section.get_name());
         //DFS in the structure

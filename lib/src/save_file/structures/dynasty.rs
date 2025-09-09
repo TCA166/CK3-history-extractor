@@ -1,8 +1,13 @@
+use std::collections::HashMap;
+
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError, SaveFileValue},
-        types::{GameString, HashMap, Wrapper, WrapperMut},
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
+        parser::{
+            types::{GameString, Wrapper, WrapperMut},
+            GameObjectMap, GameObjectMapping, ParsingError, SaveFileValue,
+        },
     },
     Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef, House,
 };
@@ -166,7 +171,7 @@ impl Localizable for Dynasty {
 #[cfg(feature = "display")]
 mod display {
     pub use super::super::{
-        super::display::{Grapher, ProceduralPath, Renderable},
+        super::super::display::{Grapher, ProceduralPath, Renderable},
         GameObjectEntity,
     };
     use super::*;

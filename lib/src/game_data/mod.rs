@@ -8,7 +8,9 @@ pub use localizer::{LocalizationError, Localize};
 mod loader;
 pub use loader::GameDataLoader;
 
-use super::types::{GameId, GameString, HashMap};
+use std::collections::HashMap;
+
+use super::save_file::parser::types::{GameId, GameString};
 
 /// Blanket facade over game files that need to be loaded
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -38,14 +40,17 @@ pub trait Localizable {
 }
 
 impl GameData {
+    /// Gets the loaded game map
     pub fn get_map(&self) -> Option<&GameMap> {
         self.map.as_ref()
     }
 
+    /// Gets the localizer
     pub fn get_localizer(&self) -> &Localizer {
         &self.localizer
     }
 
+    /// Looks up the title key for the given province ID
     pub fn lookup_title(&self, id: &GameId) -> Option<GameString> {
         self.title_province_map.get(&id).cloned()
     }

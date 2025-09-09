@@ -1,8 +1,10 @@
-use std::{borrow::Borrow, error, io, num::ParseIntError, ops::Deref, path::Path, thread};
+use std::{
+    borrow::Borrow, collections::HashMap, io, num::ParseIntError, ops::Deref, path::Path, thread,
+};
 
 use csv::ReaderBuilder;
 
-use derive_more::{Display, From};
+use derive_more::{Display, Error, From};
 use image::{
     imageops::{crop_imm, resize, FilterType},
     ImageReader, Rgb, RgbImage,
@@ -16,7 +18,7 @@ use plotters::{
     style::{Color, IntoFont, RGBAColor, ShapeStyle, BLACK},
 };
 
-use super::super::types::{GameId, GameString, HashMap};
+use super::super::save_file::parser::types::{GameId, GameString};
 
 // color stuff
 
@@ -34,23 +36,12 @@ const NULL_COLOR: Rgb<u8> = Rgb([0, 0, 0]);
 /// The scale factor for the input map image
 const SCALE: u32 = 4;
 
-#[derive(Debug, From, Display)]
+#[derive(Debug, From, Display, Error)]
 pub enum MapError {
     IoError(io::Error),
     ImageError(image::ImageError),
     DefinitionError(csv::Error),
     ParsingError(ParseIntError),
-}
-
-impl error::Error for MapError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            MapError::IoError(e) => Some(e),
-            MapError::ImageError(e) => Some(e),
-            MapError::DefinitionError(e) => Some(e),
-            MapError::ParsingError(e) => Some(e),
-        }
-    }
 }
 
 /// Returns a vector of bytes from a png file encoded with rgb8, meaning each pixel is represented by 3 bytes
@@ -266,7 +257,7 @@ impl MapGenerator for GameMap {
         assoc: F,
         key_list: Option<I>,
     ) -> RgbImage {
-        let mut colors = HashMap::default();
+        let mut colors: HashMap<&Rgb<u8>, C> = HashMap::default();
         if let Some(key_list) = key_list {
             for k in key_list {
                 if let Some(color) = self.title_color_map.get(k.as_ref()) {

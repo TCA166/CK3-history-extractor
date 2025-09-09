@@ -3,9 +3,11 @@ use std::path::{Path, PathBuf};
 use super::{
     super::{
         game_data::GameData,
-        parser::GameState,
-        structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, GameRef, Title},
-        types::GameString,
+        save_file::{
+            parser::types::GameString,
+            structures::{Character, Culture, EntityRef, Faith, GameObjectDerived, GameRef, Title},
+            GameState,
+        },
     },
     graph::{create_timeline_graph, Grapher},
     renderer::{GetPath, Renderable},

@@ -2,9 +2,9 @@ use jomini::common::Date;
 
 use super::{
     super::{
-        game_data::{GameData, Localizable, LocalizationError, Localize},
-        parser::{GameObjectMap, GameObjectMapping, GameState, ParsingError},
-        types::GameString,
+        super::game_data::{GameData, Localizable, LocalizationError, Localize},
+        game_state::GameState,
+        parser::{types::GameString, GameObjectMap, GameObjectMapping, ParsingError},
     },
     Character, EntityRef, FromGameObject, GameObjectDerived, GameRef,
 };
@@ -141,7 +141,7 @@ impl Localizable for Artifact {
 
 #[cfg(feature = "display")]
 mod serialize {
-    use super::super::super::types::Wrapper;
+    use super::super::super::parser::types::Wrapper;
     use super::*;
     use serde::Serialize;
 

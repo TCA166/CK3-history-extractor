@@ -1,7 +1,10 @@
-use std::path::{Path, PathBuf};
-use std::{fmt, fs, mem};
+use std::{
+    collections::HashMap,
+    fmt, fs, mem,
+    path::{Path, PathBuf},
+};
 
-use super::super::types::{GameString, HashMap};
+use super::super::save_file::parser::types::GameString;
 
 /* This is an imperfect localization parser. Unfortunately, the localization
 files are far too complex to be parsed without also implementing a whole
