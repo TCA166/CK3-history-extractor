@@ -109,10 +109,12 @@ impl<'a> SaveFile {
         }
 
         let mut binary = false;
-        for i in 0..read_size - BINARY_HEADER.len() {
-            if contents[i..i + BINARY_HEADER.len()] == *BINARY_HEADER {
-                binary = true;
-                break;
+        if contents.len() > BINARY_HEADER.len() {
+            for i in 0..contents.len() - BINARY_HEADER.len() {
+                if contents[i..i + BINARY_HEADER.len()] == *BINARY_HEADER {
+                    binary = true;
+                    break;
+                }
             }
         }
 
