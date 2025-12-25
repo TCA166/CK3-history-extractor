@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor_lib"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["TCA"]
 description = "The ck3_history_extractor toolkit"

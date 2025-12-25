@@ -39,7 +39,9 @@ impl TitleData {
     ) -> Result<Self, ParsingError> {
         let mut title = Self {
             key: key,
-            name: base.get_string("name")?,
+            name: base
+                .get_string("name")
+                .or_else(|_| base.get_string("key"))?,
             color: base
                 .get("color")
                 .map(|v| v.as_object().and_then(|obj| obj.as_array()))

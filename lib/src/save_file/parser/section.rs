@@ -160,7 +160,7 @@ fn add_value_quoted<T: Into<SaveFileValue>>(
     past_op: &mut Option<Operator>,
     token: T,
 ) {
-    if past_op.take().is_some_and(|op| op == Operator::Equal) {
+    if past_op.take().is_some() {
         stack
             .last_mut()
             .unwrap()

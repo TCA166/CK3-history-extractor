@@ -77,21 +77,22 @@ impl<'a> SaveFile {
             Vec::new()
         };
         let read_size = file.read_to_end(&mut contents)?;
+
         if read_size < ARCHIVE_HEADER.len() {
             return Err(SaveFileError::ParseError("Save file is too small"));
         }
+
         let mut compressed = false;
-        let mut binary = false;
         // find if ARCHIVE_HEADER is in the file
         for i in 0..read_size - ARCHIVE_HEADER.len() {
             if contents[i..i + ARCHIVE_HEADER.len()] == *ARCHIVE_HEADER {
                 compressed = true;
                 break;
-            } else if contents[i..i + BINARY_HEADER.len()] == *BINARY_HEADER {
-                binary = true;
             }
         }
+
         if compressed {
+            // decompress
             let mut archive = ZipArchive::new(Cursor::new(contents))?;
             let mut gamestate = archive.by_index(0)?;
             if gamestate.is_dir() {
@@ -101,14 +102,21 @@ impl<'a> SaveFile {
                 return Err(SaveFileError::ParseError("Unexpected file name"));
             }
             let gamestate_size = gamestate.size() as usize;
-            let mut contents = Vec::with_capacity(gamestate_size);
+            contents = Vec::with_capacity(gamestate_size);
             if gamestate.read_to_end(&mut contents)? != gamestate_size {
                 return Err(SaveFileError::ParseError("Failed to read the entire file"));
             }
-            return Ok(SaveFile { contents, binary });
-        } else {
-            return Ok(SaveFile { contents, binary });
         }
+
+        let mut binary = false;
+        for i in 0..read_size - BINARY_HEADER.len() {
+            if contents[i..i + BINARY_HEADER.len()] == *BINARY_HEADER {
+                binary = true;
+                break;
+            }
+        }
+
+        return Ok(SaveFile { contents, binary });
     }
 
     pub fn section_reader<'resolver>(
