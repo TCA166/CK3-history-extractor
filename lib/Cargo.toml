@@ -21,8 +21,8 @@ keywords = [
 minijinja = { version = "2.12.0", features = ["loader"], optional = true }
 serde = { version = "1.0.219", features = ["rc", "derive"], optional = true }
 zip = "7.0.0"
-image = "0.25.6"
-csv = "1.3.1"
+image = "0.25.9"
+csv = "1.4.0"
 plotters = "0.3.7"
 tidy-tree = "0.1.0"
 rand = "0.9.1"
@@ -36,7 +36,7 @@ serde = ["dep:serde"]
 display = ["serde", "dep:minijinja"]
 
 [dev-dependencies]
-tempfile = "3.21.0"
+tempfile = "3.24.0"
 
 [lib]
 path = "src/lib.rs"

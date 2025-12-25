@@ -130,10 +130,14 @@ impl GameDataLoader {
                     "custom map without custom titles",
                 ));
             }
-            let dir = read_dir(&province_dir_path)?;
-            for entry in dir {
+            for entry in read_dir(&province_dir_path)? {
                 let entry = entry?;
-                if entry.file_type()?.is_file() {
+                if entry.file_type()?.is_file()
+                    && entry
+                        .file_name()
+                        .to_str()
+                        .is_some_and(|str| !str.starts_with("_"))
+                {
                     create_title_province_map(
                         &SaveFile::open(entry.path())?,
                         &mut self.title_province_map,

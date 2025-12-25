@@ -430,7 +430,7 @@ mod display {
             for title in self.titles.values() {
                 //first we handle the empires and collect titles that might be relevant for events
                 if let Some(t) = title.get_internal().inner() {
-                    let hist = t.get_history_iter();
+                    let hist = t.get_history();
                     if hist.len() == 0 {
                         continue;
                     }
@@ -486,7 +486,7 @@ mod display {
             for title in event_checkout {
                 if let Some(tit) = title.get_internal().inner() {
                     //find the first event that has a character attached
-                    let mut hist = tit.get_history_iter().skip_while(|a| a.1.is_none());
+                    let mut hist = tit.get_history().iter().skip_while(|a| a.1.is_none());
                     let next = hist.next();
                     if next.is_none() {
                         continue;

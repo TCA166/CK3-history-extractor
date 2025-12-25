@@ -1,4 +1,4 @@
-use clap_derive::Parser;
+use clap::Parser;
 use derive_more::{Display, Error};
 use dialoguer::{Completion, Input, MultiSelect, Select};
 

@@ -1,6 +1,5 @@
 use std::{
     ops::{Deref, DerefMut},
-    slice::Iter,
     str::FromStr,
 };
 
@@ -236,8 +235,8 @@ impl Title {
     }
 
     /// Returns an iterator over the history of the title
-    pub fn get_history_iter(&self) -> Iter<(Date, Option<GameRef<Character>>, GameString)> {
-        self.history.iter()
+    pub fn get_history(&self) -> &Vec<(Date, Option<GameRef<Character>>, GameString)> {
+        &self.history
     }
 
     /// Returns the capital of the title

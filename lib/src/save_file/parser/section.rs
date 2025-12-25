@@ -6,7 +6,10 @@ use jomini::{
         ReaderError as BinaryReaderError, Token as BinaryToken, TokenReader as BinaryTokenReader,
         TokenResolver,
     },
-    text::{ReaderError as TextReaderError, Token as TextToken, TokenReader as TextTokenReader},
+    text::{
+        Operator, ReaderError as TextReaderError, Token as TextToken,
+        TokenReader as TextTokenReader,
+    },
     Scalar, ScalarError,
 };
 
@@ -154,15 +157,14 @@ fn scalar_to_string(scalar: Scalar) -> Result<String, SectionError> {
 fn add_value_quoted<T: Into<SaveFileValue>>(
     stack: &mut Vec<StackEntry>,
     key: &mut Option<String>,
-    past_eq: &mut bool,
+    past_op: &mut Option<Operator>,
     token: T,
 ) {
-    if *past_eq {
+    if past_op.take().is_some_and(|op| op == Operator::Equal) {
         stack
             .last_mut()
             .unwrap()
             .insert(key.take().unwrap(), token.into());
-        *past_eq = false;
     } else {
         stack.last_mut().unwrap().push(token.into());
     }
@@ -172,15 +174,17 @@ fn add_value_quoted<T: Into<SaveFileValue>>(
 fn add_value_unquoted<T: Into<SaveFileValue> + ToString>(
     stack: &mut Vec<StackEntry>,
     key: &mut Option<String>,
-    past_eq: &mut bool,
+    past_op: &mut Option<Operator>,
     token: T,
 ) {
-    if *past_eq {
+    // here we don't actually check if the operator is equal, thats bad?
+    // and we dont check cuz we dont store what the operator was
+    // is_some_and(|op| op == Operator::Equal)
+    if past_op.take().is_some() {
         stack
             .last_mut()
             .unwrap()
             .insert(key.take().unwrap(), token.into());
-        *past_eq = false;
     } else {
         if let Some(key) = key.replace(token.to_string()) {
             stack.last_mut().unwrap().push(key.into());
@@ -222,16 +226,14 @@ impl<'tape, R: Read> SaveFileSection for TextSection<'tape, R> {
     fn parse(self) -> Result<SaveFileObject, SectionError> {
         let mut stack: Vec<StackEntry> = vec![StackEntry::new(Some(self.name.clone()))];
         let mut key = None;
-        let mut past_eq = false;
+        let mut past_op: Option<Operator> = None;
         while let Some(result) = self.tape.next().transpose() {
             match result {
                 Err(e) => return Err(e.into()),
                 Ok(tok) => match tok {
                     TextToken::Open => {
                         stack.push(StackEntry::new(key.take()));
-                        if past_eq {
-                            past_eq = false;
-                        }
+                        past_op = None;
                     }
                     TextToken::Close => {
                         let mut last = stack.pop().unwrap();
@@ -250,22 +252,14 @@ impl<'tape, R: Read> SaveFileSection for TextSection<'tape, R> {
                             return Ok(value);
                         }
                     }
-                    TextToken::Operator(_op) => {
-                        // here we have a problem, when parsing game code, there can be some instances of non = operators
-                        // MAYBE solve this here somehow
-                        /*
-                        if op == Operator::Equal {
-                            past_eq = true;
-                        } else {
-                            past_eq = false;
-                        } */
-                        past_eq = true;
+                    TextToken::Operator(op) => {
+                        past_op = Some(op);
                     }
                     TextToken::Quoted(token) => {
                         add_value_quoted(
                             &mut stack,
                             &mut key,
-                            &mut past_eq,
+                            &mut past_op,
                             scalar_to_string(token)?,
                         );
                     }
@@ -277,7 +271,7 @@ impl<'tape, R: Read> SaveFileSection for TextSection<'tape, R> {
                         add_value_unquoted(
                             &mut stack,
                             &mut key,
-                            &mut past_eq,
+                            &mut past_op,
                             scalar_to_string(token)?,
                         );
                     }
@@ -324,7 +318,7 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
     fn parse(self) -> Result<SaveFileObject, SectionError> {
         let mut stack: Vec<StackEntry> = vec![StackEntry::new(Some(self.name.clone()))];
         let mut key = None;
-        let mut past_eq = false;
+        let mut past_op: Option<Operator> = None;
 
         while let Some(result) = self.tape.next().transpose() {
             match result {
@@ -332,9 +326,7 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
                 Ok(tok) => match tok {
                     BinaryToken::Open => {
                         stack.push(StackEntry::new(key.take()));
-                        if past_eq {
-                            past_eq = false;
-                        }
+                        past_op = None;
                     }
                     BinaryToken::Close => {
                         let mut last = stack.pop().unwrap();
@@ -354,13 +346,13 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
                         }
                     }
                     BinaryToken::Equal => {
-                        past_eq = true;
+                        past_op = Some(Operator::Equal);
                     }
                     BinaryToken::Quoted(token) => {
                         add_value_unquoted(
                             &mut stack,
                             &mut key,
-                            &mut past_eq,
+                            &mut past_op,
                             scalar_to_string(token)?,
                         );
                     }
@@ -368,24 +360,24 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
                         add_value_unquoted(
                             &mut stack,
                             &mut key,
-                            &mut past_eq,
+                            &mut past_op,
                             scalar_to_string(token)?,
                         );
                     }
                     BinaryToken::Bool(token) => {
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::I32(token) => {
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::I64(token) => {
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::F32(token) => {
-                        add_value_quoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_quoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::F64(token) => {
-                        add_value_quoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_quoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::Id(token) => {
                         let resolved = self
@@ -393,7 +385,7 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
                             .resolve(token)
                             .ok_or(SectionError::UnknownToken(token))?
                             .to_string();
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, resolved);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, resolved);
                     }
                     BinaryToken::Rgb(token) => {
                         let value = SaveFileObject::Array(vec![
@@ -401,13 +393,16 @@ impl<'tape, 'resolver, R: Read> SaveFileSection for BinarySection<'tape, 'resolv
                             token.g.into(),
                             token.b.into(),
                         ]);
-                        add_value_quoted(&mut stack, &mut key, &mut past_eq, value);
+                        add_value_quoted(&mut stack, &mut key, &mut past_op, value);
                     }
                     BinaryToken::U32(token) => {
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, token);
                     }
                     BinaryToken::U64(token) => {
-                        add_value_unquoted(&mut stack, &mut key, &mut past_eq, token);
+                        add_value_unquoted(&mut stack, &mut key, &mut past_op, token);
+                    }
+                    BinaryToken::Lookup(l) => {
+                        todo!("Couldn't handle the Lookup token {}", l);
                     }
                 },
             }

@@ -47,10 +47,10 @@ pub trait Wrapper<T> {
     fn wrap(t: T) -> Self;
 
     /// Get the internal value as a reference or a raw value. Will panic if the value is already mutably borrowed.
-    fn get_internal(&self) -> Ref<T>;
+    fn get_internal<'a>(&'a self) -> Ref<'a, T>;
 
     /// Try to get the internal value as a reference or a raw value
-    fn try_get_internal(&self) -> Result<Ref<T>, BorrowError>;
+    fn try_get_internal<'a>(&'a self) -> Result<Ref<'a, T>, BorrowError>;
 }
 
 /// A trait for objects that wrap a certain value and allow mutation.
@@ -58,10 +58,10 @@ pub trait Wrapper<T> {
 /// Literally just a different flavor of [std::ops::DerefMut].
 pub trait WrapperMut<T> {
     /// Get the internal value as a mutable reference
-    fn get_internal_mut(&self) -> RefMut<T>;
+    fn get_internal_mut<'a>(&'a self) -> RefMut<'a, T>;
 
     /// Try to get the internal value as a mutable reference
-    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError>;
+    fn try_get_internal_mut<'a>(&'a self) -> Result<RefMut<'a, T>, BorrowMutError>;
 }
 
 /// Really just a type alias for [Rc]<[RefCell]>
@@ -83,21 +83,21 @@ impl<T> Wrapper<T> for Shared<T> {
         }
     }
 
-    fn get_internal(&self) -> Ref<T> {
+    fn get_internal<'a>(&'a self) -> Ref<'a, T> {
         self.inner.borrow()
     }
 
-    fn try_get_internal(&self) -> Result<Ref<T>, BorrowError> {
+    fn try_get_internal<'a>(&'a self) -> Result<Ref<'a, T>, BorrowError> {
         self.inner.try_borrow()
     }
 }
 
 impl<T> WrapperMut<T> for Shared<T> {
-    fn get_internal_mut(&self) -> RefMut<T> {
+    fn get_internal_mut<'a>(&'a self) -> RefMut<'a, T> {
         self.inner.borrow_mut()
     }
 
-    fn try_get_internal_mut(&self) -> Result<RefMut<T>, BorrowMutError> {
+    fn try_get_internal_mut<'a>(&'a self) -> Result<RefMut<'a, T>, BorrowMutError> {
         self.inner.try_borrow_mut()
     }
 }
