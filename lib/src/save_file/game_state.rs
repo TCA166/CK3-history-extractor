@@ -396,18 +396,22 @@ mod display {
                         let count = total_yearly_deaths.entry(death_date.year()).or_insert(0);
                         *count += 1;
                         {
-                            let entry = faith_yearly_deaths
-                                .entry(char.get_faith().as_ref().unwrap().get_internal().get_id())
-                                .or_insert(BTreeMap::default());
-                            let count = entry.entry(death_date.year()).or_insert(0);
-                            *count += 1;
+                            if let Some(faith) = char.get_faith().as_ref() {
+                                let entry = faith_yearly_deaths
+                                    .entry(faith.get_internal().get_id())
+                                    .or_insert(BTreeMap::default());
+                                let count = entry.entry(death_date.year()).or_insert(0);
+                                *count += 1;
+                            }
                         }
                         {
-                            let entry = culture_yearly_deaths
-                                .entry(char.get_culture().as_ref().unwrap().get_internal().get_id())
-                                .or_insert(BTreeMap::default());
-                            let count = entry.entry(death_date.year()).or_insert(0);
-                            *count += 1;
+                            if let Some(culture) = char.get_culture().as_ref() {
+                                let entry = culture_yearly_deaths
+                                    .entry(culture.get_internal().get_id())
+                                    .or_insert(BTreeMap::default());
+                                let count = entry.entry(death_date.year()).or_insert(0);
+                                *count += 1;
+                            }
                         }
                     }
                 }

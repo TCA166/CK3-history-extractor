@@ -131,11 +131,15 @@ impl Into<SaveFileObject> for StackEntry {
                 }
                 return SaveFileObject::Array(array);
             } else {
-                unimplemented!(
-                    "combining a hashmap and an array is not yet implemented, {:?}, {:?}",
-                    map,
-                    array
-                );
+                /*  well so something went wrong, possibly like this:
+                localization_key=Red Turbans Rebellion
+                I dont know what now, so we will just ignore the entity with lesser length
+                */
+                if map.len() < array.len() {
+                    SaveFileObject::Map(map)
+                } else {
+                    SaveFileObject::Array(array)
+                }
             }
         }
     }
