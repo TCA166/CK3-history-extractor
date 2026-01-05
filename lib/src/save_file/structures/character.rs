@@ -310,8 +310,10 @@ impl FromGameObject for Character {
                     _ => {}
                 }
             }
-            for l in alive_data.get_object("languages")?.as_array()? {
-                val.languages.push(l.as_string()?);
+            if let Some(languages) = alive_data.get("languages") {
+                for l in languages.as_object()?.as_array()? {
+                    val.languages.push(l.as_string()?);
+                }
             }
             if let Some(perk_node) = alive_data.get("perks") {
                 for p in perk_node.as_object()?.as_array()? {
