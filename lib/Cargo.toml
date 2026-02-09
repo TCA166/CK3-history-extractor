@@ -25,7 +25,7 @@ image = "0.25.9"
 csv = "1.4.0"
 plotters = "0.3.7"
 tidy-tree = "0.1.0"
-rand = "0.9.2"
+rand = "0.10.0"
 jomini = "0.34.0"
 derive_more = { version = "2.0.1", features = ["from", "display", "error"] }
 base64 = "0.22.1"
