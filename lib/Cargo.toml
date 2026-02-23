@@ -20,7 +20,7 @@ keywords = [
 [dependencies]
 minijinja = { version = "2.12.0", features = ["loader"], optional = true }
 serde = { version = "1.0.219", features = ["rc", "derive"], optional = true }
-zip = "7.0.0"
+zip = "8.1.0"
 image = "0.25.9"
 csv = "1.4.0"
 plotters = "0.3.7"
