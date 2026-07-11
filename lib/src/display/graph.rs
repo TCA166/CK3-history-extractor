@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rand::{rng, RngExt};
+use rand::{RngExt, rng};
 
 use plotters::{
     coord::types::{RangedCoordf64, RangedCoordi32},
@@ -67,7 +67,7 @@ fn handle_node<
     let id = obj.get_id() as usize;
     if let Some(ch) = obj.inner() {
         let name = ch.get_name();
-        let txt_size = fnt.box_size(&name).unwrap();
+        let txt_size = fnt.box_size(&name).expect("Failed to calculate text size");
         let node_width = txt_size.0 as f64 * TREE_NODE_SIZE_MULTIPLIER;
         let node_height = txt_size.1 as f64 * TREE_NODE_SIZE_MULTIPLIER;
         //we also here calculate the point where the text should be drawn while we have convenient access to both size with margin and without
@@ -126,13 +126,13 @@ fn create_graph<P: AsRef<Path>, S: Into<String>>(
     }
 
     let root = SVGBackend::new(output_path, GRAPH_SIZE).into_drawing_area();
-    root.fill(&WHITE).unwrap();
+    root.fill(&WHITE).expect("Failed to fill drawing area");
     let mut chart = ChartBuilder::on(&root)
         .margin(GRAPH_MARGIN)
         .x_label_area_size(GRAPH_LABEL_SPACE)
         .y_label_area_size(GRAPH_LABEL_SPACE)
         .build_cartesian_2d((min_x as i32)..(max_x as i32), MIN_Y..MAX_Y)
-        .unwrap();
+        .expect("Failed to build cartesian chart");
 
     let mut mesh = chart.configure_mesh();
 
@@ -144,20 +144,21 @@ fn create_graph<P: AsRef<Path>, S: Into<String>>(
         mesh.y_desc(ylabel);
     }
 
-    mesh.draw().unwrap();
+    mesh.draw().expect("Failed to draw mesh");
 
     chart
         .draw_series(LineSeries::new(
             (min_x..max_x).map(|year| {
                 (
                     year as i32,
-                    *data.get(&year).unwrap_or(&0) as f64 / *contast.get(&year).unwrap() as f64
+                    *data.get(&year).unwrap_or(&0) as f64
+                        / *contast.get(&year).expect("Failed to get total data") as f64
                         * MAX_Y,
                 )
             }),
             &RED,
         ))
-        .unwrap();
+        .expect("Failed to draw line series");
 }
 
 /// An object that can create graphs from the game state
@@ -239,7 +240,9 @@ impl Grapher {
                 let id = layout[i * 3] as usize;
                 let x = layout[i * 3 + 1];
                 let y = layout[i * 3 + 2];
-                let (_, _, (node_width, node_height), _, class) = storage.get(&id).unwrap();
+                let (_, _, (node_width, node_height), _, class) = storage
+                    .get(&id)
+                    .expect("Failed to get node data from storage");
                 if let Some(class) = class {
                     // group resolving
                     if !groups.contains_key(class.as_ref()) {
@@ -295,7 +298,7 @@ impl Grapher {
 
             let root_raw = SVGBackend::new(output_path, (x_size, y_size)).into_drawing_area();
 
-            root_raw.fill(&WHITE).unwrap();
+            root_raw.fill(&WHITE).expect("Failed to fill drawing area");
 
             root = root_raw.apply_coord_spec(Cartesian2d::<RangedCoordf64, RangedCoordf64>::new(
                 min_x..max_x,
@@ -308,10 +311,14 @@ impl Grapher {
         }
         //we first draw the lines. Lines go from middle points of the nodes to the middle point of the parent nodes
         for (id, (x, y)) in &positions {
-            let (parent, _, (_, node_height), _, _) = storage.get(id).unwrap();
+            let (parent, _, (_, node_height), _, _) = storage
+                .get(id)
+                .expect("Failed to get node data from storage");
             if *parent != NO_PARENT {
                 //draw the line if applicable
-                let (parent_x, parent_y) = positions.get(parent).unwrap();
+                let (parent_x, parent_y) = positions
+                    .get(parent)
+                    .expect("Failed to get parent position");
                 //MAYBE improve the line laying algorithm, but it's not that important
                 root.draw(&PathElement::new(
                     vec![
@@ -320,15 +327,18 @@ impl Grapher {
                     ],
                     Into::<ShapeStyle>::into(&BLACK).stroke_width(1),
                 ))
-                .unwrap();
+                .expect("Failed to draw line between nodes");
             }
         }
         //then we draw the nodes so that they lay on top of the lines
         for (id, (x, y)) in &positions {
-            let (_, node_name, (node_width, node_height), txt_point, class) =
-                storage.get(id).unwrap();
+            let (_, node_name, (node_width, node_height), txt_point, class) = storage
+                .get(id)
+                .expect("Failed to get node data from storage");
             let color = if let Some(class) = class {
-                groups.get(class.as_ref()).unwrap()
+                groups
+                    .get(class.as_ref())
+                    .expect("Failed to get group data")
             } else {
                 &WHITE
             };
@@ -349,9 +359,9 @@ impl Grapher {
                     fnt.clone(),
             )),
             )
-            .unwrap();
+            .expect("Failed to draw node with text");
         }
-        root.present().unwrap();
+        root.present().expect("Failed to present drawing area");
     }
 
     /// Creates a dynasty graph, meaning the family tree graph
@@ -380,11 +390,11 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
 ) {
     let root = SVGBackend::new(&output_path, GRAPH_SIZE).into_drawing_area();
 
-    root.fill(&WHITE).unwrap();
+    root.fill(&WHITE).expect("Failed to fill drawing area");
 
     let t_len = timespans.len() as i32;
     let fnt = ("sans-serif", 10.0).into_font();
-    let lifespan_y = fnt.box_size("L").unwrap().1 as i32;
+    let lifespan_y = fnt.box_size("L").expect("Failed to get size").1 as i32;
     let height = lifespan_y * t_len + TIMELINE_MARGIN as i32;
 
     let root = root.apply_coord_spec(Cartesian2d::<RangedCoordi32, RangedCoordi32>::new(
@@ -397,7 +407,7 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
         [(0, 0), (max_date as i32, 0)],
         Into::<ShapeStyle>::into(&BLACK).filled(),
     ))
-    .unwrap();
+    .expect("Failed to draw timeline line");
     const YEAR_INTERVAL: i32 = 25;
     //draw the tick
     for i in 0..max_date as i32 / YEAR_INTERVAL {
@@ -408,18 +418,18 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
             ],
             Into::<ShapeStyle>::into(&BLACK).filled(),
         ))
-        .unwrap();
+        .expect("Failed to draw tick mark");
     }
     //draw the century labels
     for i in 1..(max_date as i32 / 100) + 1 {
         let txt = (i * 100).to_string();
-        let txt_x = fnt.box_size(&txt).unwrap().0 as i32;
+        let txt_x = fnt.box_size(&txt).expect("Failed to get size of text").0 as i32;
         root.draw(&Text::new(
             txt,
             (i * 100 - (txt_x / 2), TIMELINE_MARGIN as i32),
             fnt.clone(),
         ))
-        .unwrap();
+        .expect("Failed to draw century label");
     }
     //draw the empire lifespans
     for (i, (title, data)) in timespans.iter().enumerate() {
@@ -448,15 +458,15 @@ pub fn create_timeline_graph<P: AsRef<Path>>(
                     ],
                     Into::<ShapeStyle>::into(&GREEN).filled(),
                 ))
-                .unwrap();
+                .expect("Failed to draw lifespan rectangle");
             }
             root.draw(&Text::new(
                 title.get_name(),
                 (txt_x as i32, -lifespan_y * (i + 1) as i32),
                 fnt.clone(),
             ))
-            .unwrap();
+            .expect("Failed to draw title text");
         }
     }
-    root.present().unwrap();
+    root.present().expect("Failed to present drawing area");
 }

@@ -7,13 +7,13 @@ use super::{
         super::game_data::{GameData, Localizable, LocalizationError, Localize},
         game_state::GameState,
         parser::{
-            types::{GameString, Wrapper, WrapperMut},
             GameObjectMap, GameObjectMapping, KeyError, ParsingError, SaveFileValue,
             SaveObjectError,
+            types::{GameString, Wrapper, WrapperMut},
         },
     },
     Character, Culture, Dynasty, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived,
-    GameRef,
+    GameRef, Title,
 };
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
@@ -23,6 +23,7 @@ pub struct House {
     leaders: Vec<GameRef<Character>>,
     motto: Option<(GameString, HashMap<i64, GameString>)>,
     found_date: Option<Date>,
+    house_title: Option<GameRef<Title>>,
 }
 
 fn get_house_name(base: &GameObjectMap) -> Result<GameString, ParsingError> {
@@ -52,6 +53,10 @@ impl FromGameObject for House {
             found_date: base.get("found_date").map(|n| n.as_date()).transpose()?,
             leaders: Vec::new(),
             motto: None,
+            house_title: base
+                .get_game_id("house_title")
+                .map(|id| game_state.get_title(&id))
+                .ok(),
         };
         if let Some(motto_node) = base.get("motto") {
             if let SaveFileValue::Object(obj) = motto_node {
@@ -210,6 +215,12 @@ impl House {
                 }
             }
         }
+
+        if let Some(title) = &self.house_title {
+            if let Some(inner) = title.get_internal().inner() {
+                return inner.get_faith();
+            }
+        }
         None
     }
 
@@ -219,6 +230,12 @@ impl House {
                 if let Some(culture) = culture.inner().unwrap().get_culture() {
                     return Some(culture);
                 }
+            }
+        }
+
+        if let Some(title) = &self.house_title {
+            if let Some(inner) = title.get_internal().inner() {
+                return inner.get_culture();
             }
         }
         None

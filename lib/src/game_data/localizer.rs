@@ -54,7 +54,7 @@ fn demangle_generic(input: &str) -> String {
     if s.is_empty() {
         return s;
     }
-    let first = s.chars().nth(0).unwrap();
+    let first = s.chars().nth(0).expect("s should not be empty");
     if first.is_ascii_alphabetic() {
         s[0..1].make_ascii_uppercase();
     }
@@ -96,7 +96,12 @@ impl Localizer {
                             if let Ok(file_type) = entry.file_type() {
                                 if file_type.is_dir() {
                                     stack.push(entry.path());
-                                } else if entry.file_name().to_str().unwrap().ends_with(".yml") {
+                                } else if entry
+                                    .file_name()
+                                    .to_str()
+                                    .expect("Failed to convert file name to string")
+                                    .ends_with(".yml")
+                                {
                                     all_files.push(entry.path());
                                 }
                             }
@@ -107,7 +112,7 @@ impl Localizer {
             // having gone through all the directories, we can now read the files
             for entry in all_files {
                 // read the file to string
-                let contents = fs::read_to_string(entry).unwrap();
+                let contents = fs::read_to_string(entry).expect("Failed to read localization file");
                 // add the file to the localizer
                 self.add_localization_file(&contents);
             }
@@ -332,7 +337,7 @@ pub trait Localize<T: AsRef<str> + From<String>> {
         value: &str,
     ) -> Result<T, LocalizationError> {
         let query = |q: &LocalizationStack| {
-            if q.len() == 1 && q.first().unwrap().0 == provider {
+            if q.len() == 1 && q.first().expect("Stack should not be empty").0 == provider {
                 Some(value)
             } else {
                 None

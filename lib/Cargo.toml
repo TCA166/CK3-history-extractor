@@ -1,6 +1,6 @@
 [package]
 name = "ck3_history_extractor_lib"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 authors = ["TCA"]
 description = "The ck3_history_extractor toolkit"
@@ -18,14 +18,14 @@ keywords = [
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-minijinja = { version = "2.12.0", features = ["loader"], optional = true }
+minijinja = { version = "2.21.0", features = ["loader"], optional = true }
 serde = { version = "1.0.219", features = ["rc", "derive"], optional = true }
-zip = "8.2.0"
+zip = "8.6.0"
 image = "0.25.10"
 csv = "1.4.0"
 plotters = "0.3.7"
 tidy-tree = "0.1.0"
-rand = "0.10.0"
+rand = "0.10.2"
 jomini = "0.34.0"
 derive_more = { version = "2.0.1", features = ["from", "display", "error"] }
 base64 = "0.22.1"

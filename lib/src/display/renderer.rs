@@ -15,12 +15,12 @@ use super::{
     super::{
         game_data::{GameData, Localize},
         save_file::{
+            GameState,
             parser::types::{GameId, Wrapper},
             structures::{
                 Character, Culture, Dynasty, EntityRef, Faith, FromGameObject, GameObjectDerived,
                 GameObjectEntity, GameRef, House, Player, Title,
             },
-            GameState,
         },
     },
     graph::Grapher,
@@ -180,13 +180,17 @@ impl<'a> Renderer<'a> {
     /// Renders the [Renderable] object.
     fn render<T: Renderable, D: Deref<Target = T>>(&self, obj: D, env: &Environment<'_>) {
         //render the object
-        let template = env.get_template(T::TEMPLATE_NAME).unwrap();
+        let template = env
+            .get_template(T::TEMPLATE_NAME)
+            .expect("Template not found");
         let path = obj.get_path(self.path);
         obj.render(&self.path, &self.state, self.grapher, self.data);
-        let contents = template.render(obj.deref()).unwrap();
+        let contents = template
+            .render(obj.deref())
+            .expect("Failed to render template");
         thread::spawn(move || {
             //IO heavy, so spawn a thread
-            fs::write(path, contents).unwrap();
+            fs::write(path, contents).expect("Failed to write file");
         });
     }
 
@@ -237,7 +241,7 @@ impl<'a> Renderer<'a> {
                     break;
                 }
                 queue.push_back(None);
-                if queue.front().unwrap().is_none() {
+                if queue.front().expect("Queue is empty").is_none() {
                     break;
                 }
             }

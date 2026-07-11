@@ -10,8 +10,8 @@ use super::{
         super::game_data::{GameData, Localizable, LocalizationError, Localize},
         game_state::GameState,
         parser::{
-            types::{GameString, Wrapper, WrapperMut},
             GameObjectMap, GameObjectMapping, ParsingError, SaveFileObject, SaveFileValue,
+            types::{GameString, Wrapper, WrapperMut},
         },
     },
     Character, Culture, EntityRef, Faith, Finalize, FromGameObject, GameObjectDerived, GameRef,
@@ -264,6 +264,28 @@ impl Title {
             Title::Barony(_) => Some("Barony"),
             Title::Other(_) => None,
         }
+    }
+
+    pub fn get_culture(&self) -> Option<GameRef<Culture>> {
+        if let Some(capital) = self.get_capital() {
+            if let Some(capital_inner) = capital.get_internal().inner() {
+                if let Title::County { culture, .. } = capital_inner {
+                    return culture.clone();
+                }
+            }
+        }
+        None
+    }
+
+    pub fn get_faith(&self) -> Option<GameRef<Faith>> {
+        if let Some(capital) = self.get_capital() {
+            if let Some(capital_inner) = capital.get_internal().inner() {
+                if let Title::County { faith, .. } = capital_inner {
+                    return faith.clone();
+                }
+            }
+        }
+        None
     }
 }
 

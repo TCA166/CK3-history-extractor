@@ -4,14 +4,14 @@ use derive_more::{Display, Error, From};
 
 use super::{
     super::save_file::{
-        parser::{
-            types::{GameId, GameString},
-            GameObjectCollection, ParsingError, SaveFileObject, SaveFileSection, SaveFileValue,
-        },
         SaveFile, SaveFileError,
+        parser::{
+            GameObjectCollection, ParsingError, SaveFileObject, SaveFileSection, SaveFileValue,
+            types::{GameId, GameString},
+        },
     },
-    map::MapError,
     GameData, GameMap, Localizer,
+    map::MapError,
 };
 
 /// An error that occurred while processing game data
@@ -39,7 +39,9 @@ fn create_title_province_map(
     file: &SaveFile,
     out: &mut HashMap<GameId, GameString>,
 ) -> Result<(), ParsingError> {
-    let mut tape = file.section_reader(None).unwrap();
+    let mut tape = file
+        .section_reader(None)
+        .expect("Failed to create section reader");
     while let Some(res) = tape.next() {
         let section = res?;
         let name = GameString::from(section.get_name());

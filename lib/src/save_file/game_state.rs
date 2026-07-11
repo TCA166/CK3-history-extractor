@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use super::{
     super::game_data::{GameData, Localizable, LocalizationError},
     parser::{
-        types::{GameId, GameString, Shared, Wrapper, WrapperMut},
         GameObjectMap, ParsingError,
+        types::{GameId, GameString, Shared, Wrapper, WrapperMut},
     },
     structures::{
         Artifact, Character, Culture, Dynasty, Faith, Finalize, FromGameObject, GameObjectDerived,
@@ -294,6 +294,16 @@ impl GameState {
         county_data: HashMap<String, (GameRef<Faith>, GameRef<Culture>)>,
     ) {
         self.county_data = county_data;
+        for title in self.titles.values_mut() {
+            if let Some(internal) = title.get_internal_mut().inner_mut() {
+                if let Some(assoc) = self.county_data.get_mut(internal.get_key().as_ref()) {
+                    if let Title::County { faith, culture, .. } = internal {
+                        *faith = Some(assoc.0.clone());
+                        *culture = Some(assoc.1.clone());
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -306,14 +316,6 @@ impl Localizable for GameState {
         for title in &mut self.titles.values_mut() {
             title.finalize();
             title.localize(localization)?;
-            if let Some(internal) = title.get_internal_mut().inner_mut() {
-                if let Some(assoc) = self.county_data.get_mut(internal.get_key().as_ref()) {
-                    if let Title::County { faith, culture, .. } = internal {
-                        *faith = Some(assoc.0.clone());
-                        *culture = Some(assoc.1.clone());
-                    }
-                }
-            }
         }
         for faith in &mut self.faiths.values_mut() {
             faith.finalize();
@@ -344,7 +346,7 @@ impl Localizable for GameState {
 #[cfg(feature = "serde")]
 mod serialize {
     use super::*;
-    use serde::{ser::SerializeMap, Serialize, Serializer};
+    use serde::{Serialize, Serializer, ser::SerializeMap};
 
     impl Serialize for Shared<Option<GameRef<Character>>> {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -495,9 +497,8 @@ mod display {
                     if next.is_none() {
                         continue;
                     }
-                    if let Some(first_char) =
-                        next.unwrap().1.as_ref().unwrap().get_internal().inner()
-                    {
+                    let next = next.unwrap().1.as_ref().unwrap();
+                    if let Some(first_char) = next.get_internal().inner() {
                         let mut faith = first_char
                             .get_faith()
                             .as_ref()
@@ -520,8 +521,7 @@ mod display {
                             if let Some(ch) = char.get_internal().inner() {
                                 let char_faith = ch.get_faith().as_ref().unwrap().clone();
                                 let ch_faith = char_faith.get_internal();
-                                let char_culture = ch.get_culture().as_ref().unwrap().clone();
-                                let ch_culture = char_culture.get_internal();
+                                let char_culture = ch.get_culture();
                                 if event == USURPED_STR || event.starts_with(CONQUERED_START_STR) {
                                     let year: i16 = entry.0.year();
                                     if ch_faith.get_id() != faith {
@@ -533,22 +533,28 @@ mod display {
                                             RealmDifference::Faith(char_faith.clone()),
                                         ));
                                         faith = ch_faith.get_id();
-                                    } else if ch_culture.get_id() != culture {
+                                    } else if char_culture.as_ref().is_some_and(|ch_culture| {
+                                        ch_culture.get_internal().get_id() != culture
+                                    }) {
+                                        let ch_culture = char_culture.as_ref().unwrap();
                                         events.push((
                                             year,
                                             char.clone(),
                                             title.clone(),
                                             GameString::from("people"),
-                                            RealmDifference::Culture(char_culture.clone()),
+                                            RealmDifference::Culture(ch_culture.clone()),
                                         ));
-                                        culture = ch_culture.get_id();
+                                        culture = ch_culture.get_internal().get_id();
                                     }
                                 } else {
                                     if ch_faith.get_id() != faith {
                                         faith = ch_faith.get_id();
                                     }
-                                    if ch_culture.get_id() != culture {
-                                        culture = ch_culture.get_id();
+                                    if char_culture.as_ref().is_some_and(|ch_culture| {
+                                        ch_culture.get_internal().get_id() != culture
+                                    }) {
+                                        culture =
+                                            char_culture.as_ref().unwrap().get_internal().get_id();
                                     }
                                 }
                             }

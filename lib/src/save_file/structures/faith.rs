@@ -3,8 +3,8 @@ use super::{
         super::game_data::{GameData, Localizable, LocalizationError, Localize},
         game_state::GameState,
         parser::{
-            types::{GameString, Wrapper, WrapperMut},
             GameObjectMap, GameObjectMapping, ParsingError,
+            types::{GameString, Wrapper, WrapperMut},
         },
     },
     Character, EntityRef, Finalize, FromGameObject, GameObjectDerived, GameRef, Title,
@@ -30,6 +30,7 @@ impl FromGameObject for Faith {
             name: base
                 .get("name")
                 .or(base.get("template"))
+                .or(base.get("faith_type"))
                 .map(|v| v.as_string())
                 .transpose()?
                 .unwrap(),

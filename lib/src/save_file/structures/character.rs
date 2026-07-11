@@ -378,18 +378,41 @@ impl Finalize for GameRef<Character> {
                 }
             }
             if char.faith.is_none() {
-                if let Some(house) = &char.house {
-                    if let Some(house) = house.get_internal().inner() {
-                        char.faith = house.get_faith();
+                if let Some(faith) = (char
+                    .house
+                    .as_ref()
+                    .and_then(|h| h.get_internal().inner().and_then(|house| house.get_faith())))
+                .or_else(|| {
+                    for title in char.titles.iter() {
+                        if let Some(faith) =
+                            title.get_internal().inner().and_then(|t| t.get_faith())
+                        {
+                            return Some(faith);
+                        }
                     }
+                    return None;
+                }) {
+                    char.faith = Some(faith);
                 }
             }
             if char.culture.is_none() {
-                if let Some(house) = &char.house {
-                    if let Some(house) = house.get_internal().inner() {
-                        char.culture = house.get_culture();
+                if let Some(culture) = (char.house.as_ref().and_then(|h| {
+                    h.get_internal()
+                        .inner()
+                        .and_then(|house| house.get_culture())
+                }))
+                .or_else(|| {
+                    for title in char.titles.iter() {
+                        if let Some(culture) =
+                            title.get_internal().inner().and_then(|t| t.get_culture())
+                        {
+                            return Some(culture);
+                        }
                     }
-                }
+                    return None;
+                }) {
+                    char.culture = Some(culture);
+                } // else CAN happen? I have seen characters with no culture, and no culture in their ancestors and no titles. What?
             }
             for vassal in char.vassals.iter_mut() {
                 match vassal {
