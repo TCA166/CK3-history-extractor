@@ -27,7 +27,7 @@ dialoguer = { version = "0.12.0", features = ["completion", "history"] }
 open = "5.3.3"
 indicatif = "0.18.4"
 keyvalues-parser = "0.2.3"
-human-panic = "=2.0.6"
+human-panic = "=2.0.8"
 clap = {version="4.6.0", features = ["derive"]}
 derive_more = { version = "2.1.1", features = ["from", "display"] }
 jomini = "0.34.1"
